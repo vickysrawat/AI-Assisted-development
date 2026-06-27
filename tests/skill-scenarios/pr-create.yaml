@@ -1,0 +1,132 @@
+skill: pr-create
+scenarios:
+  - id: compliance-runs-before-ado-question
+    description: "ICEA compliance and findings gate must run before the connect/draft question"
+    input: |
+      Create a PR for feature/ADO-1234-search-filter targeting dev branch.
+      pr-describe output is present in conversation.
+    expect:
+      triggered: true
+      contains:
+        - "ICEA compliance"
+        - "connect"
+        - "draft"
+      not_contains:
+        - "PAT"
+        - "AZURE_DEVOPS_PAT"
+
+  - id: gate-blocked-stops-entirely
+    description: "BLOCKED icea-review must stop flow — no connect/draft question shown"
+    input: |
+      Create a PR for my branch. The icea-review result was:
+      ❌ BLOCKED — Missing acceptance criterion AC-F2 not implemented.
+    expect:
+      triggered: true
+      contains:
+        - "BLOCKED"
+      not_contains:
+        - "connect"
+        - "draft"
+        - "PR created"
+        - "pullRequestId"
+        - "Proceed?"
+
+  - id: gate-needs-work-shows-warning-then-question
+    description: "NEEDS WORK should show warnings and still offer connect/draft choice"
+    input: |
+      Create a PR. icea-review returned: ⚠️ NEEDS WORK BEFORE REVIEW — 2 warnings found.
+    expect:
+      triggered: true
+      contains:
+        - "warning"
+        - "connect"
+
+  - id: draft-path-asks-release-and-sprint
+    description: "Choosing draft path must ask for both Release ID and Sprint ID"
+    input: |
+      Create a PR for feature/ADO-1234-search-filter.
+      pr-describe output present. Save as draft only.
+    expect:
+      triggered: true
+      contains:
+        - "Release ID"
+        - "Sprint ID"
+
+  - id: draft-path-writes-to-correct-path
+    description: "Draft artifact must be written to docs/Release<ID>/Sprint<ID>/pr-draft-ADO-<ID>.md"
+    input: |
+      Create a PR draft. ADO #1234. Release ID: 3. Sprint ID: 42.
+    expect:
+      triggered: true
+      contains:
+        - "docs/Release3/Sprint42/pr-draft-ADO-1234.md"
+
+  - id: draft-path-reprompts-on-blank-input
+    description: "Must re-prompt if either Release ID or Sprint ID is blank"
+    input: |
+      Create a PR draft. Release ID: 3. Sprint ID: [blank]
+    expect:
+      triggered: true
+      contains:
+        - "Both Release ID and Sprint ID are required"
+
+  - id: offline-flag-requires-both-arguments
+    description: "--offline without --release and --sprint must hard-stop immediately"
+    input: "Create a PR --offline"
+    expect:
+      triggered: true
+      contains:
+        - "--offline requires --release"
+        - "--sprint"
+      not_contains:
+        - "ICEA"
+        - "compliance"
+
+  - id: offline-flag-with-args-skips-prompt
+    description: "--offline with both args must skip the connect/draft question"
+    input: "Create a PR --offline --release 3 --sprint 42"
+    expect:
+      triggered: true
+      not_contains:
+        - "Connect to ADO"
+        - "connect or save"
+
+  - id: ado-unreachable-falls-through-to-draft
+    description: "ADO network failure during submit must fall through to draft path, not hard fail"
+    input: |
+      Create a PR and submit to ADO. ADO returned a network error (curl failed).
+    expect:
+      triggered: true
+      contains:
+        - "draft"
+      not_contains:
+        - "hard fail"
+
+  - id: hard-rule-no-pr-without-pr-describe
+    description: "Must not create PR artifact without prior pr-describe output"
+    input: "Create a PR right now with no description"
+    expect:
+      triggered: true
+      contains:
+        - "pr-describe"
+
+  - id: skip-icea-check-noted-in-artifact
+    description: "--skip-icea-check bypass must be recorded in both PR description and draft artifact"
+    input: "Create a PR --skip-icea-check"
+    expect:
+      triggered: true
+      contains:
+        - "bypassed"
+
+  - id: open-findings-soft-gate-on-connect-path
+    description: "Open Critical/High findings should warn but not block on connect path — developer decides"
+    input: |
+      Create a PR. Findings gate found 2 open Critical findings across ledgers.
+      I want to connect to ADO.
+    expect:
+      triggered: true
+      contains:
+        - "Open Critical"
+        - "Proceed anyway"
+      not_contains:
+        - "BLOCKED"

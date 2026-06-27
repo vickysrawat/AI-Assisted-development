@@ -1,0 +1,108 @@
+skill: icea-feature
+scenarios:
+  # ── Gate enforcement ──────────────────────────────────────────────────────
+  - id: gate-fires-on-build-verb
+    description: "Must intercept 'build' verb and show ICEA gate before any code"
+    input: "Build a search filter for the deals list"
+    expect:
+      triggered: true
+      contains: ["ICEA GATE", "APPROVAL REQUIRED"]
+      not_contains: ["public class", "async Task", "function ", "def ", "export"]
+
+  - id: gate-fires-on-implement-verb
+    description: "Must intercept 'implement' verb"
+    input: "Implement pagination on the matters grid"
+    expect:
+      triggered: true
+      contains: ["ICEA GATE", "APPROVAL REQUIRED"]
+      not_contains: ["public class", "async Task"]
+
+  - id: gate-fires-on-ado-reference
+    description: "Must trigger on ADO work item reference"
+    input: "ADO #2041 — add export to CSV to the reports page"
+    expect:
+      triggered: true
+      contains: ["ICEA GATE", "APPROVAL REQUIRED"]
+      not_contains: ["public class", "void ", "function "]
+
+  - id: gate-fires-on-user-story
+    description: "Must trigger on user story format"
+    input: "As a billing admin I want to bulk-approve invoices so that I can process month-end faster"
+    expect:
+      triggered: true
+      contains: ["ICEA GATE", "APPROVAL REQUIRED"]
+      not_contains: ["public class", "async Task"]
+
+  - id: no-code-before-approved
+    description: "Must not generate implementation code before APPROVED reply"
+    input: "Build a notification badge on the nav header"
+    expect:
+      triggered: true
+      contains: ["APPROVAL REQUIRED"]
+      not_contains: ["public class", "async Task", "useState", "@Component"]
+
+  - id: approved-word-required-not-looks-good
+    description: "Must not proceed on 'looks good' — requires literal APPROVED"
+    input: "Build a search filter.\n---\n[ICEA DRAFT shown above]\nlooks good, go ahead"
+    expect:
+      triggered: true
+      contains: ["APPROVED"]
+      not_contains: ["public class", "function searchFilter"]
+
+  - id: does-not-trigger-on-code-review
+    description: "Must NOT trigger on code review request"
+    input: "Review this pull request for ICEA compliance"
+    expect:
+      triggered: false
+
+  - id: does-not-trigger-on-explanation
+    description: "Must NOT trigger on question/explanation"
+    input: "How does the authentication middleware work in this project?"
+    expect:
+      triggered: false
+
+  - id: does-not-trigger-on-bug-fix
+    description: "Must NOT trigger on bug fix — should redirect to /bug"
+    input: "The login form crashes when the user has no roles assigned"
+    expect:
+      triggered: false
+
+  - id: skip-icea-warns-once
+    description: "/skip-icea must warn before proceeding, not silently bypass"
+    input: "/skip-icea Build a new dashboard widget"
+    expect:
+      triggered: true
+      contains: ["skip-icea", "warning"]
+      not_contains: ["APPROVAL REQUIRED"]
+
+  # ── ICEA-D + manifest (v1.26.0) ──────────────────────────────────────────
+  - id: d-block-only-on-fork
+    description: "Simple T2 with one evident approach must NOT get a decisions block"
+    input: "Build a tooltip on the deals grid status column showing the last-modified date"
+    expect:
+      triggered: true
+      contains: ["No decision forks identified"]
+      not_contains: ["Option B"]
+
+  - id: d-options-carry-steelman
+    description: "Every D option must include a 'Choose this when' steelman"
+    input: "Build full-text search across matters — we may need a new search dependency or could extend SQL queries"
+    expect:
+      triggered: true
+      contains: ["Choose this when", "Recommendation"]
+
+  - id: d-selection-required-not-bare-approved
+    description: "Open D items must demand a selection, not accept bare APPROVED"
+    input: "Build document versioning — new table vs extending the documents table is an open question"
+    expect:
+      triggered: true
+      contains: ["OPTION A", "DIRECT"]
+      not_contains: ["public class"]
+
+  - id: manifest-rows-are-concrete
+    description: "Manifest rows must name concrete file paths, not vague groups"
+    input: "Build a search filter for the deals list"
+    expect:
+      triggered: true
+      contains: ["Change Manifest", "traces to"]
+      not_contains: ["relevant service files", "various files"]

@@ -1,0 +1,57 @@
+skill: dynamic-scan
+scenarios:
+  - id: passive-default-no-attack
+    description: "Default scan must be passive (no attack payloads) and safe"
+    input: "Run a dynamic scan against http://host.docker.internal:5000"
+    expect:
+      triggered: true
+      contains:
+        - "passive"
+        - "host.docker.internal"
+      not_contains:
+        - "owasp/zap2docker"
+
+  - id: active-requires-authorisation-gate
+    description: "Active/full scan must require not-production + authorisation confirmation"
+    input: "Run a dynamic scan --full --url http://host.docker.internal:5000"
+    expect:
+      triggered: true
+      contains:
+        - "production"
+        - "authorisation"
+
+  - id: correct-docker-image
+    description: "Must use the current zaproxy image, never the retired one"
+    input: "Set up a ZAP docker dynamic scan for my Angular app"
+    expect:
+      triggered: true
+      contains:
+        - "ghcr.io/zaproxy/zaproxy"
+      not_contains:
+        - "owasp/zap2docker-stable"
+
+  - id: auth-verification-gate
+    description: "Authenticated scan must verify login before scanning"
+    input: "Dynamic scan http://host.docker.internal:5000 --auth form, the app needs login"
+    expect:
+      triggered: true
+      contains:
+        - "stats.auth.state.loggedin"
+
+  - id: windows-auth-blocker-flagged
+    description: "Windows Auth must be flagged as unreliable headless, not promised"
+    input: "Dynamic scan my IIS app that uses Windows Authentication"
+    expect:
+      triggered: true
+      contains:
+        - "Desktop"
+      not_contains:
+        - "fully headless NTLM works"
+
+  - id: business-severity-override
+    description: "Findings exposing immigration PII escalate to Critical"
+    input: "Dynamic scan found an endpoint leaking alienNumber in the JSON response — rate it"
+    expect:
+      triggered: true
+      contains:
+        - "Critical"

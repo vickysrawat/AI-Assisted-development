@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{PROJECT_NAME}} - Product Overview</title>
+    <style>
+        :root {
+            --primary: #1a3a5c;
+            --primary-light: #2c5f8a;
+            --accent: #c8a951;
+            --bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text: #2d3436;
+            --text-light: #636e72;
+            --border: #dfe6e9;
+            --success: #00b894;
+            --warning: #fdcb6e;
+            --danger: #e17055;
+            --info: #74b9ff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: #fff;
+            padding: 60px 40px;
+            text-align: center;
+        }
+        .hero h1 { font-size: 2.8rem; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.5px; }
+        .hero h1 span { color: var(--accent); }
+        .hero .subtitle { font-size: 1.15rem; opacity: 0.9; font-weight: 300; max-width: 700px; margin: 0 auto; }
+        .hero .badge-row { margin-top: 24px; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+        .hero .badge {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            backdrop-filter: blur(4px);
+        }
+
+        /* Container */
+        .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+        /* Table of Contents */
+        .toc {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 28px 32px;
+            margin: -30px auto 40px;
+            position: relative;
+            z-index: 10;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .toc h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-light); margin-bottom: 14px; }
+        .toc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+        .toc a {
+            color: var(--primary); text-decoration: none; font-size: 0.92rem;
+            padding: 6px 10px; border-radius: 6px; transition: background 0.2s; display: block;
+        }
+        .toc a:hover { background: var(--bg); color: var(--primary-light); }
+
+        /* Sections */
+        .section { margin-bottom: 48px; }
+        .section-header {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 20px; padding-bottom: 12px;
+            border-bottom: 2px solid var(--border);
+        }
+        .section-header .icon {
+            width: 40px; height: 40px; background: var(--primary); color: #fff;
+            border-radius: 10px; display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; flex-shrink: 0;
+        }
+        .section-header h2 { font-size: 1.5rem; color: var(--primary); }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 10px; padding: 24px; margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .card h3 { font-size: 1.1rem; color: var(--primary); margin-bottom: 12px; }
+        .card p, .card li { color: var(--text); font-size: 0.95rem; }
+        .card ul { padding-left: 20px; }
+        .card ul li { margin-bottom: 6px; }
+        .card ul li strong { color: var(--primary); }
+
+        /* Feature Grid */
+        .feature-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+        .feature-card {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 10px; padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .feature-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+        .feature-card .feature-number {
+            width: 32px; height: 32px; background: var(--primary); color: #fff;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 0.85rem; font-weight: 700; margin-bottom: 12px;
+        }
+        .feature-card h3 { font-size: 1.05rem; color: var(--primary); margin-bottom: 10px; }
+        .feature-card ul { padding-left: 18px; font-size: 0.9rem; color: var(--text-light); }
+        .feature-card ul li { margin-bottom: 4px; }
+
+        /* Tables */
+        table {
+            width: 100%; border-collapse: collapse; background: var(--card-bg);
+            border-radius: 10px; overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid var(--border);
+        }
+        thead th {
+            background: var(--primary); color: #fff; padding: 14px 18px;
+            text-align: left; font-size: 0.9rem; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        tbody td { padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 0.93rem; }
+        tbody tr:last-child td { border-bottom: none; }
+        tbody tr:hover { background: #f1f5f9; }
+        tbody td:first-child { font-weight: 600; color: var(--primary); white-space: nowrap; }
+
+        /* Journey Cards */
+        .journey-card {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 10px; padding: 24px; margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .journey-card h3 { font-size: 1rem; color: var(--primary); margin-bottom: 14px; }
+        .journey-flow { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .journey-step {
+            background: var(--bg); border: 1px solid var(--border);
+            padding: 8px 16px; border-radius: 8px;
+            font-size: 0.85rem; font-weight: 500; color: var(--primary);
+        }
+        .journey-arrow { color: var(--accent); font-size: 1.2rem; font-weight: 700; }
+
+        /* Business Rules */
+        .rules-list { list-style: none; padding: 0; }
+        .rules-list li {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 10px; padding: 16px 20px; margin-bottom: 10px;
+            display: flex; gap: 14px; align-items: flex-start;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .rules-list .rule-num {
+            width: 28px; height: 28px; background: var(--accent); color: var(--primary);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 0.8rem; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+        }
+        .rules-list .rule-text { font-size: 0.93rem; }
+        .rules-list .rule-text strong { color: var(--primary); }
+
+        /* Architecture Diagram */
+        .arch-diagram {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 10px; padding: 32px; text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04); overflow-x: auto;
+        }
+        .arch-diagram svg { max-width: 100%; height: auto; }
+
+        /* Screenshot placeholder */
+        .screenshot-placeholder {
+            background: var(--bg); border: 2px dashed var(--border);
+            border-radius: 10px; padding: 40px; text-align: center;
+            color: var(--text-light); font-size: 0.9rem; margin-bottom: 16px;
+        }
+        .screenshot-placeholder .ph-icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+
+        /* Metric Cards */
+        .metric-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+        .metric-card {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 10px; padding: 20px; text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .metric-card .metric-icon { font-size: 1.8rem; margin-bottom: 8px; }
+        .metric-card h4 { font-size: 0.95rem; color: var(--primary); margin-bottom: 6px; }
+        .metric-card p { font-size: 0.82rem; color: var(--text-light); margin: 0; }
+
+        /* Future List */
+        .future-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+        .future-item {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 10px; padding: 16px 20px;
+            display: flex; align-items: center; gap: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .future-item .dot { width: 10px; height: 10px; background: var(--accent); border-radius: 50%; flex-shrink: 0; }
+        .future-item span { font-size: 0.93rem; }
+
+        /* Footer */
+        .footer {
+            background: var(--primary); color: rgba(255,255,255,0.7);
+            text-align: center; padding: 24px; font-size: 0.85rem; margin-top: 60px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero { padding: 40px 20px; }
+            .hero h1 { font-size: 2rem; }
+            .toc-grid { grid-template-columns: 1fr 1fr; }
+            .feature-grid { grid-template-columns: 1fr; }
+            .metric-grid { grid-template-columns: 1fr 1fr; }
+            .journey-flow { flex-direction: column; align-items: flex-start; }
+            .journey-arrow { transform: rotate(90deg); }
+        }
+
+        @media print {
+            .hero { padding: 30px 20px; }
+            .toc { display: none; }
+            .feature-card:hover { transform: none; box-shadow: none; }
+            body { font-size: 11pt; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Hero Section -->
+    <header class="hero">
+        <h1><span>{{PROJECT_NAME}}</span></h1>
+        <p class="subtitle">{{PROJECT_DESCRIPTION}}</p>
+        <p style="margin-top: 14px; font-size: 0.95rem;">
+            <a href="{{PROJECT_URL}}" style="color: var(--accent); text-decoration: none; font-weight: 600;">{{PROJECT_URL}}</a>
+        </p>
+        <div class="badge-row">
+            <!-- Add one <span class="badge"> per tech stack item -->
+            {{#each TECH_BADGES as BADGE}}
+            <span class="badge">{{BADGE}}</span>
+            {{/each}}
+        </div>
+    </header>
+
+    <!-- Table of Contents -->
+    <div class="container">
+        <nav class="toc">
+            <h3>Contents</h3>
+            <div class="toc-grid">
+                <a href="#problem">Problem Statement</a>
+                <a href="#users">Target Users</a>
+                <a href="#features">Core Features</a>
+                <a href="#journeys">User Journeys</a>
+                <a href="#rules">Business Rules</a>
+                <a href="#architecture">System Architecture</a>
+                <a href="#environments">Environments</a>
+                <a href="#nfr">Non-Functional Requirements</a>
+                <a href="#metrics">Success Metrics</a>
+                <a href="#future">Future Considerations</a>
+            </div>
+        </nav>
+
+        <!-- Problem Statement -->
+        <section id="problem" class="section">
+            <div class="section-header">
+                <div class="icon">!</div>
+                <h2>Problem Statement</h2>
+            </div>
+            <div class="card">
+                <p>{{PROBLEM_INTRO}}</p>
+                <ul style="margin-top: 12px;">
+                    <!-- Add one <li> per problem point -->
+                    <li><strong>{{PROBLEM_POINT_1_TITLE}}</strong> {{PROBLEM_POINT_1_DESC}}</li>
+                    <li><strong>{{PROBLEM_POINT_2_TITLE}}</strong> {{PROBLEM_POINT_2_DESC}}</li>
+                    <li><strong>{{PROBLEM_POINT_3_TITLE}}</strong> {{PROBLEM_POINT_3_DESC}}</li>
+                </ul>
+                <p style="margin-top: 14px; color: var(--text-light); font-style: italic;">{{PROBLEM_WITHOUT_TEXT}}</p>
+            </div>
+        </section>
+
+        <!-- Target Users -->
+        <section id="users" class="section">
+            <div class="section-header">
+                <div class="icon">&#9787;</div>
+                <h2>Target Users</h2>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>User Persona</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Add one <tr> per user persona -->
+                    <tr><td>{{USER_1_PERSONA}}</td><td>{{USER_1_DESCRIPTION}}</td></tr>
+                    <tr><td>{{USER_2_PERSONA}}</td><td>{{USER_2_DESCRIPTION}}</td></tr>
+                    <tr><td>{{USER_3_PERSONA}}</td><td>{{USER_3_DESCRIPTION}}</td></tr>
+                    <tr><td>{{USER_4_PERSONA}}</td><td>{{USER_4_DESCRIPTION}}</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Core Features -->
+        <section id="features" class="section">
+            <div class="section-header">
+                <div class="icon">&#9733;</div>
+                <h2>Core Features</h2>
+            </div>
+            <div class="feature-grid">
+                <!-- Repeat .feature-card for each feature -->
+                <div class="feature-card">
+                    <div class="feature-number">1</div>
+                    <h3>{{FEATURE_1_NAME}}</h3>
+                    <ul>
+                        <li>{{FEATURE_1_BULLET_1}}</li>
+                        <li>{{FEATURE_1_BULLET_2}}</li>
+                        <li>{{FEATURE_1_BULLET_3}}</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-number">2</div>
+                    <h3>{{FEATURE_2_NAME}}</h3>
+                    <ul>
+                        <li>{{FEATURE_2_BULLET_1}}</li>
+                        <li>{{FEATURE_2_BULLET_2}}</li>
+                        <li>{{FEATURE_2_BULLET_3}}</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-number">3</div>
+                    <h3>{{FEATURE_3_NAME}}</h3>
+                    <ul>
+                        <li>{{FEATURE_3_BULLET_1}}</li>
+                        <li>{{FEATURE_3_BULLET_2}}</li>
+                        <li>{{FEATURE_3_BULLET_3}}</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-number">4</div>
+                    <h3>{{FEATURE_4_NAME}}</h3>
+                    <ul>
+                        <li>{{FEATURE_4_BULLET_1}}</li>
+                        <li>{{FEATURE_4_BULLET_2}}</li>
+                        <li>{{FEATURE_4_BULLET_3}}</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-number">5</div>
+                    <h3>{{FEATURE_5_NAME}}</h3>
+                    <ul>
+                        <li>{{FEATURE_5_BULLET_1}}</li>
+                        <li>{{FEATURE_5_BULLET_2}}</li>
+                        <li>{{FEATURE_5_BULLET_3}}</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- User Journeys -->
+        <section id="journeys" class="section">
+            <div class="section-header">
+                <div class="icon">&#10132;</div>
+                <h2>User Journeys</h2>
+            </div>
+
+            <!-- Repeat .journey-card for each journey -->
+            <div class="journey-card">
+                <h3>Journey 1: {{JOURNEY_1_NAME}}</h3>
+                <div class="journey-flow">
+                    <span class="journey-step">{{JOURNEY_1_STEP_1}}</span>
+                    <span class="journey-arrow">&rarr;</span>
+                    <span class="journey-step">{{JOURNEY_1_STEP_2}}</span>
+                    <span class="journey-arrow">&rarr;</span>
+                    <span class="journey-step">{{JOURNEY_1_STEP_3}}</span>
+                    <span class="journey-arrow">&rarr;</span>
+                    <span class="journey-step">{{JOURNEY_1_STEP_4}}</span>
+                </div>
+            </div>
+
+            <div class="journey-card">
+                <h3>Journey 2: {{JOURNEY_2_NAME}}</h3>
+                <div class="journey-flow">
+                    <span class="journey-step">{{JOURNEY_2_STEP_1}}</span>
+                    <span class="journey-arrow">&rarr;</span>
+                    <span class="journey-step">{{JOURNEY_2_STEP_2}}</span>
+                    <span class="journey-arrow">&rarr;</span>
+                    <span class="journey-step">{{JOURNEY_2_STEP_3}}</span>
+                    <span class="journey-arrow">&rarr;</span>
+                    <span class="journey-step">{{JOURNEY_2_STEP_4}}</span>
+                </div>
+            </div>
+
+            <div class="journey-card">
+                <h3>Journey 3: {{JOURNEY_3_NAME}}</h3>
+                <div class="journey-flow">
+                    <span class="journey-step">{{JOURNEY_3_STEP_1}}</span>
+                    <span class="journey-arrow">&rarr;</span>
+                    <span class="journey-step">{{JOURNEY_3_STEP_2}}</span>
+                    <span class="journey-arrow">&rarr;</span>
+                    <span class="journey-step">{{JOURNEY_3_STEP_3}}</span>
+                    <span class="journey-arrow">&rarr;</span>
+                    <span class="journey-step">{{JOURNEY_3_STEP_4}}</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Business Rules -->
+        <section id="rules" class="section">
+            <div class="section-header">
+                <div class="icon">&#9881;</div>
+                <h2>Key Business Rules</h2>
+            </div>
+            <ol class="rules-list">
+                <!-- Add one <li> per business rule -->
+                <li>
+                    <span class="rule-num">1</span>
+                    <span class="rule-text"><strong>{{RULE_1_TITLE}}:</strong> {{RULE_1_DESC}}</span>
+                </li>
+                <li>
+                    <span class="rule-num">2</span>
+                    <span class="rule-text"><strong>{{RULE_2_TITLE}}:</strong> {{RULE_2_DESC}}</span>
+                </li>
+                <li>
+                    <span class="rule-num">3</span>
+                    <span class="rule-text"><strong>{{RULE_3_TITLE}}:</strong> {{RULE_3_DESC}}</span>
+                </li>
+            </ol>
+        </section>
+
+        <!-- System Architecture -->
+        <section id="architecture" class="section">
+            <div class="section-header">
+                <div class="icon">&#9634;</div>
+                <h2>System Architecture</h2>
+            </div>
+
+            <!-- Replace the svg below with a real architecture diagram if available,
+                 or use the screenshot-placeholder div instead -->
+            <div class="arch-diagram">
+                <svg viewBox="0 0 800 380" xmlns="http://www.w3.org/2000/svg" style="font-family: 'Segoe UI', sans-serif;">
+                    <!-- User Box -->
+                    <rect x="280" y="10" width="240" height="60" rx="10" fill="#1a3a5c"/>
+                    <text x="400" y="36" text-anchor="middle" fill="#fff" font-size="13" font-weight="600">{{ARCH_USER_LABEL}}</text>
+                    <text x="400" y="55" text-anchor="middle" fill="#c8a951" font-size="11">HTTPS</text>
+
+                    <!-- Arrow down -->
+                    <line x1="400" y1="70" x2="400" y2="120" stroke="#c8a951" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                    <!-- Application Box -->
+                    <rect x="240" y="120" width="320" height="70" rx="10" fill="#2c5f8a"/>
+                    <text x="400" y="150" text-anchor="middle" fill="#fff" font-size="14" font-weight="600">{{ARCH_APP_LABEL}}</text>
+                    <text x="400" y="172" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="11">{{ARCH_APP_TECH}}</text>
+
+                    <!-- Three arrows down -->
+                    <line x1="200" y1="190" x2="200" y2="260" stroke="#c8a951" stroke-width="2" marker-end="url(#arrowhead)"/>
+                    <line x1="400" y1="190" x2="400" y2="260" stroke="#c8a951" stroke-width="2" marker-end="url(#arrowhead)"/>
+                    <line x1="600" y1="190" x2="600" y2="260" stroke="#c8a951" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                    <!-- Connector dashed lines -->
+                    <line x1="310" y1="190" x2="200" y2="220" stroke="#c8a951" stroke-width="1.5" stroke-dasharray="4"/>
+                    <line x1="490" y1="190" x2="600" y2="220" stroke="#c8a951" stroke-width="1.5" stroke-dasharray="4"/>
+
+                    <!-- Dependency 1 -->
+                    <rect x="90" y="260" width="220" height="70" rx="10" fill="#fff" stroke="#1a3a5c" stroke-width="2"/>
+                    <text x="200" y="290" text-anchor="middle" fill="#1a3a5c" font-size="12" font-weight="600">{{ARCH_DEP_1_NAME}}</text>
+                    <text x="200" y="310" text-anchor="middle" fill="#636e72" font-size="10">{{ARCH_DEP_1_DESC}}</text>
+
+                    <!-- Dependency 2 -->
+                    <rect x="290" y="260" width="220" height="70" rx="10" fill="#fff" stroke="#1a3a5c" stroke-width="2"/>
+                    <text x="400" y="290" text-anchor="middle" fill="#1a3a5c" font-size="12" font-weight="600">{{ARCH_DEP_2_NAME}}</text>
+                    <text x="400" y="310" text-anchor="middle" fill="#636e72" font-size="10">{{ARCH_DEP_2_DESC}}</text>
+
+                    <!-- Dependency 3 -->
+                    <rect x="490" y="260" width="220" height="70" rx="10" fill="#fff" stroke="#1a3a5c" stroke-width="2"/>
+                    <text x="600" y="290" text-anchor="middle" fill="#1a3a5c" font-size="12" font-weight="600">{{ARCH_DEP_3_NAME}}</text>
+                    <text x="600" y="310" text-anchor="middle" fill="#636e72" font-size="10">{{ARCH_DEP_3_DESC}}</text>
+
+                    <!-- Arrowhead marker -->
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#c8a951"/>
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+
+            <!-- Tech Stack Table -->
+            <div style="margin-top: 20px;">
+                <table>
+                    <thead>
+                        <tr><th>Layer</th><th>Technology</th></tr>
+                    </thead>
+                    <tbody>
+                        <!-- Add one <tr> per layer -->
+                        <tr><td>{{TECH_LAYER_1}}</td><td>{{TECH_LAYER_1_VALUE}}</td></tr>
+                        <tr><td>{{TECH_LAYER_2}}</td><td>{{TECH_LAYER_2_VALUE}}</td></tr>
+                        <tr><td>{{TECH_LAYER_3}}</td><td>{{TECH_LAYER_3_VALUE}}</td></tr>
+                        <tr><td>{{TECH_LAYER_4}}</td><td>{{TECH_LAYER_4_VALUE}}</td></tr>
+                        <tr><td>{{TECH_LAYER_5}}</td><td>{{TECH_LAYER_5_VALUE}}</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Environments -->
+        <section id="environments" class="section">
+            <div class="section-header">
+                <div class="icon">&#9729;</div>
+                <h2>Environments</h2>
+            </div>
+            <table>
+                <thead>
+                    <tr><th>Environment</th><th>Purpose</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>Development</td><td>{{ENV_DEV_DESC}}</td></tr>
+                    <tr><td>QA</td><td>{{ENV_QA_DESC}}</td></tr>
+                    <tr><td>UAT</td><td>{{ENV_UAT_DESC}}</td></tr>
+                    <tr><td>Production</td><td>{{ENV_PROD_DESC}}</td></tr>
+                </tbody>
+            </table>
+            <div class="card" style="margin-top: 16px;">
+                <p>{{ENVIRONMENTS_NOTE}}</p>
+            </div>
+        </section>
+
+        <!-- Non-Functional Requirements -->
+        <section id="nfr" class="section">
+            <div class="section-header">
+                <div class="icon">&#9878;</div>
+                <h2>Non-Functional Requirements</h2>
+            </div>
+            <table>
+                <thead>
+                    <tr><th>Requirement</th><th>Implementation</th></tr>
+                </thead>
+                <tbody>
+                    <!-- Add one <tr> per NFR -->
+                    <tr><td>{{NFR_1_NAME}}</td><td>{{NFR_1_IMPL}}</td></tr>
+                    <tr><td>{{NFR_2_NAME}}</td><td>{{NFR_2_IMPL}}</td></tr>
+                    <tr><td>{{NFR_3_NAME}}</td><td>{{NFR_3_IMPL}}</td></tr>
+                    <tr><td>{{NFR_4_NAME}}</td><td>{{NFR_4_IMPL}}</td></tr>
+                    <tr><td>{{NFR_5_NAME}}</td><td>{{NFR_5_IMPL}}</td></tr>
+                    <tr><td>{{NFR_6_NAME}}</td><td>{{NFR_6_IMPL}}</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Success Metrics -->
+        <section id="metrics" class="section">
+            <div class="section-header">
+                <div class="icon">&#9776;</div>
+                <h2>Success Metrics</h2>
+            </div>
+            <div class="metric-grid">
+                <!-- Add one .metric-card per metric -->
+                <div class="metric-card">
+                    <div class="metric-icon">{{METRIC_1_ICON}}</div>
+                    <h4>{{METRIC_1_NAME}}</h4>
+                    <p>{{METRIC_1_DESC}}</p>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon">{{METRIC_2_ICON}}</div>
+                    <h4>{{METRIC_2_NAME}}</h4>
+                    <p>{{METRIC_2_DESC}}</p>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon">{{METRIC_3_ICON}}</div>
+                    <h4>{{METRIC_3_NAME}}</h4>
+                    <p>{{METRIC_3_DESC}}</p>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon">{{METRIC_4_ICON}}</div>
+                    <h4>{{METRIC_4_NAME}}</h4>
+                    <p>{{METRIC_4_DESC}}</p>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon">{{METRIC_5_ICON}}</div>
+                    <h4>{{METRIC_5_NAME}}</h4>
+                    <p>{{METRIC_5_DESC}}</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Future Considerations -->
+        <section id="future" class="section">
+            <div class="section-header">
+                <div class="icon">&#9670;</div>
+                <h2>Future Considerations</h2>
+            </div>
+            <div class="future-list">
+                <!-- Add one .future-item per planned enhancement -->
+                <div class="future-item"><span class="dot"></span><span>{{FUTURE_1}}</span></div>
+                <div class="future-item"><span class="dot"></span><span>{{FUTURE_2}}</span></div>
+                <div class="future-item"><span class="dot"></span><span>{{FUTURE_3}}</span></div>
+                <div class="future-item"><span class="dot"></span><span>{{FUTURE_4}}</span></div>
+                <div class="future-item"><span class="dot"></span><span>{{FUTURE_5}}</span></div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>{{PROJECT_NAME}} &mdash; {{PROJECT_TAGLINE}} &bull; Product Overview Document</p>
+    </footer>
+
+</body>
+</html>

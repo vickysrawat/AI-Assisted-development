@@ -1,0 +1,106 @@
+# Graph Index Schema
+_Schema version: 1.0 · Single source of truth for `.claude/graph/graph-index.md`_
+
+The graph index is the always-loaded entry point to the codebase knowledge graph.
+It must stay under 350 tokens. All module detail lives in per-module files — nothing else belongs here.
+
+---
+
+## Location
+
+```
+.claude/graph/graph-index.md
+```
+
+Gitignored. Created by `dream-init` Step 7b. Refreshed by `/graph-sync`.
+
+---
+
+## Required frontmatter
+
+```yaml
+---
+paths: always
+---
+```
+
+This ensures the index loads in every session regardless of which files are open.
+
+---
+
+## Header line
+
+```markdown
+# Graph Index
+_Generated: YYYY-MM-DD | Modules: N | Structure: flat|domain_
+```
+
+- `Generated` — date of last full regeneration (dream-init) or last structural change (graph-sync restructure)
+- `Modules` — total module count (must match the number of rows in the table)
+- `Structure` — `flat` when all detail files are in `.claude/graph/` directly; `domain` when subfoldered
+
+---
+
+## Module table
+
+One row per module. No exceptions, no nested rows, no sub-tables.
+
+```markdown
+| Module | Domain | Detail File | Entry Point |
+|--------|--------|-------------|-------------|
+| Orders | orders | graph/orders.md | src/Orders/OrderService.cs |
+| Payments | payments | graph/payments.md | src/Payments/PaymentGateway.cs |
+| Auth | auth | graph/auth.md | src/Auth/AuthService.cs |
+```
+
+### Column rules
+
+| Column | Rules |
+|--------|-------|
+| Module | PascalCase name matching the top-level source folder or bounded context |
+| Domain | snake_case domain label — matches the subfolder name in domain structure |
+| Detail File | Relative path from `.claude/` — always starts with `graph/` |
+| Entry Point | Single most-representative file in this module; used for fingerprint detection |
+
+### What must NOT appear in the index
+
+- File lists
+- Module descriptions or summaries
+- Dependency information
+- Patterns or conventions
+- Code snippets
+- Comments or footnotes
+
+All of this belongs in the module detail file.
+
+---
+
+## 350-token ceiling
+
+If the table would exceed 350 tokens (approx. 1,400 characters), the index is too large.
+Corrective actions in priority order:
+1. Shorten module names (use abbreviations if needed)
+2. Truncate entry-point paths (use filename only, not full path)
+3. Remove the Domain column (merge into Module if unambiguous)
+
+Never add a preamble, closing note, or section header beyond the one `# Graph Index` heading.
+
+---
+
+## Full valid example
+
+```markdown
+---
+paths: always
+---
+# Graph Index
+_Generated: 2026-06-20 | Modules: 5 | Structure: flat_
+
+| Module | Domain | Detail File | Entry Point |
+|--------|--------|-------------|-------------|
+| Orders | orders | graph/orders.md | src/Orders/OrderService.cs |
+| Payments | payments | graph/payments.md | src/Payments/PaymentGateway.cs |
+| Customers | customers | graph/customers.md | src/Customers/CustomerService.cs |
+| Notifications | notifications | graph/notifications.md | src/Notifications/NotificationService.cs |
+| Auth | auth | graph/auth.md | src/Auth/AuthService.cs |
+```

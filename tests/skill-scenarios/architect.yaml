@@ -1,0 +1,76 @@
+skill: architect
+scenarios:
+  - id: trigger-populate-architecture-docs
+    description: "Should trigger on 'populate architecture docs'"
+    input: "Populate architecture docs for this project"
+    expect:
+      triggered: true
+      contains:
+        - "architect"
+        - "deployment"
+
+  - id: deployment-questionnaire-runs-first
+    description: "Step 0.5 must run the deployment questionnaire before template detection"
+    input: "Run the architect skill. No architecture-deployment.md exists."
+    expect:
+      triggered: true
+      contains:
+        - "deployment"
+        - "Q1"
+        - "Hosting"
+
+  - id: hard-rule-no-overwrite-populated-files
+    description: "Must skip files that already contain real content"
+    input: "Run the architect skill. architecture.md already exists and is populated."
+    expect:
+      triggered: true
+      contains:
+        - "skip"
+        - "populated"
+      not_contains:
+        - "overwrite"
+
+  - id: hard-rule-no-invented-facts
+    description: "Must use Could-not-determine marker rather than inventing values"
+    input: "Run architect skill. The codebase has no identifiable entry points."
+    expect:
+      triggered: true
+      contains:
+        - "Could not determine"
+
+  - id: deployment-file-skipped-when-already-answered
+    description: "Must skip Step 0.5 questionnaire when deployment file is already fully answered"
+    input: |
+      Run the architect skill.
+      architecture-deployment.md already exists with 0 unanswered markers.
+    expect:
+      triggered: true
+      not_contains:
+        - "Q1. Hosting"
+        - "Q2. CI/CD"
+
+  - id: detect-spring-boot
+    description: "Should detect a Spring Boot repo and route to the spring-boot template"
+    input: "Run the architect skill on a repo with a pom.xml containing spring-boot-starter-web."
+    expect:
+      triggered: true
+      contains:
+        - "SPRING_BOOT"
+        - "spring-boot"
+
+  - id: detect-python-fastapi
+    description: "Should detect a FastAPI repo and route to the python-fastapi template"
+    input: "Run the architect skill on a repo whose pyproject.toml depends on fastapi."
+    expect:
+      triggered: true
+      contains:
+        - "PYTHON_FASTAPI"
+        - "python-fastapi"
+
+  - id: detect-python-django-priority
+    description: "Django signal (manage.py) takes priority when multiple python signals match"
+    input: "Run the architect skill on a repo with manage.py and a requirements.txt listing django and flask."
+    expect:
+      triggered: true
+      contains:
+        - "PYTHON_DJANGO"

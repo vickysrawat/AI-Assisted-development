@@ -1,0 +1,29 @@
+skill: dream-health
+scenarios:
+  - id: trigger-health-dashboard
+    description: "Should trigger on 'dream-health' and generate the HTML dashboard"
+    input: "Run /dream-health"
+    expect:
+      triggered: true
+      contains:
+        - "health"
+        - "memory"
+
+  - id: output-goes-to-file
+    description: "Should write output to memory/health.html, not inline only"
+    input: "Generate the dream health dashboard"
+    expect:
+      triggered: true
+      contains:
+        - "memory/health.html"
+
+  - id: no-memory-graceful
+    description: "Should handle missing memory files gracefully without crashing"
+    input: "Run /dream-health on a fresh project with no memory yet"
+    expect:
+      triggered: true
+      not_contains:
+        - "error"
+        - "crash"
+      contains:
+        - "memory"

@@ -1,0 +1,145 @@
+skill: external-dir-map
+scenarios:
+  - id: creates-settings-local-when-absent
+    description: "Must create settings.local.json when it does not exist and external paths are found"
+    input: "Run /sync-dirs on a .NET solution where one .csproj is referenced from ../SharedLib/"
+    expect:
+      triggered: true
+      contains:
+        - "settings.local.json not found"
+        - "settings.local.json updated"
+        - "additionalDirectories"
+
+  - id: adds-key-when-file-exists-without-it
+    description: "Must add additionalDirectories key when settings.local.json exists but lacks it"
+    input: "Run /sync-dirs — settings.local.json exists with only an env key"
+    expect:
+      triggered: true
+      contains:
+        - "merging"
+        - "additionalDirectories"
+      not_contains:
+        - "overwrite"
+
+  - id: preserves-existing-keys
+    description: "Must not remove or modify other keys already in settings.local.json"
+    input: "Run /sync-dirs — settings.local.json already has env and hooks keys"
+    expect:
+      triggered: true
+      contains:
+        - "merging"
+      not_contains:
+        - "removed"
+        - "overwrite"
+
+  - id: idempotent-no-change
+    description: "Must not write when all paths already listed"
+    input: "Run /sync-dirs — settings.local.json already contains the correct additionalDirectories"
+    expect:
+      triggered: true
+      contains:
+        - "already up to date"
+      not_contains:
+        - "updated"
+
+  - id: appends-new-paths
+    description: "Must append newly found paths without removing existing ones"
+    input: "Run /sync-dirs after a new external project was added to the .sln"
+    expect:
+      triggered: true
+      contains:
+        - "Added"
+        - "Total"
+      not_contains:
+        - "removed"
+
+  - id: no-external-paths
+    description: "Must handle the case where all projects are within the solution root"
+    input: "Run /sync-dirs on a self-contained solution with no external project references"
+    expect:
+      triggered: true
+      contains:
+        - "within the solution root"
+      not_contains:
+        - "additionalDirectories"
+
+  - id: invalid-json-backup
+    description: "Must back up and recreate settings.local.json if it contains invalid JSON"
+    input: "Run /sync-dirs — settings.local.json contains malformed JSON"
+    expect:
+      triggered: true
+      contains:
+        - ".bak"
+        - "recreating"
+
+  - id: multi-stack-external
+    description: "Must map external paths from both .sln and angular.json when both are present"
+    input: "Run /sync-dirs on a solution with a .NET backend referencing ../Shared/ and angular.json referencing ../design-system/"
+    expect:
+      triggered: true
+      contains:
+        - "Shared"
+        - "design-system"
+        - "Total  : 2"
+
+  - id: snapshot-saved
+    description: "Must save manifest mtime snapshot to dream-init-state.json after every run"
+    input: "Run /sync-dirs successfully"
+    expect:
+      triggered: true
+      contains:
+        - "dream-init-state.json updated"
+        - "external_dir_snapshot"
+
+  - id: dotnet-sln-parser
+    description: "Must correctly extract external .csproj paths from a .sln file"
+    input: "Run /sync-dirs — solution file references ../ExternalLib/ExternalLib.csproj"
+    expect:
+      triggered: true
+      contains:
+        - "ExternalLib"
+        - "EXTERNAL"
+
+  - id: java-maven-parser
+    description: "Must correctly extract external <module> paths from pom.xml"
+    input: "Run /sync-dirs — root pom.xml contains <module>../shared-domain</module>"
+    expect:
+      triggered: true
+      contains:
+        - "shared-domain"
+        - "EXTERNAL"
+
+  - id: gradle-includedbuild-parser
+    description: "Must correctly extract includeBuild paths from settings.gradle"
+    input: "Run /sync-dirs — settings.gradle contains includeBuild('../common-utils')"
+    expect:
+      triggered: true
+      contains:
+        - "common-utils"
+        - "EXTERNAL"
+
+  - id: angular-workspace-parser
+    description: "Must correctly extract external project roots from angular.json"
+    input: "Run /sync-dirs — angular.json projects entry has root pointing to ../shared-ui"
+    expect:
+      triggered: true
+      contains:
+        - "shared-ui"
+        - "EXTERNAL"
+
+  - id: nodejs-workspaces-parser
+    description: "Must correctly resolve package.json workspaces globs for external paths"
+    input: "Run /sync-dirs — package.json workspaces contains ../libs/*"
+    expect:
+      triggered: true
+      contains:
+        - "EXTERNAL"
+
+  - id: python-path-dep-parser
+    description: "Must correctly extract path = dependencies from pyproject.toml"
+    input: "Run /sync-dirs — pyproject.toml has a path dependency pointing to ../shared-models"
+    expect:
+      triggered: true
+      contains:
+        - "shared-models"
+        - "EXTERNAL"

@@ -1,0 +1,1935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI-Assisted Development — Developer Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ai-white:         #FFFFFF;
+    --ai-gray-50:       #F6F6F4;
+    --ai-gray-100:      #EFEFEB;
+    --ai-gray-200:      #DFDFDA;
+    --ai-gray-300:      #C8C8C1;
+    --ai-gray-400:      #969696;
+    --ai-gray-500:      #8C8C8C;
+    --ai-gray-600:      #555555;
+    --ai-gray-700:      #444444;
+    --ai-gray-800:      #222222;
+    --ai-base-dark:     #1C1E1A;
+    --ai-true-dark:     #1A1A1A;
+    --ai-accent:        #0060F0;
+    --ai-accent-strong: #0047B3;
+    --ai-accent-soft:   #D9E7FF;
+    --ai-success:       #3F8F5A;
+    --ai-success-soft:  #E5F3E9;
+    --ai-warning:       #C77B18;
+    --ai-warning-soft:  #FFF1DC;
+    --ai-error:         #B54035;
+    --ai-error-soft:    #F9E4E2;
+    --ai-info-soft:     #E7F0FF;
+
+    --text-xs:   0.75rem;
+    --text-sm:   0.875rem;
+    --text-base: 1rem;
+    --text-lg:   1.125rem;
+    --text-xl:   1.25rem;
+    --text-2xl:  1.5rem;
+    --text-3xl:  1.875rem;
+    --text-4xl:  2.5rem;
+
+    --space-1:  4px;  --space-2:  8px;  --space-3:  12px;
+    --space-4:  16px; --space-5:  20px; --space-6:  24px;
+    --space-8:  32px; --space-10: 40px; --space-12: 48px;
+    --space-16: 64px;
+
+    --radius-sm:   6px;
+    --radius-md:   10px;
+    --radius-lg:   16px;
+    --radius-xl:   24px;
+    --radius-full: 9999px;
+
+    --duration-fast:   150ms;
+    --duration-normal: 250ms;
+    --duration-slow:   400ms;
+    --ease-standard:   cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; }
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    font-size: var(--text-base);
+    line-height: 1.5;
+    background: var(--ai-base-dark);
+    color: var(--ai-gray-200);
+    min-height: 100vh;
+  }
+
+  /* ── LAYOUT ── */
+  .shell {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: 100vh;
+  }
+
+  /* ── LEFT NAV ── */
+  .nav {
+    background: var(--ai-true-dark);
+    border-right: 1px solid rgba(255,255,255,0.06);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-8) 0 var(--space-8);
+  }
+
+  .nav-brand {
+    padding: 0 var(--space-6) var(--space-8);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: var(--space-6);
+  }
+
+  .nav-brand-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-xs);
+    letter-spacing: 0.1em;
+    color: var(--ai-accent);
+    text-transform: uppercase;
+    margin-bottom: var(--space-1);
+  }
+
+  .nav-brand-title {
+    font-family: 'Playfair Display', serif;
+    font-size: var(--text-xl);
+    font-weight: 700;
+    color: var(--ai-white);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  .nav-brand-version {
+    font-size: var(--text-xs);
+    color: var(--ai-gray-500);
+    margin-top: var(--space-1);
+  }
+
+  .nav-section-label {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ai-gray-600);
+    padding: 0 var(--space-6) var(--space-2);
+    margin-top: var(--space-4);
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-6);
+    cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-standard),
+                color var(--duration-fast) var(--ease-standard);
+    border-left: 2px solid transparent;
+    color: var(--ai-gray-400);
+    font-size: var(--text-sm);
+    text-decoration: none;
+    user-select: none;
+  }
+
+  .nav-item:hover {
+    background: rgba(255,255,255,0.04);
+    color: var(--ai-gray-200);
+  }
+
+  .nav-item.active {
+    background: rgba(0,96,240,0.08);
+    color: var(--ai-white);
+    border-left-color: var(--ai-accent);
+  }
+
+  .nav-item-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+    border: 1.5px solid var(--ai-gray-600);
+    flex-shrink: 0;
+    transition: background var(--duration-fast), border-color var(--duration-fast);
+  }
+
+  .nav-item.active .nav-item-dot,
+  .nav-item.done .nav-item-dot {
+    background: var(--ai-accent);
+    border-color: var(--ai-accent);
+  }
+
+  .nav-item.done {
+    color: var(--ai-gray-500);
+  }
+
+  .nav-item.done .nav-item-dot {
+    background: var(--ai-success);
+    border-color: var(--ai-success);
+  }
+
+  .nav-progress {
+    margin: var(--space-8) var(--space-6) 0;
+    padding-top: var(--space-6);
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .nav-progress-label {
+    font-size: var(--text-xs);
+    color: var(--ai-gray-600);
+    margin-bottom: var(--space-2);
+  }
+
+  .nav-progress-bar {
+    height: 3px;
+    background: rgba(255,255,255,0.08);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+  }
+
+  .nav-progress-fill {
+    height: 100%;
+    background: var(--ai-accent);
+    border-radius: var(--radius-full);
+    transition: width var(--duration-slow) var(--ease-decelerate);
+    width: 0%;
+  }
+
+  .nav-progress-text {
+    font-size: var(--text-xs);
+    color: var(--ai-gray-500);
+    margin-top: var(--space-2);
+  }
+
+  /* ── MAIN CONTENT ── */
+  .main {
+    padding: var(--space-16) var(--space-16) var(--space-16) var(--space-12);
+    max-width: 860px;
+  }
+
+  /* ── PAGE HERO ── */
+  .hero {
+    margin-bottom: var(--space-16);
+    padding-bottom: var(--space-12);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .hero-kicker {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-xs);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ai-accent);
+    margin-bottom: var(--space-3);
+  }
+
+  .hero-title {
+    font-family: 'Playfair Display', serif;
+    font-size: var(--text-4xl);
+    font-weight: 700;
+    color: var(--ai-white);
+    line-height: 1.06;
+    letter-spacing: -0.02em;
+    margin-bottom: var(--space-5);
+  }
+
+  .hero-sub {
+    font-size: var(--text-lg);
+    color: var(--ai-gray-400);
+    line-height: 1.6;
+    max-width: 560px;
+  }
+
+  /* ── FLOW OVERVIEW ── */
+  .flow-overview {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: var(--space-16);
+    padding: var(--space-6);
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: var(--radius-lg);
+    flex-wrap: wrap;
+    row-gap: var(--space-3);
+  }
+
+  .flow-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    flex: 1;
+    min-width: 80px;
+    cursor: pointer;
+    padding: var(--space-2);
+    border-radius: var(--radius-md);
+    transition: background var(--duration-fast);
+  }
+
+  .flow-node:hover { background: rgba(255,255,255,0.04); }
+
+  .flow-node-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-full);
+    background: rgba(255,255,255,0.04);
+    border: 1.5px solid rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--text-sm);
+    transition: border-color var(--duration-fast), background var(--duration-fast);
+  }
+
+  .flow-node.active .flow-node-icon {
+    border-color: var(--ai-accent);
+    background: rgba(0,96,240,0.12);
+  }
+
+  .flow-node.done .flow-node-icon {
+    border-color: var(--ai-success);
+    background: rgba(63,143,90,0.12);
+  }
+
+  .flow-node-label {
+    font-size: 0.7rem;
+    color: var(--ai-gray-500);
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  .flow-node.active .flow-node-label { color: var(--ai-accent); }
+  .flow-node.done .flow-node-label { color: var(--ai-success); }
+
+  .flow-arrow {
+    color: var(--ai-gray-700);
+    font-size: var(--text-sm);
+    flex-shrink: 0;
+  }
+
+  /* ── MILESTONE SECTIONS ── */
+  .milestone {
+    margin-bottom: var(--space-12);
+    scroll-margin-top: var(--space-8);
+  }
+
+  .milestone-header {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-5);
+    margin-bottom: var(--space-8);
+  }
+
+  .milestone-number {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-full);
+    background: rgba(0,96,240,0.1);
+    border: 1.5px solid var(--ai-accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--ai-accent);
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+
+  .milestone-title {
+    font-family: 'Playfair Display', serif;
+    font-size: var(--text-3xl);
+    font-weight: 700;
+    color: var(--ai-white);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+
+  .milestone-desc {
+    font-size: var(--text-base);
+    color: var(--ai-gray-400);
+    margin-top: var(--space-2);
+    line-height: 1.6;
+  }
+
+  /* ── STEPS ── */
+  .steps { display: flex; flex-direction: column; gap: var(--space-3); }
+
+  .step {
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: border-color var(--duration-fast);
+  }
+
+  .step:hover { border-color: rgba(255,255,255,0.1); }
+  .step.open { border-color: rgba(0,96,240,0.3); }
+
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-5) var(--space-6);
+    cursor: pointer;
+    background: rgba(255,255,255,0.02);
+    user-select: none;
+    transition: background var(--duration-fast);
+  }
+
+  .step-header:hover { background: rgba(255,255,255,0.04); }
+  .step.open .step-header { background: rgba(0,96,240,0.06); }
+
+  .step-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-xs);
+    color: var(--ai-gray-600);
+    flex-shrink: 0;
+    width: 28px;
+  }
+
+  .step-title {
+    font-size: var(--text-base);
+    font-weight: 500;
+    color: var(--ai-gray-200);
+    flex: 1;
+  }
+
+  .step.open .step-title { color: var(--ai-white); }
+
+  .step-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-xs);
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+  }
+
+  .step-badge.command  { background: rgba(0,96,240,0.15); color: var(--ai-accent); }
+  .step-badge.auto    { background: rgba(63,143,90,0.15); color: var(--ai-success); }
+  .step-badge.info    { background: rgba(255,255,255,0.06); color: var(--ai-gray-400); }
+
+  .step-chevron {
+    color: var(--ai-gray-600);
+    font-size: var(--text-sm);
+    transition: transform var(--duration-fast) var(--ease-standard);
+    flex-shrink: 0;
+  }
+
+  .step.open .step-chevron { transform: rotate(90deg); }
+
+  .step-body {
+    display: none;
+    padding: 0 var(--space-6) var(--space-6);
+    border-top: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .step.open .step-body { display: block; }
+
+  .step-body-inner { padding-top: var(--space-5); }
+
+  .step-body p {
+    color: var(--ai-gray-300);
+    font-size: var(--text-sm);
+    line-height: 1.7;
+    margin-bottom: var(--space-4);
+  }
+
+  .step-body p:last-child { margin-bottom: 0; }
+
+  /* ── COMMAND BLOCKS ── */
+  .cmd-block {
+    background: #0D1117;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: var(--radius-md);
+    margin: var(--space-4) 0;
+    overflow: hidden;
+  }
+
+  .cmd-block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-2) var(--space-4);
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .cmd-block-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-xs);
+    color: var(--ai-gray-600);
+    letter-spacing: 0.06em;
+  }
+
+  .cmd-copy {
+    font-size: var(--text-xs);
+    color: var(--ai-gray-600);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    transition: color var(--duration-fast), background var(--duration-fast);
+    font-family: 'Inter', sans-serif;
+  }
+
+  .cmd-copy:hover { color: var(--ai-accent); background: rgba(0,96,240,0.1); }
+  .cmd-copy.copied { color: var(--ai-success); }
+
+  .cmd-block pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-sm);
+    padding: var(--space-4);
+    color: var(--ai-gray-200);
+    overflow-x: auto;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .cmd-prompt { color: var(--ai-accent); }
+  .cmd-keyword { color: #79C0FF; }
+  .cmd-value { color: #A5D6FF; }
+  .cmd-comment { color: var(--ai-gray-600); font-style: italic; }
+  .cmd-output { color: var(--ai-gray-400); }
+  .cmd-success { color: var(--ai-success); }
+  .cmd-warning { color: var(--ai-warning); }
+
+  /* ── RESPONSE PREVIEW ── */
+  .response-preview {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-left: 3px solid var(--ai-accent);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    padding: var(--space-4) var(--space-5);
+    margin: var(--space-4) 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-xs);
+    color: var(--ai-gray-300);
+    line-height: 1.8;
+    white-space: pre-wrap;
+  }
+
+  .response-preview .r-header { color: var(--ai-white); font-weight: 500; }
+  .response-preview .r-success { color: var(--ai-success); }
+  .response-preview .r-warning { color: var(--ai-warning); }
+  .response-preview .r-accent { color: var(--ai-accent); }
+  .response-preview .r-dim { color: var(--ai-gray-600); }
+
+  /* ── INFO CALLOUTS ── */
+  .callout {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-5);
+    border-radius: var(--radius-md);
+    margin: var(--space-4) 0;
+    font-size: var(--text-sm);
+    line-height: 1.6;
+  }
+
+  .callout.info    { background: var(--ai-info-soft);    color: #003A99; border: 1px solid rgba(0,96,240,0.2); }
+  .callout.success { background: var(--ai-success-soft); color: #1F5C35; border: 1px solid rgba(63,143,90,0.2); }
+  .callout.warning { background: var(--ai-warning-soft); color: #7A4800; border: 1px solid rgba(199,123,24,0.2); }
+
+  .callout-icon { flex-shrink: 0; font-size: var(--text-base); margin-top: 1px; }
+
+  /* ── TABLES ── */
+  .ref-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: var(--space-4) 0;
+    font-size: var(--text-sm);
+  }
+
+  .ref-table th {
+    text-align: left;
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ai-gray-600);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .ref-table td {
+    padding: var(--space-3) var(--space-4);
+    color: var(--ai-gray-300);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: top;
+  }
+
+  .ref-table tr:last-child td { border-bottom: none; }
+
+  .ref-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .ref-table code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--ai-accent);
+    background: rgba(0,96,240,0.08);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+  }
+
+  /* ── KEYWORD QUICK REF ── */
+  .keyword-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+    margin: var(--space-4) 0;
+  }
+
+  .keyword-card {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    cursor: pointer;
+    transition: border-color var(--duration-fast), background var(--duration-fast);
+  }
+
+  .keyword-card:hover {
+    border-color: rgba(0,96,240,0.3);
+    background: rgba(0,96,240,0.04);
+  }
+
+  .keyword-card code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-xs);
+    color: var(--ai-accent);
+    display: block;
+    margin-bottom: var(--space-2);
+  }
+
+  .keyword-card p {
+    font-size: var(--text-xs);
+    color: var(--ai-gray-500);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  /* ── FILE STRUCTURE ── */
+  .file-tree {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-xs);
+    background: #0D1117;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: var(--radius-md);
+    padding: var(--space-5);
+    color: var(--ai-gray-300);
+    line-height: 2;
+    margin: var(--space-4) 0;
+  }
+
+  .file-tree .ft-dir  { color: var(--ai-accent); }
+  .file-tree .ft-icea { color: #A5D6FF; }
+  .file-tree .ft-tech { color: #7EE787; }
+  .file-tree .ft-plan { color: #E3B341; }
+  .file-tree .ft-epic { color: #FF7B72; }
+  .file-tree .ft-track{ color: var(--ai-gray-400); }
+
+  /* ── SP TABLE ── */
+  .sp-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: var(--text-sm);
+  }
+
+  .sp-row:last-child { border-bottom: none; }
+
+  .sp-badge {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full);
+    background: rgba(0,96,240,0.1);
+    border: 1.5px solid rgba(0,96,240,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--ai-accent);
+    flex-shrink: 0;
+  }
+
+  .sp-hours { color: var(--ai-gray-400); font-size: var(--text-xs); width: 40px; }
+  .sp-desc  { color: var(--ai-gray-300); flex: 1; }
+
+  /* ── SECTION DIVIDERS ── */
+  .section-divider {
+    height: 1px;
+    background: rgba(255,255,255,0.06);
+    margin: var(--space-16) 0;
+  }
+
+  /* ── RECOVERY TABLE ── */
+  .recovery-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--space-4);
+    align-items: center;
+    padding: var(--space-4) var(--space-5);
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-2);
+    font-size: var(--text-sm);
+  }
+
+  .recovery-state { color: var(--ai-gray-300); }
+  .recovery-action code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-xs);
+    color: var(--ai-accent);
+    background: rgba(0,96,240,0.1);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    white-space: nowrap;
+  }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ── LEFT NAV ── -->
+  <nav class="nav">
+    <div class="nav-brand">
+      <div class="nav-brand-label">Plugin Guide</div>
+      <div class="nav-brand-title">AI-Assisted Dev</div>
+      <div class="nav-brand-version">Version 2.4.1</div>
+    </div>
+
+    <div class="nav-section-label">Workflow</div>
+    <a class="nav-item active" href="#milestone-1" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Start a Feature
+    </a>
+    <a class="nav-item" href="#milestone-2" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Review the Plan
+    </a>
+    <a class="nav-item" href="#milestone-3" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Review &amp; Save ICEA
+    </a>
+    <a class="nav-item" href="#milestone-4" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Review &amp; Save Tech Spec
+    </a>
+    <a class="nav-item" href="#milestone-5" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Share for Review
+    </a>
+    <a class="nav-item" href="#milestone-6" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Approve
+    </a>
+    <a class="nav-item" href="#milestone-7" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Implement
+    </a>
+    <a class="nav-item" href="#milestone-8" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Track &amp; Bug Log
+    </a>
+
+    <div class="nav-section-label" style="margin-top: var(--space-6);">Reference</div>
+    <a class="nav-item" href="#keywords" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> All Keywords
+    </a>
+    <a class="nav-item" href="#files" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> File Structure
+    </a>
+    <a class="nav-item" href="#recovery" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Cross-Session Recovery
+    </a>
+    <a class="nav-item" href="#sp-scale" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Story Point Scale
+    </a>
+    <a class="nav-item" href="#skill-boundaries" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Skill Responsibilities
+    </a>
+
+    <div class="nav-progress">
+      <div class="nav-progress-label">Your progress</div>
+      <div class="nav-progress-bar"><div class="nav-progress-fill" id="progressFill"></div></div>
+      <div class="nav-progress-text" id="progressText">0 of 8 milestones</div>
+    </div>
+  </nav>
+
+  <!-- ── MAIN ── -->
+  <main class="main">
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-kicker">First-time developer guide</div>
+      <h1 class="hero-title">From feature request<br>to working code.</h1>
+      <p class="hero-sub">
+        This guide walks you through every milestone — what to type,
+        what Claude does, and what happens next. Keep it open while you work.
+      </p>
+    </div>
+
+    <!-- FLOW OVERVIEW -->
+    <div class="flow-overview">
+      <div class="flow-node active" onclick="scrollTo('milestone-1')">
+        <div class="flow-node-icon">💬</div>
+        <div class="flow-node-label">Start</div>
+      </div>
+      <div class="flow-arrow">›</div>
+      <div class="flow-node" onclick="scrollTo('milestone-2')">
+        <div class="flow-node-icon">🗺</div>
+        <div class="flow-node-label">Plan</div>
+      </div>
+      <div class="flow-arrow">›</div>
+      <div class="flow-node" onclick="scrollTo('milestone-3')">
+        <div class="flow-node-icon">📋</div>
+        <div class="flow-node-label">ICEA</div>
+      </div>
+      <div class="flow-arrow" title="SAVE PLAN triggers ICEA, SAVE ICEA triggers Tech Spec automatically">⚡</div>
+      <div class="flow-node" onclick="scrollTo('milestone-4')">
+        <div class="flow-node-icon">⚙️</div>
+        <div class="flow-node-label">Tech Spec</div>
+      </div>
+      <div class="flow-arrow">›</div>
+      <div class="flow-node" onclick="scrollTo('milestone-5')">
+        <div class="flow-node-icon">📤</div>
+        <div class="flow-node-label">Share</div>
+      </div>
+      <div class="flow-arrow">›</div>
+      <div class="flow-node" onclick="scrollTo('milestone-6')">
+        <div class="flow-node-icon">✅</div>
+        <div class="flow-node-label">Approve</div>
+      </div>
+      <div class="flow-arrow">›</div>
+      <div class="flow-node" onclick="scrollTo('milestone-7')">
+        <div class="flow-node-icon">🔨</div>
+        <div class="flow-node-label">Implement</div>
+      </div>
+      <div class="flow-arrow">›</div>
+      <div class="flow-node" onclick="scrollTo('milestone-8')">
+        <div class="flow-node-icon">🐛</div>
+        <div class="flow-node-label">Track</div>
+      </div>
+      <div style="width: 100%; font-size: var(--text-xs); color: var(--ai-gray-600); text-align: center; padding-top: var(--space-2);">
+        ⚡ = SAVE PLAN triggers ICEA · SAVE ICEA triggers Tech Spec &nbsp;·&nbsp; For Epics: repeat Implement step per story using <code style="color: var(--ai-accent);">IMPLEMENT ADO-{ID} Story-{N}</code>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         MILESTONE 1 — START A FEATURE
+    ══════════════════════════════════════════ -->
+    <div class="milestone" id="milestone-1">
+      <div class="milestone-header">
+        <div class="milestone-number">01</div>
+        <div>
+          <div class="milestone-title">Start a Feature</div>
+          <div class="milestone-desc">Describe the feature to Claude. The ICEA gate triggers and collects the identifiers it needs before drafting anything.</div>
+        </div>
+      </div>
+
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">1.1</span>
+            <span class="step-title">Describe your feature</span>
+            <span class="step-badge info">natural language</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body">
+            <div class="step-body-inner">
+              <p>Just describe what you want to build. The gate triggers automatically on keywords like <em>build, implement, add, create, I need, work on, ADO #</em>. No special syntax required.</p>
+              <div class="cmd-block">
+                <div class="cmd-block-header">
+                  <span class="cmd-block-label">Claude Code — chat</span>
+                  <button class="cmd-copy" onclick="copyCmd(this)">copy</button>
+                </div>
+                <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">Add an export to CSV button</span> on the report page so users can download the current view</pre>
+              </div>
+              <p>Or invoke explicitly with all three identifiers upfront:</p>
+              <div class="cmd-block">
+                <div class="cmd-block-header">
+                  <span class="cmd-block-label">explicit invocation</span>
+                  <button class="cmd-copy" onclick="copyCmd(this)">copy</button>
+                </div>
+                <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/icea-feature</span> <span class="cmd-value">ADO-1847 R3 S12</span> — add export to CSV on the report page</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">1.2</span>
+            <span class="step-title">Provide ADO, Release, and Sprint numbers</span>
+            <span class="step-badge command">required</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body">
+            <div class="step-body-inner">
+              <p>If any of the three identifiers are missing, Claude asks for them all in one prompt. Never asked one at a time.</p>
+              <div class="response-preview"><span class="r-header">Claude:</span>
+Before I create the ICEA, I need a few details:
+
+  <span class="r-accent">ADO #:</span>       [e.g. ADO #1847]      ← the work item ID
+  <span class="r-accent">Release #:</span>   [e.g. Release 3 / R3] ← the release this ships in
+  <span class="r-accent">Sprint #:</span>    [e.g. Sprint 12 / S12] ← the sprint it is planned for</div>
+              <div class="cmd-block">
+                <div class="cmd-block-header">
+                  <span class="cmd-block-label">your reply</span>
+                  <button class="cmd-copy" onclick="copyCmd(this)">copy</button>
+                </div>
+                <pre><span class="cmd-prompt">You:</span> <span class="cmd-value">ADO #1847, Release 3, Sprint 12</span></pre>
+              </div>
+              <div class="callout info">
+                <span class="callout-icon">ℹ</span>
+                <span>If an approved ICEA already exists for this ADO ID, Claude redirects you to <code>REVISE ADO-1847</code> rather than overwriting it.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <!-- ══════════════════════════════════════════
+         MILESTONE 2 — REVIEW THE PLAN
+    ══════════════════════════════════════════ -->
+    <div class="milestone" id="milestone-2">
+      <div class="milestone-header">
+        <div class="milestone-number">02</div>
+        <div>
+          <div class="milestone-title">Review the Plan</div>
+          <div class="milestone-desc">Claude drafts a structured feature plan before the ICEA — problem statement, story, personas, MoSCoW, risks, assumptions. Review it interactively, correct wrong assumptions, then save.</div>
+        </div>
+      </div>
+
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">2.1</span>
+            <span class="step-title">Plan presented inline</span>
+            <span class="step-badge auto">automatic</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body">
+            <div class="step-body-inner">
+              <p>Before drafting the ICEA, Claude drafts a structured feature plan covering: problem statement, story (As a/I want/so that), personas, MoSCoW feature priority, release plan, assumptions, risks, pre-mortem, and open questions.</p>
+              <div class="response-preview"><span class="r-header">📋 FEATURE PLAN — ADO #1847</span>
+<span class="r-dim">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+<span class="r-accent">Problem Statement:</span>
+  Users cannot export filtered report data — they manually copy rows.
+  Success: export available to 80% of report users within Sprint 12.
+
+<span class="r-accent">Story:</span>
+  As a Report Viewer, I want to export the current filtered view to CSV,
+  so that I can analyse the data in Excel without manual copying.
+
+<span class="r-accent">Personas:</span>
+  Report Viewer: analyst · runs weekly reports · needs offline analysis
+
+<span class="r-accent">Must Have:</span>   Export filtered grid to CSV
+<span class="r-accent">Won't Have:</span>  Excel format, scheduled exports, email delivery
+
+<span class="r-accent">Assumptions:</span>
+  [1] Export is synchronous (small datasets) — unverified
+  [2] CSV format only — verified
+
+<span class="r-accent">Pre-mortem:</span> "This shipped and failed — export silently truncated large datasets"
+<span class="r-dim">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+Review above. Correct anything wrong or: <span class="r-success">SAVE PLAN ADO-1847</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">2.2</span>
+            <span class="step-title">Correct the plan conversationally</span>
+            <span class="step-badge info">optional</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body">
+            <div class="step-body-inner">
+              <p>Correct wrong assumptions or fill in unknowns before the ICEA is drafted. No special syntax — just reply naturally.</p>
+              <div class="cmd-block">
+                <div class="cmd-block-header">
+                  <span class="cmd-block-label">examples</span>
+                </div>
+                <pre><span class="cmd-prompt">You:</span> [1] Export can be large — use async with a download link
+<span class="cmd-prompt">You:</span> [3] Auth policy is RequireReportViewer not RequireMatter
+<span class="cmd-prompt">You:</span> [5] Hidden columns should not be included</pre>
+              </div>
+              <p>Claude updates the plan after each correction. When the plan looks right, save the ICEA.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <!-- ══════════════════════════════════════════
+         MILESTONE 3 — REVIEW & SAVE ICEA
+    ══════════════════════════════════════════ -->
+    <div class="milestone" id="milestone-3">
+      <div class="milestone-header">
+        <div class="milestone-number">03</div>
+        <div>
+          <div class="milestone-title">Review &amp; Save ICEA</div>
+          <div class="milestone-desc">Claude drafts the ICEA from the confirmed plan. Review it, answer any remaining gaps, and save when ready. Nothing is written to disk until you say so.</div>
+        </div>
+      </div>
+
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">3.1</span>
+            <span class="step-title">ICEA drafted to temp file</span>
+            <span class="step-badge auto">automatic</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body">
+            <div class="step-body-inner">
+              <p>Claude generates the full ICEA from the confirmed plan and writes it to <code>temp/ADO-{ID}-icea.md</code>. Open it in VS Code for a clean read with properly rendered tables and headings.</p>
+              <div class="callout info">
+                <span class="callout-icon">ℹ</span>
+                <span>Open with <strong>Ctrl+Shift+V</strong> to open VS Code markdown preview in a side panel. Keep chat on the left, preview on the right.</span>
+              </div>
+              <p>Claude lists any remaining gaps in chat — answer them there. The temp file is rewritten after each change so the preview stays current.</p>
+              <div class="response-preview"><span class="r-header">📄 ICEA draft written to temp/ADO-1847-icea.md</span>
+   Open in VS Code preview: <span class="r-success">Ctrl+Shift+V</span>
+
+<span class="r-dim">⚠ ICEA GAPS — review in the file before saving:</span>
+[1] Intent — Max file size: no limit specified
+[2] Context — Error state: what if the export service times out?
+
+Answer gaps here in chat. I will update the temp file after each change.
+When satisfied: <span class="r-success">SAVE ICEA ADO-1847</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">3.2</span>
+            <span class="step-title">Answer gaps and make edits</span>
+            <span class="step-badge info">optional</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body">
+            <div class="step-body-inner">
+              <p>Answer gaps by number or make freeform edits in chat. After each change Claude rewrites <code>temp/ADO-{ID}-icea.md</code> in place — VS Code preview auto-refreshes. Claude confirms with one line in chat.</p>
+              <div class="cmd-block">
+                <div class="cmd-block-header">
+                  <span class="cmd-block-label">examples</span>
+                </div>
+                <pre><span class="cmd-prompt">You:</span> [1] Max file size is 50MB
+<span class="cmd-prompt">You:</span> Change the endpoint to POST /api/reports/{id}/export
+<span class="cmd-prompt">You:</span> Add AC — export must complete within 30 seconds
+<span class="cmd-prompt">You:</span> Skip [2] — will decide later</pre>
+              </div>
+              <div class="response-preview">✅ Updated — AC-F3 endpoint. Refresh preview.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">3.3</span>
+            <span class="step-title">Save the ICEA</span>
+            <span class="step-badge command">SAVE ICEA</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body">
+            <div class="step-body-inner">
+              <p>When satisfied, save the ICEA. This writes the plan and ICEA to disk and immediately begins drafting the Tech Spec.</p>
+              <div class="cmd-block">
+                <div class="cmd-block-header">
+                  <span class="cmd-block-label">command</span>
+                  <button class="cmd-copy" onclick="copyCmd(this)">copy</button>
+                </div>
+                <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">SAVE ICEA</span> <span class="cmd-value">ADO-1847</span></pre>
+              </div>
+              <div class="response-preview"><span class="r-success">✅ ICEA saved — ADO #1847</span>
+   Path: docs/Release3/Sprint12/UserStory1847/ADO-1847-export-to-csv.icea.md
+   Temp file cleaned up.
+
+Drafting Tech Spec now...</div>
+              <div class="callout success">
+                <span class="callout-icon">✓</span>
+                <span>Plan is written at <code>SAVE PLAN</code>. ICEA is written at <code>SAVE ICEA</code>. Nothing else is written until <code>SAVE TECH</code>.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <!-- ══════════════════════════════════════════
+         MILESTONE 4 — REVIEW & SAVE TECH SPEC
+    ══════════════════════════════════════════ -->
+    <div class="milestone" id="milestone-4">
+      <div class="milestone-header">
+        <div class="milestone-number">04</div>
+        <div>
+          <div class="milestone-title">Review &amp; Save Tech Spec</div>
+          <div class="milestone-desc">Claude drafts the Tech Spec from the saved ICEA. Covers architecture, data design, API contract, test cases, and sizing. Review it interactively before saving.</div>
+        </div>
+      </div>
+
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">4.1</span>
+            <span class="step-title">Tech Spec drafted automatically</span>
+            <span class="step-badge auto">automatic</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body">
+            <div class="step-body-inner">
+              <p>Immediately after <code>SAVE ICEA</code>, Claude generates the full Tech Spec and writes it to <code>temp/ADO-{ID}-tech.md</code>. Open in VS Code preview (<strong>Ctrl+Shift+V</strong>) — same pattern as the ICEA review. The ICEA is already populated from the plan — no re-asking answered questions. Key sections:</p>
+              <table class="ref-table">
+                <thead><tr><th>Section</th><th>Content</th></tr></thead>
+                <tbody>
+                  <tr><td>2. Architecture Touch Points</td><td>Layer, component/file, change type</td></tr>
+                  <tr><td>3. Data Design</td><td>Entities, DTOs, Dapper repositories, SQL</td></tr>
+                  <tr><td>4. API Contract</td><td>Endpoint, auth policy, request/response, error codes</td></tr>
+                  <tr><td>9. Testing Strategy</td><td>Per AC — positive + negative test cases, SP estimate</td></tr>
+                  <tr><td>11. Sizing Summary</td><td>Total SP, Story vs Epic recommendation, story breakdown</td></tr>
+                </tbody>
+              </table>
+              <div class="callout info">
+                <span class="callout-icon">ℹ</span>
+                <span>Data access always uses <strong>Dapper with parameterised SQL</strong>. EF Core is never used.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">4.2</span>
+            <span class="step-title">Story vs Epic recommendation</span>
+            <span class="step-badge auto">automatic</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body">
+            <div class="step-body-inner">
+              <p>Section 11 totals the SP across all ACs and makes a recommendation.</p>
+
+              <div style="background: rgba(63,143,90,0.08); border: 1px solid rgba(63,143,90,0.2); border-radius: var(--radius-md); padding: var(--space-4); margin-bottom: var(--space-3);">
+                <div style="font-size: var(--text-xs); color: var(--ai-success); font-weight: 600; margin-bottom: var(--space-2);">STORY (≤ 5 SP)</div>
+                <div class="file-tree" style="margin: 0; padding: var(--space-3);">Total SP: 5
+Recommendation: STORY — fits in one sprint</div>
+              </div>
+
+              <div style="background: rgba(199,123,24,0.08); border: 1px solid rgba(199,123,24,0.2); border-radius: var(--radius-md); padding: var(--space-4);">
+                <div style="font-size: var(--text-xs); color: var(--ai-warning); font-weight: 600; margin-bottom: var(--space-2);">EPIC (&gt; 5 SP)</div>
+                <div class="file-tree" style="margin: 0; padding: var(--space-3);">Total SP: 10
+Recommendation: EPIC — exceeds single-story capacity
+
+Suggested story breakdown:
+  Story 1 — Core export      (AC-F1, AC-F2) — 5 SP — Sprint 12
+  Story 2 — Filters + async  (AC-F3, AC-F4) — 5 SP — Sprint 13
+  Dependency: Story 2 → Story 1</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">4.3</span>
+            <span class="step-title">Answer open questions and edit</span>
+            <span class="step-badge info">optional</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body">
+            <div class="step-body-inner">
+              <p>Open questions are shown after the Tech Spec. Answer them conversationally or skip for later. Claude re-outputs <strong>only the changed section</strong> — not the full Tech Spec — after each change, so the conversation stays focused.</p>
+              <div class="cmd-block">
+                <div class="cmd-block-header">
+                  <span class="cmd-block-label">examples</span>
+                </div>
+                <pre><span class="cmd-prompt">You:</span> ❓[1] use a stored procedure for the export query
+<span class="cmd-prompt">You:</span> Section 4 — the endpoint returns a pre-signed URL, not a stream
+<span class="cmd-prompt">You:</span> Skip ❓[2] — will decide during implementation</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">4.4</span>
+            <span class="step-title">Save the Tech Spec</span>
+            <span class="step-badge command">SAVE TECH</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body">
+            <div class="step-body-inner">
+              <p>Save the Tech Spec when satisfied. Tracker and Epic doc are written automatically — no further input needed.</p>
+              <div class="cmd-block">
+                <div class="cmd-block-header">
+                  <span class="cmd-block-label">command</span>
+                  <button class="cmd-copy" onclick="copyCmd(this)">copy</button>
+                </div>
+                <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">SAVE TECH</span> <span class="cmd-value">ADO-1847</span></pre>
+              </div>
+              <p>If open questions remain, Claude warns before saving:</p>
+              <div class="response-preview"><span class="r-warning">⚠ 1 open question remains in the Tech Spec.</span>
+  Will be saved as ❓ placeholder — resolve before APPROVE ADO-1847.
+
+  ❓ [2] API Contract — stream or pre-signed URL?
+
+  Reply <span class="r-success">SAVE TECH ADO-1847 CONFIRM</span> to save anyway.</div>
+              <div class="cmd-block">
+                <div class="cmd-block-header">
+                  <span class="cmd-block-label">save with open questions</span>
+                  <button class="cmd-copy" onclick="copyCmd(this)">copy</button>
+                </div>
+                <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">SAVE TECH</span> <span class="cmd-value">ADO-1847</span> CONFIRM</pre>
+              </div>
+              <div class="response-preview"><span class="r-success">✅ Documents saved — ADO #1847 · Release 3 · Sprint 12</span>
+<span class="r-dim">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+  Plan     → ...ADO-1847-export-to-csv.plan.md
+  ICEA     → ...ADO-1847-export-to-csv.icea.md
+  TechSpec → ...ADO-1847-export-to-csv.techspec.md
+  Tracker  → ...ADO-1847-export-to-csv.tracker.md
+
+Share with your Tech Lead and Product team for review.
+When approved: <span class="r-accent">APPROVE ADO-1847</span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <!-- ══════════════════════════════════════════
+         MILESTONE 5 — SHARE FOR REVIEW
+    ══════════════════════════════════════════ -->
+    <div class="milestone" id="milestone-5">
+      <div class="milestone-header">
+        <div class="milestone-number">05</div>
+        <div>
+          <div class="milestone-title">Share for Review</div>
+          <div class="milestone-desc">Share the saved documents with your Tech Lead and Product team. Check status at any time — even from a new session.</div>
+        </div>
+      </div>
+
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">5.1</span>
+            <span class="step-title">Check status at any time</span>
+            <span class="step-badge command">STATUS</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body">
+            <div class="step-body-inner">
+              <div class="cmd-block">
+                <div class="cmd-block-header">
+                  <span class="cmd-block-label">command</span>
+                  <button class="cmd-copy" onclick="copyCmd(this)">copy</button>
+                </div>
+                <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">STATUS</span> <span class="cmd-value">ADO-1847</span></pre>
+              </div>
+              <div class="response-preview"><span class="r-header">📊 STATUS — ADO #1847 · Export to CSV</span>
+<span class="r-dim">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+Type:    STORY  |  Release: 3  |  Sprint: 12
+
+Files:
+  ✅ Plan      — saved
+  ✅ ICEA      — Status: DRAFT
+  ✅ TechSpec  — Open questions: 1
+  ✅ Tracker   — 0/4 ACs done
+
+<span class="r-accent">Next action:</span>
+  → Share with Tech Lead, then APPROVE ADO-1847</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">5.2</span>
+            <span class="step-title">Revise based on feedback</span>
+            <span class="step-badge command">REVISE</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body">
+            <div class="step-body-inner">
+              <p>If the Tech Lead or Product team requests changes, revise the documents before approving.</p>
+              <div class="cmd-block">
+                <div class="cmd-block-header">
+                  <span class="cmd-block-label">command</span>
+                  <button class="cmd-copy" onclick="copyCmd(this)">copy</button>
+                </div>
+                <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">REVISE</span> <span class="cmd-value">ADO-1847</span></pre>
+              </div>
+              <p>Claude locates the files, confirms the path, shows current state and open questions, and asks what needs updating. All edits are conversational — files re-written once changes are confirmed.</p>
+              <div class="callout info">
+                <span class="callout-icon">ℹ</span>
+                <span><strong>Status-aware re-gate:</strong> if the ICEA is still <code>DRAFT</code>, revising does not change the status — the gate is already active. Only if the ICEA was <code>✅ Approved</code> does revising reset it to <code>DRAFT — Revising</code> and re-block code generation until re-approved.</span>
+              </div>
+              <div class="callout warning">
+                <span class="callout-icon">⚠</span>
+                <span>If you revise the ICEA and it significantly changes scope, Claude will warn that the Tech Spec may be out of sync and suggest running <code>TECH ADO-1847</code> to re-draft it.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <!-- ══════════════════════════════════════════
+         MILESTONE 6 — APPROVE
+    ══════════════════════════════════════════ -->
+    <div class="milestone" id="milestone-6">
+      <div class="milestone-header">
+        <div class="milestone-number">06</div>
+        <div>
+          <div class="milestone-title">Approve</div>
+          <div class="milestone-desc">Once the Tech Lead and Product team are satisfied, approve the ICEA. Works from any session — Claude reads state from disk.</div>
+        </div>
+      </div>
+
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">6.1</span>
+            <span class="step-title">Approve the ICEA</span>
+            <span class="step-badge command">APPROVE</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body">
+            <div class="step-body-inner">
+              <p>Run from any session — even a brand new one. Claude reads the ICEA from disk, shows a lightweight summary, and writes the approval status.</p>
+              <div class="cmd-block">
+                <div class="cmd-block-header">
+                  <span class="cmd-block-label">command</span>
+                  <button class="cmd-copy" onclick="copyCmd(this)">copy</button>
+                </div>
+                <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">APPROVE</span> <span class="cmd-value">ADO-1847</span></pre>
+              </div>
+              <div class="response-preview"><span class="r-header">📋 ICEA APPROVAL — ADO #1847 · Release 3 · Sprint 12</span>
+<span class="r-dim">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+ICEA:    ...ADO-1847-export-to-csv.icea.md — Status: DRAFT
+Intent:  Export report data to CSV with column selection
+Type:    STORY  |  Total SP: 5
+Open questions: 1  ← consider resolving before approving
+
+Reply <span class="r-success">APPROVE ADO-1847</span> to confirm.</div>
+              <div class="cmd-block">
+                <div class="cmd-block-header">
+                  <span class="cmd-block-label">confirm</span>
+                  <button class="cmd-copy" onclick="copyCmd(this)">copy</button>
+                </div>
+                <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">APPROVE</span> <span class="cmd-value">ADO-1847</span></pre>
+              </div>
+              <div class="response-preview"><span class="r-success">✅ ICEA Approved — ADO #1847</span>
+   Status: ✅ Approved written to ICEA file
+
+To start implementation:
+  <span class="r-accent">IMPLEMENT ADO-1847</span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <!-- ══════════════════════════════════════════
+         MILESTONE 7 — IMPLEMENT
+    ══════════════════════════════════════════ -->
+    <div class="milestone" id="milestone-7">
+      <div class="milestone-header">
+        <div class="milestone-number">07</div>
+        <div>
+          <div class="milestone-title">Implement</div>
+          <div class="milestone-desc">Claude generates all implementation code from the approved ICEA and Tech Spec. Code is reviewed by the auto-critic before you decide what to write to disk.</div>
+        </div>
+      </div>
+
+      <div class="callout info" style="margin-bottom: var(--space-6);">
+        <span class="callout-icon">ℹ</span>
+        <div>
+          <strong>Skill responsibilities:</strong> each skill has one job and never crosses into another's territory.
+          <ul style="margin-top: var(--space-2); padding-left: var(--space-5); font-size: var(--text-sm); line-height: 1.8;">
+            <li><code>icea-feature</code> — drafts Plan, ICEA, Tech Spec, Tracker. Never generates code.</li>
+            <li><code>icea-approve</code> — writes ✅ Approved status. Never generates code.</li>
+            <li><code>icea-implement</code> — generates and writes code only. Never writes ICEA or Tech Spec.</li>
+            <li><code>icea-revise</code> — revises ICEA and Tech Spec only. Never writes code.</li>
+            <li><code>icea-status</code> — reads and reports. Never writes anything.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">7.1</span>
+            <span class="step-title">Start implementation</span>
+            <span class="step-badge command">IMPLEMENT</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body">
+            <div class="step-body-inner">
+              <div class="cmd-block">
+                <div class="cmd-block-header">
+                  <span class="cmd-block-label">story</span>
+                  <button class="cmd-copy" onclick="copyCmd(this)">copy</button>
+                </div>
+                <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">IMPLEMENT</span> <span class="cmd-value">ADO-1847</span></pre>
+              </div>
+              <div class="cmd-block">
+                <div class="cmd-block-header">
+                  <span class="cmd-block-label">epic — story by story</span>
+                  <button class="cmd-copy" onclick="copyCmd(this)">copy</button>
+                </div>
+                <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">IMPLEMENT</span> <span class="cmd-value">ADO-1847 Story-1</span>
+<span class="cmd-output">... later ...</span>
+<span class="cmd-prompt">You:</span> <span class="cmd-keyword">IMPLEMENT</span> <span class="cmd-value">ADO-1847 Story-2</span></pre>
+              </div>
+              <p>Claude checks the tracker for already-implemented ACs and skips them. Shows an implementation plan before generating any code.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">7.2</span>
+            <span class="step-title">Auto-critic runs before any disk write</span>
+            <span class="step-badge auto">automatic</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body">
+            <div class="step-body-inner">
+              <p>All code is generated in context first. The auto-critic checks for ICEA traceability, rules compliance, and hidden assumptions. If the critic fails, Claude revises automatically (up to 2 retries) before surfacing to you.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">7.3</span>
+            <span class="step-title">Write the implementation files</span>
+            <span class="step-badge command">APPROVE</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body">
+            <div class="step-body-inner">
+              <p>After the critic passes, Claude lists all files to be written and waits for your approval before touching the filesystem.</p>
+              <div class="response-preview"><span class="r-header">📁 WRITE PENDING — reply APPROVE ADO-1847 to write all files</span>
+<span class="r-dim">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+  [1] src/Api/Controllers/ReportExportController.cs
+  [2] src/Application/Services/ReportExportService.cs
+  [3] src/Infrastructure/Repositories/ReportExportRepository.cs
+  [4] src/Application/DTOs/ExportRequestDto.cs
+  [5] tests/Api/ReportExportControllerTests.cs
+  [6] tests/Application/ReportExportServiceTests.cs</div>
+              <div class="cmd-block">
+                <div class="cmd-block-header">
+                  <span class="cmd-block-label">write files</span>
+                  <button class="cmd-copy" onclick="copyCmd(this)">copy</button>
+                </div>
+                <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">APPROVE</span> <span class="cmd-value">ADO-1847</span></pre>
+              </div>
+              <div class="response-preview"><span class="r-success">✅ Implementation written — ADO #1847</span>
+   AC-F1: ✅ Done  AC-F2: ✅ Done
+   AC-F3: ✅ Done  AC-F4: ✅ Done
+
+   Tracker updated. All ACs complete.
+   ICEA marked <span class="r-success">COMPLETE</span>.</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <!-- ══════════════════════════════════════════
+         MILESTONE 8 — TRACK & BUG LOG
+    ══════════════════════════════════════════ -->
+    <div class="milestone" id="milestone-8">
+      <div class="milestone-header">
+        <div class="milestone-number">08</div>
+        <div>
+          <div class="milestone-title">Track &amp; Bug Log</div>
+          <div class="milestone-desc">Log bugs as they are found during testing. The tracker is updated instantly — no approval needed.</div>
+        </div>
+      </div>
+
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">8.1</span>
+            <span class="step-title">Log a bug</span>
+            <span class="step-badge command">BUG</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body">
+            <div class="step-body-inner">
+              <div class="cmd-block">
+                <div class="cmd-block-header">
+                  <span class="cmd-block-label">command</span>
+                  <button class="cmd-copy" onclick="copyCmd(this)">copy</button>
+                </div>
+                <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">BUG</span> <span class="cmd-value">ADO-1847</span> — CSV includes hidden columns when filter is active</pre>
+              </div>
+              <div class="response-preview"><span class="r-warning">🐛 Bug logged — ADO #1847</span>
+   Added to tracker: ...ADO-1847-export-to-csv.tracker.md</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">8.2</span>
+            <span class="step-title">Review open bugs and tracker</span>
+            <span class="step-badge command">STATUS</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body">
+            <div class="step-body-inner">
+              <div class="cmd-block">
+                <div class="cmd-block-header">
+                  <span class="cmd-block-label">command</span>
+                  <button class="cmd-copy" onclick="copyCmd(this)">copy</button>
+                </div>
+                <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">STATUS</span> <span class="cmd-value">ADO-1847</span></pre>
+              </div>
+              <p>Shows AC progress, open bugs, and fixed bugs. The tracker file can also be opened directly in any markdown viewer.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">8.3</span>
+            <span class="step-title">Mark a bug as fixed</span>
+            <span class="step-badge command">REVISE</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body">
+            <div class="step-body-inner">
+              <p>Once a bug is fixed and verified, update the tracker via REVISE to record the fix notes and mark it ✔ Fixed.</p>
+              <div class="cmd-block">
+                <div class="cmd-block-header">
+                  <span class="cmd-block-label">command</span>
+                  <button class="cmd-copy" onclick="copyCmd(this)">copy</button>
+                </div>
+                <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">REVISE</span> <span class="cmd-value">ADO-1847</span></pre>
+              </div>
+              <div class="cmd-block">
+                <div class="cmd-block-header">
+                  <span class="cmd-block-label">then describe the fix</span>
+                </div>
+                <pre><span class="cmd-prompt">You:</span> Mark bug 1 as fixed — hidden columns now excluded via columnDef.hide check in ExportService</pre>
+              </div>
+              <div class="response-preview"><span class="r-success">✔ Bug #1 marked fixed — ADO #1847</span>
+   Tracker updated: ...ADO-1847-export-to-csv.tracker.md
+   Fix noted: hidden columns excluded via columnDef.hide check</div>
+              <div class="callout success">
+                <span class="callout-icon">✓</span>
+                <span>Tracker updates (bug fixes, status changes) are written immediately — no APPROVE ADO-{ID} needed. Only source code requires approval before writing.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <!-- ══════════════════════════════════════════
+         REFERENCE — KEYWORDS
+    ══════════════════════════════════════════ -->
+    <div class="milestone" id="keywords">
+      <div class="milestone-header">
+        <div class="milestone-number" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: var(--ai-gray-400);">⌘</div>
+        <div>
+          <div class="milestone-title">All Keywords</div>
+          <div class="milestone-desc">Every keyword the plugin recognises. No slash prefix needed — just type them in any session.</div>
+        </div>
+      </div>
+
+      <div class="keyword-grid">
+        <div class="keyword-card" onclick="copyText('/icea-feature ADO-{ID} R{N} S{N}')">
+          <code>/icea-feature ADO-{ID} R{N} S{N}</code>
+          <p>Start a new feature. Triggers automatically on feature keywords too.</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('SAVE PLAN ADO-{ID}')">
+          <code>SAVE PLAN ADO-{ID}</code>
+          <p>Save plan to disk. Triggers ICEA draft automatically.</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('SAVE ICEA ADO-{ID}')">
+          <code>SAVE ICEA ADO-{ID}</code>
+          <p>Save Plan + ICEA to disk. Triggers Tech Spec draft automatically.</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('SAVE TECH ADO-{ID}')">
+          <code>SAVE TECH ADO-{ID}</code>
+          <p>Save Tech Spec, Tracker, and Epic doc. Warns if open questions remain.</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('SAVE TECH ADO-{ID} CONFIRM')">
+          <code>SAVE TECH ADO-{ID} CONFIRM</code>
+          <p>Save Tech Spec with open questions — bypasses the warning.</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('TECH ADO-{ID}')">
+          <code>TECH ADO-{ID}</code>
+          <p>Draft Tech Spec from saved ICEA. Cross-session recovery.</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('ICEA ADO-{ID}')">
+          <code>ICEA ADO-{ID}</code>
+          <p>Generate ICEA from a saved plan. Cross-session recovery when plan is on disk but ICEA is not.</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('APPROVE ADO-{ID}')">
+          <code>APPROVE ADO-{ID}</code>
+          <p>Approve ICEA after Tech Lead + Product review. Works in any session.</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('IMPLEMENT ADO-{ID}')">
+          <code>IMPLEMENT ADO-{ID}</code>
+          <p>Generate and write implementation code for an approved ICEA.</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('IMPLEMENT ADO-{ID} Story-{N}')">
+          <code>IMPLEMENT ADO-{ID} Story-{N}</code>
+          <p>Implement a specific story within an Epic.</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('REVISE ADO-{ID}')">
+          <code>REVISE ADO-{ID}</code>
+          <p>Revise ICEA and/or Tech Spec after feedback.</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('STATUS ADO-{ID}')">
+          <code>STATUS ADO-{ID}</code>
+          <p>Check current state and next action. Re-entry point after any session gap.</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('BUG ADO-{ID} — {description}')">
+          <code>BUG ADO-{ID} — {description}</code>
+          <p>Log a bug to the tracker. Written immediately, no approval needed.</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('/skip-icea')">
+          <code>/skip-icea</code>
+          <p>Emergency override — skip the ICEA gate. Warns once then proceeds.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <!-- ══════════════════════════════════════════
+         REFERENCE — FILE STRUCTURE
+    ══════════════════════════════════════════ -->
+    <div class="milestone" id="files">
+      <div class="milestone-header">
+        <div class="milestone-number" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: var(--ai-gray-400);">📁</div>
+        <div>
+          <div class="milestone-title">File Structure</div>
+          <div class="milestone-desc">Where your documents live on disk.</div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6);">
+        <div>
+          <div style="font-size: var(--text-xs); color: var(--ai-gray-500); margin-bottom: var(--space-3); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;">Story</div>
+          <div class="file-tree">docs/
+  Release<span class="ft-dir">3</span>/
+    Sprint<span class="ft-dir">12</span>/
+      UserStory<span class="ft-dir">1847</span>/
+        <span class="ft-plan">*.plan.md</span>
+        <span class="ft-icea">*.icea.md</span>
+        <span class="ft-tech">*.techspec.md</span>
+        <span class="ft-track">*.tracker.md</span></div>
+        </div>
+        <div>
+          <div style="font-size: var(--text-xs); color: var(--ai-gray-500); margin-bottom: var(--space-3); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;">Epic</div>
+          <div class="file-tree">docs/
+  Release<span class="ft-dir">3</span>/
+    Epic<span class="ft-dir">1847</span>/
+      <span class="ft-plan">*.plan.md</span>
+      <span class="ft-icea">*.icea.md</span>
+      <span class="ft-tech">*.techspec.md</span>
+      <span class="ft-epic">*.epic.md</span>
+      <span class="ft-track">*.tracker.md</span>
+      Sprint<span class="ft-dir">12</span>/
+        UserStory<span class="ft-dir">1848</span>/
+          <span class="ft-icea">*.icea.md</span>
+          <span class="ft-tech">*.techspec.md</span>
+          <span class="ft-track">*.tracker.md</span></div>
+        </div>
+      </div>
+
+      <table class="ref-table" style="margin-top: var(--space-6);">
+        <thead><tr><th>File</th><th>Written when</th><th>Audience</th></tr></thead>
+        <tbody>
+          <tr><td><code>*.plan.md</code></td><td>On SAVE PLAN</td><td>Dev team</td></tr>
+          <tr><td><code>*.icea.md</code></td><td>On SAVE ICEA (after SAVE PLAN)</td><td>Dev, Tech Lead, Product</td></tr>
+          <tr><td><code>*.techspec.md</code></td><td>On SAVE TECH</td><td>Dev, Tech Lead</td></tr>
+          <tr><td><code>*.epic.md</code></td><td>On SAVE TECH (Epic only)</td><td>Tech Lead, Product</td></tr>
+          <tr><td><code>*.tracker.md</code></td><td>On SAVE TECH</td><td>All — updated throughout</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <!-- ══════════════════════════════════════════
+         REFERENCE — CROSS-SESSION RECOVERY
+    ══════════════════════════════════════════ -->
+    <div class="milestone" id="recovery">
+      <div class="milestone-header">
+        <div class="milestone-number" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: var(--ai-gray-400);">↺</div>
+        <div>
+          <div class="milestone-title">Cross-Session Recovery</div>
+          <div class="milestone-desc">Closed a session mid-workflow? Run STATUS to find out exactly where you are and what to do next.</div>
+        </div>
+      </div>
+
+      <div class="cmd-block" style="margin-bottom: var(--space-6);">
+        <div class="cmd-block-header">
+          <span class="cmd-block-label">always start here</span>
+          <button class="cmd-copy" onclick="copyCmd(this)">copy</button>
+        </div>
+        <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">STATUS</span> <span class="cmd-value">ADO-1847</span></pre>
+      </div>
+
+      <div class="recovery-item">
+        <div class="recovery-state">No files found</div>
+        <div class="recovery-action"><code>/icea-feature ADO-1847</code></div>
+      </div>
+      <div class="recovery-item">
+        <div class="recovery-state">Plan saved, no ICEA yet<br><span style="font-size: var(--text-xs); color: var(--ai-gray-600);">Session closed after SAVE ICEA before ICEA was generated</span></div>
+        <div class="recovery-action"><code>ICEA ADO-1847</code></div>
+      </div>
+      <div class="recovery-item">
+        <div class="recovery-state">ICEA saved, no Tech Spec</div>
+        <div class="recovery-action"><code>TECH ADO-1847</code></div>
+      </div>
+      <div class="recovery-item">
+        <div class="recovery-state">All docs saved, Status: DRAFT</div>
+        <div class="recovery-action"><code>APPROVE ADO-1847</code></div>
+      </div>
+      <div class="recovery-item">
+        <div class="recovery-state">Status: ✅ Approved</div>
+        <div class="recovery-action"><code>IMPLEMENT ADO-1847</code></div>
+      </div>
+      <div class="recovery-item">
+        <div class="recovery-state">Status: IN PROGRESS</div>
+        <div class="recovery-action"><code>IMPLEMENT ADO-1847</code></div>
+      </div>
+      <div class="recovery-item">
+        <div class="recovery-state">Status: COMPLETE</div>
+        <div class="recovery-action"><code style="color: var(--ai-success); background: rgba(63,143,90,0.1);">All done ✓</code></div>
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <!-- ══════════════════════════════════════════
+         REFERENCE — STORY POINT SCALE
+    ══════════════════════════════════════════ -->
+    <div class="milestone" id="sp-scale">
+      <div class="milestone-header">
+        <div class="milestone-number" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: var(--ai-gray-400);">SP</div>
+        <div>
+          <div class="milestone-title">Story Point Scale</div>
+          <div class="milestone-desc">Used by the Tech Spec to estimate effort per AC and determine Story vs Epic.</div>
+        </div>
+      </div>
+
+      <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius-lg); overflow: hidden;">
+        <div class="sp-row">
+          <div class="sp-badge">1</div>
+          <div class="sp-hours">4h</div>
+          <div class="sp-desc">Simple change, one layer, clear path — no uncertainty</div>
+        </div>
+        <div class="sp-row">
+          <div class="sp-badge">2</div>
+          <div class="sp-hours">8h</div>
+          <div class="sp-desc">Standard feature, 2–3 layers, well-understood pattern</div>
+        </div>
+        <div class="sp-row">
+          <div class="sp-badge">3</div>
+          <div class="sp-hours">16h</div>
+          <div class="sp-desc">Complex feature, cross-layer, some technical uncertainty</div>
+        </div>
+        <div class="sp-row">
+          <div class="sp-badge">5</div>
+          <div class="sp-hours">24h</div>
+          <div class="sp-desc">Large feature, many layers, high complexity or risk</div>
+        </div>
+        <div class="sp-row" style="background: rgba(199,123,24,0.05); border-top: 1px solid rgba(199,123,24,0.15);">
+          <div class="sp-badge" style="border-color: rgba(199,123,24,0.4); color: var(--ai-warning); background: rgba(199,123,24,0.1);">&gt;5</div>
+          <div class="sp-hours" style="color: var(--ai-warning);">Epic</div>
+          <div class="sp-desc" style="color: var(--ai-warning);">Total exceeds single-story capacity — Claude recommends splitting into an Epic</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="section-divider"></div>
+
+    <!-- ══════════════════════════════════════════
+         REFERENCE — SKILL RESPONSIBILITIES
+    ══════════════════════════════════════════ -->
+    <div class="milestone" id="skill-boundaries">
+      <div class="milestone-header">
+        <div class="milestone-number" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: var(--ai-gray-400);">⚡</div>
+        <div>
+          <div class="milestone-title">Skill Responsibilities</div>
+          <div class="milestone-desc">Each skill owns exactly one phase. No skill crosses into another's territory.</div>
+        </div>
+      </div>
+
+      <table class="ref-table">
+        <thead><tr><th>Skill</th><th>Owns</th><th>Never does</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>icea-feature</code></td>
+            <td>Drafts Plan, ICEA, Tech Spec, Tracker, Epic doc. Handles EDIT/REJECT cycles.</td>
+            <td>Never generates implementation code. Never writes ✅ Approved. Never handles revision inline.</td>
+          </tr>
+          <tr>
+            <td><code>icea-approve</code></td>
+            <td>Reads ICEA from disk. Presents summary. Writes <code>Status: ✅ Approved</code>. Outputs ADO description block.</td>
+            <td>Never generates implementation code.</td>
+          </tr>
+          <tr>
+            <td><code>icea-implement</code></td>
+            <td>Reads approved ICEA + Tech Spec. Generates code. Runs auto-critic. Gates writes behind APPROVE ADO-{ID}. Updates tracker.</td>
+            <td>Never writes ICEA, Tech Spec, or Tracker header. Never approves.</td>
+          </tr>
+          <tr>
+            <td><code>icea-revise</code></td>
+            <td>Locates files by ADO ID. Confirms path. Checks for mid-implementation files. Applies edits. Re-gates only if was ✅ Approved.</td>
+            <td>Never generates implementation code.</td>
+          </tr>
+          <tr>
+            <td><code>icea-status</code></td>
+            <td>Reads all files for an ADO ID. Reports state and next action.</td>
+            <td>Never writes anything — completely read-only.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  function toggleStep(header) {
+    const step = header.closest('.step');
+    const isOpen = step.classList.contains('open');
+    step.classList.toggle('open', !isOpen);
+  }
+
+  function setActive(el) {
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function scrollTo(id) {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function copyCmd(btn) {
+    const pre = btn.closest('.cmd-block').querySelector('pre');
+    const text = pre.innerText.replace(/^You:\s*/m, '').trim();
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'copied';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 1500);
+    });
+  }
+
+  function copyText(text) {
+    navigator.clipboard.writeText(text);
+  }
+
+  // Intersection observer — update nav active state on scroll
+  const milestones = document.querySelectorAll('.milestone[id]');
+  const navItems = document.querySelectorAll('.nav-item[href]');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        navItems.forEach(item => {
+          item.classList.toggle('active', item.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  milestones.forEach(m => observer.observe(m));
+
+  // Progress tracking
+  const workflowMilestones = ['milestone-1','milestone-2','milestone-3','milestone-4','milestone-5','milestone-6','milestone-7','milestone-8'];
+  const seen = new Set();
+
+  const progressObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting && workflowMilestones.includes(entry.target.id)) {
+        seen.add(entry.target.id);
+        const count = seen.size;
+        const pct = Math.round((count / workflowMilestones.length) * 100);
+        document.getElementById('progressFill').style.width = pct + '%';
+        document.getElementById('progressText').textContent = count + ' of ' + workflowMilestones.length + ' milestones';
+      }
+    });
+  }, { threshold: 0.3 });
+
+  milestones.forEach(m => progressObserver.observe(m));
+</script>
+
+</body>
+</html>

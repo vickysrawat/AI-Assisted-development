@@ -1,0 +1,58 @@
+skill: pr-describe
+scenarios:
+  - id: trigger-write-pr-description
+    description: "Should trigger on 'write PR description' and output structured PR"
+    input: |
+      Write a PR description for my branch feature/ADO-1847-matter-filter.
+      ICEA AC-1: Add status filter to matter list. AC-2: Filter persists on reload.
+    expect:
+      triggered: true
+      contains:
+        - "ADO-1847"
+        - "AC-1"
+        - "AC-2"
+
+  - id: hard-rule-requires-git-diff
+    description: "Must read git diff — must not fabricate a description without one"
+    input: "Write a PR description. I don't have a diff yet."
+    expect:
+      triggered: true
+      contains:
+        - "diff"
+        - "git"
+
+  - id: scope-creep-flagged
+    description: "Must flag changes not covered by any ICEA AC"
+    input: |
+      Write PR description for ADO-2100.
+      ICEA AC-1: Update matter list endpoint.
+      Diff includes: MatterService.cs, MatterController.cs, AND AuthService.cs (not in ICEA).
+    expect:
+      triggered: true
+      contains:
+        - "SCOPE CREEP"
+        - "AuthService"
+
+  - id: no-scope-creep-passes
+    description: "Must output clean check when all changes match ICEA ACs"
+    input: |
+      Write PR description for ADO-3300.
+      ICEA AC-1: Add filter field. AC-2: Add filter API endpoint.
+      Diff covers only FilterComponent.ts and FilterController.cs.
+    expect:
+      triggered: true
+      contains:
+        - "Scope check passed"
+      not_contains:
+        - "SCOPE CREEP"
+
+  - id: self-review-checklist-included
+    description: "Must always include the self-review checklist at the end"
+    input: |
+      Write a PR description for ADO-1500. ICEA AC-1: Add search box.
+      Diff: SearchComponent.ts changed.
+    expect:
+      triggered: true
+      contains:
+        - "before requesting human review"
+        - "test"

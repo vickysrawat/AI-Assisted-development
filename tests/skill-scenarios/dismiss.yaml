@@ -1,0 +1,80 @@
+skill: dismiss
+scenarios:
+  # ── Hard rule: empty justification refused ────────────────────────────────
+  - id: empty-justification-refused
+    description: "Must refuse dismiss with empty justification"
+    input: "/dismiss FP-a1b2c3d4 false-positive \"\""
+    expect:
+      triggered: true
+      contains: ["justification", "required"]
+      not_contains: ["Dismissed", "moving"]
+
+  - id: missing-justification-refused
+    description: "Must refuse dismiss with no justification argument"
+    input: "/dismiss FP-a1b2c3d4 false-positive"
+    expect:
+      triggered: true
+      contains: ["Usage", "justification"]
+      not_contains: ["Dismissed"]
+
+  # ── Confirmation required ─────────────────────────────────────────────────
+  - id: confirmation-required-before-write
+    description: "Must show finding and ask for confirmation before dismissing"
+    input: "/dismiss FP-a1b2c3d4 false-positive \"Reachability guard at line 40\""
+    expect:
+      triggered: true
+      contains: ["Dismiss this finding", "yes", "no"]
+      not_contains: ["Dismissed —", "Ledger updated"]
+
+  # ── Invalid fingerprint ───────────────────────────────────────────────────
+  - id: invalid-fingerprint-format
+    description: "Must reject malformed fingerprint"
+    input: "/dismiss abc123 false-positive \"some reason\""
+    expect:
+      triggered: true
+      contains: ["Usage", "FP-"]
+      not_contains: ["Dismissed"]
+
+  # ── Cannot dismiss already-fixed finding ─────────────────────────────────
+  - id: cannot-dismiss-fixed-finding
+    description: "Must refuse to dismiss a finding already in Fixed Findings"
+    input: "/dismiss FP-fixed001 false-positive \"already fixed\""
+    expect:
+      triggered: true
+      contains: ["Fixed", "cannot dismiss"]
+      not_contains: ["moving", "Dismissed —"]
+
+  # ── Critical/High accepted-risk warning ───────────────────────────────────
+  - id: accepted-risk-critical-warns
+    description: "Must surface warning for accepted-risk on Critical/High findings"
+    input: "/dismiss FP-crit0001 accepted-risk \"Mitigated at infrastructure layer\""
+    expect:
+      triggered: true
+      contains: ["Critical", "accepted-risk", "visible"]
+      not_contains: []
+
+  # ── Undo path ─────────────────────────────────────────────────────────────
+  - id: undo-moves-back-to-open
+    description: "--undo must move finding back to Open Findings"
+    input: "/dismiss FP-a1b2c3d4 --undo"
+    expect:
+      triggered: true
+      contains: ["Open Findings", "Undone"]
+      not_contains: ["Dismissed —"]
+
+  - id: undo-not-found-in-dismissed
+    description: "--undo on a finding not in Dismissed must explain clearly"
+    input: "/dismiss FP-notdismissed --undo"
+    expect:
+      triggered: true
+      contains: ["not in Dismissed"]
+      not_contains: ["moved back", "Undone"]
+
+  # ── verify-flag re-opened findings ───────────────────────────────────────
+  - id: verify-flag-warning-shown
+    description: "Must warn when dismissing a finding that was re-opened due to code change"
+    input: "/dismiss FP-reopen01 wont-fix \"test code only\""
+    expect:
+      triggered: true
+      contains: ["previously dismissed", "code changed"]
+      not_contains: []

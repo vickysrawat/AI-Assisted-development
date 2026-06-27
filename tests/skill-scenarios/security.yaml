@@ -1,0 +1,36 @@
+skill: security
+scenarios:
+  - id: static-asset-audit-runs-first
+    description: "Step 0.5 must check public/ before SAST analysis"
+    input: "Run a security review. The project has a public/data.json file."
+    expect:
+      triggered: true
+      contains:
+        - "public"
+        - "CRITICAL"
+      not_contains:
+        - "High"
+
+  - id: business-override-immigration-pii
+    description: "Immigration PII must be rated Critical even if CVSS is lower"
+    input: |
+      Review this for security:
+      console.log('Processing case for A-Number: ' + client.alienNumber);
+    expect:
+      triggered: true
+      contains:
+        - "Critical"
+        - "B2"
+      not_contains:
+        - "Low"
+
+  - id: full-flag-scope-report
+    description: "Security review with --full must report 0 files skipped"
+    input: "Run a security review --full"
+    expect:
+      triggered: true
+      contains:
+        - "SCOPE_FLAG"
+        - "--full"
+      not_contains:
+        - "Files skipped (cache): [^0]"

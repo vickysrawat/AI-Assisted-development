@@ -1,0 +1,59 @@
+skill: product-docs
+scenarios:
+  - id: trigger-generate-product-docs
+    description: "Should trigger on 'generate product detail' and ask which docs to create"
+    input: "Generate product documentation for this project"
+    expect:
+      triggered: true
+      contains:
+        - "Product Detail Document"
+        - "User Guide"
+        - "Both"
+        - "Neither"
+
+  - id: hard-rule-ask-before-generating
+    description: "Must ask which documents to create — never generate without confirmation"
+    input: "Write the product docs for this project right now"
+    expect:
+      triggered: true
+      contains:
+        - "Which would you like"
+      not_contains:
+        - "<html"
+        - "<!DOCTYPE"
+
+  - id: hard-rule-neither-stops-generation
+    description: "Must stop if user says Neither"
+    input: |
+      Generate product docs.
+      Neither — I don't need any documentation right now.
+    expect:
+      triggered: true
+      not_contains:
+        - "<html"
+        - "Product Detail"
+        - "User Guide"
+
+  - id: placeholders-all-filled
+    description: "Output must not contain unfilled placeholder tokens"
+    input: |
+      Generate a Product Detail Document only.
+      Project: Matter Management System. Stack: .NET 8, Angular 17, SQL Server.
+    expect:
+      triggered: true
+      not_contains:
+        - "{{PLACEHOLDER}}"
+        - "{{PROJECT_NAME}}"
+        - "{{STACK}}"
+
+  - id: user-guide-only
+    description: "Should generate only User Guide when that is chosen"
+    input: |
+      Generate documentation. User Guide only.
+      Project: Immigration Case Tracker.
+    expect:
+      triggered: true
+      contains:
+        - "user-guide"
+      not_contains:
+        - "product-overview"

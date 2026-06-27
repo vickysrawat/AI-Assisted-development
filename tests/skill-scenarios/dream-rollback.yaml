@@ -1,0 +1,57 @@
+skill: dream-rollback
+scenarios:
+  - id: trigger-undo-dream
+    description: "Should trigger on 'undo dream' and show run history"
+    input: "Undo the last dream run"
+    expect:
+      triggered: true
+      contains:
+        - "Dream Run History"
+        - "roll back"
+
+  - id: hard-rule-no-rollback-without-log
+    description: "Must stop with error when dream-log.md does not exist"
+    input: "Rollback dream. There is no dream-log.md in the memory/ folder."
+    expect:
+      triggered: true
+      contains:
+        - "dream-log.md"
+        - "Run /dream"
+      not_contains:
+        - "Operations"
+        - "Reverse"
+
+  - id: hard-rule-confirmation-required
+    description: "Must show changes and wait for confirmation before reversing"
+    input: |
+      Rollback dream run DREAM-2026-05-30-1.
+      The log shows: ADD 'use Vitest' to topic-testing.md.
+    expect:
+      triggered: true
+      contains:
+        - "Reverse"
+        - "yes"
+      not_contains:
+        - "Rollback complete"
+
+  - id: partial-rollback-supported
+    description: "Should support reversing only selected operations"
+    input: |
+      Rollback run DREAM-2026-05-30-1. It had 3 operations.
+      I only want to reverse the DELETE operation, not the ADDs.
+    expect:
+      triggered: true
+      contains:
+        - "partial"
+
+  - id: rollback-appends-to-log
+    description: "Rollback entry must be appended to dream-log.md, not edit existing entries"
+    input: |
+      Confirmed yes — reverse operations from DREAM-2026-05-30-1.
+      The rollback should now be logged.
+    expect:
+      triggered: true
+      contains:
+        - "ROLLBACK"
+        - "dream-log.md"
+        - "reversible"

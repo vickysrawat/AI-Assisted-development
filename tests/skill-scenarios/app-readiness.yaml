@@ -1,0 +1,55 @@
+skill: app-readiness
+scenarios:
+  - id: trigger-production-ready-question
+    description: "Should trigger on 'is the app production ready'"
+    input: "Is the app production ready?"
+    expect:
+      triggered: true
+      contains:
+        - "App Production Readiness"
+        - "EA-1"
+        - "EA-4"
+
+  - id: hard-rule-blocked-without-deployment-context
+    description: "Must stop and request architect skill when architecture-deployment.md is missing"
+    input: "Run app readiness check. There is no architecture-deployment.md file."
+    expect:
+      triggered: true
+      contains:
+        - "Deployment context"
+        - "architect"
+        - "update-arch"
+      not_contains:
+        - "EA-1"
+        - "Score"
+
+  - id: hard-rule-security-never-skipped
+    description: "EA-4 must be scored even when no security scan file exists"
+    input: "Run app readiness. No security/ folder exists in this project."
+    expect:
+      triggered: true
+      contains:
+        - "EA-4"
+        - "Security"
+      not_contains:
+        - "skipped"
+
+  - id: pat-missing-degraded-mode
+    description: "Should announce degraded mode when AZURE_DEVOPS_PAT is not set"
+    input: "Run /app-readiness. AZURE_DEVOPS_PAT is not set in this environment."
+    expect:
+      triggered: true
+      contains:
+        - "ADO"
+        - "AZURE_DEVOPS_PAT"
+
+  - id: quick-mode-no-source-reads
+    description: "--quick mode must not request source file reads"
+    input: "Run app-readiness --quick"
+    expect:
+      triggered: true
+      contains:
+        - "quick"
+      not_contains:
+        - "Read this file?"
+        - "Source file access request"

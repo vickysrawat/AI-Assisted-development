@@ -1,0 +1,63 @@
+skill: ado-tasks
+scenarios:
+  - id: trigger-break-down-story
+    description: "Should trigger on 'break down this story' and produce task list"
+    input: "Break down this story into ADO tasks: ICEA for ADO #2210 — add matter search filter"
+    expect:
+      triggered: true
+      contains:
+        - "Angular"
+        - ".NET"
+        - "QA"
+        - "h"
+
+  - id: hard-rule-always-qa-tasks
+    description: "Must always include QA tasks regardless of stack"
+    input: |
+      Break down this story. ICEA for ADO #1900:
+      Context: Backend-only API change, no frontend.
+      AC-1: New /api/matters endpoint returns paginated results.
+    expect:
+      triggered: true
+      contains:
+        - "QA"
+      not_contains:
+        - "Angular"
+
+  - id: hard-rule-no-tasks-without-icea
+    description: "Must ask for ICEA when none is provided"
+    input: "Create ADO tasks for the search filter feature"
+    expect:
+      triggered: true
+      contains:
+        - "ICEA"
+      not_contains:
+        - "h"
+        - "Angular task"
+
+  - id: hard-rule-no-generic-implement-task
+    description: "Must not generate a single 'implement feature' task — must be per-AC"
+    input: |
+      Generate tasks. ICEA for ADO #3001:
+      AC-1: Add filter by status to matter list.
+      AC-2: Filter state persists on page reload.
+    expect:
+      triggered: true
+      contains:
+        - "AC-1"
+        - "AC-2"
+      not_contains:
+        - "Implement feature"
+        - "implement the feature"
+
+  - id: effort-estimate-summary
+    description: "Should output an effort estimate summary table"
+    input: |
+      Break down ADO #2500. ICEA:
+      AC-1: New Angular component displays client name.
+      AC-2: .NET endpoint returns formatted name.
+    expect:
+      triggered: true
+      contains:
+        - "EFFORT"
+        - "TOTAL"

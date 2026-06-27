@@ -1,0 +1,15 @@
+skill: update-arch
+scenarios:
+  - id: stops-if-no-domain-map
+    description: "Should stop and direct to dream-init if no domain-map"
+    input: "/update-arch"
+    expect:
+      contains: ["dream-init", "domain-map.md"]
+      not_contains: ["Updated areas"]
+
+  - id: preserves-unchanged-areas
+    description: "Must not delete unchanged areas from the map"
+    input: "/update-arch src/services/"
+    expect:
+      contains: ["Unchanged", "skipping"]
+      not_contains: ["deleted", "removed"]

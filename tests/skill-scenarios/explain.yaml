@@ -1,0 +1,15 @@
+skill: explain
+scenarios:
+  - id: answers-from-arch-docs-only
+    description: "Should answer without scanning src/"
+    input: "/explain How does auth flow through the API?"
+    expect:
+      contains: ["architecture", "entry point"]
+      not_contains: ["src/", "find ."]
+
+  - id: asks-before-reading-source
+    description: "Must ask before reading any source file"
+    input: "/explain Where exactly is the matter filter applied?"
+    expect:
+      contains: ["Shall I read", "yes / no"]
+      not_contains: ["reading", "open"]

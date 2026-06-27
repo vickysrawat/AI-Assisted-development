@@ -1,0 +1,51 @@
+skill: security-review
+scenarios:
+  - id: trigger-security-review
+    description: "Should trigger on security review request and invoke the security skill"
+    input: "Run /security-review on this codebase"
+    expect:
+      triggered: true
+      contains:
+        - "security"
+        - "scan"
+
+  - id: scope-flag-changed
+    description: "Should pass --changed flag through to the security skill"
+    input: "Run /security-review --changed"
+    expect:
+      triggered: true
+      contains:
+        - "--changed"
+
+  - id: scope-flag-ci
+    description: "Should pass --ci flag and emit cache-presence warning if cache exists"
+    input: "Run /security-review --ci"
+    expect:
+      triggered: true
+      contains:
+        - "--ci"
+
+  - id: writes-security-ledger
+    description: "Must write security/security-ledger.md after completing the scan"
+    input: "Run a full security review"
+    expect:
+      triggered: true
+      contains:
+        - "security/security-ledger.md"
+        - "FP-"
+
+  - id: ledger-fingerprint-format
+    description: "Findings with source-level fixes must have FP-xxxxxxxx fingerprint IDs"
+    input: "Run /security-review and show findings"
+    expect:
+      triggered: true
+      contains:
+        - "FP-"
+
+  - id: advisory-findings-no-fingerprint
+    description: "Advisory-only findings (no code fix) must be marked manual-fix-required, not get FP IDs"
+    input: "Run /security-review — include advisory findings"
+    expect:
+      triggered: true
+      contains:
+        - "manual-fix-required"

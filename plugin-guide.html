@@ -1,0 +1,2362 @@
+<!DOCTYPE html>
+<!-- documents-plugin-version: 2.6.0 -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ai-assisted-development — Developer Guide</title>
+  <style>
+    :root {
+      --bg:        #f1f5f9;
+      --surface:   #ffffff;
+      --surface2:  #f8fafc;
+      --border:    #e2e8f0;
+      --accent:    #3b82f6;
+      --accent2:   #06b6d4;
+      --gold:      #f59e0b;
+      --green:     #10b981;
+      --red:       #ef4444;
+      --amber:     #f59e0b;
+      --text:      #0f172a;
+      --muted:     #475569;
+      --dim:       #94a3b8;
+      --mono:      'Consolas', 'Cascadia Code', 'Courier New', monospace;
+      --display:   'Calibri', 'Candara', 'Segoe UI', sans-serif;
+      --body:      'Calibri', 'Candara', 'Segoe UI', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--body);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #e2e8f0; }
+    ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 60px 48px 56px;
+      background: #111827;
+      border-bottom: 1px solid #1e2d45;
+    }
+    .hero-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+    .hero-glow {
+      position: absolute;
+      top: -120px; left: -120px;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-content { position: relative; }
+    .hero-tag {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px; letter-spacing: 2px;
+      text-transform: uppercase; color: #67e8f9;
+      border: 1px solid rgba(6,182,212,0.3);
+      padding: 5px 14px; border-radius: 20px;
+      background: rgba(6,182,212,0.06); margin-bottom: 20px;
+    }
+    .hero-tag::before { content: ''; width: 6px; height: 6px;
+      background: var(--accent2); border-radius: 50%;
+      animation: pulse 2s infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.3; }
+    }
+    .hero h1 {
+      font-family: var(--display); font-size: clamp(2.8rem, 5vw, 4.8rem); font-weight: 800;
+      line-height: 1.05; letter-spacing: -1.5px; margin-bottom: 16px; color: #f1f5f9;
+    }
+    .hero h1 em { font-style: normal; color: var(--accent); }
+    .hero .sub {
+      font-size: 1.1rem; color: #94a3b8;
+      line-height: 1.6; margin-bottom: 32px;
+    }
+    .hero-badges { display: flex; gap: 10px; flex-wrap: wrap; }
+    .badge {
+      font-family: var(--mono); font-size: 11px; font-weight: 600;
+      padding: 5px 13px; border-radius: 6px; letter-spacing: 0.5px;
+    }
+    .badge-blue  { background: rgba(59,130,246,0.12); color: #93c5fd; border: 1px solid rgba(59,130,246,0.25); }
+    .badge-cyan  { background: rgba(6,182,212,0.1);  color: #67e8f9; border: 1px solid rgba(6,182,212,0.2); }
+    .badge-gold  { background: rgba(245,158,11,0.1); color: #fcd34d; border: 1px solid rgba(245,158,11,0.2); }
+    .badge-green { background: rgba(16,185,129,0.1); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.2); }
+
+    /* ── Layout ── */
+    .layout { display: grid; grid-template-columns: 300px 1fr; min-height: calc(100vh - 200px); }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      position: sticky; top: 0; height: 100vh;
+      overflow-y: auto; padding: 36px 0;
+      background: #111827; border-right: 1px solid #1e2d45;
+    }
+    .sidebar-section { margin-bottom: 4px; }
+    .sidebar-label {
+      font-family: var(--mono); font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 2px; color: var(--dim);
+      padding: 10px 24px 6px;
+    }
+    .sidebar a {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 24px; text-decoration: none;
+      color: #94a3b8; font-size: 15px;
+      border-left: 2px solid transparent;
+      transition: all 0.12s;
+    }
+    .sidebar a:hover { color: #f1f5f9; border-left-color: var(--accent); background: rgba(59,130,246,0.05); }
+    .sidebar a.active { color: var(--accent); border-left-color: var(--accent); background: rgba(59,130,246,0.1); }
+    .sidebar a .step-dot {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: #1a2235; border: 1px solid #1e2d45;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-size: 11px; flex-shrink: 0;
+    }
+    .sidebar a.mandatory .step-dot { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); color: #fca5a5; }
+    .sidebar a.recommended .step-dot { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3); color: #fcd34d; }
+    .sidebar a.optional .step-dot { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.2); color: #6ee7b7; }
+
+    /* ── Main content ── */
+    main { padding: 52px 40px 100px; width: 100%; }
+
+    /* ── Section ── */
+    section { margin-bottom: 72px; scroll-margin-top: 32px; }
+
+    .section-eyebrow {
+      font-family: var(--mono); font-size: 14px; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: #0e7490; margin-bottom: 10px;
+    }
+
+    h2 {
+      font-family: var(--display); font-size: 1.8rem; font-weight: 700;
+      color: #0f172a; margin-bottom: 8px; line-height: 1.2;
+    }
+    h2 .accent { color: var(--accent); }
+
+    .section-intro { color: var(--muted); font-size: 0.95rem; margin-bottom: 28px; }
+    .bullet-list, .numbered-list { margin: 0 0 20px; padding-left: 22px; color: var(--text, #334155); font-size: 0.92rem; line-height: 1.7; }
+    .bullet-list li, .numbered-list li { margin-bottom: 8px; }
+    .bullet-list { list-style: disc; }
+    .numbered-list { list-style: decimal; }
+
+    h3 {
+      font-family: var(--display); font-size: 1.05rem; font-weight: 700;
+      color: #1e293b; margin: 28px 0 12px;
+    }
+    p { color: var(--muted); margin-bottom: 12px; font-size: 0.94rem; }
+    .step-card p:last-child { margin-bottom: 0; }
+
+    /* ── Step cards ── */
+    .step-card {
+      position: relative;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 28px 28px 28px 72px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .step-card:hover { border-color: #94a3b8; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+    .step-card.mandatory { border-left: 4px solid #dc2626; }
+    .step-card.recommended { border-left: 4px solid #d97706; }
+    .step-card.optional { border-left: 4px solid #059669; }
+
+    .step-number {
+      position: absolute; left: 22px; top: 26px;
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-size: 13px; font-weight: 600;
+    }
+    .mandatory .step-number  { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+    .recommended .step-number { background: #fef3c7; color: #d97706; border: 1px solid #fcd34d; }
+    .optional .step-number   { background: #d1fae5; color: #059669; border: 1px solid #6ee7b7; }
+
+    .step-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 10px; }
+    .step-title { font-family: var(--display); font-size: 1.05rem; font-weight: 700; color: var(--text); }
+
+    .tag {
+      font-family: var(--mono); font-size: 10px; font-weight: 600;
+      padding: 3px 10px; border-radius: 4px; white-space: nowrap;
+      text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0;
+    }
+    .tag-mandatory   { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+    .tag-recommended { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
+    .tag-optional    { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+    .tag-once        { background: #cffafe; color: #0e7490; border: 1px solid #67e8f9; }
+    .tag-recurring   { background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; }
+
+    .step-desc { color: var(--muted); font-size: 0.92rem; margin-bottom: 14px; }
+
+    /* ── Warning block ── */
+    .warning {
+      background: #fff1f2; border: 1px solid #fca5a5;
+      border-radius: 8px; padding: 12px 16px; margin-top: 12px;
+      font-size: 0.87rem; color: #9f1239; display: flex; gap: 10px; line-height: 1.5;
+    }
+    .warning strong { color: #7f1d1d; }
+    .warning .wi { flex-shrink: 0; margin-top: 1px; }
+
+    /* ── Info block ── */
+    .info {
+      background: #eff6ff; border: 1px solid #93c5fd;
+      border-radius: 8px; padding: 12px 16px; margin-top: 12px;
+      font-size: 0.87rem; color: #1e40af; display: flex; gap: 10px; line-height: 1.5;
+    }
+    .info strong { color: #1e3a8a; }
+    .warning code { background: rgba(159,18,57,0.08); border-color: #fca5a5; color: #7f1d1d; }
+    .info code { background: rgba(30,64,175,0.08); border-color: #93c5fd; color: #1e3a8a; }
+    .info .wi { flex-shrink: 0; }
+
+    /* ── Code blocks ── */
+    .code-block {
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 8px; overflow: hidden; margin: 14px 0;
+      font-family: var(--mono);
+    }
+    .code-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px; background: #0f172a;
+      border-bottom: 1px solid #334155;
+    }
+    .code-lang { font-size: 11px; color: #94a3b8; letter-spacing: 0.5px; }
+    .code-body { padding: 16px 20px; font-size: 12.5px; line-height: 1.7; overflow-x: auto; white-space: pre; color: #e2e8f0; }
+    .code-body pre { padding: 0; margin: 0; background: none; border: none; border-radius: 0; font-size: inherit; line-height: inherit; white-space: pre; }
+    .code-body .kw  { color: #7dd3fc; }
+    .code-body .str { color: #86efac; }
+    .code-body .cmt { color: #94a3b8; font-style: italic; }
+    .code-body .cmd { color: #f9a8d4; }
+    .code-body .var { color: #fde68a; }
+
+    /* ── Command pill ── */
+    .cmd-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.25);
+      color: #93c5fd; padding: 4px 12px; border-radius: 6px;
+      margin: 3px 4px 3px 0;
+    }
+    .cmd-pill::before { content: '/'; color: var(--accent2); font-weight: 700; }
+
+    /* ── Inline code ── */
+    code {
+      font-family: var(--mono); font-size: 12px;
+      background: #f1f5f9; border: 1px solid #cbd5e1;
+      padding: 1px 6px; border-radius: 4px; color: #0f172a;
+    }
+
+    /* ── Feature grid ── */
+    .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+    .feature-card {
+      background: #ffffff; border: 1px solid #e2e8f0;
+      border-radius: 10px; padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      transition: border-color 0.12s, transform 0.12s, box-shadow 0.12s;
+    }
+    .feature-card:hover { border-color: #94a3b8; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .feature-card .fc-icon { font-size: 1.4rem; margin-bottom: 10px; }
+    .feature-card .fc-name {
+      font-family: var(--display); font-size: 0.92rem; font-weight: 700;
+      color: #0f172a; margin-bottom: 4px;
+    }
+    .feature-card .fc-trigger {
+      font-family: var(--mono); font-size: 10px; color: #0e7490;
+      margin-bottom: 8px;
+    }
+    .feature-card .fc-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+
+    /* ── Command table ── */
+    .cmd-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
+    .cmd-table thead th {
+      font-family: var(--mono); font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1.2px; color: #475569;
+      padding: 10px 16px; border-bottom: 2px solid #e2e8f0;
+      text-align: left; background: #f8fafc;
+    }
+    .cmd-table tbody td {
+      padding: 12px 16px; border-bottom: 1px solid #e2e8f0;
+      font-size: 0.88rem; vertical-align: top;
+    }
+    .cmd-table tbody tr:last-child td { border-bottom: none; }
+    .cmd-table tbody tr:hover td { background: #f8fafc; }
+    .cmd-table td:first-child { font-family: var(--mono); font-size: 11.5px; color: #1d4ed8; white-space: nowrap; }
+    .cmd-table td:last-child { color: var(--muted); }
+
+    /* ── Flow diagram ── */
+    .flow {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 0;
+      background: #f8fafc; border: 1px solid var(--border);
+      border-radius: 10px; padding: 20px 24px; margin: 16px 0;
+      overflow-x: auto;
+    }
+    .flow-step {
+      background: #ffffff; border: 1px solid #cbd5e1;
+      border-radius: 8px; padding: 10px 16px;
+      font-size: 12.5px; white-space: nowrap;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .flow-step .fs-label { font-family: var(--mono); font-size: 10px; color: #64748b; }
+    .flow-step .fs-name { color: #1e293b; font-weight: 600; }
+    .flow-arrow {
+      color: var(--accent); font-size: 1.1rem; padding: 0 10px;
+      flex-shrink: 0;
+    }
+
+    /* ── Lifecycle timeline ── */
+    .timeline { position: relative; padding-left: 28px; }
+    .timeline::before {
+      content: ''; position: absolute; left: 6px; top: 8px; bottom: 8px;
+      width: 2px; background: var(--border);
+    }
+    .tl-item { position: relative; margin-bottom: 28px; }
+    .tl-dot {
+      position: absolute; left: -26px; top: 4px;
+      width: 14px; height: 14px; border-radius: 50%;
+      border: 2px solid;
+    }
+    .tl-dot.once      { background: rgba(6,182,212,0.2); border-color: var(--accent2); }
+    .tl-dot.recurring { background: rgba(139,92,246,0.2); border-color: #8b5cf6; }
+    .tl-dot.ongoing   { background: rgba(16,185,129,0.2); border-color: var(--green); }
+    .tl-title { font-family: var(--display); font-size: 0.95rem; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+    .tl-meta  { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-bottom: 6px; }
+    .tl-desc  { font-size: 0.88rem; color: var(--muted); }
+
+    /* ── Footer ── */
+    footer {
+      background: #111827; border-top: 1px solid #1e2d45;
+      padding: 28px 64px; display: flex; justify-content: space-between;
+      align-items: center; font-size: 12px; color: var(--dim);
+      font-family: var(--mono);
+    }
+    footer span { color: #94a3b8; }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      main { padding: 32px 24px 80px; }
+      .hero { padding: 48px 24px 40px; }
+      .hero h1 { font-size: 2.2rem; }
+      .feature-grid { grid-template-columns: 1fr; }
+      footer { flex-direction: column; gap: 8px; padding: 24px; }
+    }
+    @media print {
+      .sidebar { display: none; }
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════ HERO ═══════════════════ -->
+<header class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+  <div class="hero-content">
+    <div class="hero-tag" style="margin-bottom:12px;">Claude Code Plugin · v2.6.0</div>
+    <h1>ai-assisted-<em>development</em></h1>
+    <p class="sub">
+      ICEA-driven development workflow for distributed .NET · Angular · Node.js teams.
+      Enforces spec-first coding, automates PR workflows, consolidates session memory,
+      and guards code quality with scoped rules — all inside Claude Code.
+    </p>
+    <div class="hero-badges">
+        <span class="badge badge-gold">v2.6.0</span>
+      <span class="badge badge-blue">.NET 8 / 10</span>
+      <span class="badge badge-cyan">Angular 17+</span>
+      <span class="badge badge-cyan">Java / Spring Boot</span>
+      <span class="badge badge-cyan">Python</span>
+      <span class="badge badge-cyan">Node.js</span>
+      <span class="badge badge-gold">Azure DevOps</span>
+      <span class="badge badge-green">Claude Code</span>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- ═══════════════════ SIDEBAR ═══════════════════ -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Getting Started</div>
+      <a href="#why-this-exists" class="optional">
+        <span class="nav-icon">◈</span> Why this exists
+      </a>
+      <a href="#prerequisites" class="mandatory">
+        <span class="step-dot">1</span> Prerequisites
+      </a>
+      <a href="#install" class="mandatory">
+        <span class="step-dot">2</span> Install Plugin
+      </a>
+      <a href="#verify" class="mandatory">
+        <span class="step-dot">3</span> Verify Installation
+      </a>
+      <a href="#project-setup" class="mandatory">
+        <span class="step-dot">4</span> Project Setup
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Next Steps</div>
+      <a href="#pat" class="mandatory">
+        <span class="step-dot">5</span> ADO PAT Setup
+      </a>
+      <a href="#architecture" class="recommended">
+        <span class="step-dot">6</span> Architecture Docs
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Daily Usage</div>
+      <a href="#structure" class="optional">
+        <span class="step-dot">→</span> Plugin Structure
+      </a>
+      <a href="#commands" class="optional">
+        <span class="step-dot">→</span> All Commands
+      </a>
+      <a href="#skills" class="optional">
+        <span class="step-dot">→</span> Skills Reference
+      </a>
+      <a href="#rules" class="optional">
+        <span class="step-dot">→</span> Rules
+      </a>
+      <a href="#workflow" class="optional">
+        <span class="step-dot">→</span> Dev Workflow
+      </a>
+      <a href="#security-review-guide" class="optional">
+        <span class="nav-icon">🛡</span>Security Review
+      </a>
+      <a href="#testing" class="optional">
+        <span class="nav-icon">✓</span>Testing
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Maintenance</div>
+      <a href="#dream-status" class="recommended">
+        <span class="nav-icon">🟢</span>Dream Status
+      </a>
+      <a href="#dream-rollback" class="recommended">
+        <span class="nav-icon">↩</span>Dream Rollback
+      </a>
+      <a href="#dream" class="recommended">
+        <span class="step-dot">→</span> Run Dream
+      </a>
+      <a href="#design-philosophy" class="optional">
+        <span class="nav-icon">🎯</span>Design Philosophy
+      </a>
+      <a href="#model-routing" class="optional">
+        <span class="nav-icon">🤖</span>Model Routing
+      </a>
+      <a href="#token-efficiency" class="optional">
+        <span class="nav-icon">⚡</span>Token Efficiency
+      </a>
+      <a href="#tokens" class="optional">
+        <span class="step-dot">→</span> Token Analysis
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Extending the Plugin</div>
+      <a href="#repo-layout" class="optional">
+        <span class="nav-icon">📁</span>Repository Layout
+      </a>
+      <a href="#adding-skill" class="optional">
+        <span class="nav-icon">➕</span>Adding a Skill
+      </a>
+      <a href="#adding-command" class="optional">
+        <span class="nav-icon">➕</span>Adding a Command
+      </a>
+      <a href="#shared-primitives" class="optional">
+        <span class="nav-icon">🔗</span>Shared Primitives
+      </a>
+      <a href="#releasing" class="optional">
+        <span class="nav-icon">🏷</span>Releasing a Version
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <a href="#update" class="optional">
+        <span class="step-dot">→</span> Update / Uninstall
+      </a>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════ MAIN ═══════════════════ -->
+  <main>
+
+    <!-- ───────── WHY ───────── -->
+    <section id="why-this-exists">
+      <div class="section-eyebrow">Context — five versions, three lessons</div>
+      <h2>Why this <em class="accent">exists</em></h2>
+      <p class="section-intro">The plugin grew from a real problem: an AI assistant that was brilliant in isolation but inconsistent under pressure.</p>
+
+      <div class="step-card recommended">
+        <div class="step-number">📖</div>
+        <div class="step-header">
+          <div class="step-title">The three lessons that shaped every design decision</div>
+          <span class="tag tag-recommended">Architecture rationale</span>
+        </div>
+        <table class="cmd-table" style="margin-top:10px;">
+          <thead><tr><th>Lesson</th><th>What happened</th><th>What it became</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Stateless skills are expensive</strong></td>
+              <td>Code review rescanned all 50 files daily even when only 2 changed. Security loaded Python, JS, and Java refs for a pure C# codebase. Three skills, three independent scan implementations.</td>
+              <td>Shared primitives layer: <code>domain-map.md</code>, <code>file-cache.json</code>, scope flags. 80–95% token savings after first baseline run.</td>
+            </tr>
+            <tr>
+              <td><strong>Orientation docs beat source reads</strong></td>
+              <td>Every skill read source files to understand structure. The ICEA skill was opening half the codebase on every invocation.</td>
+              <td><code>domain-map.md</code> maps feature areas to entry-point files. Skills orient in one read. Source consent spec governs when source is actually needed.</td>
+            </tr>
+            <tr>
+              <td><strong>The .gitignore from day one</strong></td>
+              <td>A PAT in <code>.claude/settings.json</code> that is not gitignored is a real credential leak. Easy to forget under delivery pressure.</td>
+              <td>Plugin handles this at setup, audits it in check 9 of <code>dream-status</code>, and defaults to Windows User Environment Variables.</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="info" style="margin-top:12px;">
+          <span class="wi">ℹ</span>
+          <span>
+            The ICEA gate changed developer behaviour not through enforcement but through incentive alignment.
+            A bad spec meant a blocked PR. Developers started writing better IECAs because the gate made
+            the cost of a thin spec visible — one well-written spec prevents three bounced PRs.
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── PREREQUISITES ───────── -->
+    <section id="prerequisites">
+      <div class="section-eyebrow">Step 1</div>
+      <h2>Prerequisites</h2>
+      <p class="section-intro">Confirm these are installed before touching anything else. The plugin will partially or silently fail without them.</p>
+
+      <div class="step-card mandatory">
+        <div class="step-number">1</div>
+        <div class="step-header">
+          <div class="step-title">Claude Code CLI</div>
+          <span class="tag tag-mandatory">Mandatory</span>
+        </div>
+        <p class="step-desc">The plugin runs inside Claude Code. Install it globally via npm.</p>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">bash</span></div>
+          <div class="code-body"><pre><span class="cmd">npm install -g @anthropic-ai/claude-code</span>
+<span class="cmt"># Verify</span>
+<span class="cmd">claude --version</span></pre></div>
+        </div>
+        <div class="warning">
+          <span class="wi">⚠</span>
+          <span>Without Claude Code, none of the commands, skills, or rules will load. The install scripts will fail at the final registration step.</span>
+        </div>
+      </div>
+
+      <div class="step-card mandatory">
+        <div class="step-number">2</div>
+        <div class="step-header">
+          <div class="step-title">Node.js ≥ 18 and Git</div>
+          <span class="tag tag-mandatory">Mandatory</span>
+        </div>
+        <p class="step-desc">Required by Claude Code and the install scripts.</p>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">bash</span></div>
+          <div class="code-body"><pre><span class="cmd">node --version</span>   <span class="cmt"># must be ≥ 18</span>
+<span class="cmd">git --version</span>    <span class="cmt"># any recent version</span></pre></div>
+        </div>
+        <div class="warning">
+          <span class="wi">⚠</span>
+          <span>The install scripts use Node.js to update <code>settings.json</code>. Without it the plugin installs but never registers — it will not appear in <code>claude plugin list</code>.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── INSTALL ───────── -->
+    <section id="install">
+      <div class="section-eyebrow">Step 2</div>
+      <h2>Install the <em class="accent">Plugin</em></h2>
+      <p class="section-intro">Run the install script once per machine — not once per project. The plugin installs to user scope and is available across all your repos.</p>
+
+      <div class="step-card mandatory">
+        <div class="step-number">1</div>
+        <div class="step-header">
+          <div class="step-title">Windows — PowerShell (recommended)</div>
+          <span class="tag tag-mandatory">Mandatory</span>
+        </div>
+        <p class="step-desc">Clone or download the plugin repo, then run the installer from that folder.</p>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">powershell</span></div>
+          <div class="code-body"><pre><span class="cmt"># If you see "not digitally signed", run this once as Administrator first:</span>
+<span class="kw">Set-ExecutionPolicy</span> <span class="var">-ExecutionPolicy</span> RemoteSigned <span class="var">-Scope</span> CurrentUser
+
+<span class="cmt"># Then run the installer:</span>
+<span class="cmd">.\install.ps1</span></pre></div>
+        </div>
+        <div class="info">
+          <span class="wi">ℹ</span>
+          <span>The script asks: <strong>Clone from ADO</strong> (pulls latest) or <strong>Copy from local folder</strong> (uses files you have). Choose Clone for a clean install.</span>
+        </div>
+      </div>
+
+      <div class="step-card mandatory">
+        <div class="step-number">2</div>
+        <div class="step-header">
+          <div class="step-title">Mac / Linux — Git Bash (no admin required)</div>
+          <span class="tag tag-mandatory">Mandatory</span>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">bash</span></div>
+          <div class="code-body"><pre><span class="cmd">bash install.sh</span></pre></div>
+        </div>
+        <div class="warning">
+          <span class="wi">⚠</span>
+          <span>Do <strong>not</strong> run the installer inside a Claude Code session. Run it in a plain terminal. Running inside Claude Code can cause the plugin registration to conflict with the running instance.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── VERIFY ───────── -->
+    <section id="verify">
+      <div class="section-eyebrow">Step 3</div>
+      <h2>Verify <em class="accent">Installation</em></h2>
+      <p class="section-intro">Confirm the plugin registered correctly before doing anything else. A broken registration means commands silently do nothing.</p>
+
+      <div class="step-card mandatory">
+        <div class="step-number">✓</div>
+        <div class="step-header">
+          <div class="step-title">Check plugin is registered</div>
+          <span class="tag tag-mandatory">Mandatory</span>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">bash</span></div>
+          <div class="code-body"><pre><span class="cmt"># Should list ai-assisted-development</span>
+<span class="cmd">claude plugin list --scope user</span>
+
+<span class="cmt"># Should show all commands and skills</span>
+<span class="cmd">claude plugin show ai-assisted-development</span></pre></div>
+        </div>
+        <div class="warning">
+          <span class="wi">⚠</span>
+          <span>If <code>ai-assisted-development</code> does not appear in the list, the registration failed. Re-run the install script. If it still fails, check that Node.js is on your PATH and <code>~/.claude/settings.json</code> is writable.</span>
+        </div>
+      </div>
+
+      <div class="step-card mandatory">
+        <div class="step-number">✓</div>
+        <div class="step-header">
+          <div class="step-title">Open Claude Code and check the slash picker</div>
+          <span class="tag tag-mandatory">Mandatory</span>
+        </div>
+        <p class="step-desc">Open any project in VS Code, open the Claude Code panel, and type <code>/ai-assisted</code>. You should see the commands appear.</p>
+        <div class="info">
+          <span class="wi">ℹ</span>
+          <span>Commands only appear in VS Code after <strong>/dream-init has been run in that project</strong> (Step 4). They are visible in the CLI immediately after install.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── PROJECT SETUP ───────── -->
+    <section id="project-setup">
+      <div class="section-eyebrow">Step 4 — Run once per project</div>
+      <h2>Project <em class="accent">Setup</em></h2>
+      <p class="section-intro">
+        Run this once in every repo you want the plugin to operate in. It deploys rules,
+        command stubs, architecture templates, and ensures CLAUDE.md has Dream infrastructure.
+        Safe to re-run — skips anything already present.
+      </p>
+
+      <div class="step-card mandatory">
+        <div class="step-number">!</div>
+        <div class="step-header">
+          <div class="step-title">Run /dream-init</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <span class="tag tag-mandatory">Mandatory</span>
+            <span class="tag tag-once">Once per project</span>
+          </div>
+        </div>
+        <p class="step-desc">Open the project in Claude Code and run:</p>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">claude code</span></div>
+          <div class="code-body"><pre><span class="cmd">/ai-assisted-development:dream-init</span></pre></div>
+        </div>
+        <p class="step-desc">This creates the following in your project:</p>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">project structure</span></div>
+          <div class="code-body"><pre>your-project/
+├── <span class="var">.claude/commands/</span>      ← 36 command stubs (makes all commands visible in VS Code)
+│   ├── dream.md              ← /dream
+│   ├── dream-health.md       ← /dream-health
+│   ├── dream-init.md         ← /dream-init
+│   ├── dream-status.md       ← /dream-status  <span class="tag tag-mandatory" style="font-size:10px;padding:1px 5px;">New</span>
+│   ├── dream-rollback.md     ← /dream-rollback <span class="tag tag-mandatory" style="font-size:10px;padding:1px 5px;">New</span>
+│   ├── security-review.md    ← /security-review
+│   ├── code-review.md        ← /code-review
+│   ├── dynamic-scan.md       ← /dynamic-scan  <span class="tag tag-optional" style="font-size:10px;padding:1px 5px;">New v1.10</span>
+│   ├── token-analysis.md     ← /token-analysis
+│   ├── sprint-metrics.md     ← /sprint-metrics
+│   ├── product-docs.md       ← /product-docs
+│   ├── session-start.md      ← /session-start  <span class="tag tag-optional" style="font-size:10px;padding:1px 5px;">New v1.7</span>
+│   ├── bug.md                ← /bug  <span class="tag tag-optional" style="font-size:10px;padding:1px 5px;">New v1.7</span>
+│   ├── checkin.md            ← /checkin  <span class="tag tag-optional" style="font-size:10px;padding:1px 5px;">New v1.7</span>
+│   ├── update-arch.md        ← /update-arch  <span class="tag tag-optional" style="font-size:10px;padding:1px 5px;">New v1.7</span>
+│   ├── explain.md            ← /explain  <span class="tag tag-optional" style="font-size:10px;padding:1px 5px;">New v1.7</span>
+│   ├── fix.md                ← /fix  <span class="tag tag-optional" style="font-size:10px;padding:1px 5px;">New v1.7</span>
+│   ├── app-readiness.md      ← /app-readiness  <span class="tag tag-optional" style="font-size:10px;padding:1px 5px;">New v1.9</span>
+│   └── plugin-readiness.md   ← /plugin-readiness  <span class="tag tag-optional" style="font-size:10px;padding:1px 5px;">New v1.9</span>
+├── <span class="var">.claude/rules/</span>         ← scoped quality rules (auto-fire on file edit)
+│   ├── project-rules.md   ← all files
+│   ├── dotnet-rules.md    ← *.cs files
+│   ├── angular-rules.md   ← *.ts / *.html files
+│   ├── nodejs-rules.md    ← services / routes
+│   ├── java-rules.md      ← *.java files
+│   └── python-rules.md    ← *.py files
+├── <span class="var">.claude/architecture/</span>  ← populated by architect skill (see Step 7)
+├── <span class="var">memory/</span>
+│   ├── MEMORY.md          ← manual override inbox
+│   └── dream-log.md       ← audit trail
+├── <span class="var">.claude/</span>
+│   └── file-cache.json    ← empty cache seeded by dream-init (code-review &amp; security use this)
+│   └── dream-init-state.json  ← tracks developer-declined gitignore entries (gitignored)
+├── <span class="var">token-analysis/</span>
+│   └── token-graph.json   ← empty cache (populated on first token-analysis run)
+├── <span class="var">.claude/architecture/domain-map.md</span>  ← generated by architect skill, inside .claude/ (gitignored)
+└── <span class="var">CLAUDE.md</span>              ← generated by /init if missing, Dream sections appended</pre></div>
+        </div>
+        <div class="warning">
+          <span class="wi">⚠</span>
+          <span>
+            <strong>If you skip this step:</strong>
+            Commands will not appear in the VS Code slash picker.
+            Rules will not deploy — Claude has no guardrails when editing code.
+            CLAUDE.md will have no auto-capture triggers — session knowledge is never retained.
+            Architecture docs will not be generated — Claude re-establishes context from scratch every session.
+          </span>
+        </div>
+        <div class="info">
+          <span class="wi">ℹ</span>
+          <span>After running, update the <strong>Repository</strong> line in <code>CLAUDE.md</code> with your project's ADO repo name. Everything else is auto-populated.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── PAT SETUP ───────── -->
+    <section id="pat">
+      <div class="section-eyebrow">Step 5 — Required for direct PR submission</div>
+      <h2>Azure DevOps <em class="accent">PAT</em></h2>
+      <p class="section-intro">The <code>pr-create</code> skill can submit PRs to ADO via REST API <strong>or</strong> save a complete PR draft artifact for manual submission — a PAT is only required for direct submission. Compliance checks always run on both paths.</p>
+
+      <div class="step-card mandatory">
+        <div class="step-number">1</div>
+        <div class="step-header">
+          <div class="step-title">Create a PAT in Azure DevOps</div>
+          <span class="tag tag-mandatory">Mandatory for PR creation</span>
+        </div>
+        <p class="step-desc">Navigate to <code>https://dev.azure.com/kirklandandellis/KE</code> → profile avatar → Personal access tokens → + New Token.</p>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">settings</span></div>
+          <div class="code-body"><pre>Name       : <span class="str">claude-code-pr-create</span>
+Org        : <span class="str">kirklandandellis</span>
+Expiration : <span class="str">30–90 days</span>
+Scope      : <span class="str">Code → Read & Write  (custom defined, nothing else)</span></pre></div>
+        </div>
+        <div class="warning">
+          <span class="wi">⚠</span>
+          <span>ADO displays your token <strong>once only</strong>. Copy it immediately before closing the dialog.</span>
+        </div>
+      </div>
+
+      <div class="step-card mandatory">
+        <div class="step-number">2</div>
+        <div class="step-header">
+          <div class="step-title">Store the PAT — Option A · Windows env var <span class="tag tag-optional" style="font-size:10px;padding:1px 7px;vertical-align:middle;">Recommended</span></div>
+          <span class="tag tag-mandatory">Safest option</span>
+        </div>
+        <p class="step-desc">Win+S → "environment variables" → User variables → New → <code>AZURE_DEVOPS_PAT</code> = your token → restart VS Code. The PAT is never written to disk in the project directory — zero accidental-commit risk.</p>
+        <div class="info">
+          <span class="wi">ℹ</span>
+          <span>This is the recommended default for all developers. The PAT survives VS Code restarts and can never be accidentally committed to source control.</span>
+        </div>
+      </div>
+
+      <div class="step-card recommended">
+        <div class="step-number">2</div>
+        <div class="step-header">
+          <div class="step-title">Store the PAT — Option B · <code>.claude/settings.json</code></div>
+          <span class="tag tag-recommended">Alternative — only if gitignored</span>
+        </div>
+        <p class="step-desc">Add to <code>.claude/settings.json</code> in your repo root. Only use this option if the file is already in <code>.gitignore</code>.</p>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">json</span></div>
+          <div class="code-body"><pre>{
+  <span class="kw">"env"</span>: {
+    <span class="kw">"AZURE_DEVOPS_PAT"</span>: <span class="str">"your-token-here"</span>
+  }
+}</pre></div>
+        </div>
+        <div class="warning">
+          <span class="wi">⚠</span>
+          <span><strong>Never commit <code>.claude/settings.json</code>.</strong> Run <code>/dream-status</code> after setup — it will flag a ❌ Red credential risk if <code>settings.json</code> is present but not gitignored. Fix that before using this option.</span>
+        </div>
+        <div class="info">
+          <span class="wi">ℹ</span>
+          <span>PATs expire. When yours expires: ADO → Personal access tokens → find the expired token → Regenerate → update your storage location.</span>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ───────── DREAM STATUS ───────── -->
+    <section id="dream-status">
+      <div class="section-eyebrow">Run after dream-init · 20 checks</div>
+      <h2>Plugin Health <em class="accent">Check</em></h2>
+      <p class="section-intro">
+        <code>/dream-status</code> is a read-only health check that reports on all <strong>20 infrastructure items</strong> in one pass.
+        Run it after <code>/dream-init</code> and any time you want to verify the plugin is properly configured.
+        It never modifies anything.
+      </p>
+
+      <div class="step-card recommended">
+        <div class="step-number">✓</div>
+        <div class="step-header">
+          <div class="step-title">Run dream-status</div>
+          <span class="tag tag-recommended">Recommended after every dream-init</span>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">claude code</span></div>
+          <div class="code-body"><pre><span class="cmd">/ai-assisted-development:dream-status</span></pre></div>
+        </div>
+        <p class="step-desc">You'll get a report like this:</p>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">output</span></div>
+          <div class="code-body"><pre>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Dream Plugin Status — my-project
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  CLAUDE.md             ✅   Dream sections present
+  memory/               ✅   MEMORY.md + dream-log.md present
+  .claude/rules/        ✅   6/6 rule files present
+  .claude/commands/     ✅   36/36 stubs deployed
+  .claude/architecture/ ⚠️   2 files still showing template placeholders
+  .claude/architecture/domain-map.md  ✅   generated 2026-06-01, fresh (fingerprint verified)
+  file-cache.json       ℹ️   0 entries (first code-review run pending)
+  token-graph.json      ℹ️   0 sessions (first token-analysis run pending)
+  .gitignore coverage   ✅   12/12 entries present
+  dream-rollback        ✅   no rollback since last consolidation
+  skill usage           ℹ️   no data yet — run token-analysis to populate
+  model versions        ✅   gen=claude-opus-4-6, review=claude-sonnet-4-6, reviewed: 2026-06-01
+  prod-readiness        ℹ️   no readiness report yet — run /app-readiness or /plugin-readiness
+  graph-index.md        ✅   8 modules, structure: flat, generated: 2026-06-20
+  knowledge graph       ✅   8/8 modules current
+  graph stale flag      ✅   no pending refresh
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Overall: ⚠️ Partially configured
+
+Recommended actions:
+  1. Run /architect — fixes: architecture docs (2 unpopulated files)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</pre></div>
+        </div>
+        <div class="warning" style="border-color:#ef4444;background:rgba(239,68,68,0.06);">
+          <span class="wi">⚠</span>
+          <span>
+            <strong>PAT credential risk:</strong> If <code>.claude/settings.json</code> exists but is not in your
+            <code>.gitignore</code>, dream-status will flag it as ❌ Red — the highest-severity finding.
+            Fix this before doing anything else.
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── DREAM ROLLBACK ───────── -->
+    <section id="dream-rollback">
+      <div class="section-eyebrow">New in v1.5.0 — Undo a Dream run</div>
+      <h2>Dream <em class="accent">Rollback</em></h2>
+      <p class="section-intro">
+        If a Dream consolidation run promoted incorrect information, wrongly deleted a memory,
+        or made changes you want to undo, <code>/dream-rollback</code> lets you reverse it.
+        The rollback is logged in <code>memory/dream-log.md</code> and is itself reversible.
+      </p>
+
+      <div class="step-card recommended">
+        <div class="step-number">↩</div>
+        <div class="step-header">
+          <div class="step-title">Run dream-rollback</div>
+          <span class="tag tag-recommended">When a Dream run needs undoing</span>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">claude code</span></div>
+          <div class="code-body"><pre><span class="cmd">/ai-assisted-development:dream-rollback</span></pre></div>
+        </div>
+        <p class="step-desc">It will interactively guide you through:</p>
+        <ol style="padding-left:20px;line-height:2;color:var(--muted);font-size:14px;">
+          <li>List the last 10 dream runs with change summaries</li>
+          <li>Show the before/after for every ADD, UPDATE, and DELETE in the selected run</li>
+          <li>Confirm before reversing — supports full or partial rollback</li>
+          <li>Append a logged rollback entry to <code>dream-log.md</code></li>
+        </ol>
+        <div class="info">
+          <span class="wi">ℹ</span>
+          <span>Partial rollbacks are supported — you can choose to reverse only specific operations from a run. If a file was manually edited after the Dream run, dream-rollback will warn you before touching it.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── DREAM ───────── -->
+    <section id="dream">
+      <div class="section-eyebrow">Maintenance — every 5–8 sessions</div>
+      <h2>Run <em class="accent">Dream</em></h2>
+      <p class="section-intro">Dream consolidates what Claude learned across your sessions into persistent memory files. Without it Claude starts each session with no knowledge of past decisions.</p>
+
+      <div class="step-card recommended">
+        <div class="step-number">~</div>
+        <div class="step-header">
+          <div class="step-title">Run after every 5–8 sessions</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <span class="tag tag-recommended">Recommended</span>
+            <span class="tag tag-recurring">Every 5–8 sessions</span>
+          </div>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">claude code</span></div>
+          <div class="code-body"><pre><span class="cmt"># Consolidate memory</span>
+<span class="cmd">/ai-assisted-development:dream</span>
+
+<span class="cmt"># View health dashboard</span>
+<span class="cmd">/ai-assisted-development:dream-health</span></pre></div>
+        </div>
+        <p class="step-desc">Dream works in 6 phases: session discovery → inventory → confidence scoring → propose changes → tiered approval → audit log. Every proposed change requires your approval before anything is written.</p>
+        <div class="warning">
+          <span class="wi">⚠</span>
+          <span>If you never run Dream, Claude re-establishes architectural context from scratch each session through longer prompts. Session costs increase over time. Pattern knowledge (what worked, what failed, conventions confirmed) is permanently lost.</span>
+        </div>
+      </div>
+
+      <div class="flow">
+        <div class="flow-step">
+          <span class="fs-label">Phase 0</span>
+          <span class="fs-name">Budget check</span>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">
+          <span class="fs-label">Phase 1</span>
+          <span class="fs-name">Session discovery</span>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">
+          <span class="fs-label">Phase 2</span>
+          <span class="fs-name">Inventory</span>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">
+          <span class="fs-label">Phase 3</span>
+          <span class="fs-name">Score confidence</span>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">
+          <span class="fs-label">Phase 4</span>
+          <span class="fs-name">Propose changes</span>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">
+          <span class="fs-label">Phase 5</span>
+          <span class="fs-name">Your approval</span>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">
+          <span class="fs-label">Phase 6</span>
+          <span class="fs-name">Audit log</span>
+        </div>
+      </div>
+
+      <div class="step-card optional" style="margin-top:16px;">
+        <div class="step-number">⚡</div>
+        <div class="step-header">
+          <div class="step-title">Token budget guard — Phase 0 pre-flight</div>
+          <span class="tag tag-optional">Automatic</span>
+        </div>
+        <p class="step-desc">Before searching sessions, <code>/dream</code> checks memory size and will warn or stop if limits are exceeded:</p>
+        <table class="cmd-table" style="margin-top:8px;">
+          <thead><tr><th>Condition</th><th>Behaviour</th></tr></thead>
+          <tbody>
+            <tr><td><code>MEMORY.md</code> &gt; 200 lines</td><td>⚠ Warning — archive promoted entries to topic files first</td></tr>
+            <tr><td>Topic files &gt; 10</td><td>⚠ Warning — consider merging related topics</td></tr>
+            <tr><td>Session window &gt; 30 conversations</td><td>⚠ Capped at 30 most recent, with warning</td></tr>
+            <tr><td>Estimated combined context &gt; 80K tokens</td><td>❌ Hard stop — archive topic files or use a narrower keyword search</td></tr>
+          </tbody>
+        </table>
+        <div class="info" style="margin-top:10px;">
+          <span class="wi">ℹ</span>
+          <span>If you hit the hard stop, either archive older topic files or run <code>/dream</code> with a specific keyword to process one topic area at a time (e.g. say "dream — only consolidate sessions about authentication").</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── ARCHITECTURE ───────── -->
+    <section id="architecture">
+      <div class="section-eyebrow">Step 6 — Once per project</div>
+      <h2>Architecture <em class="accent">Docs</em></h2>
+      <p class="section-intro">The architect skill reads your actual codebase and generates structured reference files in <code>.claude/architecture/</code>. Without them Claude has to re-read the codebase to answer structural questions every session.</p>
+
+      <div class="step-card recommended">
+        <div class="step-number">6</div>
+        <div class="step-header">
+          <div class="step-title">Architect skill runs automatically via dream-init</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <span class="tag tag-recommended">Recommended</span>
+            <span class="tag tag-once">Once per project</span>
+          </div>
+        </div>
+        <p class="step-desc">
+          <code>/dream-init</code> triggers the architect skill automatically after deploying rules.
+          It detects your repo type and generates the matching set of three files.
+        </p>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">generated files</span></div>
+          <div class="code-body"><pre><span class="cmt"># .NET Web API</span>
+.claude/architecture/<span class="str">architecture.md</span>          ← stack, layers, endpoints
+.claude/architecture/<span class="str">architecture-callchains.md</span>  ← request flow traces
+.claude/architecture/<span class="str">architecture-reference.md</span>   ← NuGet versions, pipelines
+
+<span class="cmt"># Angular (Nx or standard)</span>
+.claude/architecture/<span class="str">architecture.md</span>
+.claude/architecture/<span class="str">architecture-flows.md</span>        ← component/data flows
+.claude/architecture/<span class="str">architecture-reference.md</span></pre></div>
+        </div>
+        <p class="step-desc">Supported repo types: <code>dotnet-api</code> · <code>angular-nx</code> · <code>angular-standard</code> · <code>react</code> · <code>js-library</code> · <code>aspnet-framework</code> · <code>aspnet-mvc</code></p>
+        <div class="info">
+          <span class="wi">ℹ</span>
+          <span>Sections the skill can't determine are flagged with <strong>⚠ Could not determine — needs manual input</strong>. Review and fill those in. Re-run is safe — already-populated files are skipped.</span>
+        </div>
+        <div class="warning">
+          <span class="wi">⚠</span>
+          <span>Without architecture docs, Claude reads source files on demand each session to understand structure. This adds hundreds of tokens per session and produces inconsistent results as the session progresses.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── PLUGIN STRUCTURE ───────── -->
+    <section id="structure">
+      <div class="section-eyebrow">Reference</div>
+      <h2>Plugin <em class="accent">Structure</em></h2>
+      <p class="section-intro">
+        Everything inside the plugin repository. Files marked
+        <span class="tag tag-mandatory" style="font-size:10px;">Global</span> are available the moment the plugin is installed.
+        Files marked <span class="tag tag-recommended" style="font-size:10px;">Project</span> are deployed into each repo by <code>/dream-init</code>.
+        Files marked <span class="tag tag-optional" style="font-size:10px;">Hybrid</span> live globally but produce output inside the project.
+      </p>
+
+      <!-- Legend -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;align-items:center;">
+        <span style="font-size:12px;color:var(--muted);">Legend:</span>
+        <span class="tag tag-mandatory">Global — always available, installed once per machine</span>
+        <span class="tag tag-recommended">Project — deployed per repo by /dream-init</span>
+        <span class="tag tag-optional">Hybrid — global logic, project output</span>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ai-assisted-development/ plugin repository</span></div>
+        <div class="code-body"><pre><span class="cmt">ai-assisted-development/</span>
+│
+├── <span class="var">.claude-plugin/</span>
+│   └── plugin.json                        <span class="cmt">plugin manifest — name, version, recommended_models</span>
+│
+├── <span class="var">commands/</span>                              <span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;">Global</span>
+│   ├── dream.md                           <span class="cmt">← /ai-assisted-development:dream</span>
+│   ├── dream-health.md                    <span class="cmt">← /ai-assisted-development:dream-health</span>
+│   ├── dream-init.md                      <span class="cmt">← /ai-assisted-development:dream-init</span>
+│   ├── dream-status.md                    <span class="cmt">← /ai-assisted-development:dream-status</span>
+│   ├── dream-rollback.md                  <span class="cmt">← /ai-assisted-development:dream-rollback</span>
+│   ├── security-review.md                 <span class="cmt">← /ai-assisted-development:security-review</span>
+│   ├── code-review.md                     <span class="cmt">← /ai-assisted-development:code-review</span>
+│   ├── dynamic-scan.md                    <span class="cmt">← /ai-assisted-development:dynamic-scan  <span class="tag tag-optional" style="font-size:10px;padding:1px 5px;">New v1.10</span></span>
+│   ├── token-analysis.md                  <span class="cmt">← /ai-assisted-development:token-analysis</span>
+│   ├── sprint-metrics.md                  <span class="cmt">← /ai-assisted-development:sprint-metrics</span>
+│   ├── product-docs.md                    <span class="cmt">← /ai-assisted-development:product-docs</span>
+│   ├── session-start.md                   <span class="cmt">← /ai-assisted-development:session-start  <span class="tag tag-optional" style="font-size:10px;padding:1px 5px;">New v1.7</span></span>
+│   ├── bug.md                             <span class="cmt">← /ai-assisted-development:bug</span>
+│   ├── checkin.md                         <span class="cmt">← /ai-assisted-development:checkin</span>
+│   ├── update-arch.md                     <span class="cmt">← /ai-assisted-development:update-arch</span>
+│   ├── explain.md                         <span class="cmt">← /ai-assisted-development:explain</span>
+│   ├── fix.md                             <span class="cmt">← /ai-assisted-development:fix</span>
+│   ├── app-readiness.md                   <span class="cmt">← /ai-assisted-development:app-readiness  <span class="tag tag-optional" style="font-size:10px;padding:1px 5px;">New v1.9</span></span>
+│   ├── plugin-readiness.md                <span class="cmt">← /ai-assisted-development:plugin-readiness  <span class="tag tag-optional" style="font-size:10px;padding:1px 5px;">New v1.9</span></span>
+│   └── graph-sync.md                      <span class="cmt">← /ai-assisted-development:graph-sync  <span class="tag tag-optional" style="font-size:10px;padding:1px 5px;">New v2.6.0</span></span>
+│
+├── <span class="var">skills/</span>
+│   │
+│   ├── <span class="var">command-stubs/</span>                     <span class="tag tag-recommended" style="font-size:10px;padding:1px 6px;">Project</span> deployed to .claude/commands/ by dream-init
+│   │   ├── dream.md                       <span class="cmt">thin stub → makes /dream visible in VS Code</span>
+│   │   ├── dream-health.md
+│   │   ├── security-review.md
+│   │   ├── code-review.md
+│   │   └── token-analysis.md
+│   │
+│   ├── <span class="var">icea-feature/</span>                      <span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;">Global</span> gate pre-loaded by session-start · invoke explicitly via /icea-feature
+│   │   ├── SKILL.md
+│   │   └── references/
+│   │       ├── icea-template.md
+│   │       ├── ado-description-template.md
+│   │       └── examples.md
+│   │
+│   ├── <span class="var">icea-review/</span>                       <span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;">Global</span> auto-triggers on review requests
+│   │   ├── SKILL.md
+│   │   └── references/
+│   │       ├── review-checks.md
+│   │       └── report-format.md
+│   │
+│   ├── <span class="var">ado-tasks/</span>                         <span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;">Global</span> auto-triggers on task breakdown requests
+│   │   ├── SKILL.md
+│   │   └── references/
+│   │       └── task-formats.md
+│   │
+│   ├── <span class="var">pr-describe/</span>                       <span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;">Global</span> auto-triggers on PR description requests
+│   │   ├── SKILL.md
+│   │   └── references/
+│   │       └── pr-description-template.md
+│   │
+│   ├── <span class="var">pr-create/</span>                         <span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;">Global</span> auto-triggers on PR creation requests
+│   │   ├── SKILL.md
+│   │   └── references/
+│   │       └── ado-api-guide.md
+│   │
+│   ├── <span class="var">pr-spec-review/</span>                    <span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;">Global</span> auto-triggers on spec compliance requests
+│   │   ├── SKILL.md
+│   │   └── references/
+│   │       ├── output-format.md
+│   │       └── usage-guide.md
+│   │
+│   ├── <span class="var">sprint-metrics/</span>                    <span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;">Global</span> auto-triggers on sprint metric requests
+│   │   ├── SKILL.md
+│   │   └── references/
+│   │       └── metrics-guide.md
+│   │
+│   ├── <span class="var">security/</span>                          <span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;">Global</span> auto-triggers on security questions
+│   │   ├── SKILL.md
+│   │   └── references/
+│   │       ├── language-notes.md
+│   │       ├── domain-guidance.md
+│   │       ├── cross-cutting-principles.md
+│   │       ├── cloud-checks.md
+│   │       ├── compliance-controls.md
+│   │       ├── output-formats.md
+│   │       └── weekly-summary-template.md
+│   │
+│   ├── <span class="var">dynamic-scan/</span>                      <span class="tag tag-optional" style="font-size:10px;padding:1px 6px;">New v1.10</span> runtime DAST — auto-triggers on "dynamic scan", "ZAP", "DAST"
+│   │   ├── SKILL.md
+│   │   └── references/
+│   │       ├── zap-automation-plan.md     <span class="cmt">ZAP Automation Framework YAML templates per stack</span>
+│   │       ├── zap-setup.md               <span class="cmt">Docker images, host.docker.internal, HTTPS certs</span>
+│   │       ├── zap-auth.md                <span class="cmt">form/token/OAuth auth + verification gate</span>
+│   │       ├── zap-windows-auth.md        <span class="cmt">NTLM handling (Desktop-export path)</span>
+│   │       ├── zap-angular-spa.md         <span class="cmt">Ajax spider + route seeding</span>
+│   │       ├── zap-aspnet-mvc.md          <span class="cmt">antiforgery, ViewState, route seeding</span>
+│   │       ├── zap-aspnet-api.md          <span class="cmt">OpenAPI import, verb + mass-assignment probes</span>
+│   │       ├── zap-aspnet-blazor.md       <span class="cmt">Ajax spider; WebSocket noted as v2</span>
+│   │       ├── route-extraction.md        <span class="cmt">seed ZAP from source routes</span>
+│   │       ├── finding-to-source.md       <span class="cmt">map HTTP finding → .cs/.ts file</span>
+│   │       ├── dependency-scan.md         <span class="cmt">npm / pip / NuGet SCA</span>
+│   │       ├── severity-mapping.md        <span class="cmt">ZAP risk → CVSS/CWE + B1–B7</span>
+│   │       ├── baseline-tuning.md         <span class="cmt">false-positive baseline</span>
+│   │       └── report-format.md           <span class="cmt">HTML report + run-to-run diff</span>
+│   │
+│   ├── <span class="var">code-review/</span>                       <span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;">Global</span> invoked by /code-review command
+│   │   ├── SKILL.md
+│   │   └── references/
+│   │       ├── checkers.md
+│   │       ├── checkers-dotnet.md
+│   │       ├── checkers-typescript.md
+│   │       ├── analysis-rules.md
+│   │       └── output-format.md
+│   │
+│   ├── <span class="var">token-analysis/</span>                    <span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;">Global</span> invoked by /token-analysis command
+│   │   ├── SKILL.md
+│   │   └── references/
+│   │       ├── graph-schema.md            <span class="cmt">token-graph.json structure + delta rules</span>
+│   │       ├── recommendations.md         <span class="cmt">13-entry recommendation catalogue</span>
+│   │       └── report-template.md         <span class="cmt">HTML report template</span>
+│   │
+│   ├── <span class="var">shared/</span>                            <span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;">Global</span> cross-skill primitives  <span class="tag tag-mandatory" style="font-size:10px;padding:1px 5px;">New v1.5</span>
+│   │   ├── README.md                  <span class="cmt">ownership rules for this folder</span>
+│   │   ├── file-cache-schema.md       <span class="cmt">schema + merge rules for .claude/file-cache.json</span>
+│   │   ├── scope-flags-spec.md        <span class="cmt">canonical --changed/--pr/--full/--ci spec (v1.1)</span>
+│   │   ├── domain-map-spec.md         <span class="cmt">schema + authoring/reading rules + fingerprint contract (v1.1)</span>
+│   │   ├── single-writer-assumption.md <span class="cmt">concurrency constraints + --ci guidance</span>
+│   │   ├── model-routing-spec.md       <span class="cmt">model routing tiers, env vars, defaults — single source of truth</span>
+│   │   ├── business-context-severity.md <span class="cmt">B1-B7 domain severity overrides for all review skills</span>
+│   │   ├── source-file-consent.md      <span class="cmt">Category A/B/C consent — when to announce, gate, or never read source  <span class="tag tag-optional" style="font-size:10px;padding:1px 5px;">New v1.8.1</span></span>
+│   │   ├── vcs-detect-spec.md          <span class="cmt">detect Git vs TFVC; select .gitignore / .tfignore for ignore protection  <span class="tag tag-optional" style="font-size:10px;padding:1px 5px;">New v1.27.0</span></span>
+│   │   ├── graph-index-schema.md       <span class="cmt">schema + authoring rules for .claude/graph/graph-index.md  <span class="tag tag-optional" style="font-size:10px;padding:1px 5px;">New v2.6.0</span></span>
+│   │   └── graph-module-schema.md      <span class="cmt">schema + hard rules for .claude/graph/&lt;module&gt;.md detail files  <span class="tag tag-optional" style="font-size:10px;padding:1px 5px;">New v2.6.0</span></span>
+│   │
+│   ├── <span class="var">dream-status/</span>                      <span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;">Global</span> health check skill  <span class="tag tag-mandatory" style="font-size:10px;padding:1px 5px;">New v1.5</span>
+│   │   └── SKILL.md
+│   │
+│   ├── <span class="var">dream-rollback/</span>                    <span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;">Global</span> rollback skill  <span class="tag tag-mandatory" style="font-size:10px;padding:1px 5px;">New v1.5</span>
+│   │   └── SKILL.md
+│   │
+│   ├── <span class="var">product-docs/</span>                      <span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;">Project</span> generates HTML docs
+│   │   ├── SKILL.md
+│   │   └── references/
+│   │       ├── product-detail-template.html
+│   │       └── user-guide-template.html
+│   │
+│   ├── <span class="var">app-readiness/</span>                     <span class="tag tag-optional" style="font-size:10px;padding:1px 6px;">New v1.9</span> 8-domain app production readiness
+│   │   ├── SKILL.md
+│   │   └── references/
+│   │       └── ado-pipelines-api.md
+│   │
+│   ├── <span class="var">plugin-readiness/</span>                  <span class="tag tag-optional" style="font-size:10px;padding:1px 6px;">New v1.9</span> 6-domain plugin readiness — plugin state only
+│   │   └── SKILL.md
+│   │
+│   ├── <span class="var">graph-sync/</span>                        <span class="tag tag-optional" style="font-size:10px;padding:1px 6px;">New v2.6.0</span> incremental knowledge graph refresh
+│   │   └── SKILL.md
+│   │
+│   └── <span class="var">architect/</span>                         <span class="tag tag-optional" style="font-size:10px;padding:1px 6px;">Hybrid</span> logic global, output lands in .claude/architecture/ + domain-map.md
+│       ├── SKILL.md                       <span class="cmt">repo-type detection + population orchestrator</span>
+│       ├── prompts/                       <span class="cmt">per-repo-type populate prompts</span>
+│       │   ├── dotnet-api.md
+│       │   ├── angular-nx.md
+│       │   ├── angular-standard.md
+│       │   ├── react.md
+│       │   ├── js-library.md
+│       │   ├── aspnet-framework.md
+│       │   └── aspnet-mvc.md
+│       └── templates/                     <span class="cmt">empty scaffolding deployed per repo type</span>
+│           ├── dotnet-api/                <span class="cmt">architecture.md · architecture-callchains.md · architecture-reference.md</span>
+│           ├── angular-nx/                <span class="cmt">architecture.md · architecture-flows.md · architecture-reference.md</span>
+│           ├── angular-standard/
+│           ├── react/
+│           ├── js-library/                <span class="cmt">architecture.md · architecture-api.md · architecture-reference.md</span>
+│           ├── aspnet-framework/
+│           └── aspnet-mvc/
+│
+├── <span class="var">rules/</span>                                 <span class="tag tag-recommended" style="font-size:10px;padding:1px 6px;">Project</span> deployed to .claude/rules/ by dream-init
+│   ├── project-rules.md                   <span class="cmt">all files (**/*) — guardrails + code quality</span>
+│   ├── dotnet-rules.md                    <span class="cmt">**/*.cs — Clean Architecture, DI, auth, SQL</span>
+│   ├── angular-rules.md                   <span class="cmt">**/*.ts, **/*.html — OnPush, async pipe, a11y</span>
+│   ├── nodejs-rules.md                    <span class="cmt">services/routes — Zod, AppError, Winston</span>
+│   ├── java-rules.md                      <span class="cmt">**/*.java — Spring Boot, Bean Validation, JUnit 5</span>
+│   └── python-rules.md                    <span class="cmt">**/*.py — type hints, Pydantic/DRF, pytest</span>
+│
+├── <span class="var">memory/</span>                                <span class="tag tag-recommended" style="font-size:10px;padding:1px 6px;">Project</span> created in project root by dream-init
+│   ├── MEMORY.md                          <span class="cmt">manual override inbox + auto-capture entries</span>
+│   └── dream-log.md                       <span class="cmt">append-only audit trail of all dream runs</span>
+│
+├── <span class="var">tests/</span>                                 <span class="tag tag-optional" style="font-size:10px;padding:1px 6px;">Dev</span> skill test harness  <span class="tag tag-mandatory" style="font-size:10px;padding:1px 5px;">New v1.5</span>
+│   ├── runner.js                          <span class="cmt">Node.js runner — calls Anthropic API per scenario</span>
+│   ├── README.md
+│   ├── validate.js                        <span class="cmt">structural validator — no API key required  <span class="tag tag-optional" style="font-size:10px;padding:1px 5px;">New v1.7</span></span>
+│   └── skill-scenarios/                   <span class="cmt">YAML scenarios: 18 skills covered including all new commands</span>
+│
+├── CLAUDE.md                              <span class="tag tag-recommended" style="font-size:10px;padding:1px 6px;">Project</span> plugin template — /init generates project version
+├── install.ps1                            <span class="cmt">Windows installer — v2.6.0</span>
+├── install.sh                             <span class="cmt">Mac / Linux / Git Bash installer — v2.6.0</span>
+├── CHANGELOG.md
+└── README.md</pre></div>
+      </div>
+
+      <div class="info">
+        <span class="wi">ℹ</span>
+        <span>
+          <strong>Global</strong> files live in the plugin installation at <code>~/.claude/plugins/ke-marketplace/plugins/ai-assisted-development/</code> and are available the moment the plugin is installed — no per-project setup needed.<br><br>
+          <strong>Project</strong> files are copied into each repo by <code>/dream-init</code> and live under <code>.claude/</code>, <code>memory/</code>, and <code>token-analysis/</code> in the project root. Generated files (<code>domain-map.md</code>, <code>CodeReviews/</code>, <code>.claude/file-cache.json</code>, <code>.claude/graph/</code>, <code>token-analysis/</code>, <code>memory/health.html</code>, <code>.claude/settings.json</code>) are gitignored automatically by <code>/dream-init</code> — which creates or updates <code>.gitignore</code> in three phases: plugin entries (always), root-level well-known artifacts (auto-detected), and a full repo walk for build artifacts (<code>bin/</code>, <code>obj/</code>, <code>.env</code>, etc.) with a developer selection prompt before writing.<br><br>
+          <strong>Hybrid</strong> means the skill logic is global but its output (the populated architecture docs) lives in the project's <code>.claude/architecture/</code> folder.
+        </span>
+      </div>
+    </section>
+
+    <!-- ───────── COMMANDS ───────── -->
+    <section id="commands">
+      <div class="section-eyebrow">Reference</div>
+      <h2>All <em class="accent">Commands</em></h2>
+      <p class="section-intro">Slash commands are invoked directly. Global commands work across all projects; project commands require <code>/dream-init</code> to have run first.</p>
+
+      <h3>Global commands — always available</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Command</th><th>What it does</th><th>Output</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>/ai-assisted-development:dream</td>
+            <td>6-phase memory consolidation. Reads recent sessions, scores knowledge entries, proposes ADD/UPDATE/DELETE with full justification. Every change requires your approval.</td>
+            <td>Updates <code>memory/topic-*.md</code> and <code>CLAUDE.md</code></td>
+          </tr>
+          <tr>
+            <td>/ai-assisted-development:dream-health</td>
+            <td>Generates a browser dashboard showing confidence scores, decay curve, promote candidates, and full dream run history with justification panels.</td>
+            <td><code>memory/health.html</code></td>
+          </tr>
+          <tr>
+            <td>/ai-assisted-development:security-review [path]</td>
+            <td>Full codebase (or targeted) security review using OWASP/CVSS/CWE methodology. Omit path to review the whole codebase.</td>
+            <td><code>security/security-review-&lt;date&gt;.html</code> + <code>security/security-ledger.md</code> (FP-fingerprinted findings — use /fix)</td>
+          </tr>
+          <tr>
+            <td>/ai-assisted-development:dynamic-scan</td>
+            <td>Runtime DAST scan with OWASP ZAP via Docker. Passive default; gated active scan with --full. Auth-verified, source-mapped fixes.</td>
+            <td><code>dynamic-scan/dynamic-scan-&lt;date&gt;.html</code> + <code>dynamic-scan/dynamic-scan-ledger.md</code> (FP-fingerprinted findings — use /fix)</td>
+          </tr>
+          <tr>
+            <td>/ai-assisted-development:code-review [path]</td>
+            <td>Coverity-style static analysis with persistent cross-run tracking. Detects new defects, marks previously-found defects as fixed with git attribution.</td>
+            <td><code>CodeReviews/</code> folder + <code>CodeReviews/code-review-ledger.md</code></td>
+          </tr>
+          <tr>
+            <td>/ai-assisted-development:token-analysis [sessions=N]</td>
+            <td>Analyses token consumption across last N sessions (default 10). Uses a graph cache — subsequent runs only process the delta. Identifies expensive prompts and recommends rewrites. Now includes <strong>Skill Usage</strong> table — Active / Occasional / Never used per skill.</td>
+            <td><code>token-analysis/token-analysis-&lt;date&gt;.html</code></td>
+          </tr>
+          <tr>
+            <td>/ai-assisted-development:dream-status</td>
+            <td><span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;margin-right:6px;">New v1.5</span>Read-only health check. Reports ✅/⚠️/❌ on <strong>20 infrastructure items</strong>: CLAUDE.md, memory, rules, stubs, architecture docs, domain-map freshness, deployment doc, file-cache, token-graph, ignore-file coverage, sensitive-skip audit, open findings across all ledgers, dream-rollback log, skill usage, model versions, plugin version drift, production-readiness reports, and knowledge graph (index, freshness, stale flag). Shows prioritised action list for any issues.</td>
+            <td>Conversation output only</td>
+          </tr>
+          <tr>
+            <td>/ai-assisted-development:dream-rollback</td>
+            <td><span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;margin-right:6px;">New v1.5</span>Reverses a specific Dream consolidation run using the audit trail in <code>memory/dream-log.md</code>. Lists run history, shows before/after for each operation, confirms before reversing. The rollback is logged and itself reversible.</td>
+            <td>Updates memory files + appends to <code>dream-log.md</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>New developer workflow commands — v1.7</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Command</th><th>What it does</th><th>Output</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>/ai-assisted-development:session-start</td>
+            <td><span class="tag tag-optional" style="font-size:10px;padding:1px 6px;margin-right:6px;">New v1.7</span>Zero-cost session warm-up. Reads CLAUDE.md, memory, and architecture docs in one pass. Prints a ≤20-line session brief: stack, ADO project, last decision, active areas, sessions since last /dream. Surfaces any ❌ Red infrastructure items without running the full health check. In v2.6.0, also checks the <code>.claude/graph/.stale</code> flag and warns if the knowledge graph needs refreshing after a <code>git pull</code>.</td>
+            <td>Conversation only</td>
+          </tr>
+          <tr>
+            <td>/ai-assisted-development:bug ADO-&lt;id&gt; "&lt;description&gt;"</td>
+            <td><span class="tag tag-optional" style="font-size:10px;padding:1px 6px;margin-right:6px;">New v1.7</span>Lightweight bug fix flow. One-screen Bug Spec (Root Cause / Fix Approach / Regression Test) with a single approval cycle. Faster than the full ICEA gate for confirmed defects on existing behaviour. Saves spec to <code>docs/icea/ADO-{ID}-bug.md</code>. Redirects to icea-feature if the bug requires new design.</td>
+            <td><code>docs/icea/ADO-{ID}-bug.md</code></td>
+          </tr>
+          <tr>
+            <td>/ai-assisted-development:checkin</td>
+            <td><span class="tag tag-optional" style="font-size:10px;padding:1px 6px;margin-right:6px;">New v1.7</span>Pre-commit quality gate. Runs code-review <code>--changed</code>, ICEA compliance check, and secrets + static-asset data scan in a single shared-context pass. One unified pass/fail verdict. Outputs a pre-filled <code>git commit</code> command when all checks pass. Always blocks on Critical/High findings, missing ICEA ACs, staged secrets, or real data in <code>public/</code>.</td>
+            <td>Conversation only + commit command</td>
+          </tr>
+          <tr>
+            <td>/ai-assisted-development:update-arch [path]</td>
+            <td><span class="tag tag-optional" style="font-size:10px;padding:1px 6px;margin-right:6px;">New v1.7</span>Targeted architecture doc refresh. Re-reads only changed entry-point files (using the SHA-1 fingerprint) and updates <code>domain-map.md</code> for those areas only. Optional path argument to scope to a subtree. 85–90% cheaper than re-running the full architect skill.</td>
+            <td><code>.claude/architecture/domain-map.md</code></td>
+          </tr>
+          <tr>
+            <td>/ai-assisted-development:explain "&lt;question&gt;"</td>
+            <td><span class="tag tag-optional" style="font-size:10px;padding:1px 6px;margin-right:6px;">New v1.7</span>Codebase Q&amp;A from architecture docs only — no source scanning. Answers "how does X work" and "where is Y" questions from <code>.claude/architecture/</code> files. Rates confidence (HIGH / MEDIUM / LOW). Only asks to read a source file when genuinely needed — and only one file.</td>
+            <td>Conversation only</td>
+          </tr>
+          <tr>
+            <td>/ai-assisted-development:fix FP-&lt;fingerprint&gt;</td>
+            <td><span class="tag tag-optional" style="font-size:10px;padding:1px 6px;margin-right:6px;">New v1.7 · Multi-ledger v1.12</span>Apply a specific fix directly. Takes a fingerprint ID from any of three ledgers — <code>CodeReviews/code-review-ledger.md</code>, <code>security/security-ledger.md</code>, or <code>dynamic-scan/dynamic-scan-ledger.md</code>. Searches all three in order, displays the vulnerable code and fix side by side, waits for explicit confirmation, then applies with <code>str_replace</code>, moves the entry from Open Findings to Fixed Findings in its ledger, and updates Summary counts.</td>
+            <td>Modifies source file + updates the matching ledger</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Project commands — require /dream-init</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>/ai-assisted-development:dream-init</td>
+            <td>Per-project setup. Seeds <code>file-cache.json</code>, runs architect skill to generate <code>domain-map.md</code> and architecture docs, deploys 36 command stubs and rules, ensures CLAUDE.md has Dream sections. In Step 7b, generates the codebase knowledge graph in <code>.claude/graph/</code> and installs git hooks for staleness detection. Creates/updates <code>.gitignore</code> automatically. Safe to re-run.</td>
+          </tr>
+          <tr>
+            <td>/ai-assisted-development:sprint-metrics [sprint=&lt;name&gt;]</td>
+            <td>Post-sprint KPI report via ADO REST API: ICEA compliance rate, PR rejection rate, rework hours. Arguments: <code>sprint=Sprint 5</code> or <code>from=YYYY-MM-DD to=YYYY-MM-DD</code>. Optional: <code>capacity=&lt;hours&gt;</code>.</td>
+          </tr>
+          <tr>
+            <td>/ai-assisted-development:product-docs</td>
+            <td>Generates Product Detail Document and/or User Guide as self-contained HTML files. Asks which documents to create before generating — skips any you say no to.</td>
+          </tr>
+          <tr>
+            <td>/ai-assisted-development:code-review [--changed | --pr | --full]</td>
+            <td><span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;margin-right:6px;">Updated v1.5</span>Cache-aware by default — skips files unchanged since last run. Scope flags: <code>--changed</code> (staged/modified files only), <code>--pr</code> (branch diff vs dev), <code>--full</code> (ignore cache), <code>--ci</code> (full scan + warns if a cache file is found on disk — use in all pipeline invocations). Fingerprint tracking across runs with git-attributed Fixed status.</td>
+          </tr>
+          <tr>
+            <td>/ai-assisted-development:security-review [--changed | --pr | --full]</td>
+            <td><span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;margin-right:6px;">Updated v1.5</span>Cache-aware with lazy language detection — loads only reference sections for languages present in the codebase. Same scope flags as code-review (including <code>--ci</code> for pipeline use). Full codebase, OWASP/CVSS/CWE methodology.</td>
+          </tr>
+          <tr>
+            <td>/ai-assisted-development:dynamic-scan [--url &lt;target&gt; | --deps-only]</td>
+            <td><span class="tag tag-recommended" style="font-size:10px;padding:1px 6px;margin-right:6px;">New v1.10</span>Dynamic (DAST) scan of a <strong>running</strong> app or API with OWASP ZAP via Docker — the runtime counterpart to security-review. Covers Angular SPA, ASP.NET MVC, Web API, Blazor, Razor Pages, plus npm/pip/NuGet dependency audit. Safe passive baseline by default; <code>--full</code>/<code>--scope</code> run gated active scans (staging only). Flags: <code>--url --stack --auth --swagger --deps-only --diff --ci --fail-on</code>. Writes HTML to <code>dynamic-scan/</code> and updates <code>dynamic-scan-ledger.md</code> with FP-fingerprinted findings.</td>
+          </tr>
+          <tr>
+            <td>/ai-assisted-development:ado-tasks [ADO-&lt;id&gt;]</td>
+            <td><span class="tag tag-recommended" style="font-size:10px;padding:1px 6px;margin-right:6px;">New v1.12</span>Explicit command path for the ado-tasks skill. Generates a complete Azure DevOps task breakdown from an approved ICEA — one task per Acceptance Criterion per layer (Angular, .NET, Node.js, DB, QA, Infra) with titles, tags, and effort estimates. The skill also auto-triggers on task breakdown keywords. Requires an ICEA with APPROVED status.</td>
+          </tr>
+          <tr>
+            <td>/ai-assisted-development:icea-feature [ADO-&lt;id&gt;]</td>
+            <td><span class="tag tag-recommended" style="font-size:10px;padding:1px 6px;margin-right:6px;">New v1.12</span>Explicit command path for the icea-feature skill. Invoke explicitly to start feature planning. The feature gate rule is pre-loaded by <code>session-start</code> each session and documented as a team convention in <code>CLAUDE.md</code> — run this command when you are ready to build. Argument: ADO ID or inline feature description.</td>
+          </tr>
+          <tr>
+            <td>/ai-assisted-development:critic [icea | code] [ADO-&lt;id&gt;]</td>
+            <td><span class="tag tag-recommended" style="font-size:10px;padding:1px 6px;margin-right:6px;">New v1.15</span>Standalone path for the critic skill, which also auto-runs inside <code>icea-feature</code> at two gates. <code>icea</code> mode critiques a spec (completeness, testability, B1–B7 coverage, scope vs Intent); <code>code</code> mode critiques generated/changed code (ICEA traceability, simplicity, rules compliance, decision transparency, hidden assumptions). With no phase, infers from context. Uses <code>CRITIC_MODEL</code> (falls back to <code>REVIEW_MODEL</code>). The standalone <code>code</code> path reports concerns only — it never rewrites files.</td>
+          </tr>
+          <tr>
+            <td>/ai-assisted-development:app-readiness [--quick | --full]</td>
+            <td><span class="tag tag-recommended" style="font-size:10px;padding:1px 6px;margin-right:6px;">New v1.9</span>Enterprise Architect + Solution Architect production readiness assessment across 8 domains: deployment pipeline, resilience, observability, security posture, scalability, data integrity, operational runbook, and test coverage. Reads <code>architecture-deployment.md</code> for hosting-specific checks. Produces an HTML report.</td>
+          </tr>
+          <tr>
+            <td>/ai-assisted-development:plugin-readiness</td>
+            <td><span class="tag tag-recommended" style="font-size:10px;padding:1px 6px;margin-right:6px;">New v1.9</span>AI Architect production readiness assessment of the plugin itself across 6 domains: infrastructure health, model routing, memory health, governance rails, skill quality, and session budget. Reads plugin state files only — never application source. Produces an HTML report with a maturity score per domain.</td>
+          </tr>
+          <tr>
+            <td>/ai-assisted-development:graph-sync</td>
+            <td><span class="tag tag-optional" style="font-size:10px;padding:1px 6px;margin-right:6px;">New v2.6.0</span>Incremental refresh of the codebase knowledge graph in <code>.claude/graph/</code>. Checks entry-point fingerprints for all modules and regenerates only stale detail files — unchanged modules are skipped entirely. Detects new source modules and restructures flat→domain layout when the project crosses 30 modules. Deletes the <code>.stale</code> flag on success. For first-time graph creation use <code>/dream-init</code> instead.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ───────── SKILLS ───────── -->
+    <section id="skills">
+      <div class="section-eyebrow">Reference</div>
+      <h2>Auto-invoked <em class="accent">Skills</em></h2>
+      <p class="section-intro">Skills trigger automatically when you use matching keywords — no slash command needed. Claude reads the skill and follows its workflow.</p>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="fc-icon">📋</div>
+          <div class="fc-name">icea-feature</div>
+          <div class="fc-trigger">Triggers: "build", "implement", "add feature", ADO #, user story</div>
+          <div class="fc-desc">Intercepts feature requests and creates a complete ICEA document before any code is written. Blocks code generation until you explicitly approve the ICEA.</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">⚖️</div>
+          <div class="fc-name">critic</div>
+          <div class="fc-trigger">Triggers: auto inside icea-feature; "critique", "second opinion on this spec", "is this over-engineered"</div>
+          <div class="fc-desc">Second-pass generator-critic that evaluates artefacts <strong>before they are written to disk</strong>. Runs at two gates inside <code>icea-feature</code>: after the ICEA draft (concerns fold into the gap list) and after code generation (the verdict gates the write — up to 2 automatic regenerate-and-re-critique retries, then surfaces to you with ACCEPT / GUIDE / HALT). Ephemeral — no ledger, no fingerprints. Standalone via <code>/critic icea|code</code>.</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">📋</div>
+          <div class="fc-name">ado-tasks</div>
+          <div class="fc-trigger">Triggers: "break down this story", "create tasks", "estimate work"</div>
+          <div class="fc-desc">Generates a complete ADO task breakdown from an approved ICEA — one task per Acceptance Criterion per layer, with effort estimates.</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">🔍</div>
+          <div class="fc-name">icea-review</div>
+          <div class="fc-trigger">Triggers: "review this PR", "ICEA compliance", "self-review"</div>
+          <div class="fc-desc">Reviews a PR or diff against an approved ICEA. Produces a structured pass/fail compliance report. <strong>Check 7 applies B1–B7 business context overrides</strong> retroactively to all findings — attorney-client data, immigration PII, or vulnerable population data escalates any finding to Critical.</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">📝</div>
+          <div class="fc-name">pr-describe</div>
+          <div class="fc-trigger">Triggers: "write PR", "PR description", "ready to merge"</div>
+          <div class="fc-desc">Reads the git diff and generates an ICEA-traceable PR description. Maps every changed file to an Acceptance Criterion. Flags scope creep.</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">🚀</div>
+          <div class="fc-name">pr-create <span class="tag tag-mandatory" style="font-size:10px;padding:1px 5px;vertical-align:middle;">Updated v1.21</span></div>
+          <div class="fc-trigger">Triggers: "create PR", "open PR", "submit PR to ADO"</div>
+          <div class="fc-desc">Submits a PR to Azure DevOps via REST API, or saves a complete PR draft artifact for manual submission. <strong>Compliance checks and the findings gate always run on both paths</strong> — no PR artifact is produced without passing (or explicitly acknowledging) these gates. After compliance, asks: <em>connect to ADO or save draft?</em> Draft written to <code>docs/Release&lt;ID&gt;/Sprint&lt;ID&gt;/pr-draft-ADO-&lt;ID&gt;.md</code> with pre-filled submit URL. CI/offline mode: <code>--offline --release &lt;ID&gt; --sprint &lt;ID&gt;</code>. Overrides: <code>--skip-icea-check</code>, <code>--skip-security-gate</code> (both noted in artifact).</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">🔎</div>
+          <div class="fc-name">pr-spec-review</div>
+          <div class="fc-trigger">Triggers: "review PR against spec", "spec compliance", "traceability"</div>
+          <div class="fc-desc">Reviews a PR against a spec or ICEA. Produces Spec Compliance Check, Code Review Against Spec, Traceability Matrix, and Gaps &amp; Risks Report.</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">📊</div>
+          <div class="fc-name">sprint-metrics</div>
+          <div class="fc-trigger">Triggers: "sprint metrics", "ICEA compliance rate", "rework hours"</div>
+          <div class="fc-desc">Measures three post-sprint KPIs via ADO REST API: ICEA compliance rate, PR rejection rate, and rework hours from Bug work items.</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">🛡</div>
+          <div class="fc-name">security <span class="tag tag-mandatory" style="font-size:10px;padding:1px 5px;vertical-align:middle;">Updated</span></div>
+          <div class="fc-trigger">Triggers: "security", "vulnerability", "OWASP", "threat model", "is this secure?"</div>
+          <div class="fc-desc">Full-spectrum security assistant. Cache-aware with lazy language detection. <strong>Step 0.5 static asset audit</strong> always runs first — flags real data in <code>public/</code>, <code>wwwroot/</code>, or <code>assets/</code> as CRITICAL before any SAST analysis. <strong>Business context severity override</strong> (B1–B7): attorney-client data, immigration PII, active case timelines, and vulnerable population data are always Critical regardless of CVSS score.</div>
+        </div>
+        <div class="feature-card" style="border-color:rgba(16,185,129,0.3);background:rgba(16,185,129,0.03);">
+          <div class="fc-icon">🟢</div>
+          <div class="fc-name">dream-status <span class="tag tag-mandatory" style="font-size:10px;padding:1px 5px;vertical-align:middle;">New</span></div>
+          <div class="fc-trigger">Triggers: "dream status", "plugin status", "check setup", "is the plugin set up"</div>
+          <div class="fc-desc">Read-only health check. Reports ✅/⚠️/❌ on all plugin infrastructure. Flags PAT credential risk if <code>.claude/settings.json</code> is not gitignored. Run after <code>/dream-init</code> to confirm setup.</div>
+        </div>
+        <div class="feature-card" style="border-color:rgba(16,185,129,0.3);background:rgba(16,185,129,0.03);">
+          <div class="fc-icon">↩</div>
+          <div class="fc-name">dream-rollback <span class="tag tag-mandatory" style="font-size:10px;padding:1px 5px;vertical-align:middle;">New</span></div>
+          <div class="fc-trigger">Triggers: "rollback dream", "undo dream", "reverse dream run", "restore memory"</div>
+          <div class="fc-desc">Reverses a specific Dream consolidation run. Lists run history from <code>dream-log.md</code>, shows before/after per operation, confirms before applying. Rollback is logged and itself reversible.</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">🏗</div>
+          <div class="fc-name">architect <span class="tag tag-mandatory" style="font-size:10px;padding:1px 5px;vertical-align:middle;">Updated</span></div>
+          <div class="fc-trigger">Triggers: "populate architecture docs", "document the architecture", "run architect"</div>
+          <div class="fc-desc">Detects repo type, deploys architecture templates, populates them from the codebase, then generates <code>domain-map.md</code> — a lightweight index mapping feature areas to entry-point files used by icea-feature, icea-review, and other skills for low-cost orientation.</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">⛬</div>
+          <div class="fc-name">dynamic-scan <span class="tag tag-recommended" style="font-size:10px;padding:1px 5px;vertical-align:middle;">New v1.10</span></div>
+          <div class="fc-trigger">Triggers: "dynamic scan", "DAST", "OWASP ZAP", "active/passive scan", "scan my running app", "fuzz endpoints"</div>
+          <div class="fc-desc">Runtime DAST counterpart to <code>security</code>. Runs OWASP ZAP via Docker (Automation Framework) against a live Angular / ASP.NET MVC / Web API / Blazor / Razor Pages target, plus npm/pip/NuGet dependency audit. Safe passive default; gated active scans. Auth-verification gate, route seeding, baseline tuning, run-to-run diff, B1–B7 severity overrides, and source-mapped fixes. Writes HTML to <code>dynamic-scan/</code>.</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">🔧</div>
+          <div class="fc-name">code-review</div>
+          <div class="fc-trigger">Triggers: "review my code", "code review", "static analysis", "find bugs"</div>
+          <div class="fc-desc">Coverity-style static analysis with persistent cross-run fingerprint tracking. Cache-aware — skips files unchanged since the last run. B1–B7 business-context severity applied to findings.</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">📊</div>
+          <div class="fc-name">token-analysis</div>
+          <div class="fc-trigger">Triggers: "token usage", "analyse tokens", "token cost", "context budget"</div>
+          <div class="fc-desc">Analyses token consumption across sessions and files using a persistent graph cache — subsequent runs process only new sessions and changed files. Surfaces high-cost skills and files.</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">📄</div>
+          <div class="fc-name">product-docs</div>
+          <div class="fc-trigger">Triggers: "write product docs", "generate user guide", "product detail document"</div>
+          <div class="fc-desc">Generates a Product Detail Document and/or User Guide as self-contained HTML. Always asks which documents to create before generating anything.</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">🚀</div>
+          <div class="fc-name">app-readiness <span class="tag tag-recommended" style="font-size:10px;padding:1px 5px;vertical-align:middle;">New v1.9</span></div>
+          <div class="fc-trigger">Triggers: "is the app production ready", "app readiness", "go-live readiness"</div>
+          <div class="fc-desc">Enterprise Architect + Solution Architect assessment across 8 domains (pipeline, resilience, observability, security, scalability, data integrity, runbook, tests). Reads <code>architecture-deployment.md</code> for hosting-specific checks. Produces an HTML report.</div>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">🧩</div>
+          <div class="fc-name">plugin-readiness <span class="tag tag-recommended" style="font-size:10px;padding:1px 5px;vertical-align:middle;">New v1.9</span></div>
+          <div class="fc-trigger">Triggers: "is the plugin production ready", "plugin readiness", "AI governance review"</div>
+          <div class="fc-desc">AI Architect assessment of the plugin itself across 6 domains (infrastructure, model routing, memory health, governance rails, skill quality, session budget). Reads plugin state only — never application source.</div>
+        </div>
+        <div class="feature-card" style="border-color:rgba(6,182,212,0.3);background:rgba(6,182,212,0.03);">
+          <div class="fc-icon">🔄</div>
+          <div class="fc-name">graph-sync <span class="tag tag-optional" style="font-size:10px;padding:1px 5px;vertical-align:middle;">New v2.6.0</span></div>
+          <div class="fc-trigger">Triggers: "refresh knowledge graph", "update graph", "graph is stale", "sync the graph", "knowledge graph stale"</div>
+          <div class="fc-desc">Incrementally refreshes <code>.claude/graph/</code> — checks entry-point fingerprints and regenerates only stale module detail files. Detects new modules, restructures flat→domain at 30+ modules, and clears the <code>.stale</code> flag set by git hooks after a pull. Typical run cost: 1–3 module scans.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── RULES ───────── -->
+    <section id="rules">
+      <div class="section-eyebrow">Reference</div>
+      <h2>Scoped <em class="accent">Rules</em></h2>
+      <p class="section-intro">Rules are deployed by <code>/dream-init</code> to <code>.claude/rules/</code> and activate automatically when Claude edits matching files. No invocation needed.</p>
+
+      <table class="cmd-table">
+        <thead><tr><th>Rule file</th><th>Activates for</th><th>Enforces</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>project-rules.md</td>
+            <td>All files (<code>**/*</code>)</td>
+            <td>No unsolicited architectural changes · no third-party libs without flagging · no secrets in source · no <code>TODO</code> without ADO item · no <code>any</code> in TypeScript · no debug logging in production</td>
+          </tr>
+          <tr>
+            <td>dotnet-rules.md</td>
+            <td><code>**/*.cs</code></td>
+            <td>Clean Architecture layers · ProblemDetails error responses · Azure AD auth patterns · Singleton DI lifetime · SQL injection guards · xUnit test naming</td>
+          </tr>
+          <tr>
+            <td>angular-rules.md</td>
+            <td><code>**/*.ts</code>, <code>**/*.html</code></td>
+            <td>Standalone components · OnPush change detection · async pipe · reactive forms · no direct DOM manipulation · WCAG 2.1 AA accessibility</td>
+          </tr>
+          <tr>
+            <td>nodejs-rules.md</td>
+            <td><code>**/services/**</code>, <code>**/routes/**</code></td>
+            <td>Zod schema validation · AppError pattern · Winston structured logging · no PII in logs · graceful shutdown</td>
+          </tr>
+          <tr>
+            <td>java-rules.md</td>
+            <td><code>**/*.java</code></td>
+            <td>Spring Boot layered architecture · constructor injection · Bean Validation (<code>@Valid</code>) · <code>ProblemDetail</code> errors · <code>@PreAuthorize</code> · JUnit 5 + Mockito · no PII in logs</td>
+          </tr>
+          <tr>
+            <td>python-rules.md</td>
+            <td><code>**/*.py</code></td>
+            <td>Type hints + mypy · boundary validation (Pydantic / DRF / marshmallow) · no <code>eval</code>/<code>exec</code>/unsafe deserialization · parameterized queries · pytest naming · no PII in logs</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="info">
+        <span class="wi">ℹ</span>
+        <span>Rules fire only when Claude is actively editing a matching file. They do not load on every prompt — this is intentional to keep token overhead low.</span>
+      </div>
+    </section>
+
+    <!-- ───────── WORKFLOW ───────── -->
+    <section id="workflow">
+      <div class="section-eyebrow">Reference</div>
+      <h2>Developer <em class="accent">Workflow</em></h2>
+      <p class="section-intro">The standard end-to-end flow for a feature from ADO ticket to merged PR.</p>
+
+      <div class="timeline">
+        <div class="tl-item">
+          <div class="tl-dot once"></div>
+          <div class="tl-title">0 · Start every session</div>
+          <div class="tl-meta">/session-start command</div>
+          <div class="tl-desc">Run at the start of every Claude Code session. Loads CLAUDE.md, memory, and architecture docs in one pass — prints a 20-line project brief. Replaces ad-hoc context re-establishment and saves 500–2,000 tokens per session.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot once"></div>
+          <div class="tl-title">1 · Describe the feature (or fix a bug)</div>
+          <div class="tl-meta">icea-feature skill (features) · /bug command (defects)</div>
+          <div class="tl-desc">For features: run <code>/ai-assisted-development:icea-feature</code> before describing the feature — the gate is a team convention enforced by the feature gate rule pre-loaded at session start and the output constraint in <code>CLAUDE.md</code>. For confirmed bugs on existing behaviour: use <code>/bug ADO-XXXX "description"</code> for a lightweight one-screen spec with a single approval cycle.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot once"></div>
+          <div class="tl-title">2 · Generate ADO tasks</div>
+          <div class="tl-meta">ado-tasks skill</div>
+          <div class="tl-desc">"Break down this story into tasks" — generates one task per AC per layer (.NET, Angular, Node.js, QA) with estimates ready to paste into ADO.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot ongoing"></div>
+          <div class="tl-title">3 · Write code</div>
+          <div class="tl-meta">Rules auto-fire on file save</div>
+          <div class="tl-desc">Work normally. Stack rules enforce conventions automatically as Claude generates code. CLAUDE.md auto-captures decisions and patterns.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot once"></div>
+          <div class="tl-title">4 · Self-review</div>
+          <div class="tl-meta">icea-review skill</div>
+          <div class="tl-desc">"Review my changes against the ICEA" — produces a pass/fail compliance report before you request human review.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot once"></div>
+          <div class="tl-title">4.5 · Pre-commit gate</div>
+          <div class="tl-meta">/checkin command</div>
+          <div class="tl-desc">Before committing: run <code>/checkin</code>. Runs code-review, ICEA compliance, and secrets/static-asset checks in one shared-context pass. Outputs a pre-filled commit command if all checks pass. Always blocks on Critical findings, missing ACs, staged secrets, or real data in <code>public/</code>.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot once"></div>
+          <div class="tl-title">5 · Generate PR description</div>
+          <div class="tl-meta">pr-describe skill</div>
+          <div class="tl-desc">"Write the PR description" — reads the git diff and generates an ICEA-traceable PR description with scope creep detection.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot once"></div>
+          <div class="tl-title">6 · Submit PR</div>
+          <div class="tl-meta">pr-create skill</div>
+          <div class="tl-desc">"Create the PR" — compliance checks always run first, then asks: <em>connect to ADO and submit</em> or <em>save PR draft for manual submission</em>. Draft written to <code>docs/Release&lt;ID&gt;/Sprint&lt;ID&gt;/pr-draft-ADO-&lt;ID&gt;.md</code> with pre-filled submit URL. PAT only required for direct submission. CI/offline: <code>--offline --release &lt;ID&gt; --sprint &lt;ID&gt;</code>.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot recurring"></div>
+          <div class="tl-title">7 · Run Dream (every 5–8 sessions)</div>
+          <div class="tl-meta">/dream command</div>
+          <div class="tl-desc">Consolidates session knowledge into persistent memory. Keeps Claude's context accurate and reduces session startup cost over time.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── TOKEN ANALYSIS ───────── -->
+
+
+    <!-- ───────── SECURITY REVIEW ───────── -->
+    <section id="security-review-guide">
+      <div class="section-eyebrow">New in v1.7 — runs before SAST</div>
+      <h2>Security <em class="accent">Review</em></h2>
+      <p class="section-intro">
+        Two major additions in v1.7: a static asset directory audit that runs before all other analysis,
+        and a business context severity system that overrides CVSS scores for this domain's specific data.
+      </p>
+
+      <div class="step-card mandatory">
+        <div class="step-number">0.5</div>
+        <div class="step-header">
+          <div class="step-title">Static asset directory audit — always runs first</div>
+          <span class="tag tag-mandatory">Before SAST</span>
+        </div>
+        <p class="step-desc">
+          Before any code analysis, the security skill enumerates <code>public/</code>, <code>wwwroot/</code>,
+          <code>assets/</code>, and <code>static/</code> directories and classifies every file inside them.
+          Any <code>.json</code>, <code>.csv</code>, <code>.xlsx</code>, or data file containing real entity data
+          is flagged as CRITICAL immediately — before other findings are shown.
+        </p>
+        <div class="warning">
+          <span class="wi">⚠</span>
+          <span>
+            <strong>Why this matters for this project:</strong> Angular's <code>public/</code> directory is
+            copied verbatim into the build output and served at the root URL with no authentication.
+            Any file here is accessible at <code>http://[server]/filename</code> with no login required.
+            Real client names, A-Numbers, or matter data committed here constitutes an immediate data breach.
+          </span>
+        </div>
+        <div class="info">
+          <span class="wi">ℹ</span>
+          <span>This check also runs inside <code>/checkin</code> — staged files in static directories containing real entity data always block the commit.</span>
+        </div>
+      </div>
+
+      <div class="step-card mandatory">
+        <div class="step-number">B1–B7</div>
+        <div class="step-header">
+          <div class="step-title">Business context severity override</div>
+          <span class="tag tag-mandatory">All review skills</span>
+        </div>
+        <p class="step-desc">
+          CVSS is a mathematical floor — business context can raise severity, never lower it.
+          All review skills (security, code-review, icea-review, checkin, pr-spec-review) apply
+          the override triggers from <code>skills/shared/business-context-severity.md</code>.
+        </p>
+        <table class="cmd-table" style="margin-top:12px;">
+          <thead><tr><th>Trigger</th><th>Data type</th><th>Why Critical</th></tr></thead>
+          <tbody>
+            <tr><td>B1</td><td>Attorney-client privileged data</td><td>Bar ethics rules — privilege cannot be restored once breached</td></tr>
+            <tr><td>B2</td><td>Immigration identifiers (A-Numbers, visa numbers, case IDs)</td><td>Active proceedings at risk, mandatory breach reporting</td></tr>
+            <tr><td>B3</td><td>Hearing dates, filing deadlines, case status</td><td>Missed deadline = irreversible harm in immigration proceedings</td></tr>
+            <tr><td>B4</td><td>Pro bono / vulnerable client data</td><td>Individuals with no recourse, life-altering consequences</td></tr>
+            <tr><td>B5</td><td>Data triggering mandatory breach notification</td><td>State privacy laws, bar ethics reporting obligations</td></tr>
+            <tr><td>B6</td><td>Physical safety data</td><td>Identity/location for individuals at risk of harm</td></tr>
+            <tr><td>B7</td><td>Real PII in a static-serving directory</td><td>Directly accessible by URL, no authentication required</td></tr>
+          </tbody>
+        </table>
+        <p class="step-desc" style="margin-top:12px;">
+          When a business override applies, the finding reports both scores:
+        </p>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">finding output format</span></div>
+          <div class="code-body"><pre>- Severity          : Critical (business override)
+- Technical score   : CVSS 7.5 / High (AV:A/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N)
+- Business severity : Critical
+- Override reason   : B1 + B2 — attorney-client privileged matter data and
+                      immigration A-Numbers for individuals in active proceedings</pre></div>
+        </div>
+      </div>
+
+      <div class="step-card recommended">
+        <div class="step-number">→</div>
+        <div class="step-header">
+          <div class="step-title">Running security review</div>
+          <span class="tag tag-recommended">Scope flags</span>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">claude code</span></div>
+          <div class="code-body"><pre><span class="cmt"># Full scan — skip cache, scan all files from project root</span>
+<span class="cmd">/ai-assisted-development:security-review --full</span>
+
+<span class="cmt"># Changed files only (faster, use during dev)</span>
+<span class="cmd">/ai-assisted-development:security-review --changed</span>
+
+<span class="cmt"># CI mode — full scan + warns if cache file found on disk</span>
+<span class="cmd">/ai-assisted-development:security-review --ci</span></pre></div>
+        </div>
+        <div class="info">
+          <span class="wi">ℹ</span>
+          <span>Scope report must show <strong>Files skipped (cache): 0</strong> when using <code>--full</code>. If this is non-zero, the cache-bypass is not working. The scan root is always the project root — files outside <code>src/</code> (config files, environment files, <code>public/</code>, pipeline YAML) are included.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── TESTING ───────── -->
+    <section id="testing">
+      <div class="section-eyebrow">New in v1.7 — no API key required</div>
+      <h2>Testing the <em class="accent">Plugin</em></h2>
+      <p class="section-intro">
+        Three layers of testing. The structural validator (Layer 1) requires no API key
+        and catches the majority of configuration issues in seconds.
+      </p>
+
+      <div class="step-card mandatory">
+        <div class="step-number">1</div>
+        <div class="step-header">
+          <div class="step-title">Structural validation — no API key needed</div>
+          <span class="tag tag-mandatory">Run after any plugin change</span>
+        </div>
+        <p class="step-desc">Validates all files exist, commands are registered, hard rules are present, and cross-references are intact — a full suite of structural checks that runs in under 2 seconds.</p>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">bash</span></div>
+          <div class="code-body"><pre><span class="cmt"># From the plugin root directory</span>
+<span class="cmd">node tests/validate.js</span>
+
+<span class="cmt"># Show detail on every check</span>
+<span class="cmd">node tests/validate.js --verbose</span>
+
+<span class="cmt"># Show fix instructions for failures</span>
+<span class="cmd">node tests/validate.js --fix</span></pre></div>
+        </div>
+        <p class="step-desc">Expected: <code>All checks passed · 0 failed</code>. The validator specifically checks scope flag handling, cache bypass logic, <code>src/</code> scoping, B1–B7 labels, and the stub deployment loop — the issues that have required fixes in this session.</p>
+      </div>
+
+      <div class="step-card recommended">
+        <div class="step-number">2</div>
+        <div class="step-header">
+          <div class="step-title">Manual smoke tests in Claude Code — no API key needed</div>
+          <span class="tag tag-recommended">After install or plugin update</span>
+        </div>
+        <table class="cmd-table" style="margin-top:8px;">
+          <thead><tr><th>#</th><th>Command</th><th>What to verify</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td><code>/dream-init</code></td><td>All steps complete. 36 stubs in <code>.claude/commands/</code>. <code>domain-map.md</code> at <code>.claude/architecture/</code>. Knowledge graph at <code>.claude/graph/</code>. Both JSON cache files created.</td></tr>
+            <tr><td>2</td><td><code>/dream-status</code></td><td>20 green checks on a fresh init (including 3 knowledge graph checks).</td></tr>
+            <tr><td>3</td><td><code>/session-start</code></td><td>≤20 line brief. No source files scanned.</td></tr>
+            <tr><td>4</td><td>Type: <code>Build a search filter</code></td><td>ICEA gate fires — session-start pre-loaded the feature gate rule. <code>APPROVAL REQUIRED</code> shown. No code generated.</td></tr>
+            <tr><td>5</td><td>Reply: <code>looks good</code></td><td><code>APPROVAL REQUIRED</code> still shown — exact word required.</td></tr>
+            <tr><td>6</td><td><code>/security-review --full</code></td><td>Scope report: <strong>Files skipped (cache): 0</strong>. Scan root is project root, not <code>src/</code>.</td></tr>
+            <tr><td>7</td><td>Create <code>public/test.json</code> with <code>{"name":"Test"}</code>, run <code>/security-review --full</code></td><td>CRITICAL finding at the top before any SAST findings. Delete file after.</td></tr>
+            <tr><td>8</td><td>Stage code with <code>console.log('email@test.com')</code>, run <code>/checkin</code></td><td>Business override fires — finding escalated to Critical (B1/B2 domain data). Commit blocked.</td></tr>
+            <tr><td>9</td><td><code>/explain "How does auth work?"</code></td><td>Answered from architecture docs only. No source files opened unprompted.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="step-card optional">
+        <div class="step-number">3</div>
+        <div class="step-header">
+          <div class="step-title">Automated behaviour tests — requires API key</div>
+          <span class="tag tag-optional">When API key available</span>
+        </div>
+        <p class="step-desc">Tests actual model behaviour — trigger detection, hard rules, approval gate, business context escalation.</p>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">bash</span></div>
+          <div class="code-body"><pre><span class="var">export</span> ANTHROPIC_API_KEY=your-key
+<span class="cmd">node tests/runner.js</span>              <span class="cmt"># all 12 scenario files</span>
+<span class="cmd">node tests/runner.js --verbose</span>    <span class="cmt"># show response previews</span></pre></div>
+        </div>
+        <div class="info">
+          <span class="wi">ℹ</span>
+          <span>Costs approximately $0.02 per full run at current Sonnet pricing. Run before every plugin release.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── DESIGN PHILOSOPHY ───────── -->
+    <section id="design-philosophy">
+      <div class="section-eyebrow">Global constraint — applies to every skill and rule</div>
+      <h2>Design <em class="accent">Philosophy</em></h2>
+      <p class="section-intro">
+        One principle governs everything the plugin generates, reviews, and validates:
+        <strong>do not over-complicate. Prefer the simplest solution that correctly solves the problem.</strong>
+        This is enforced globally via <code>rules/project-rules.md</code> (active on all files)
+        and is always present in <code>CLAUDE.md</code>.
+      </p>
+
+      <div class="step-card recommended">
+        <div class="step-number">🎯</div>
+        <div class="step-header">
+          <div class="step-title">Five principles — enforced as project rules</div>
+          <span class="tag tag-recommended">Applies to all files</span>
+        </div>
+        <table class="cmd-table" style="margin-top:12px;">
+          <thead><tr><th>Principle</th><th>What it means in practice</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Simplicity</strong></td>
+              <td>If a simpler approach exists, take it — even if it means more lines. Complexity without a concrete requirement is a defect, not a feature.</td>
+            </tr>
+            <tr>
+              <td><strong>Readability</strong></td>
+              <td>Code is read far more often than written. Optimise for the reader, not the writer. Self-documenting names over clever shortcuts.</td>
+            </tr>
+            <tr>
+              <td><strong>Maintainability</strong></td>
+              <td>Explicit and self-contained over clever abstractions. A future developer should understand and change any piece without reading the whole codebase.</td>
+            </tr>
+            <tr>
+              <td><strong>Testability</strong></td>
+              <td>No hidden side effects, no global state, no deep coupling. Code that cannot be unit-tested without heroic effort is a design smell.</td>
+            </tr>
+            <tr>
+              <td><strong>Do not assume</strong></td>
+              <td>If a requirement, instruction, or expected behaviour is vague, ambiguous, or complex enough to support more than one interpretation — stop and ask. Never guess and proceed. A wrong assumption costs more to unwind than the question costs to ask.</td>
+            </tr>
+            <tr>
+              <td><strong>Decision transparency</strong></td>
+              <td>For any complex or non-trivial logic, document the decision inline: list the options considered, why each was rejected, and why the chosen approach was selected. A future developer should never have to guess why something was built the way it was.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="info" style="margin-top:14px;border-color:#f59e0b;background:rgba(245,158,11,0.06);">
+          <span class="wi">⚠</span>
+          <span>
+            The code review and ICEA skills will flag violations — over-engineered abstractions,
+            unnecessary generics, premature optimisation, and deep coupling are treated as
+            <strong>findings</strong>, not style preferences.
+            The canonical statement in <code>project-rules.md</code>:
+            <em>"Complexity that cannot be justified by a concrete requirement is a defect."</em>
+          </span>
+        </div>
+
+        <div class="step-card" style="margin-top:16px;">
+          <div class="step-number">📝</div>
+          <div class="step-header">
+            <div class="step-title">Decision transparency — required for complex logic</div>
+          </div>
+          <p style="margin-top:8px;font-size:13px;color:var(--muted);">
+            Whenever a non-trivial design choice is made, document it inline above the implementation.
+            List the options considered, why each was rejected, and why the chosen approach was selected.
+          </p>
+          <div class="code-block" style="margin-top:10px;">
+            <div class="code-header"><span class="code-lang">typescript · inline comment format</span></div>
+            <div class="code-body"><pre>// Design decision: character-count cache for file change detection
+// Options considered:
+//   A) Git diff (git diff --name-only)
+//      Rejected: requires git CLI, fails on untracked new files
+//   B) File hash (MD5/SHA256)
+//      Rejected: slower than char count, overkill for change detection
+//   C) Character count  ← chosen
+//      Selected: fast, no dependencies, sufficient for detecting edits</pre></div>
+          </div>
+          <div class="info" style="margin-top:10px;">
+            <span class="wi">ℹ</span>
+            <span>Apply this to any logic a future developer would reasonably ask <em>"why was this done this way?"</em> — algorithm selection, data structure choice, pattern selection, or architectural approach.</span>
+          </div>
+        </div>
+
+        <div class="info" style="margin-top:10px;">
+          <span class="wi">ℹ</span>
+          <span>
+            Defined in two places for maximum coverage:
+            <code>rules/project-rules.md</code> (activates on <code>**/*</code> — every file) and
+            <code>CLAUDE.md</code> Section 3 (always in session context regardless of active skill).
+          </span>
+        </div>
+
+        <div class="step-card recommended" style="margin-top:16px;">
+          <div class="step-number">🔍</div>
+          <div class="step-header">
+            <div class="step-title">Source file consent — second governing principle</div>
+            <span class="tag tag-recommended">New in v1.8.1</span>
+          </div>
+          <p class="step-desc">
+            Every skill that reads source files operates under one of three consent categories,
+            defined in <code>skills/shared/source-file-consent.md</code>. Claude never reads a
+            source file without telling you which file, why it needs it, what it is looking for,
+            and how much it will cost.
+          </p>
+          <table class="cmd-table" style="margin-top:10px;">
+            <thead><tr><th>Category</th><th>Skills</th><th>Behaviour</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>A — Implicit</strong></td>
+                <td><code>/code-review</code> <code>/security-review</code> <code>/checkin</code></td>
+                <td>Developer consented by invoking the command. Skill announces scope before first file read. No confirmation prompt — type <code>STOP</code> to halt.</td>
+              </tr>
+              <tr>
+                <td><strong>B — Explicit gate</strong></td>
+                <td><code>icea-review</code> <code>pr-spec-review</code> <code>/bug</code> <code>/update-arch</code> <code>/explain</code></td>
+                <td>Before reading any file beyond the diff or architecture docs, the skill asks: which file, why, what it is looking for, token cost. You say yes / no / read a different file.</td>
+              </tr>
+              <tr>
+                <td><strong>C — Never</strong></td>
+                <td><code>session-start</code> <code>dream-status</code> <code>dream</code> <code>icea-feature</code></td>
+                <td>Hard rule — these skills never read source files regardless of what the developer asks. Architecture docs and memory only.</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="code-block" style="margin-top:12px;">
+            <div class="code-header"><span class="code-lang">Category B gate format</span></div>
+            <div class="code-body"><pre><span class="cmt">📂 Source file access request</span>
+  File    : <span class="var">src/services/MatterService.cs</span>
+  Why     : Diff shows the method signature changed but not whether the
+            null guard was added — needed to confirm AC-3 compliance.
+  Looking for: <span class="str">filterMatters() null check on roleId parameter</span>
+  Token cost: ~800 tokens (~250 lines)
+
+<span class="cmd">Read this file? (yes / no / read a different file)</span></pre></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── MODEL ROUTING ───────── -->
+    <section id="model-routing">
+      <div class="section-eyebrow">Task-appropriate model per skill · quarterly review cadence</div>
+      <h2>Model <em class="accent">Routing</em></h2>
+      <p class="section-intro">
+        The plugin routes tasks to different models based on their nature.
+        Generative work (planning, coding) uses a more capable model.
+        Analytical review work uses a faster model — reducing cost and timeout risk.
+      </p>
+
+      <div class="step-card recommended">
+        <div class="step-number">⚙</div>
+        <div class="step-header">
+          <div class="step-title">Two routing tiers</div>
+          <span class="tag tag-recommended">Configurable per project</span>
+        </div>
+        <table class="cmd-table" style="margin-top:12px;">
+          <thead><tr><th>Tier</th><th>Default model</th><th>Skills</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Generation</strong></td>
+              <td><code>claude-opus-4-6</code></td>
+              <td>icea-feature, ado-tasks, pr-describe, product-docs</td>
+              <td>Quality at generation time reduces rework downstream</td>
+            </tr>
+            <tr>
+              <td><strong>Review</strong></td>
+              <td><code>claude-sonnet-4-6</code></td>
+              <td>icea-review, code-review, security, pr-spec-review, pr-create gate, critic</td>
+              <td>5× faster than Opus — reduces connection timeout risk on long scans</td>
+            </tr>
+          </tbody>
+        </table>
+        <p style="margin-top:12px;font-size:13px;color:var(--muted);">
+          Override either tier in <code>.claude/settings.json</code> without editing any skill files:
+        </p>
+        <div class="code-block" style="margin-top:8px;">
+          <div class="code-header"><span class="code-lang">json · .claude/settings.json</span></div>
+          <div class="code-body"><pre>{
+  "env": {
+    "AZURE_DEVOPS_PAT": "your-pat-here",
+    "ICEA_MODEL":       "claude-opus-4-6",
+    "REVIEW_MODEL":     "claude-sonnet-4-6",
+    "INFRA_MODEL":      "claude-sonnet-4-6",
+    "CRITIC_MODEL":     "claude-sonnet-4-6"
+  }
+}</pre></div>
+        </div>
+        <div class="info" style="margin-top:12px;">
+          <span class="wi">ℹ</span>
+          <span>If an env var is not set, the skill uses its hardcoded default — no action needed unless you want to change the routing. See <code>skills/shared/model-routing-spec.md</code> for full documentation.</span>
+        </div>
+      </div>
+
+      <div class="step-card optional">
+        <div class="step-number">📅</div>
+        <div class="step-header">
+          <div class="step-title">Model version hygiene — quarterly review</div>
+          <span class="tag tag-optional">Automatic reminder via dream-status</span>
+        </div>
+        <p class="step-desc">
+          Default model names are tracked in <code>.claude-plugin/plugin.json</code> under <code>recommended_models</code>
+          with a <code>last_reviewed</code> date and a 90-day cadence. <code>/dream-status</code> check 12 (model versions)
+          will show ⚠️ Amber when the review date lapses, prompting you to check Anthropic's release notes
+          and update the defaults if a newer model is appropriate.
+        </p>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">json · .claude-plugin/plugin.json</span></div>
+          <div class="code-body"><pre>{
+  <span class="kw">"recommended_models"</span>: {
+    <span class="kw">"generation"</span>:          <span class="str">"claude-opus-4-6"</span>,
+    <span class="kw">"review"</span>:              <span class="str">"claude-sonnet-4-6"</span>,
+    <span class="kw">"last_reviewed"</span>:       <span class="str">"2026-06-01"</span>,
+    <span class="kw">"review_cadence_days"</span>: <span class="str">90</span>
+  }
+}</pre></div>
+        </div>
+        <div class="info" style="margin-top:10px;">
+          <span class="wi">ℹ</span>
+          <span>To update: change <code>generation</code> and/or <code>review</code> values, update <code>last_reviewed</code> to today, and update the matching hardcoded defaults inside every affected skill's <code>## Model routing</code> section. See the Developer Guide for the full update checklist.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── TOKEN EFFICIENCY ───────── -->
+    <section id="token-efficiency">
+      <div class="section-eyebrow">Performance — automatic from v1.2.0+</div>
+      <h2>Token <em class="accent">Efficiency</em></h2>
+      <p class="section-intro">
+        After <code>/dream-init</code>, the plugin operates in incremental mode —
+        skills skip work they've already done. First run is the full baseline; every subsequent run processes only what changed.
+      </p>
+
+      <div class="step-card recommended">
+        <div class="step-number">⚡</div>
+        <div class="step-header">
+          <div class="step-title">Shared infrastructure layer</div>
+          <span class="tag tag-recommended">Automatic — no action needed</span>
+        </div>
+        <table class="cmd-table" style="margin-top:12px;">
+          <thead><tr><th>Primitive</th><th>Written by</th><th>Used by</th><th>Saves</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>domain-map.md</code></td>
+              <td>architect skill</td>
+              <td>icea-feature, icea-review, pr-describe, ado-tasks, pr-spec-review</td>
+              <td>Skills orient without reading source files — 80–95% per call</td>
+            </tr>
+            <tr>
+              <td><code>.claude/file-cache.json</code></td>
+              <td>code-review, security</td>
+              <td>code-review, security</td>
+              <td>Skip unchanged files — 80–95% after first scan</td>
+            </tr>
+            <tr>
+              <td><code>token-analysis/token-graph.json</code></td>
+              <td>token-analysis</td>
+              <td>token-analysis</td>
+              <td>Only process new sessions — delta only after first run</td>
+            </tr>
+            <tr>
+              <td><code>.claude/graph/graph-index.md</code> + detail files</td>
+              <td>dream-init (Step 7b), graph-sync</td>
+              <td>session-start (stale check), dream-status (3 checks)</td>
+              <td>Skills orient by module without reading source; staleness detection via git hooks</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="info" style="margin-top:12px;">
+          <span class="wi">ℹ</span>
+          <span>Use scope flags on code-review and security-review to target just what changed: <code>--changed</code> (staged files), <code>--pr</code> (branch diff vs dev), <code>--full</code> (force complete scan), <code>--ci</code> (CI/CD pipelines — full scan + warns if cache file found on disk).</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="tokens">
+      <div class="section-eyebrow">Maintenance</div>
+      <h2>Token <em class="accent">Analysis</em></h2>
+      <p class="section-intro">Monitor how much context you're consuming and where the waste is. The report shows fixed overhead, session trends, expensive operations, and specific prompt rewrites.</p>
+
+      <div class="step-card optional">
+        <div class="step-number">→</div>
+        <div class="step-header">
+          <div class="step-title">Run periodically to check efficiency</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <span class="tag tag-optional">Optional</span>
+            <span class="tag tag-recurring">Monthly or when slow</span>
+          </div>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">claude code</span></div>
+          <div class="code-body"><pre><span class="cmt"># Analyse last 10 sessions (default)</span>
+<span class="cmd">/ai-assisted-development:token-analysis</span>
+
+<span class="cmt"># Analyse last 20 sessions</span>
+<span class="cmd">/ai-assisted-development:token-analysis sessions=20</span></pre></div>
+        </div>
+        <p class="step-desc">Report writes to <code>token-analysis/token-analysis-&lt;date&gt;.html</code>. The graph cache at <code>token-analysis/token-graph.json</code> means subsequent runs only process new sessions — fast after the first run.</p>
+        <div class="info">
+          <span class="wi">ℹ</span>
+          <span>Both files are gitignored automatically. They contain session-specific data that should not be committed.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── REPO LAYOUT ───────── -->
+    <section id="repo-layout">
+      <div class="section-eyebrow">Extending the plugin · for contributors</div>
+      <h2>Repository <em class="accent">Layout</em></h2>
+      <p class="section-intro">
+        The sections below are for developers who want to extend or maintain the plugin itself — add a skill, add a command,
+        update a shared spec, or cut a release. If you are only using the plugin, you can stop at Update &amp; Uninstall.
+      </p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">repository structure</span></div>
+        <div class="code-body"><pre>ai-assisted-development/
+├── .claude-plugin/plugin.json   <span class="cmt">← manifest — name, version, component lists (source of truth)</span>
+├── commands/                    <span class="cmt">← slash command implementations (Markdown)</span>
+├── skills/
+│   ├── shared/                  <span class="cmt">← cross-skill specs and schemas (single source of truth)</span>
+│   ├── command-stubs/           <span class="cmt">← thin stubs deployed to .claude/commands/ by dream-init</span>
+│   └── &lt;skill-name&gt;/
+│       ├── SKILL.md             <span class="cmt">← skill implementation</span>
+│       └── references/          <span class="cmt">← reference data loaded lazily by the skill</span>
+├── rules/                       <span class="cmt">← scoped rules deployed to .claude/rules/ by dream-init</span>
+├── tests/
+│   ├── runner.js                <span class="cmt">← behaviour harness (Anthropic API)</span>
+│   ├── validate.js / validate.py <span class="cmt">← structural validators (no API key)</span>
+│   └── skill-scenarios/         <span class="cmt">← YAML scenario files per skill</span>
+├── memory/                      <span class="cmt">← Dream memory files (per-project, gitignored)</span>
+├── install.ps1 / install.sh     <span class="cmt">← installers</span>
+├── CLAUDE.md                    <span class="cmt">← per-project AI context (seeded by dream-init)</span>
+├── README.md                    <span class="cmt">← end-user documentation</span>
+└── CHANGELOG.md                 <span class="cmt">← append-only version history</span></pre></div>
+      </div>
+      <div class="info">
+        <span class="wi">ℹ</span>
+        <span><strong>The manifest is authoritative.</strong> <code>.claude-plugin/plugin.json</code> declares every command and skill under
+        <code>components.commands</code> and <code>components.skills</code>. Claude Code reads it on load. If a folder exists but is not
+        registered there, it does not ship — and <code>tests/validate.py</code> will flag the mismatch.</span>
+      </div>
+    </section>
+
+    <!-- ───────── ADDING A SKILL ───────── -->
+    <section id="adding-skill">
+      <div class="section-eyebrow">Extending the plugin · for contributors</div>
+      <h2>Adding a <em class="accent">Skill</em></h2>
+      <p class="section-intro">
+        Skills trigger automatically on keyword match. The <code>dynamic-scan</code> skill (added in v1.10) is a recent worked example —
+        a <code>SKILL.md</code> orchestrator plus a <code>references/</code> folder of lazily-loaded detail files.
+      </p>
+
+      <h3>1 — Create the folder</h3>
+      <div class="code-block"><div class="code-header"><span class="code-lang">skill folder</span></div><div class="code-body"><pre>skills/&lt;skill-name&gt;/
+├── SKILL.md
+└── references/          <span class="cmt">← optional; only if the skill needs lazily-loaded data</span></pre></div></div>
+
+      <h3>2 — Write the frontmatter</h3>
+      <p>The YAML <code>description</code> is what Claude matches against at invocation time — precision reduces false triggers.</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">yaml · SKILL.md frontmatter</span></div><div class="code-body"><pre>---
+description: &gt;
+  One or two sentences on what this skill does and when to use it.
+  End with trigger phrases: "phrase one", "phrase two", "phrase three".
+---</pre></div></div>
+
+      <h3>3 — Write the body (conventions)</h3>
+      <ul class="bullet-list">
+        <li>Open with a purpose statement — what it does <em>and what it does not do</em>.</li>
+        <li>Put hard rules in a closing section — constraints the skill must never break regardless of user input.</li>
+        <li>Add a model-routing note citing <code>../shared/model-routing-spec.md</code> and state the tier (generation / review / infrastructure).</li>
+        <li>If it reads or writes a shared cache, cite <code>../shared/single-writer-assumption.md</code>.</li>
+        <li>Reference <code>../shared/business-context-severity.md</code> — the structural validator requires every <code>SKILL.md</code> to reference it.</li>
+        <li>Large or conditional data goes in <code>references/</code>, loaded lazily in the relevant step — never all at skill start.</li>
+      </ul>
+
+      <h3>4 — Register and wire up</h3>
+      <ul class="bullet-list">
+        <li>Add the name to <code>components.skills</code> in <code>plugin.json</code>.</li>
+        <li>If slash-invokable: create <code>skills/command-stubs/&lt;name&gt;.md</code> and a <code>commands/&lt;name&gt;.md</code>, then add the stub to the <code>dream-init</code> deploy loop and the <code>dream-status</code> stub check.</li>
+        <li>Add the skill to the Category A/B/C table in <code>shared/source-file-consent.md</code>.</li>
+        <li>Create <code>tests/skill-scenarios/&lt;name&gt;.yaml</code> — at least one trigger-detection scenario and one hard-rule scenario.</li>
+      </ul>
+      <div class="info">
+        <span class="wi">ℹ</span>
+        <span><strong>Run the validator.</strong> <code>python3 tests/validate.py --strict</code> must pass with zero errors before the skill ships.
+        It cross-checks the manifest, the stub loops, the consent table, the CHANGELOG version, and more.</span>
+      </div>
+    </section>
+
+    <!-- ───────── ADDING A COMMAND ───────── -->
+    <section id="adding-command">
+      <div class="section-eyebrow">Extending the plugin · for contributors</div>
+      <h2>Adding a <em class="accent">Command</em></h2>
+      <p class="section-intro">
+        Commands live in <code>commands/</code> and are always invoked explicitly — no keyword trigger detection. Most commands are a thin
+        wrapper that resolves flags and then executes a skill in full.
+      </p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">markdown · commands/&lt;name&gt;.md</span></div><div class="code-body"><pre>---
+description: One-line summary shown in the VS Code command picker.
+argument-hint: [--flag-one | --flag-two]
+---
+
+# /command-name
+
+What this command does and when to run it. Resolve flags, then read
+skills/&lt;skill&gt;/SKILL.md and execute it from Step 0 to the end.</pre></div></div>
+      <p>Then: add the name (without <code>/</code>) to <code>components.commands</code> in <code>plugin.json</code>, create a matching
+      stub in <code>skills/command-stubs/</code>, and update <code>dream-init</code> (deploy loop + table + Step 10 summary) and the
+      <code>dream-status</code> stub count so the new stub is tracked.</p>
+    </section>
+
+    <!-- ───────── SHARED PRIMITIVES ───────── -->
+    <section id="shared-primitives">
+      <div class="section-eyebrow">Extending the plugin · for contributors</div>
+      <h2>Shared <em class="accent">Primitives</em> Layer</h2>
+      <p class="section-intro">
+        <code>skills/shared/</code> is the single source of truth for conventions that span multiple skills. Never duplicate a shared
+        spec inside a skill — reference it with a relative path (<code>../shared/&lt;file&gt;.md</code>).
+      </p>
+      <table class="cmd-table">
+        <thead><tr><th>Shared file</th><th>Governs</th></tr></thead>
+        <tbody>
+          <tr><td><code>file-cache-schema.md</code></td><td>Schema and merge rules for <code>.claude/file-cache.json</code></td></tr>
+          <tr><td><code>scope-flags-spec.md</code></td><td>Canonical <code>--changed</code> / <code>--pr</code> / <code>--full</code> / <code>--ci</code> definitions</td></tr>
+          <tr><td><code>domain-map-spec.md</code></td><td><code>domain-map.md</code> schema, staleness rules, fingerprint contract</td></tr>
+          <tr><td><code>single-writer-assumption.md</code></td><td>Cache concurrency constraints and CI guidance</td></tr>
+          <tr><td><code>model-routing-spec.md</code></td><td>Model routing tiers, env vars, fallback defaults</td></tr>
+          <tr><td><code>business-context-severity.md</code></td><td>B1–B7 domain severity overrides — applied by all review skills, including <code>dynamic-scan</code></td></tr>
+          <tr><td><code>source-file-consent.md</code></td><td>Category A/B/C consent — when to announce, gate, or never read source</td></tr>
+          <tr><td><code>findings-gate.md</code></td><td>Canonical Critical/High open-finding detection across all three ledgers — delegated by <code>checkin</code> and <code>pr-create</code></td></tr>
+          <tr><td><code>dismissed-findings-reconciliation.md</code></td><td>Rule 5: dismissed findings stay dismissed on re-scan unless the code at their location changed — delegated by all three scan skills</td></tr>
+          <tr><td><code>change-tier-spec.md</code></td><td>T1/T2/T3 diff-classified change tiers — the system classifies, never the developer; re-classification only moves up</td></tr>
+          <tr><td><code>icea-decisions-spec.md</code></td><td>ICEA-D: fork-triggered decisions block — steelmanned options, repo-evidence recommendations, selection-shaped approval (OPTION A/B/EDIT/DIRECT), role-based approvals, amendment-only deviation</td></tr>
+          <tr><td><code>change-manifest-spec.md</code></td><td>Trust calibration: file-level change prediction generated with the ICEA, measured mechanically at checkin (precision + recall), deviations harvested into memory; graduated-autonomy criteria (per-category, human-flipped, auto-reverting)</td></tr>
+          <tr><td><code>phase-d-spec.md</code></td><td>Deterministic analysis layer: machine-local capability profile, probe ladders, baseline strategy (pre-existing findings never gate), capability-aware reconciliation, deterministic-vs-probabilistic disagreement protocol</td></tr>
+          <tr><td><code>async-checkpoint-queue.md</code></td><td>PROPOSAL (v0.9): human gates as asynchronous checkpoints with provisional execution — generalises the pr-create draft pattern</td></tr>
+          <tr><td><code>graph-index-schema.md</code></td><td><span class="tag tag-optional" style="font-size:10px;padding:1px 5px;margin-right:4px;">New v2.6.0</span>Schema and authoring rules for <code>.claude/graph/graph-index.md</code> — module table, flat vs domain structure, fingerprint contract</td></tr>
+          <tr><td><code>graph-module-schema.md</code></td><td><span class="tag tag-optional" style="font-size:10px;padding:1px 5px;margin-right:4px;">New v2.6.0</span>Schema and hard rules for <code>.claude/graph/&lt;module&gt;.md</code> detail files — frontmatter, ambient-context suppression, four required sections, 400-token ceiling</td></tr>
+        </tbody>
+      </table>
+      <div class="warning">
+        <span class="wi">⚠</span>
+        <span><strong>When you change a shared spec,</strong> update every skill that references it in the same commit. There is no runtime
+        version negotiation — a skill reading a stale convention will silently behave wrong.</span>
+      </div>
+    </section>
+
+    <!-- ───────── RELEASING ───────── -->
+    <section id="releasing">
+      <div class="section-eyebrow">Extending the plugin · for contributors</div>
+      <h2>Releasing a <em class="accent">Version</em></h2>
+      <ol class="numbered-list">
+        <li>Make all changes on a feature branch.</li>
+        <li>Prepend a <code>## [X.Y.Z] — YYYY-MM-DD</code> section to <code>CHANGELOG.md</code> — list affected files and the exact behaviour change.</li>
+        <li>Bump <code>version</code> in <code>.claude-plugin/plugin.json</code>.</li>
+        <li>Update the version badge in <code>README.md</code> and the <code>Plugin version:</code> line in <code>CLAUDE.md</code>.</li>
+        <li>If model defaults changed, update <code>recommended_models</code> and the model-routing references.</li>
+        <li>Run <code>python3 tests/validate.py --strict</code> (structural) and <code>node tests/runner.js</code> (behaviour); confirm both pass.</li>
+        <li>Open a PR to <code>main</code> titled <code>[vX.Y.Z] Short description</code>. After merge, tag: <code>git tag vX.Y.Z &amp;&amp; git push --tags</code>.</li>
+      </ol>
+      <table class="cmd-table">
+        <thead><tr><th>Change type</th><th>Version bump</th></tr></thead>
+        <tbody>
+          <tr><td>New skill, new command, new shared spec</td><td>Minor (X.Y → X.Y+1)</td></tr>
+          <tr><td>Bug fix, spec update, new checker, documentation</td><td>Patch (X.Y.Z → X.Y.Z+1)</td></tr>
+          <tr><td>Breaking change to a shared spec or cache schema</td><td>Major (X → X+1)</td></tr>
+        </tbody>
+      </table>
+      <p>The v2.6.0 release adds the codebase knowledge graph (<code>.claude/graph/</code>), the <code>/graph-sync</code> command and skill, git-hook stale-detection, two new shared schemas (<code>graph-index-schema.md</code>, <code>graph-module-schema.md</code>), write-gate diff-only display, and output-token reduction via <code>customInstructions</code>. It is a representative <strong>minor</strong> bump:
+      new skill + command, manifest updated, stubs extended (36 total), CHANGELOG entry added, validators green. The preceding v1.26.0 release added the <code>dream-audit</code> skill and enforcement-floor hooks in the same shape.</p>
+    </section>
+
+    <!-- ───────── UPDATE / UNINSTALL ───────── -->
+    <section id="update">
+      <div class="section-eyebrow">Maintenance</div>
+      <h2>Update &amp; <em class="accent">Uninstall</em></h2>
+
+      <h3>Updating</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">powershell</span></div>
+        <div class="code-body"><pre><span class="cmd">.\install.ps1 -Update</span></pre></div>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash</span></div>
+        <div class="code-body"><pre><span class="cmd">bash install.sh --update</span></pre></div>
+      </div>
+      <div class="info">
+        <span class="wi">ℹ</span>
+        <span><strong>VS Code users:</strong> After updating, run <code>Developer: Reload Window</code> from the Command Palette (<code>Ctrl+Shift+P</code>) to pick up changes. <code>/reload-plugins</code> only works in a <code>claude</code> terminal session.</span>
+      </div>
+
+      <h3>Uninstalling</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">powershell</span></div>
+        <div class="code-body"><pre><span class="cmd">.\install.ps1 -Uninstall</span></pre></div>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash</span></div>
+        <div class="code-body"><pre><span class="cmd">bash install.sh --uninstall</span></pre></div>
+      </div>
+      <p>This removes the plugin files, unregisters the marketplace, and cleans <code>settings.json</code>. Project files (<code>.claude/</code>, <code>memory/</code>, <code>CLAUDE.md</code>) are not touched — they belong to your project.</p>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  <span>ai-assisted-development · Claude Code Plugin · v2.6.0</span>
+  <span>Product Engineering · Kirkland &amp; Ellis</span>
+</footer>
+
+<script>
+  // Active sidebar link on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const links = document.querySelectorAll('.sidebar a[href^="#"]');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const a = document.querySelector(`.sidebar a[href="#${e.target.id}"]`);
+        if (a) a.classList.add('active');
+      }
+    });
+  }, { threshold: 0.3, rootMargin: '-10% 0px -60% 0px' });
+  sections.forEach(s => io.observe(s));
+</script>
+
+</body>
+</html>

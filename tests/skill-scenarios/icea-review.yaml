@@ -1,0 +1,35 @@
+skill: icea-review
+scenarios:
+  - id: triggers-on-review-pr-phrase
+    description: "Should trigger on 'review this PR' phrase"
+    input: "Review this PR against the ICEA"
+    expect:
+      triggered: true
+      contains:
+        - "ICEA"
+        - "CHECK"
+      not_contains:
+        - "ICEA GATE"
+
+  - id: produces-verdict-block
+    description: "Should always end with a verdict (READY / NEEDS WORK / BLOCKED)"
+    input: "Self-review my changes against the ICEA for ADO #1234"
+    expect:
+      triggered: true
+      contains:
+        - "READY FOR REVIEW"
+        - "NEEDS WORK"
+        - "BLOCKED"
+
+  - id: business-context-check
+    description: "Should apply business context severity override"
+    input: |
+      Review this diff. It logs client.alienRegistrationNumber to the console.
+      The ICEA says: AC-1: display matter details.
+    expect:
+      triggered: true
+      contains:
+        - "Critical"
+      not_contains:
+        - "Low"
+        - "Informational"

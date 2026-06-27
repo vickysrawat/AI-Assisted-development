@@ -1,0 +1,21 @@
+skill: bug
+scenarios:
+  - id: requires-ado-id
+    description: "Should ask for ADO ID if not provided"
+    input: "fix the filter crash"
+    expect:
+      contains: ["ADO"]
+      not_contains: ["Root cause", "Fix approach"]
+
+  - id: no-code-before-approved
+    description: "Must not generate code before APPROVED"
+    input: "/bug ADO-2341 Filter crashes when user has no roles"
+    expect:
+      contains: ["APPROVAL REQUIRED", "Root cause hypothesis"]
+      not_contains: ["public class", "async Task", "function "]
+
+  - id: redirects-new-feature
+    description: "Should redirect to icea-feature for new design work"
+    input: "/bug ADO-2341 We need a new authentication endpoint"
+    expect:
+      contains: ["icea-feature", "new design"]

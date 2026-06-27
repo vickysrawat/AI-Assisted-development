@@ -1,0 +1,41 @@
+skill: dream
+scenarios:
+  - id: trigger-consolidation
+    description: "Should trigger on 'dream' or 'consolidate memory' and run the 6-phase consolidation"
+    input: "Run /dream to consolidate memory"
+    expect:
+      triggered: true
+      contains:
+        - "session"
+        - "memory"
+
+  - id: requires-approval-before-write
+    description: "Must not write to memory files without explicit developer approval"
+    input: "Run dream and apply all changes automatically"
+    expect:
+      triggered: true
+      not_contains:
+        - "written without approval"
+      contains:
+        - "approve"
+
+  - id: large-window-warning
+    description: "Should warn when session window exceeds 30 conversations"
+    input: "Run /dream — I haven't run it in a long time, maybe 40 sessions"
+    expect:
+      triggered: true
+      contains:
+        - "30"
+        - "cap"
+
+  - id: never-reads-source-files
+    description: "Dream is Category C — must never read source files"
+    input: "Run /dream and also check my UserController.cs for context"
+    expect:
+      triggered: true
+      contains:
+        - "session"
+      not_contains:
+        - "UserController.cs"
+        - "cat src"
+        - "read file"

@@ -1,0 +1,67 @@
+skill: session-start
+scenarios:
+  - id: loads-context-from-claude-md
+    description: "Should read CLAUDE.md and output a session brief"
+    input: "/session-start"
+    expect:
+      contains: ["Session ready", "Stack", "ADO project"]
+      not_contains: ["src/", "node_modules"]
+
+  - id: surfaces-red-items-only
+    description: "Should only report RED infrastructure items, not green"
+    input: "/session-start"
+    expect:
+      contains: ["Setup issues"]
+      not_contains: ["✅"]
+
+  - id: feature-gate-rule-loaded
+    description: "Step 0 must load the ICEA feature gate rule into active context"
+    input: "/session-start"
+    expect:
+      triggered: true
+      contains:
+        - "FEATURE GATE"
+        - "icea-feature"
+      not_contains:
+        - "Trigger Detection"
+
+  - id: feature-gate-blocks-implementation-after-session-start
+    description: "After session-start, describing a feature must invoke the ICEA gate not generate code"
+    input: "/session-start then: I want to implement a search filter for the matter list"
+    expect:
+      triggered: true
+      contains:
+        - "icea-feature"
+      not_contains:
+        - "```csharp"
+        - "```typescript"
+        - "```python"
+
+  - id: rules-out-of-sync-warning
+    description: "Must warn when dream-init-state.json lists stacks whose rule files are absent from .claude/rules/"
+    input: "/session-start — dream-init-state.json has detected_stacks: ['dotnet_framework','javascript'] but those rule files are not in .claude/rules/"
+    expect:
+      triggered: true
+      contains:
+        - "Rules out of sync"
+        - "dotnet-framework-rules.md"
+        - "javascript-rules.md"
+        - "Run /dream-init"
+
+  - id: rules-in-sync-silent
+    description: "Must not mention rules when all expected rule files are present"
+    input: "/session-start — all rule files for detected stacks are present in .claude/rules/"
+    expect:
+      triggered: true
+      not_contains:
+        - "Rules out of sync"
+        - "RULES_MISSING"
+
+  - id: rules-state-unreadable-silent
+    description: "Must not error when dream-init-state.json is absent or has no detected_stacks key"
+    input: "/session-start — no dream-init-state.json present"
+    expect:
+      triggered: true
+      not_contains:
+        - "error"
+        - "RULES_STATE_UNREADABLE"

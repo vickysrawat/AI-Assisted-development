@@ -1,0 +1,58 @@
+skill: sprint-metrics
+scenarios:
+  - id: trigger-sprint-metrics
+    description: "Should trigger on 'sprint metrics' and produce three KPIs"
+    input: "Run sprint metrics for Sprint 5"
+    expect:
+      triggered: true
+      contains:
+        - "ICEA Compliance"
+        - "PR Rejection"
+        - "Rework"
+
+  - id: hard-rule-no-fabricated-values
+    description: "Must mark metric as Unavailable when ADO query returns an error, not invent data"
+    input: "Run sprint metrics for Sprint 3. The ADO API returns a 401 Unauthorized error."
+    expect:
+      triggered: true
+      contains:
+        - "Unavailable"
+        - "401"
+      not_contains:
+        - "ICEA Compliance Rate\n   Rate"
+
+  - id: hard-rule-raw-counts-with-percentages
+    description: "Must always show raw counts alongside percentages"
+    input: "Sprint metrics sprint=Sprint 4"
+    expect:
+      triggered: true
+      contains:
+        - "Tickets moved to Active"
+        - "PRs completed"
+        - "Bug items raised"
+
+  - id: missing-sprint-name-prompts-for-input
+    description: "Must ask for sprint name or date range when neither is provided"
+    input: "Run sprint metrics"
+    expect:
+      triggered: true
+      contains:
+        - "sprint="
+        - "from="
+
+  - id: pat-missing-prompts-gracefully
+    description: "Should ask for PAT with clear instructions when env var is not set"
+    input: "Run sprint metrics sprint=Sprint 6. AZURE_DEVOPS_PAT is not set."
+    expect:
+      triggered: true
+      contains:
+        - "AZURE_DEVOPS_PAT"
+        - "Personal Access Token"
+
+  - id: capacity-omitted-when-not-provided
+    description: "Must omit rework % calculation when capacity is not given"
+    input: "Sprint metrics sprint=Sprint 2. No capacity provided."
+    expect:
+      triggered: true
+      not_contains:
+        - "Rework %"

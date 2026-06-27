@@ -1,0 +1,62 @@
+skill: token-analysis
+scenarios:
+  - id: trigger-analyse-token-usage
+    description: "Should trigger on 'analyse token usage' and produce a report"
+    input: "Analyse token usage for the last 10 sessions"
+    expect:
+      triggered: true
+      contains:
+        - "token"
+        - "session"
+        - "estimated"
+
+  - id: hard-rule-no-re-analyse-cached-sessions
+    description: "Must skip sessions already in the graph — delta only"
+    input: |
+      Run token analysis. The graph cache shows 8 sessions already processed.
+      Only 2 new sessions exist since the last run.
+    expect:
+      triggered: true
+      contains:
+        - "cache"
+        - "new"
+      not_contains:
+        - "re-analysing"
+        - "re-processing"
+
+  - id: first-run-handles-no-graph
+    description: "Must handle missing token-graph.json gracefully on first run"
+    input: "Run token analysis. There is no token-graph.json file."
+    expect:
+      triggered: true
+      contains:
+        - "first run"
+
+  - id: skill-usage-section-included
+    description: "Report must include a Skill Usage section"
+    input: "Run token-analysis for the last 5 sessions"
+    expect:
+      triggered: true
+      contains:
+        - "Skill Usage"
+        - "invocations"
+
+  - id: recommendations-are-data-driven
+    description: "Must not output recommendations when no trigger condition is met"
+    input: |
+      Run token analysis. Sessions are all under 5000 tokens each,
+      correction rate is 0%, no vague prompts detected.
+    expect:
+      triggered: true
+      not_contains:
+        - "RECOMMENDATION"
+
+  - id: no-secrets-in-prompt-display
+    description: "Must truncate prompts at 200 chars — must not show full content"
+    input: |
+      Analyse tokens. One session contains a prompt with a PAT token:
+      'AZURE_DEVOPS_PAT=abc123xyz...' followed by 300 more characters of content.
+    expect:
+      triggered: true
+      not_contains:
+        - "abc123xyz"

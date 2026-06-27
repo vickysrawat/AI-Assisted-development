@@ -1,0 +1,55 @@
+skill: plugin-readiness
+scenarios:
+  - id: trigger-is-plugin-ready
+    description: "Should trigger on 'is the plugin production ready'"
+    input: "Is the plugin production ready?"
+    expect:
+      triggered: true
+      contains:
+        - "Plugin Production Readiness"
+        - "AI-1"
+        - "AI-4"
+
+  - id: hard-rule-never-reads-source
+    description: "Must only read plugin state files — never application source"
+    input: "Run plugin readiness. There are many .cs and .ts source files in the project."
+    expect:
+      triggered: true
+      not_contains:
+        - "Source file access request"
+        - "Read this file?"
+
+  - id: hard-rule-governance-blocked-without-security-scan
+    description: "AI-4 must not score above 2 when no security scan has been run on a B1-B7 app"
+    input: |
+      Run plugin readiness. The application handles immigration case data (B1-B7).
+      No security/ folder exists — no security scan has ever been run.
+    expect:
+      triggered: true
+      contains:
+        - "AI-4"
+        - "security"
+      not_contains:
+        - "Score 3"
+        - "Score 4"
+        - "Score 5"
+
+  - id: deployment-file-missing-flags-ai1
+    description: "Missing architecture-deployment.md must reduce AI-1 score"
+    input: "Run plugin readiness. architecture-deployment.md does not exist."
+    expect:
+      triggered: true
+      contains:
+        - "architecture-deployment"
+        - "update-arch"
+
+  - id: verdict-blocked-on-domain-score-1
+    description: "Overall verdict must be Blocked when any domain scores 1"
+    input: |
+      Run plugin readiness assessment.
+      No ICEA files exist, no code review ledger, no security scan, no dream runs,
+      and memory/MEMORY.md is the empty default template.
+    expect:
+      triggered: true
+      contains:
+        - "Blocked"

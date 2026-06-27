@@ -1,0 +1,62 @@
+skill: pr-spec-review
+scenarios:
+  - id: trigger-review-pr-against-spec
+    description: "Should trigger when both spec and diff are present"
+    input: |
+      Review this PR against the spec.
+      Spec: AC-1 — filter must reject empty strings. AC-2 — results must be paginated.
+      Diff: MatterController.cs updated filter method.
+    expect:
+      triggered: true
+      contains:
+        - "AC-1"
+        - "AC-2"
+        - "Compliance"
+
+  - id: all-four-outputs-produced
+    description: "Must produce all four structured outputs"
+    input: |
+      Review PR against spec. Spec: AC-1 validate input, AC-2 log errors.
+      Diff shows input validation added but no logging.
+    expect:
+      triggered: true
+      contains:
+        - "Compliance"
+        - "Traceability"
+        - "Gaps"
+
+  - id: missing-requirement-marked-fail
+    description: "Unimplemented AC must be marked as missing/failed"
+    input: |
+      Review PR against spec.
+      Spec: AC-1 add filter. AC-2 add pagination. AC-3 add export.
+      Diff: only filter logic added. No pagination or export code found.
+    expect:
+      triggered: true
+      contains:
+        - "AC-2"
+        - "AC-3"
+        - "Missing"
+
+  - id: merge-verdict-block-on-critical
+    description: "Must output BLOCK MERGE when Critical findings exist"
+    input: |
+      Review PR against spec. AC-1: authentication must be enforced.
+      Diff shows the auth middleware was removed entirely.
+    expect:
+      triggered: true
+      contains:
+        - "BLOCK"
+        - "Critical"
+
+  - id: business-context-override-applies
+    description: "Finding touching immigration data must be escalated to Critical"
+    input: |
+      Review PR against spec.
+      AC-1: new endpoint returns A-Number for client lookup.
+      Diff adds A-Number to API response with no access control check.
+    expect:
+      triggered: true
+      contains:
+        - "Critical"
+        - "B2"

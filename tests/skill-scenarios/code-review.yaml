@@ -1,0 +1,73 @@
+skill: code-review
+scenarios:
+  # ── Ledger reconciliation states ─────────────────────────────────────────
+  - id: dismissed-finding-not-reopened
+    description: "A dismissed finding that reappears in scan must stay dismissed (file unchanged)"
+    input: "/code-review --changed"
+    expect:
+      triggered: true
+      not_contains: ["New finding", "re-opened", "Status: Open\n- **FP-dismissed"]
+
+  - id: dismissed-finding-reopened-on-code-change
+    description: "A dismissed finding must be re-opened when the file changed since dismissal"
+    input: "/code-review --changed"
+    expect:
+      triggered: true
+      contains: ["previously dismissed", "code changed", "re-review required"]
+
+  - id: regression-marked-correctly
+    description: "A previously-fixed finding that reappears must be marked Regression"
+    input: "/code-review --full"
+    expect:
+      triggered: true
+      contains: ["Regression"]
+      not_contains: ["New finding"]
+
+  # ── Fingerprint collision ─────────────────────────────────────────────────
+  - id: fingerprint-collision-detected
+    description: "Must detect and suffix fingerprint when collision occurs"
+    input: "/code-review --full"
+    expect:
+      triggered: true
+      contains: ["FP-"]
+      not_contains: ["duplicate fingerprint silently"]
+
+  # ── Scope flags ──────────────────────────────────────────────────────────
+  - id: full-flag-scans-everything
+    description: "--full must ignore cache and scan all files"
+    input: "/code-review --full"
+    expect:
+      triggered: true
+      contains: ["full scan", "cache"]
+      not_contains: ["skipping", "unchanged"]
+
+  - id: no-changed-files-exits-cleanly
+    description: "Must exit cleanly with message when no files changed"
+    input: "/code-review"
+    expect:
+      triggered: true
+      contains: ["No changed files", "--full"]
+      not_contains: ["Error", "undefined"]
+
+  # ── Phase D hybrid (v1.25.0) ──────────────────────────────────────────────
+  - id: baseline-never-gates
+    description: "First Phase D run writes Baseline section; baseline findings must not block"
+    input: "/code-review --full"
+    expect:
+      triggered: true
+      contains: ["Baseline", "do NOT gate"]
+      not_contains: ["BLOCKED"]
+
+  - id: capability-guard-no-false-fixed
+    description: "Deterministic finding must not be marked Fixed by a run lacking the producing tool"
+    input: "/code-review --changed"
+    expect:
+      triggered: true
+      not_contains: ["marked Fixed"]
+
+  - id: phase-p-never-suppresses-phase-d
+    description: "Probabilistic layer may annotate but never delete a deterministic finding"
+    input: "/code-review --changed"
+    expect:
+      triggered: true
+      not_contains: ["removed deterministic", "suppressed"]

@@ -1,0 +1,63 @@
+skill: critic
+scenarios:
+  - id: trigger-critique-spec
+    description: "Should trigger on a request to critique a spec and run ICEA mode"
+    input: "Give me a second opinion on this ICEA before I approve it."
+    expect:
+      triggered: true
+      contains:
+        - "CRITIC"
+        - "Verdict"
+
+  - id: icea-mode-dimensions
+    description: "ICEA critique must cover completeness, testability, B-coverage, and scope"
+    input: "/critic icea ADO-1847"
+    expect:
+      triggered: true
+      contains:
+        - "Completeness"
+        - "Testability"
+        - "Scope"
+
+  - id: code-mode-traceability
+    description: "CODE critique must check ICEA traceability and simplicity"
+    input: "Is this generated code over-engineered and does it match the ICEA?"
+    expect:
+      triggered: true
+      contains:
+        - "Traceability"
+        - "Simplicity"
+
+  - id: revise-retry-bound
+    description: "CODE mode REVISE loop must cap at 2 automatic retries then surface"
+    input: "/critic code — the code still fails critique after regenerating twice"
+    expect:
+      triggered: true
+      contains:
+        - "revision 2 of 2"
+        - "ACCEPT AS-IS"
+
+  - id: standalone-code-is-category-a
+    description: "Standalone code critique announces scope before reading files (Category A)"
+    input: "/critic code"
+    expect:
+      triggered: true
+      contains:
+        - "Will read"
+        - "STOP"
+
+  - id: standalone-code-no-rewrite
+    description: "Standalone code mode reports concerns only — never rewrites files"
+    input: "/critic code ADO-1847 on my already-committed changes"
+    expect:
+      triggered: true
+      contains:
+        - "/fix"
+
+  - id: no-fingerprints
+    description: "Critic is ephemeral — must not assign fingerprints or write a ledger"
+    input: "/critic icea ADO-1847 and add the findings to a ledger"
+    expect:
+      triggered: true
+      contains:
+        - "ephemeral"
