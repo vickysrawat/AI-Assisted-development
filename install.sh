@@ -5,10 +5,42 @@
 # Uninstall: bash install.sh --uninstall
 
 PLUGIN_NAME="ai-assisted-development"
-MARKETPLACE_NAME="ke-marketplace"
-MARKETPLACE_DIR="$HOME/.claude/plugins/$MARKETPLACE_NAME"
-PLUGIN_DIR="$MARKETPLACE_DIR/plugins/$PLUGIN_NAME"
-ADO_REPO_URL="https://dev.azure.com/kirklandandellis/KE/_git/ai-assisted-development"
+
+# ── Identity: single source of truth is .claude-plugin/config.json (co-located
+#    with this script). The plugin ships company-agnostic; on a fresh install the
+#    values are prompted (see prompt_identity) and written back to config.json.
+#    Never hardcode org/project/company here — generic placeholders are the only fallback.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_JSON="$SCRIPT_DIR/.claude-plugin/config.json"
+read_cfg() { node -e "try{const c=require(process.argv[1]);process.stdout.write(String(c[process.argv[2]]||''))}catch(e){}" "$CONFIG_JSON" "$1" 2>/dev/null; }
+if [ -f "$CONFIG_JSON" ] && command -v node &>/dev/null; then
+  COMPANY="$(read_cfg company)";                  COMPANY="${COMPANY:-Your Company}"
+  ADO_ORG="$(read_cfg organization)";             ADO_ORG="${ADO_ORG:-your-org}"
+  ADO_PROJECT="$(read_cfg project)";              ADO_PROJECT="${ADO_PROJECT:-your-project}"
+  ADO_BASE="$(read_cfg adoBaseUrl)";              ADO_BASE="${ADO_BASE:-https://dev.azure.com}"
+  ADO_PLUGIN_REPO="$(read_cfg pluginRepoName)";   ADO_PLUGIN_REPO="${ADO_PLUGIN_REPO:-$PLUGIN_NAME}"
+else
+  COMPANY="Your Company"; ADO_ORG="your-org"; ADO_PROJECT="your-project"
+  ADO_BASE="https://dev.azure.com"; ADO_PLUGIN_REPO="$PLUGIN_NAME"
+fi
+
+# Marketplace name is DERIVED from the organization: "<org>-marketplace" for a real
+# org, else "local-marketplace". (Never a hardcoded company name.)
+derive_marketplace() { if [ -n "$1" ] && [ "$1" != "your-org" ]; then echo "$1-marketplace"; else echo "local-marketplace"; fi; }
+
+# Prefer an already-installed plugin dir (any marketplace name) so --update/--uninstall
+# and overwrite-detection always find it; otherwise derive the name from the org.
+EXISTING_PLUGIN_DIR="$(ls -d "$HOME"/.claude/plugins/*/plugins/ai-assisted-development 2>/dev/null | head -1)"
+if [ -n "$EXISTING_PLUGIN_DIR" ]; then
+  PLUGIN_DIR="$EXISTING_PLUGIN_DIR"
+  MARKETPLACE_DIR="$(dirname "$(dirname "$PLUGIN_DIR")")"
+  MARKETPLACE_NAME="$(basename "$MARKETPLACE_DIR")"
+else
+  MARKETPLACE_NAME="$(derive_marketplace "$ADO_ORG")"
+  MARKETPLACE_DIR="$HOME/.claude/plugins/$MARKETPLACE_NAME"
+  PLUGIN_DIR="$MARKETPLACE_DIR/plugins/$PLUGIN_NAME"
+fi
+ADO_REPO_URL="$ADO_BASE/$ADO_ORG/$ADO_PROJECT/_git/$ADO_PLUGIN_REPO"
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; CYAN='\033[0;36m'; NC='\033[0m'
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -59,7 +91,7 @@ write_marketplace_json() {
 {
   "name": "$MARKETPLACE_NAME",
   "owner": { "name": "Product Engineering" },
-  "description": "Kirkland & Ellis internal Claude Code plugins",
+  "description": "$COMPANY internal Claude Code plugins",
   "plugins": [
     {
       "name": "$PLUGIN_NAME",
@@ -69,6 +101,48 @@ write_marketplace_json() {
   ]
 }
 MARKETPLACE_EOF
+}
+
+# Prompt for identity on a fresh install. Enter keeps the shown default (the
+# config placeholder). Skipped entirely on non-interactive shells (CI). Re-derives
+# ADO_REPO_URL so a git-clone install uses the entered org/project.
+prompt_identity() {
+  if [ ! -t 0 ]; then
+    echo "  (non-interactive shell — keeping config.json defaults: $ADO_ORG/$ADO_PROJECT)"
+    return
+  fi
+  echo -e "${CYAN}Azure DevOps identity${NC} — press Enter to keep the shown default (placeholder is fine):"
+  local _in
+  read -p "  Organization [$ADO_ORG]: " _in;   [ -n "$_in" ] && ADO_ORG="$_in"
+  read -p "  Project [$ADO_PROJECT]: " _in;     [ -n "$_in" ] && ADO_PROJECT="$_in"
+  read -p "  Company / team [$COMPANY]: " _in;  [ -n "$_in" ] && COMPANY="$_in"
+  read -p "  ADO base URL [$ADO_BASE]: " _in;   [ -n "$_in" ] && ADO_BASE="$_in"
+  ADO_REPO_URL="$ADO_BASE/$ADO_ORG/$ADO_PROJECT/_git/$ADO_PLUGIN_REPO"
+  # Re-derive the marketplace name/paths from the entered org — fresh install only
+  # (when overwriting/updating an existing install we keep its discovered location).
+  if [ -z "$EXISTING_PLUGIN_DIR" ]; then
+    MARKETPLACE_NAME="$(derive_marketplace "$ADO_ORG")"
+    MARKETPLACE_DIR="$HOME/.claude/plugins/$MARKETPLACE_NAME"
+    PLUGIN_DIR="$MARKETPLACE_DIR/plugins/$PLUGIN_NAME"
+    echo "  Marketplace: $MARKETPLACE_NAME"
+  fi
+  echo ""
+}
+
+# Persist the resolved identity into the INSTALLED plugin's config.json, then run
+# its sync-config.sh so plugin.json / marketplace.json match. Skips fields left blank.
+write_plugin_config() {
+  local dest="$PLUGIN_DIR/.claude-plugin/config.json"
+  [ -f "$dest" ] || return 0
+  COMPANY="$COMPANY" ADO_ORG="$ADO_ORG" ADO_PROJECT="$ADO_PROJECT" ADO_BASE="$ADO_BASE" \
+  node -e '
+    const fs=require("fs"); const p=process.argv[1];
+    const c=JSON.parse(fs.readFileSync(p,"utf8"));
+    c.company=process.env.COMPANY||c.company; c.organization=process.env.ADO_ORG||c.organization;
+    c.project=process.env.ADO_PROJECT||c.project; c.adoBaseUrl=process.env.ADO_BASE||c.adoBaseUrl;
+    fs.writeFileSync(p, JSON.stringify(c,null,2)+"\n");
+  ' "$dest" 2>/dev/null && echo "  ✓ Identity saved to config.json ($ADO_ORG/$ADO_PROJECT)"
+  [ -f "$PLUGIN_DIR/scripts/sync-config.sh" ] && bash "$PLUGIN_DIR/scripts/sync-config.sh" >/dev/null 2>&1 || true
 }
 
 # Ask source — git or local folder. Sets SOURCE_CHOICE.
@@ -192,6 +266,15 @@ if [[ "$1" == "--update" ]]; then
 
   echo -e "${CYAN}Update mode — plugin found at $PLUGIN_DIR${NC}"
   echo ""
+
+  # Preserve the installed identity — an update copy/pull would otherwise revert
+  # config.json to the shipped placeholders.
+  CFG_BACKUP=""
+  if [ -f "$PLUGIN_DIR/.claude-plugin/config.json" ]; then
+    CFG_BACKUP="$(mktemp 2>/dev/null || echo "$PLUGIN_DIR/.claude-plugin/config.json.bak")"
+    cp "$PLUGIN_DIR/.claude-plugin/config.json" "$CFG_BACKUP"
+  fi
+
   select_source "update"
 
   case "$SOURCE_CHOICE" in
@@ -220,6 +303,14 @@ if [[ "$1" == "--update" ]]; then
       ;;
   esac
 
+  # Restore the preserved identity and re-sync the manifests.
+  if [ -n "$CFG_BACKUP" ] && [ -f "$CFG_BACKUP" ]; then
+    cp "$CFG_BACKUP" "$PLUGIN_DIR/.claude-plugin/config.json"
+    rm -f "$CFG_BACKUP"
+    [ -f "$PLUGIN_DIR/scripts/sync-config.sh" ] && bash "$PLUGIN_DIR/scripts/sync-config.sh" >/dev/null 2>&1 || true
+    echo "  ✓ Preserved your identity (config.json) across the update"
+  fi
+
   write_marketplace_json "$NEW_VERSION"
 
   echo ""
@@ -237,6 +328,9 @@ fi
 command -v claude &>/dev/null || { echo -e "${RED}✗ Claude Code CLI not found. Install: npm install -g @anthropic-ai/claude-code${NC}"; exit 1; }
 command -v git    &>/dev/null || { echo -e "${RED}✗ git not found. Please install Git and retry.${NC}"; exit 1; }
 command -v node   &>/dev/null || { echo -e "${RED}✗ node not found. Please install Node.js and retry.${NC}"; exit 1; }
+
+# ── Configure identity (prompt on fresh install) ────────────────────────────────
+prompt_identity
 
 # ── Handle existing install ────────────────────────────────────────────────────
 if [ -d "$PLUGIN_DIR" ]; then
@@ -279,6 +373,9 @@ esac
 # ── Validate ───────────────────────────────────────────────────────────────────
 [ ! -f "$PLUGIN_DIR/.claude-plugin/plugin.json" ] && \
   echo -e "${RED}✗ Install failed — plugin.json not found. Check the source and retry.${NC}" && exit 1
+
+# ── Persist entered identity into the installed plugin's config.json ────────────
+write_plugin_config
 
 # ── Create marketplace wrapper ─────────────────────────────────────────────────
 write_marketplace_json "$NEW_VERSION"

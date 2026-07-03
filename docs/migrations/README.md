@@ -47,3 +47,14 @@ Summary: {one line — what a sync brings current}
 | Version | Summary |
 |---|---|
 | 1.27.0 | VCS-aware ignore file: add `.tfignore` for TFVC repos; refresh the managed ignore block |
+| 1.31.0 | Write Gate, hierarchical ICEA folder structure, Tech Spec companion doc |
+| 2.0.0 | Session-independent workflow, keyword handlers, Epic support |
+| 2.1.0 | Single-responsibility skill boundaries, interactive draft-then-save flow |
+| 2.1.1 | `install.ps1` rewrite — dynamic version, local-folder update |
+| 2.2.0 | Plan phase integrated into `icea-feature`; extended ICEA template |
+| 2.2.0 (shell config) | Shell & Git Configuration section added to CLAUDE.md |
+| 2.3.0 | Fixed `dream-init` path resolution and section detection |
+| 2.3.1 | Fixed `where.exe`-only path detection in `dream-init` and `dream-sync` |
+| 2.4.1 | ICEA and Tech Spec drafts written to `temp/` for VS Code preview |
+| 2.6.0 | Codebase knowledge graph (`.claude/graph/`) — index+detail files with git-hook staleness detection; `/graph-sync` refresh |
+| 3.0.0 | Knowledge graph is the single orientation layer; `domain-map.md` retired; graph now committed (not gitignored) |

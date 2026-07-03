@@ -102,7 +102,7 @@ Checks performed:
 - No inline B1-B7 lists (must reference shared spec)
 - No hardcoded ADO org in skill bodies
 - dream-health trigger uses hyphen not space
-- domain-map-spec has no individual skill version pins
+- knowledge-graph schemas present and domain-map-spec removed (ADR 0038)
 - source-file-consent.md table contains all skills
 - business-context-severity.md referenced in every SKILL.md
 - No consecutive --- separators outside frontmatter

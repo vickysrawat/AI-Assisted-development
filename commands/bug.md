@@ -33,12 +33,13 @@ Provide the ADO bug ID and a one-line description:
 ```bash
 git symbolic-ref --short HEAD
 git log -1 --format="%s" HEAD
-cat .claude/architecture/domain-map.md 2>/dev/null | head -80
+cat .claude/graph/graph-index.md 2>/dev/null
 cat .claude/architecture/architecture.md 2>/dev/null | head -40
 ```
 
-From the domain-map, identify which feature area the bug description mentions.
-Note the entry-point file for that area — do not open it yet.
+From the graph index, identify which module the bug description mentions, then read
+that module's `.claude/graph/<module>.md` detail file. Note the entry-point file for
+that module — do not open it yet.
 
 ---
 
@@ -73,12 +74,12 @@ Expected behaviour:
   {What should happen instead}
 
 Root cause hypothesis:
-  {Most likely cause based on description and domain-map context.
+  {Most likely cause based on description and knowledge-graph context.
    State it as a hypothesis — not a certainty — if the source hasn't been read.
-   Reference the entry-point file from the domain-map if relevant.}
+   Reference the entry-point file from the module detail file if relevant.}
 
 Files likely involved:
-  {List 1–3 files from domain-map or architecture docs. Do not open them yet.}
+  {List 1–3 files from the module's graph detail or architecture docs. Do not open them yet.}
 
 Fix approach:
   {Concise description of the change needed — null guard, missing condition,

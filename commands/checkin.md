@@ -54,7 +54,7 @@ Report scope immediately:
 Load these once. Do not reload per check:
 
 ```bash
-cat .claude/architecture/domain-map.md 2>/dev/null | head -80
+cat .claude/graph/graph-index.md 2>/dev/null
 cat .claude/architecture/architecture.md 2>/dev/null | head -40
 cat .claude/file-cache.json 2>/dev/null || echo "NO_CACHE"
 ```

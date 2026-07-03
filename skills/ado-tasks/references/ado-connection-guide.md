@@ -1,6 +1,6 @@
 # ADO Connection Guide — ado-tasks skill
 
-## Required curl flags on the Kirkland network
+## Required curl flags on the corporate network
 
 **Always use both flags. Omitting either causes a silent failure.**
 
@@ -60,7 +60,7 @@ Then reference `$AUTH` in all subsequent curl calls.
 ### If a PAT was exposed
 
 Rotate it immediately:
-1. Open `https://dev.azure.com/kirklandandellis/_usersSettings/tokens`
+1. Open `https://dev.azure.com/<your-org>/_usersSettings/tokens`
 2. Find the token → Revoke
 3. Create a new token with the minimum required scopes
 4. Update your environment variable / settings.json
@@ -76,7 +76,7 @@ Rotate it immediately:
 | Read PRs | Code → Read |
 | Create PRs | Code → Read & Write |
 
-Generate a PAT at: `https://dev.azure.com/kirklandandellis/_usersSettings/tokens`
+Generate a PAT at: `https://dev.azure.com/<your-org>/_usersSettings/tokens`
 Select **Custom defined** → choose only the scopes you need.
 
 ---

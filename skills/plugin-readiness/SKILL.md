@@ -57,7 +57,7 @@ echo "=== dream-status checks ==="
 # Check each of the 17 dream-status items directly
 ls CLAUDE.md memory/MEMORY.md memory/dream-log.md 2>/dev/null
 ls .claude/rules/ .claude/commands/ .claude/architecture/ 2>/dev/null
-ls .claude/architecture/domain-map.md .claude/file-cache.json 2>/dev/null
+ls .claude/graph/graph-index.md .claude/file-cache.json 2>/dev/null
 ls token-analysis/token-graph.json 2>/dev/null
 
 echo "=== rules sync check ==="
@@ -171,7 +171,7 @@ Evaluate the 17 dream-status checks from the evidence collected in Step 1.
 | .claude/rules/ in sync | `RULES_IN_SYNC` emitted — all expected rule files present for detected stacks | Required |
 | .claude/commands/ 22 stubs | Count = 22 | Required |
 | .claude/architecture/ populated | No `<!-- TEMPLATE -->` markers | Required |
-| domain-map.md exists | File present + fingerprint | Required |
+| knowledge graph exists | `.claude/graph/graph-index.md` present + module detail files | Required |
 | file-cache.json seeded | File present | Required |
 | token-graph.json seeded | File present | Required |
 | .gitignore coverage | All 13 entries covered | Required |
@@ -269,7 +269,8 @@ Evidence: shared spec versions, skill SKILL.md files for spot-check.
 
 ```bash
 echo "=== Shared spec versions ==="
-grep "_Spec version" .claude/architecture/domain-map.md 2>/dev/null
+head -2 skills/shared/graph-index-schema.md 2>/dev/null
+head -2 skills/shared/graph-module-schema.md 2>/dev/null
 head -2 skills/shared/scope-flags-spec.md 2>/dev/null
 head -2 skills/shared/source-file-consent.md 2>/dev/null
 head -2 skills/shared/business-context-severity.md 2>/dev/null
@@ -290,7 +291,7 @@ grep -c "FILE_BUDGET\|40 file\|budget cap" \
 
 | Check | Required for production |
 |---|---|
-| domain-map-spec.md v1.1 (fingerprint) | ✓ |
+| graph-index-schema.md + graph-module-schema.md (per-module fingerprint) | ✓ |
 | scope-flags-spec.md v1.2 (--area, budget cap) | ✓ |
 | source-file-consent.md present | ✓ |
 | business-context-severity.md B1–B7 complete | ✓ |

@@ -57,7 +57,7 @@ Check for explicit scope flags in the user's request:
 | `--area backend` | Backend source files (`*.cs`, `*.java`, `*.py`) |
 | `--area frontend` | Only `*.ts` and `*.html` files |
 | `--area config` | Only `*.json`, `*.yml`, `*.yaml`, `*.env`, `Dockerfile` |
-| `--area <AreaName>` | Entry-point file + key files for that domain-map area |
+| `--area <ModuleName>` | Entry-point file + key files for that knowledge-graph module |
 | `--continue` | Resume from checkpoint |
 | (none) | Default: cache-aware full-project scan with budget cap |
 
@@ -109,7 +109,7 @@ directly. Do not filter by subdirectory.
 For `--area backend`: `find . \( -name "*.cs" -o -name "*.java" -o -name "*.py" \) -not -path "./bin/*" -not -path "./obj/*" -not -path "./target/*" -not -path "*/__pycache__/*" -not -path "*/.venv/*"`
 For `--area frontend`: `find . \( -name "*.ts" -o -name "*.html" \) -not -path "./node_modules/*" -not -path "./dist/*"`
 For `--area config`: `find . \( -name "*.json" -o -name "*.yml" -o -name "*.yaml" -o -name "Dockerfile" \) -not -path "./node_modules/*" -not -path "./dist/*"`
-For `--area <AreaName>`: read `domain-map.md` and extract entry-point + key files for the named area.
+For `--area <ModuleName>`: read `.claude/graph/graph-index.md`, find the module row, then read its `.claude/graph/<module>.md` detail file and extract the entry-point + key files.
 For `--continue`: read pending files from `.claude/code-review-checkpoint.json`.
 
 ### Step 0a2 — Apply file budget cap
@@ -340,5 +340,5 @@ Load `references/analysis-rules.md` now.
 | `references/checkers-python.md` | Python / FastAPI / Django / Flask analysis |
 | `../shared/file-cache-schema.md` (spec v1.0) | file-cache.json schema and merge rules (shared across skills) |
 | `../shared/scope-flags-spec.md` (spec v1.4) | Canonical scope flag definitions and file enumeration command (`--changed`, `--pr`, `--full`, `--ci`) |
-| `../shared/domain-map-spec.md` (spec v1.1) | domain-map.md schema, staleness rules, and fingerprint contract |
+| `../shared/graph-index-schema.md` · `../shared/graph-module-schema.md` | Knowledge-graph schema (index + per-module detail) used for `--area` orientation |
 | `../shared/dismissed-findings-reconciliation.md` (spec v1.0) | Canonical Rule 5 — dismissed finding reconciliation on re-scan (keep dismissed if file unchanged; re-open with verify flag if file changed since dismissal date) |

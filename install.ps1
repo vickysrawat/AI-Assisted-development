@@ -9,12 +9,77 @@ param(
 )
 
 $PLUGIN_NAME      = "ai-assisted-development"
-$MARKETPLACE_NAME = "ke-marketplace"
-$MARKETPLACE_DIR  = "$env:USERPROFILE\.claude\plugins\$MARKETPLACE_NAME"
-$PLUGIN_DIR       = "$MARKETPLACE_DIR\plugins\$PLUGIN_NAME"
-$ADO_REPO_URL     = "https://dev.azure.com/kirklandandellis/KE/_git/ai-assisted-development"
+
+# Identity: single source of truth is .claude-plugin/config.json (co-located with
+# this script). The plugin ships company-agnostic; on a fresh install the values
+# are prompted (Prompt-Identity) and written back to config.json. Never hardcode
+# org/project/company here — generic placeholders are the only fallback.
+$CONFIG_JSON = Join-Path $PSScriptRoot ".claude-plugin\config.json"
+$COMPANY = "Your Company"; $ADO_ORG = "your-org"; $ADO_PROJECT = "your-project"
+$ADO_BASE = "https://dev.azure.com"; $ADO_PLUGIN_REPO = $PLUGIN_NAME
+if (Test-Path $CONFIG_JSON) {
+  try {
+    $cfg = Get-Content $CONFIG_JSON -Raw | ConvertFrom-Json
+    if ($cfg.company)         { $COMPANY = $cfg.company }
+    if ($cfg.organization)    { $ADO_ORG = $cfg.organization }
+    if ($cfg.project)         { $ADO_PROJECT = $cfg.project }
+    if ($cfg.adoBaseUrl)      { $ADO_BASE = $cfg.adoBaseUrl }
+    if ($cfg.pluginRepoName)  { $ADO_PLUGIN_REPO = $cfg.pluginRepoName }
+  } catch { }
+}
+
+# Marketplace name is DERIVED from the organization: "<org>-marketplace" for a real
+# org, else "local-marketplace". Never a hardcoded company name.
+function Derive-Marketplace($org) { if ($org -and $org -ne "your-org") { return "$org-marketplace" } else { return "local-marketplace" } }
+
+# Prefer an already-installed plugin dir (any marketplace name) so -Update/-Uninstall
+# and overwrite-detection always find it; otherwise derive the name from the org.
+$EXISTING_PLUGIN_DIR = Get-ChildItem -Path "$env:USERPROFILE\.claude\plugins\*\plugins\ai-assisted-development" -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($EXISTING_PLUGIN_DIR) {
+  $PLUGIN_DIR       = $EXISTING_PLUGIN_DIR.FullName
+  $MARKETPLACE_DIR  = Split-Path -Parent (Split-Path -Parent $PLUGIN_DIR)
+  $MARKETPLACE_NAME = Split-Path -Leaf $MARKETPLACE_DIR
+} else {
+  $MARKETPLACE_NAME = Derive-Marketplace $ADO_ORG
+  $MARKETPLACE_DIR  = "$env:USERPROFILE\.claude\plugins\$MARKETPLACE_NAME"
+  $PLUGIN_DIR       = "$MARKETPLACE_DIR\plugins\$PLUGIN_NAME"
+}
+$ADO_REPO_URL     = "$ADO_BASE/$ADO_ORG/$ADO_PROJECT/_git/$ADO_PLUGIN_REPO"
 $SETTINGS_FILE    = "$env:USERPROFILE\.claude\settings.json"
 $TEMP_JS          = "$env:TEMP\claude-plugin-setup.js"
+
+# Prompt for identity on a fresh install (Enter keeps the shown default). Re-derives
+# the clone URL so a git install uses the entered org/project.
+function Prompt-Identity {
+  Write-Cyan "Azure DevOps identity - press Enter to keep the shown default (placeholder is fine):"
+  $i = Read-Host "  Organization [$script:ADO_ORG]";     if ($i) { $script:ADO_ORG = $i }
+  $i = Read-Host "  Project [$script:ADO_PROJECT]";      if ($i) { $script:ADO_PROJECT = $i }
+  $i = Read-Host "  Company / team [$script:COMPANY]";   if ($i) { $script:COMPANY = $i }
+  $i = Read-Host "  ADO base URL [$script:ADO_BASE]";    if ($i) { $script:ADO_BASE = $i }
+  $script:ADO_REPO_URL = "$script:ADO_BASE/$script:ADO_ORG/$script:ADO_PROJECT/_git/$script:ADO_PLUGIN_REPO"
+  # Re-derive marketplace name/paths from the entered org — fresh install only.
+  if (-not $script:EXISTING_PLUGIN_DIR) {
+    $script:MARKETPLACE_NAME = Derive-Marketplace $script:ADO_ORG
+    $script:MARKETPLACE_DIR  = "$env:USERPROFILE\.claude\plugins\$script:MARKETPLACE_NAME"
+    $script:PLUGIN_DIR       = "$script:MARKETPLACE_DIR\plugins\$script:PLUGIN_NAME"
+    Write-Host "  Marketplace: $script:MARKETPLACE_NAME"
+  }
+  Write-Host ""
+}
+
+# Persist entered identity into the installed plugin's config.json, then sync manifests.
+function Write-PluginConfig {
+  $dest = Join-Path $PLUGIN_DIR ".claude-plugin\config.json"
+  if (-not (Test-Path $dest)) { return }
+  try {
+    $c = Get-Content $dest -Raw | ConvertFrom-Json
+    $c.company = $COMPANY; $c.organization = $ADO_ORG; $c.project = $ADO_PROJECT; $c.adoBaseUrl = $ADO_BASE
+    ($c | ConvertTo-Json -Depth 10) | Set-Content -Path $dest -Encoding UTF8
+    Write-Green "  Identity saved to config.json ($ADO_ORG/$ADO_PROJECT)"
+    $sync = Join-Path $PLUGIN_DIR "scripts\sync-config.sh"
+    if ((Test-Path $sync) -and (Get-Command bash -ErrorAction SilentlyContinue)) { bash $sync 2>$null | Out-Null }
+  } catch { }
+}
 
 function Write-Green($msg)  { Write-Host $msg -ForegroundColor Green }
 function Write-Yellow($msg) { Write-Host $msg -ForegroundColor Yellow }
@@ -124,6 +189,16 @@ if ($Update) {
 
   Write-Cyan "Update mode — plugin found at $PLUGIN_DIR"
   Write-Host ""
+
+  # Preserve the installed identity — an update copy/pull would otherwise revert
+  # config.json to the shipped placeholders.
+  $cfgBackup = $null
+  $installedCfg = Join-Path $PLUGIN_DIR ".claude-plugin\config.json"
+  if (Test-Path $installedCfg) {
+    $cfgBackup = [System.IO.Path]::GetTempFileName()
+    Copy-Item $installedCfg $cfgBackup -Force
+  }
+
   $choice = Select-Source $true
   Write-Host ""
 
@@ -171,6 +246,15 @@ if ($Update) {
 
   $newVersion = Get-PluginVersion $PLUGIN_DIR
 
+  # Restore the preserved identity and re-sync the manifests.
+  if ($cfgBackup -and (Test-Path $cfgBackup)) {
+    Copy-Item $cfgBackup $installedCfg -Force
+    Remove-Item $cfgBackup -Force
+    $sync = Join-Path $PLUGIN_DIR "scripts\sync-config.sh"
+    if ((Test-Path $sync) -and (Get-Command bash -ErrorAction SilentlyContinue)) { bash $sync 2>$null | Out-Null }
+    Write-Green "  Preserved your identity (config.json) across the update"
+  }
+
   # Update marketplace description with new version
   New-Item -ItemType Directory -Force -Path "$MARKETPLACE_DIR\.claude-plugin" | Out-Null
   $winPath = $MARKETPLACE_DIR -replace '\\', '\\\\'
@@ -178,7 +262,7 @@ if ($Update) {
 {
   "name": "$MARKETPLACE_NAME",
   "owner": { "name": "Product Engineering" },
-  "description": "Kirkland and Ellis internal Claude Code plugins",
+  "description": "$COMPANY internal Claude Code plugins",
   "plugins": [
     {
       "name": "$PLUGIN_NAME",
@@ -213,6 +297,9 @@ if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
   Write-Red "node not found. Please install Node.js and retry."
   exit 1
 }
+
+# ── Configure identity (prompt on fresh install) ────────────────────────────────
+Prompt-Identity
 
 # ── Handle existing install ────────────────────────────────────────────────────
 if (Test-Path $PLUGIN_DIR) {
@@ -273,6 +360,9 @@ if (-not (Test-Path "$PLUGIN_DIR\.claude-plugin\plugin.json")) {
 
 $newVersion = Get-PluginVersion $PLUGIN_DIR
 
+# ── Persist entered identity into the installed plugin's config.json ────────────
+Write-PluginConfig
+
 # ── Create marketplace wrapper ─────────────────────────────────────────────────
 New-Item -ItemType Directory -Force -Path "$MARKETPLACE_DIR\.claude-plugin" | Out-Null
 
@@ -281,7 +371,7 @@ Set-Content -Path "$MARKETPLACE_DIR\.claude-plugin\marketplace.json" -Encoding U
 {
   "name": "$MARKETPLACE_NAME",
   "owner": { "name": "Product Engineering" },
-  "description": "Kirkland and Ellis internal Claude Code plugins",
+  "description": "$COMPANY internal Claude Code plugins",
   "plugins": [
     {
       "name": "$PLUGIN_NAME",

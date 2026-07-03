@@ -58,18 +58,38 @@ are checked against what the project's stack signals say should be there.
 # project-rules.md is always required
 ls .claude/rules/project-rules.md 2>/dev/null && echo "EXISTS project-rules.md" || echo "MISSING project-rules.md"
 
-# Detect which stack rules SHOULD be present, then verify each one
-HAS_DOTNET=$(find . -name "*.csproj" -o -name "*.sln" -maxdepth 4 2>/dev/null | head -1 | grep -q "." && echo 1 || echo 0)
-HAS_ANGULAR=$(ls angular.json 2>/dev/null && echo 1 || find . -name "angular.json" -maxdepth 3 2>/dev/null | head -1 | grep -q "." && echo 1 || echo 0)
-HAS_NODEJS=$(node -e "try{const p=require('./package.json');const d=Object.assign({},p.dependencies,p.devDependencies);if(!d['@angular/core'])console.log('1')}catch(e){}" 2>/dev/null || echo 0)
-HAS_JAVA=$({ find . -name "pom.xml" -maxdepth 3 2>/dev/null | xargs grep -l "spring-boot" 2>/dev/null; find . -name "build.gradle*" -maxdepth 3 2>/dev/null | xargs grep -l "org.springframework.boot" 2>/dev/null; } | head -1 | grep -q "." && echo 1 || echo 0)
-HAS_PYTHON=$(find . \( -name "*.py" -o -name "requirements.txt" -o -name "pyproject.toml" \) -maxdepth 3 2>/dev/null | head -1 | grep -q "." && echo 1 || echo 0)
+# Detect which stack rules SHOULD be present, then verify each one.
+# Prefer the cached stack list dream-init wrote; fall back to a tree scan only if the
+# state file is absent. Canonical stack->rule table: skills/shared/plugin-path-resolution.md §2
+STACKS="$(node -e 'try{const s=JSON.parse(require("fs").readFileSync(".claude/dream-init-state.json","utf8"));process.stdout.write((s.detected_stacks||[]).join(" "));}catch(e){}' 2>/dev/null)"
 
-[ "$HAS_DOTNET"  = "1" ] && { ls .claude/rules/dotnet-rules.md  2>/dev/null && echo "EXISTS dotnet-rules.md"  || echo "MISSING dotnet-rules.md"; }
-[ "$HAS_ANGULAR" = "1" ] && { ls .claude/rules/angular-rules.md 2>/dev/null && echo "EXISTS angular-rules.md" || echo "MISSING angular-rules.md"; }
-[ "$HAS_NODEJS"  = "1" ] && { ls .claude/rules/nodejs-rules.md  2>/dev/null && echo "EXISTS nodejs-rules.md"  || echo "MISSING nodejs-rules.md"; }
-[ "$HAS_JAVA"    = "1" ] && { ls .claude/rules/java-rules.md    2>/dev/null && echo "EXISTS java-rules.md"    || echo "MISSING java-rules.md"; }
-[ "$HAS_PYTHON"  = "1" ] && { ls .claude/rules/python-rules.md  2>/dev/null && echo "EXISTS python-rules.md"  || echo "MISSING python-rules.md"; }
+if [ -n "$STACKS" ]; then
+  case " $STACKS " in *" dotnet "*)          HAS_DOTNET=1;;           *) HAS_DOTNET=0;;           esac
+  case " $STACKS " in *" dotnet_framework "*) HAS_DOTNET_FRAMEWORK=1;; *) HAS_DOTNET_FRAMEWORK=0;; esac
+  case " $STACKS " in *" angular "*)          HAS_ANGULAR=1;;          *) HAS_ANGULAR=0;;          esac
+  case " $STACKS " in *" nodejs "*)           HAS_NODEJS=1;;           *) HAS_NODEJS=0;;           esac
+  case " $STACKS " in *" javascript "*)       HAS_JAVASCRIPT=1;;       *) HAS_JAVASCRIPT=0;;       esac
+  case " $STACKS " in *" java "*)             HAS_JAVA=1;;             *) HAS_JAVA=0;;             esac
+  case " $STACKS " in *" python "*)           HAS_PYTHON=1;;           *) HAS_PYTHON=0;;           esac
+else
+  # Fallback: no cached state — scan the tree. (Cannot distinguish dotnet_framework /
+  # javascript here; the cache path above carries that detail.)
+  HAS_DOTNET=$(find . -name "*.csproj" -o -name "*.sln" -maxdepth 4 2>/dev/null | head -1 | grep -q "." && echo 1 || echo 0)
+  HAS_DOTNET_FRAMEWORK=0
+  HAS_ANGULAR=$(ls angular.json 2>/dev/null && echo 1 || find . -name "angular.json" -maxdepth 3 2>/dev/null | head -1 | grep -q "." && echo 1 || echo 0)
+  HAS_NODEJS=$(node -e "try{const p=require('./package.json');const d=Object.assign({},p.dependencies,p.devDependencies);if(!d['@angular/core'])console.log('1')}catch(e){}" 2>/dev/null || echo 0)
+  HAS_JAVASCRIPT=0
+  HAS_JAVA=$({ find . -name "pom.xml" -maxdepth 3 2>/dev/null | xargs grep -l "spring-boot" 2>/dev/null; find . -name "build.gradle*" -maxdepth 3 2>/dev/null | xargs grep -l "org.springframework.boot" 2>/dev/null; } | head -1 | grep -q "." && echo 1 || echo 0)
+  HAS_PYTHON=$(find . \( -name "*.py" -o -name "requirements.txt" -o -name "pyproject.toml" \) -maxdepth 3 2>/dev/null | head -1 | grep -q "." && echo 1 || echo 0)
+fi
+
+[ "$HAS_DOTNET"           = "1" ] && { ls .claude/rules/dotnet-rules.md           2>/dev/null && echo "EXISTS dotnet-rules.md"           || echo "MISSING dotnet-rules.md"; }
+[ "$HAS_DOTNET_FRAMEWORK" = "1" ] && { ls .claude/rules/dotnet-framework-rules.md 2>/dev/null && echo "EXISTS dotnet-framework-rules.md" || echo "MISSING dotnet-framework-rules.md"; }
+[ "$HAS_ANGULAR"          = "1" ] && { ls .claude/rules/angular-rules.md          2>/dev/null && echo "EXISTS angular-rules.md"          || echo "MISSING angular-rules.md"; }
+[ "$HAS_NODEJS"           = "1" ] && { ls .claude/rules/nodejs-rules.md           2>/dev/null && echo "EXISTS nodejs-rules.md"           || echo "MISSING nodejs-rules.md"; }
+[ "$HAS_JAVASCRIPT"       = "1" ] && { ls .claude/rules/javascript-rules.md       2>/dev/null && echo "EXISTS javascript-rules.md"       || echo "MISSING javascript-rules.md"; }
+[ "$HAS_JAVA"             = "1" ] && { ls .claude/rules/java-rules.md             2>/dev/null && echo "EXISTS java-rules.md"             || echo "MISSING java-rules.md"; }
+[ "$HAS_PYTHON"           = "1" ] && { ls .claude/rules/python-rules.md           2>/dev/null && echo "EXISTS python-rules.md"           || echo "MISSING python-rules.md"; }
 ```
 
 Status:
@@ -114,20 +134,22 @@ Status:
 
 ---
 
-### 1f — .claude/architecture/domain-map.md
+### 1f — .claude/graph/graph-index.md (orientation graph)
 
 ```bash
-ls .claude/architecture/domain-map.md 2>/dev/null && echo "EXISTS" || echo "MISSING"
-# Get generated date from file if present
-grep "_Generated:" .claude/architecture/domain-map.md 2>/dev/null || echo "NO_DATE"
-# Get days since last structural git change (scan all source, not just src/)
-git log -1 --diff-filter=ARD --format="%cr" -- . 2>/dev/null || echo "unknown"
+ls .claude/graph/graph-index.md 2>/dev/null && echo "EXISTS" || echo "MISSING"
+# Get generated date from the index header if present
+grep "_Generated:" .claude/graph/graph-index.md 2>/dev/null || echo "NO_DATE"
+# Stale flag set by the post-merge git hook when entry-point files change
+ls .claude/graph/.stale 2>/dev/null && echo "STALE" || echo "FRESH"
 ```
 
 Status:
-- EXISTS and generated within 7 days of last structural commit → ✅ Green
-- EXISTS but >7 days older than last structural commit → ⚠️ Amber — run architect skill
-- MISSING → ❌ Red — run dream-init (architect skill generates this; icea-feature and icea-review cannot orient without it)
+- EXISTS and no `.stale` flag → ✅ Green
+- EXISTS but `.stale` flag present → ⚠️ Amber — run /graph-sync
+- MISSING → ❌ Red — run dream-init (the architect skill generates the graph; icea-feature and icea-review cannot orient without it)
+
+> The former `domain-map.md` was retired in v3.0.0 — the knowledge graph is the single orientation layer ([ADR 0038](../../docs/adr/0038-knowledge-graph-orientation.md)).
 
 ---
 
@@ -633,9 +655,9 @@ Include in output report line:
   CLAUDE.md                          {✅ / ⚠️ / ❌}  {detail}
   memory/                            {✅ / ❌}       {detail}
   .claude/rules/                     {✅ / ⚠️}       {N/4 files present}
-  .claude/commands/                  {✅ / ⚠️}       {N/35 stubs deployed}
+  .claude/commands/                  {✅ / ⚠️}       {N/36 stubs deployed}
   .claude/architecture/              {✅ / ⚠️}       {N files, N populated}
-  .claude/architecture/domain-map.md {✅ / ⚠️ / ❌}  {generated: date | MISSING — run dream-init}
+  .claude/graph/graph-index.md       {✅ / ⚠️ / ❌}  {N modules | STALE — run /graph-sync | MISSING — run dream-init}
   architecture-deployment.md        {✅ / ⚠️ / ❌}  {answered: 0 unanswered | MISSING — run /update-arch --deployment}
   .claude/file-cache.json            {✅ / ℹ️ / ❌}  {N entries cached}
   token-analysis/token-graph.json    {✅ / ℹ️ / ⚠️}  {N sessions cached}
@@ -664,8 +686,8 @@ Recommended actions:
                          Automatically creates/updates the repo's ignore file —
                          .gitignore on Git, .tfignore on TFVC (plugin entries +
                          repo walk for build artifacts)
-  2. Run /architect    — fixes: .claude/architecture/domain-map.md, architecture docs
-  6. Run /graph-sync   — fixes: knowledge graph freshness, stale flag
+  2. Run /architect    — fixes: architecture docs + the knowledge graph (.claude/graph/)
+  6. Run /graph-sync   — fixes: knowledge graph freshness, stale flag, graph-index
   7. Run /dream-sync   — fixes: plugin version drift (provisioned < installed) —
                          re-provisions version-sensitive artifacts (hooks, shared
                          specs, ignore-file managed block, new state files) and

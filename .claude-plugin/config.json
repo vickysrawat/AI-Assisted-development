@@ -1,0 +1,17 @@
+{
+  "_comment": "Single source of truth for identity — the plugin ships company-agnostic. The installer (install.sh / install.ps1) prompts for organization / project / company / adoBaseUrl and writes them here; any field left blank keeps the placeholder below. Runtime skills read org/project from CLAUDE.md section 2 (seeded from these values by dream-init Step 5d), and locate the plugin dir by glob so the marketplace name is free. After editing by hand, run scripts/sync-config.sh to propagate into plugin.json (author, repository) and marketplace.json. See DEVELOPER-GUIDE.md > Rebranding / forking.",
+  "company": "Your Company",
+  "companyUrl": "",
+  "organization": "your-org",
+  "project": "your-project",
+  "adoBaseUrl": "https://dev.azure.com",
+  "pluginRepoName": "ai-assisted-development",
+  "marketplaceName": "local-marketplace",
+  "derived": {
+    "_note": "Do not edit — documents how the values above compose. Consumers (install scripts, sync-config.sh) compute these. marketplaceName is auto-derived from organization: '{organization}-marketplace' when a real org is set, else 'local-marketplace'.",
+    "adoProjectUrl": "{adoBaseUrl}/{organization}/{project}",
+    "pluginCloneUrl": "{adoBaseUrl}/{organization}/{project}/_git/{pluginRepoName}",
+    "marketplaceName": "{organization}-marketplace (or local-marketplace when organization is unset/placeholder)",
+    "marketplaceDescription": "{company} internal Claude Code plugins"
+  }
+}

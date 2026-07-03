@@ -27,7 +27,7 @@ Rules:
 | 0014 | Finding-producing skill contract | Accepted |
 | 0015 | Business-context severity overrides (B1–B7) | Accepted |
 | 0016 | Cache-aware scanning and token efficiency | Accepted |
-| 0017 | Domain-map: architecture orientation in one read | Accepted |
+| 0017 | Domain-map: architecture orientation in one read | Superseded by 0038 |
 | 0018 | Language-agnostic design | Accepted |
 | 0019 | Code-review hybrid: deterministic + probabilistic (Phase D/P) | Accepted |
 | 0020 | Baseline strategy: pre-existing findings never gate | Accepted |
@@ -47,3 +47,5 @@ Rules:
 | 0034 | Interactive draft-then-save flow for ICEA and Tech Spec | Accepted |
 | 0035 | Plan phase integrated into icea-feature — plan feeds ICEA | Accepted |
 | 0036 | temp/ rendering aid pattern and TEMP_WRITE_EXEMPT convention | Accepted |
+| 0037 | Roadmap proposals live in docs/proposals/, outside shared specs and the manifest | Accepted |
+| 0038 | Knowledge graph is the single codebase-orientation layer (supersedes 0017; domain-map retired) | Accepted |

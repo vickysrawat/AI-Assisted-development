@@ -47,7 +47,7 @@ These are processed and removed by /dream each run.
 
 <!-- Auto-capture entries appear below this line -->
 
-### [manual] 2026-06-09 — ADO curl flags required on Kirkland network
+### [manual] 2026-06-09 — ADO curl flags required on the corporate network
 All ADO REST API calls must use `--ssl-no-revoke -4` on every curl invocation.
 `--ssl-no-revoke` is required because the corporate proxy blocks certificate
 revocation checks (CRYPT_E_NO_REVOCATION_CHECK), causing curl to exit with
@@ -67,7 +67,7 @@ Priority: high
 
 ### [manual] 2026-06-09 — Azure CLI auth not viable; PAT is the correct approach
 Azure CLI background calls (`az account get-access-token`) are blocked on the
-Kirkland network/environment. This means the preferred Entra ID token flow
+corporate network/environment. This means the preferred Entra ID token flow
 cannot be used as a replacement for PAT-based ADO authentication in Claude Code
 skills. PAT stored in AZURE_DEVOPS_PAT environment variable (Windows User
 Environment Variable, Option A) remains the correct and only supported auth

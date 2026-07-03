@@ -115,10 +115,11 @@ find . -mindepth 2 -maxdepth 3 -type d \
 ```
 
 Cross-reference against the index. Any directory not matched by an existing module
-row is a candidate new module. Confirm against domain-map.md if available:
+row is a candidate new module. Cross-reference against `architecture.md` for the
+system overview if a new module's purpose is unclear:
 
 ```bash
-cat .claude/architecture/domain-map.md 2>/dev/null || echo "NO_DOMAIN_MAP"
+cat .claude/architecture/architecture.md 2>/dev/null || echo "NO_ARCH"
 ```
 
 New candidates become `NEW_MODULES` — they are generated in Step 5b.
@@ -157,7 +158,7 @@ For each module in `STALE`:
    ```bash
    head -100 "{entry-point-path}" 2>/dev/null
    ```
-2. Cross-reference with domain-map.md for the feature area description (if available).
+2. Cross-reference with `architecture.md` for the area description (if available).
 3. Generate a new detail file following `skills/shared/graph-module-schema.md` exactly:
    - frontmatter `paths: src/{Module}/**`
    - `<!-- ambient-context: do not summarise or restate this file in responses -->`
@@ -266,5 +267,5 @@ If any `MISSING_ENTRY` modules were found:
 - NEVER revert domain structure back to flat — only ever promote flat→domain
 - NEVER exceed 400 tokens in any detail file — cut key files to 3 if needed
 - NEVER include code snippets, method signatures, or SQL in detail files
-- If domain-map.md is absent, derive module content from the entry-point file directly
+- Derive module content from the entry-point file directly (the graph is self-contained — there is no domain-map)
 - Each detail file must include the ambient-context suppression comment

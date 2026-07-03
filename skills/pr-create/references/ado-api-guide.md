@@ -8,13 +8,13 @@ POST https://dev.azure.com/{org}/{project}/_apis/git/repositories/{repo}/pullreq
 
 | Placeholder | Example | Where to find it |
 |---|---|---|
-| `{org}` | `kirklandandellis` | ADO URL or git remote |
-| `{project}` | `KE` | ADO URL or git remote |
+| `{org}` | `<your-org>` | CLAUDE.md §2 Organization (or ADO URL / git remote) |
+| `{project}` | `<your-project>` | CLAUDE.md §2 Project (or ADO URL / git remote) |
 | `{repo}` | `client-portal-api` | Git remote `_git/{repo}` segment |
 
-**Kirkland endpoint:**
+**Example endpoint** (substitute `{org}`/`{project}` from CLAUDE.md §2):
 ```
-https://dev.azure.com/kirklandandellis/KE/_apis/git/repositories/{repo}/pullrequests?api-version=7.1
+https://dev.azure.com/{org}/{project}/_apis/git/repositories/{repo}/pullrequests?api-version=7.1
 ```
 
 ---
@@ -99,10 +99,10 @@ PR URL to present to the developer: `{repository.remoteUrl}/pullrequest/{pullReq
 
 ## Generating a PAT
 
-1. Open `https://dev.azure.com/kirklandandellis/_usersSettings/tokens` in a browser
+1. Open `https://dev.azure.com/<your-org>/_usersSettings/tokens` in a browser (your org is in CLAUDE.md §2)
 2. Click **+ New Token**
 3. Name: `claude-code-pr-create` (or any label)
-4. Organization: `kirklandandellis`
+4. Organization: `<your-org>`
 5. Expiration: 30–90 days recommended
 6. Scopes: select **Custom defined** → **Code → Read & Write**
 7. Click **Create** and copy the token immediately — it is not shown again

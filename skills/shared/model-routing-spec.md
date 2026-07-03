@@ -66,7 +66,7 @@ this tier independently of the generation and review tiers.
 
 Skills in this tier:
 - `dream` — memory consolidation (6-phase session analysis)
-- `architect` — domain-map and architecture doc generation
+- `architect` — knowledge graph and architecture doc generation
 - `dream-status` — health check (read-only, Haiku would suffice)
 - `dream-rollback` — memory revert from audit trail
 - `dream-health` — health dashboard generation

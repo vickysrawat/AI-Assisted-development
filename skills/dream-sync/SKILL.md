@@ -13,19 +13,27 @@ Triggered by: `/dream-sync` or `/dream-init --upgrade`
 ## Step 1 — Resolve plugin path and read versions
 
 ```bash
-PLUGIN_DIR="$HOME/.claude/plugins/ke-marketplace/plugins/ai-assisted-development"
+# Resolve the installed plugin dir + version from the registry (installed_plugins.json).
+# Fork-agnostic, prefers user scope, normalises \ -> /, falls back to the source glob.
+# Canonical resolver: see skills/shared/plugin-path-resolution.md §1a.
+IFS=$'\t' read -r PLUGIN_DIR INSTALLED_VERSION < <(node -e '
+const fs=require("fs"),os=require("os"),path=require("path");
+const base=path.join(os.homedir(),".claude","plugins");
+const norm=p=>p?p.split(String.fromCharCode(92)).join("/"):"";
+let dir="",ver="";
+try{
+  const reg=JSON.parse(fs.readFileSync(path.join(base,"installed_plugins.json"),"utf8"));
+  const key=Object.keys(reg.plugins||{}).find(k=>k.startsWith("ai-assisted-development@"));
+  if(key){const a=reg.plugins[key]||[];const e=a.find(x=>x.scope==="user")||a[0];
+    if(e&&e.installPath&&fs.existsSync(e.installPath)){dir=e.installPath;ver=e.version||"";}}
+}catch(e){}
+if(!dir){try{for(const m of fs.readdirSync(base)){const p=path.join(base,m,"plugins","ai-assisted-development");if(fs.existsSync(p)){dir=p;break;}}}catch(e){}}
+if(dir&&!ver){try{ver=JSON.parse(fs.readFileSync(path.join(dir,".claude-plugin","plugin.json"),"utf8")).version||"";}catch(e){}}
+process.stdout.write(norm(dir)+"\t"+(ver||"unknown"));
+')
 PLUGIN_HOOKS="$PLUGIN_DIR/hooks"
 PLUGIN_STUBS="$PLUGIN_DIR/skills/command-stubs"
 PLUGIN_RULES="$PLUGIN_DIR/rules"
-
-# Read installed version
-INSTALLED_VERSION=$(node -e "
-  const fs = require('fs');
-  try {
-    const p = JSON.parse(fs.readFileSync('$PLUGIN_DIR/.claude-plugin/plugin.json', 'utf8'));
-    process.stdout.write(p.version || 'unknown');
-  } catch(e) { process.stdout.write('unknown'); }
-")
 
 # Read provisioned version
 PROVISIONED_VERSION=$(node -e "

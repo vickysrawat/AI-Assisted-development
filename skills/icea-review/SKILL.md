@@ -33,30 +33,21 @@ defaults below.
 
 ## Codebase Orientation (run before Step 1)
 
-> Schema: `../shared/domain-map-spec.md`
+> Schema: `../shared/graph-index-schema.md` · `../shared/graph-module-schema.md`
 
 Before collecting the diff, orient yourself to the project without reading raw source files:
 
 1. **Read `.claude/architecture/architecture.md`** if it exists — provides system overview, layer responsibilities, and key patterns.
-2. **Read `.claude/architecture/domain-map.md`** if it exists — provides the feature area map with entry-point files per domain area.
+2. **Read `.claude/graph/graph-index.md`** if it exists — the module table maps each module to its entry point. Match the branch diff to the closest **Module** row and **read that module's detail file** (`.claude/graph/<module>.md`) for bounded context, key files, dependencies, and patterns.
 3. If neither exists, continue without orientation (no prompt needed — icea-review is invoked mid-workflow when the developer already has context).
-4. Use the domain-map to understand which feature area the branch diff touches. Reference the entry-point files in compliance findings rather than opening all changed files blindly.
+4. Use the graph to understand which module the branch diff touches. Reference the entry-point files in compliance findings rather than opening all changed files blindly.
 
-5. **Staleness check** — after reading domain-map.md, verify it is fresh:
-   ```bash
-   # Get domain-map.md modification date
-   stat -c '%Y' .claude/architecture/domain-map.md 2>/dev/null || echo "0"
-   # Get last structural git commit date (renames, new files, deletes)
-   git log -1 --diff-filter=ARD --format="%ct" -- . 2>/dev/null || echo "0"
+5. **Staleness check** — if `.claude/graph/.stale` exists (set by the post-merge git hook), the graph may be behind the working tree:
    ```
-   If domain-map.md is more than 7 days older than the last structural change, warn:
-   ```
-   ⚠ .claude/architecture/domain-map.md may be stale (last updated: {date}, last structural change: {date}).
-   Run the architect skill to refresh it for accurate orientation.
-   Continuing with current map…
+   ⚠ .claude/graph may be stale — run /graph-sync to refresh. Continuing with current graph…
    ```
    Then proceed — do not block execution.
-5. Do NOT scan `src/` or open source files during orientation — use only the architecture docs and domain-map.
+6. Do NOT scan `src/` or open source files during orientation — use only the architecture docs and the knowledge graph.
 
 ## Execution Steps
 

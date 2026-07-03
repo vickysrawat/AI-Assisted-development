@@ -1,5 +1,5 @@
 ---
-description: Answers codebase questions primarily from architecture docs and domain-map. Will optionally read ONE source file with explicit consent (Category B) when structural docs don't contain the answer. Saves hundreds of tokens vs scanning src/. Tells you exactly which file to look at for deeper detail.
+description: Answers codebase questions primarily from architecture docs and the codebase knowledge graph. Will optionally read ONE source file with explicit consent (Category B) when structural docs don't contain the answer. Saves hundreds of tokens vs scanning src/. Tells you exactly which file to look at for deeper detail.
 argument-hint: "<question about the codebase>"
 ---
 
@@ -42,7 +42,7 @@ Ask a question about the codebase:
 
 ```bash
 cat .claude/architecture/architecture.md 2>/dev/null || echo "NO_ARCH_DOCS"
-cat .claude/architecture/domain-map.md 2>/dev/null || echo "NO_DOMAIN_MAP"
+cat .claude/graph/graph-index.md 2>/dev/null || echo "NO_GRAPH"
 ```
 
 Also load any additional architecture files present:
@@ -51,9 +51,9 @@ ls .claude/architecture/*.md 2>/dev/null
 ```
 Read each one found (they are small).
 
-If `NO_ARCH_DOCS` and `NO_DOMAIN_MAP`:
+If `NO_ARCH_DOCS` and `NO_GRAPH`:
 ```
-⚠ No architecture docs found.
+⚠ No architecture docs or knowledge graph found.
 Run /dream-init to generate them — /explain relies on these to answer without scanning source.
 ```
 And stop.
@@ -71,9 +71,9 @@ Attempt to answer the question using only the architecture context loaded in Ste
  Reference layer names, patterns, and file names from the architecture docs.
  Do not invent details not present in the docs.}
 
-Relevant area: {AreaName from domain-map}
-Entry point  : {path/to/EntryFile.cs from domain-map}
-Key files    : {list from domain-map, if relevant}
+Relevant module: {Module from graph-index}
+Entry point    : {path/to/EntryFile from the module detail file}
+Key files      : {list from the module detail file, if relevant}
 ```
 
 ---
@@ -84,7 +84,7 @@ After answering from architecture docs, assess confidence:
 
 **HIGH confidence** (answer is complete from docs):
 - State the answer
-- List the relevant files from the domain-map for reference
+- List the relevant files from the module detail file for reference
 - Do not open any source files
 
 **MEDIUM confidence** (partial answer, one file would clarify):
@@ -100,7 +100,7 @@ After answering from architecture docs, assess confidence:
 
 **LOW confidence** (question is too specific for architecture docs):
 - State what is known
-- Name the 1–2 most relevant files from the domain-map
+- Name the 1–2 most relevant files from the module detail file
 - Say:
   ```
   This is too specific for the architecture docs.
@@ -133,8 +133,8 @@ The gate in Step 4 is the implementation of that spec.
 - NEVER read more than ONE source file per /explain invocation
 - NEVER say "I don't have access to the source code" — the architecture docs were built
   from the source and contain the structural answer for most questions
-- If the architecture docs are stale (fingerprint mismatch), note it:
+- If the knowledge graph is stale (`.claude/graph/.stale` present), note it:
   ```
-  ⚠ domain-map.md may be stale — run /update-arch for a fresh answer
+  ⚠ the knowledge graph may be stale — run /graph-sync for a fresh answer
   ```
   Then answer with what is available

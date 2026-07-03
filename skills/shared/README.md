@@ -10,7 +10,8 @@ rather than inventing its own conventions.
 |---|---|---|
 | `file-cache-schema.md` | code-review, security | Schema and merge rules for `.claude/file-cache.json` |
 | `scope-flags-spec.md` | code-review, security | Canonical definition of `--changed`, `--pr`, `--full` flags |
-| `domain-map-spec.md` | architect, icea-feature, icea-review | Schema and authoring rules for `domain-map.md` |
+| `graph-index-schema.md` | architect, icea-feature, icea-review, code-review, security | Schema for `.claude/graph/graph-index.md` (breadth index) |
+| `graph-module-schema.md` | architect, graph-sync, orientation readers | Schema for `.claude/graph/<module>.md` (per-module depth) |
 | `single-writer-assumption.md` | code-review, security, token-analysis | Concurrency constraints for cache-writing skills |
 | `model-routing-spec.md` | all generation and review skills | Model routing tiers, env vars, defaults |
 | `source-file-consent.md` | all skills | Consent categories and gate format for source file access |

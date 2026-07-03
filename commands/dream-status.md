@@ -1,5 +1,5 @@
 ---
-description: Health check for all Dream plugin infrastructure — shows green/amber/red status for CLAUDE.md, memory, rules, command stubs, architecture docs, domain-map, file-cache, token-graph, and .gitignore coverage. Non-destructive read-only check.
+description: Health check for all Dream plugin infrastructure — shows green/amber/red status for CLAUDE.md, memory, rules, command stubs, architecture docs, the knowledge graph, file-cache, token-graph, and .gitignore coverage. Non-destructive read-only check.
 argument-hint: (no arguments needed)
 ---
 

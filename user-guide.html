@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- documents-plugin-version: 2.5.0 -->
+<!-- documents-plugin-version: 3.0.0 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -534,7 +534,7 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
       <div class="step"><div class="step-n">3</div><div class="step-body"><strong>Deploys scoped rules</strong><p>6 rule files to <code>.claude/rules/</code> — activate automatically when Claude edits matching file types</p></div></div>
       <div class="step"><div class="step-n">4</div><div class="step-body"><strong>Seeds CLAUDE.md</strong><p>Appends Dream sections to an existing <code>CLAUDE.md</code>, or creates one via <code>/init</code></p></div></div>
       <div class="step"><div class="step-n">5</div><div class="step-body"><strong>Seeds caches</strong><p>Empty <code>.claude/file-cache.json</code> and <code>token-analysis/token-graph.json</code> — ready for first scan</p></div></div>
-      <div class="step"><div class="step-n">6</div><div class="step-body"><strong>Runs architect skill</strong><p>First runs the <strong>deployment questionnaire</strong> — answers are saved to <code>.claude/architecture/architecture-deployment.md</code> and required by <code>/app-readiness</code>. Then detects repo type, populates <code>.claude/architecture/</code>, and generates <code>domain-map.md</code> with entry-point fingerprint.</p></div></div>
+      <div class="step"><div class="step-n">6</div><div class="step-body"><strong>Runs architect skill</strong><p>First runs the <strong>deployment questionnaire</strong> — answers are saved to <code>.claude/architecture/architecture-deployment.md</code> and required by <code>/app-readiness</code>. Then detects repo type, populates <code>.claude/architecture/</code>, and generates the codebase knowledge graph <code>.claude/graph/</code> (index + per-module detail files with fingerprints).</p></div></div>
       <div class="step"><div class="step-n">7</div><div class="step-body"><strong>Creates and populates .gitignore</strong><p>Phase 1: plugin-required entries added automatically. Phase 2: root-level artifacts (node_modules, .vs, etc.) auto-detected. Phase 3: full repo walk finds bin/, obj/, dist/, .env and similar — presents numbered selection prompt before writing.</p></div></div>
     </div>
     <p>After setup, confirm everything is green:</p>
@@ -557,7 +557,7 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
 
     <h3>Create a PAT</h3>
     <div class="steps">
-      <div class="step"><div class="step-n">1</div><div class="step-body"><strong>Go to ADO</strong><p><code>https://dev.azure.com/kirklandandellis/KE</code></p></div></div>
+      <div class="step"><div class="step-n">1</div><div class="step-body"><strong>Go to ADO</strong><p><code>https://dev.azure.com/&lt;your-org&gt;/&lt;your-project&gt;</code> (your org/project are in CLAUDE.md §2)</p></div></div>
       <div class="step"><div class="step-n">2</div><div class="step-body"><strong>Open Personal Access Tokens</strong><p>Profile avatar → Personal access tokens → + New Token</p></div></div>
       <div class="step"><div class="step-n">3</div><div class="step-body"><strong>Configure</strong><p>Name: <code>claude-code</code> · Expiration: 30–90 days · Scopes: Custom → tick required scopes</p></div></div>
       <div class="step"><div class="step-n">4</div><div class="step-body"><strong>Copy immediately</strong><p>The token is displayed once only. Save it before closing the dialog.</p></div></div>
@@ -601,7 +601,7 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
       <div class="health-item"><div class="hi-num">03</div><div class="hi-label">.claude/rules/ — all 6 rules deployed</div></div>
       <div class="health-item"><div class="hi-num">04</div><div class="hi-label">.claude/commands/ — all 19 stubs deployed</div></div>
       <div class="health-item"><div class="hi-num">05</div><div class="hi-label">.claude/architecture/ — templates populated</div></div>
-      <div class="health-item"><div class="hi-num">06</div><div class="hi-label">domain-map.md — fresh (structural + fingerprint)</div></div>
+      <div class="health-item"><div class="hi-num">06</div><div class="hi-label">knowledge graph — present + fresh (no .stale flag)</div></div>
       <div class="health-item"><div class="hi-num">07</div><div class="hi-label">file-cache.json — seeded and valid</div></div>
       <div class="health-item"><div class="hi-num">08</div><div class="hi-label">token-graph.json — seeded and valid</div></div>
       <div class="health-item"><div class="hi-num">09</div><div class="hi-label">.gitignore — 13 required entries covered</div></div>
@@ -634,7 +634,7 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
       <div class="workflow-body">
         <div class="steps">
           <div class="step"><div class="step-n">1</div><div class="step-body"><strong>Gate fires</strong><p>Claude responds with <code>⏸ ICEA GATE — Feature detected.</code> before doing anything else.</p></div></div>
-          <div class="step"><div class="step-n">2</div><div class="step-body"><strong>Draft created → critic (gate 1)</strong><p>Claude generates the full ICEA from the domain-map and your description. The critic then reviews the draft for completeness, testability, B1–B7 coverage, and scope — its concerns are folded into the [?] gap list so you see everything in one place.</p></div></div>
+          <div class="step"><div class="step-n">2</div><div class="step-body"><strong>Draft created → critic (gate 1)</strong><p>Claude generates the full ICEA from the knowledge graph and your description. The critic then reviews the draft for completeness, testability, B1–B7 coverage, and scope — its concerns are folded into the [?] gap list so you see everything in one place.</p></div></div>
           <div class="step"><div class="step-n">3</div><div class="step-body"><strong>You review and approve</strong><p>Reply <code>APPROVED</code> to proceed. Use <code>EDIT [section]</code> to change a specific part. Use <code>REJECT [reason]</code> to start over.</p></div></div>
           <div class="step"><div class="step-n">4</div><div class="step-body"><strong>Implementation generated → critic (gate 2)</strong><p>In dependency order for the layers your repo actually has — persistence → service → API → UI → tests → PR description — in the project's detected stack (.NET, Java/Spring Boot, Python, or Node.js). The critic reviews the generated code <em>before any file is written to disk</em>. A clean verdict writes the files; a REVISE verdict regenerates (up to twice) before surfacing to you.</p></div></div>
         </div>
@@ -880,6 +880,16 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
     <p>Reverts the last consolidation using the <code>dream-log.md</code> audit trail. After a rollback, <code>dream-status</code> will show ⚠ Amber for the rollback check until <code>/dream</code> is run again to re-consolidate.</p>
   </section>
 
+  <!-- KNOWLEDGE GRAPH -->
+  <section id="knowledge-graph">
+    <h2>Codebase knowledge graph <span class="tag tag-optional">New v2.6.0</span></h2>
+    <p>The plugin maintains a lightweight map of your codebase under <code>.claude/graph/</code>: a <code>graph-index.md</code> listing every module, plus one small detail file per module (each capped at ~400 tokens). Skills read this map for fast orientation instead of scanning source, which keeps token cost down on large repositories.</p>
+    <h3>Keeping it fresh</h3>
+    <p>Each module records a fingerprint of its entry-point files. A git post-merge hook sets a stale flag when those files change, and <code>dream-status</code> surfaces it. Run the refresh to bring only the changed modules current — untouched modules are skipped:</p>
+    <pre><code>/ai-assisted-development:graph-sync</code></pre>
+    <p><code>graph-sync</code> regenerates only stale detail files, detects newly-added modules, and — once a project crosses 30 modules — restructures the flat layout into a domain-grouped one. It clears the stale flag on success. After a plugin upgrade, <code>dream-sync</code> reminds you to run it.</p>
+  </section>
+
   <!-- COMMANDS REFERENCE -->
   <section id="commands-ref">
     <h2>All commands</h2>
@@ -891,7 +901,8 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
       <div class="cmd-card"><div class="cmd-name">dream-health</div><div class="cmd-title">Memory dashboard</div><div class="cmd-desc">Generates memory/health.html with confidence and decay visualisations.</div></div>
       <div class="cmd-card"><div class="cmd-name">dream-rollback</div><div class="cmd-title">Revert consolidation</div><div class="cmd-desc">Reverts a specific /dream run using the audit trail. Auditable and reversible.</div></div>
       <div class="cmd-card"><div class="cmd-name">session-start</div><div class="cmd-title">Session warm-up</div><div class="cmd-desc">Zero-cost context load — stack, last decision, last fix, sessions since /dream.</div></div>
-      <div class="cmd-card"><div class="cmd-name">update-arch</div><div class="cmd-title">Architecture refresh</div><div class="cmd-desc">Targeted domain-map refresh for changed files only. Flag: --deployment re-runs questionnaire.</div></div>
+      <div class="cmd-card"><div class="cmd-name">update-arch</div><div class="cmd-title">Architecture refresh</div><div class="cmd-desc">Targeted architecture.md prose refresh for changed areas. Flag: --deployment re-runs the questionnaire. For the module graph, use /graph-sync.</div></div>
+      <div class="cmd-card"><div class="cmd-name">graph-sync</div><div class="cmd-title">Knowledge graph refresh</div><div class="cmd-desc">Incrementally refreshes <code>.claude/graph/</code> — regenerates only stale module detail files, detects new modules, restructures flat→domain past 30 modules, clears the stale flag. Flag: --effort low|medium</div></div>
       <div class="cmd-card"><div class="cmd-name">code-review</div><div class="cmd-title">Static analysis</div><div class="cmd-desc">Cache-aware Coverity-style review. Flags: --changed --pr --full --ci --area</div></div>
       <div class="cmd-card"><div class="cmd-name">security-review</div><div class="cmd-title">Security scan</div><div class="cmd-desc">OWASP/CVSS/CWE with static asset audit first. Same scope flags as code-review.</div></div>
       <div class="cmd-card"><div class="cmd-name">dynamic-scan</div><div class="cmd-title">Dynamic scan (DAST)</div><div class="cmd-desc">OWASP ZAP via Docker against a running app/API. Safe passive default; --full/--scope for gated active scans. Angular/MVC/API/Blazor + dependency audit.</div></div>
@@ -907,6 +918,10 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
       <div class="cmd-card"><div class="cmd-name">product-docs</div><div class="cmd-title">Documentation</div><div class="cmd-desc">Generates Product Detail Document and/or User Guide as self-contained HTML.</div></div>
       <div class="cmd-card"><div class="cmd-name">ado-tasks</div><div class="cmd-title">ADO task breakdown</div><div class="cmd-desc">One task per Acceptance Criterion per layer (Angular, .NET, Node.js, DB, QA, Infra) from an approved ICEA. Arg: ADO-&lt;id&gt;</div></div>
       <div class="cmd-card"><div class="cmd-name">icea-feature</div><div class="cmd-title">ICEA gate</div><div class="cmd-desc">Explicitly invoke the ICEA planning gate. Feature gate rule is pre-loaded by <code>session-start</code> each session and enforced by <code>CLAUDE.md</code> output constraint. Always invoke this before describing a feature. Arg: ADO-&lt;id&gt; or a feature description.</div></div>
+      <div class="cmd-card"><div class="cmd-name">icea-status</div><div class="cmd-title">ICEA state</div><div class="cmd-desc">Shows the current state of all ICEA files for a work item — ICEA/Tech Spec status, open questions, tracker progress, open bugs, and the exact next action. The re-entry point after a session gap. Keyword: STATUS ADO-&lt;id&gt;</div></div>
+      <div class="cmd-card"><div class="cmd-name">icea-approve</div><div class="cmd-title">Approve ICEA</div><div class="cmd-desc">Marks an ICEA and Tech Spec approved by ADO ID — works in any session, reads state from disk. Unblocks code generation. Keyword: APPROVE ADO-&lt;id&gt; [Story-&lt;n&gt;]</div></div>
+      <div class="cmd-card"><div class="cmd-name">icea-implement</div><div class="cmd-title">Generate code</div><div class="cmd-desc">Generates and writes implementation code for an approved ICEA. Works in any session; for Epics, implement story by story. Keyword: IMPLEMENT ADO-&lt;id&gt; [Story-&lt;n&gt;]</div></div>
+      <div class="cmd-card"><div class="cmd-name">icea-revise</div><div class="cmd-title">Revise ICEA</div><div class="cmd-desc">Revises an existing ICEA and Tech Spec — answers open questions or folds in feedback — and re-gates code generation until re-approved. Keyword: REVISE ADO-&lt;id&gt;</div></div>
       <div class="cmd-card"><div class="cmd-name">critic</div><div class="cmd-title">Standalone critique</div><div class="cmd-desc">Second-opinion pass on a spec or code. <code>icea</code> mode checks completeness/testability/B1–B7/scope; <code>code</code> mode checks traceability/simplicity/rules/decisions/assumptions. Also auto-runs inside icea-feature. Args: icea | code, optional ADO-&lt;id&gt;</div></div>
       <div class="cmd-card"><div class="cmd-name">dream-audit</div><div class="cmd-title">Memory quality audit</div><div class="cmd-desc">Quarterly memory health check: flags topic files never cited in sessions, surfaces facts developers contradicted, and feeds rollback history into Dream's confidence scoring. Archives stale memory reversibly. Args: [--days &lt;N&gt;]</div></div>
       <div class="cmd-card"><div class="cmd-name">gitignore-sync</div><div class="cmd-title">Gitignore sync</div><div class="cmd-desc">Ensures .gitignore exists with all plugin-required entries in a managed block — never touches your own lines. Use directly if .gitignore is missing or out of date. Arg: --with-artifacts</div></div>
@@ -922,7 +937,8 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
       <tbody>
         <tr><td><code>icea-feature</code></td><td>Explicit invocation — pre-loaded by <code>session-start</code> · team convention in <code>CLAUDE.md</code></td><td>ICEA gate → spec → code generation. Does not self-trigger. Invoke explicitly before describing a feature.</td></tr>
         <tr><td><code>icea-review</code></td><td>"review this PR", "ICEA compliance", "self-review"</td><td>Checks PR/diff against ICEA — pass/fail report</td></tr>
-        <tr><td><code>architect</code></td><td>"populate architecture docs", "run architect"</td><td>Runs deployment questionnaire first, then generates domain-map.md with entry-point fingerprint</td></tr>
+        <tr><td><code>architect</code></td><td>"populate architecture docs", "run architect"</td><td>Runs deployment questionnaire first, then generates the knowledge graph (.claude/graph/) with per-module entry-point fingerprints</td></tr>
+        <tr><td><code>graph-sync</code></td><td>"refresh knowledge graph", "update graph", "graph is stale", "sync the graph"</td><td>Incremental knowledge-graph refresh — regenerates only stale module detail files, detects new modules, restructures flat→domain past 30 modules, clears the stale flag</td></tr>
         <tr><td><code>ado-tasks</code></td><td>"break down this story", "create tasks", "generate ADO tasks"</td><td>ADO task breakdown from approved ICEA — one task per AC per layer</td></tr>
         <tr><td><code>pr-describe</code></td><td>"write PR", "PR description", "ready to merge"</td><td>ICEA-compliant PR description for ADO with scope-creep check</td></tr>
         <tr><td><code>pr-create</code></td><td>"create PR", "open PR", "raise PR"</td><td>Auto-compliance gate → confirm → submit to ADO REST API</td></tr>

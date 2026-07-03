@@ -133,7 +133,7 @@ findings tied to a specific section or AC — never vague commentary.
 | **Testability** | Is every Example a concrete, verifiable scenario with an observable outcome? Can a QA engineer write one test per Example without guessing? |
 | **B1–B7 coverage** | Does the Intent or Context imply a sensitivity trigger that no AC flags? (e.g. "matter data" implies B-level client-confidentiality handling.) |
 | **Scope** | Does any AC introduce behaviour beyond the stated Intent? Scope creep is a finding, not a feature. |
-| **Decisions (when a D block exists)** | Anti-strawman audit per `../shared/icea-decisions-spec.md` §2: is each option genuinely distinct on a trade-off axis, or decoration? Does every option carry a real "Choose this when…" steelman? Does the recommendation cite repo evidence (domain-map locations, memory decisions) rather than best-practice filler? A fork the implementation plainly faces but the D block omits is a finding. Manifest check: does every manifest row trace to an AC/Example/Context/D item, and do rows name concrete diff-matchable paths? |
+| **Decisions (when a D block exists)** | Anti-strawman audit per `../shared/icea-decisions-spec.md` §2: is each option genuinely distinct on a trade-off axis, or decoration? Does every option carry a real "Choose this when…" steelman? Does the recommendation cite repo evidence (knowledge-graph locations, memory decisions) rather than best-practice filler? A fork the implementation plainly faces but the D block omits is a finding. Manifest check: does every manifest row trace to an AC/Example/Context/D item, and do rows name concrete diff-matchable paths? |
 
 **Tech Spec conformance check (runs when a Tech Spec is present):**
 

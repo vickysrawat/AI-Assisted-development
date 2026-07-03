@@ -176,9 +176,10 @@ If it does, skip it. If it does not, copy it from
 | `gitignore-sync.md` | `/ai-assisted-development:gitignore-sync` |
 | `dismiss.md` | `/ai-assisted-development:dismiss` |
 | `sync-dirs.md` | `/ai-assisted-development:sync-dirs` |
+| `graph-sync.md` | `/ai-assisted-development:graph-sync` |
 
 ```bash
-for stub in dream.md dream-audit.md dream-health.md dream-init.md dream-rollback.md dream-status.md dream-sync.md security-review.md code-review.md token-analysis.md product-docs.md sprint-metrics.md session-start.md bug.md checkin.md update-arch.md explain.md fix.md app-readiness.md plugin-readiness.md dynamic-scan.md ado-tasks.md icea-feature.md icea-approve.md icea-implement.md icea-revise.md icea-status.md icea-review.md pr-create.md pr-describe.md pr-spec-review.md critic.md gitignore-sync.md dismiss.md sync-dirs.md; do
+for stub in dream.md dream-audit.md dream-health.md dream-init.md dream-rollback.md dream-status.md dream-sync.md security-review.md code-review.md token-analysis.md product-docs.md sprint-metrics.md session-start.md bug.md checkin.md update-arch.md explain.md fix.md app-readiness.md plugin-readiness.md dynamic-scan.md ado-tasks.md icea-feature.md icea-approve.md icea-implement.md icea-revise.md icea-status.md icea-review.md pr-create.md pr-describe.md pr-spec-review.md critic.md gitignore-sync.md dismiss.md sync-dirs.md graph-sync.md; do
   if [ ! -f ".claude/commands/$stub" ]; then
     cp "$(dirname $0)/../skills/command-stubs/$stub" ".claude/commands/$stub"
     echo "  ✓ deployed $stub"
@@ -348,11 +349,25 @@ state.detected_stacks = Object.entries(stackMap)
   .filter(([flag]) => detectedFlags.has(flag))
   .map(([, key]) => key);
 
+// Resolve the plugin dir from the registry, fork-agnostic, glob fallback.
+// Canonical resolver: skills/shared/plugin-path-resolution.md §1b
+function resolvePluginDir(){
+  const os=require('os'), pth=require('path');
+  const base=pth.join(os.homedir(),'.claude','plugins');
+  try{
+    const reg=JSON.parse(fs.readFileSync(pth.join(base,'installed_plugins.json'),'utf8'));
+    const key=Object.keys(reg.plugins||{}).find(k=>k.startsWith('ai-assisted-development@'));
+    if(key){const a=reg.plugins[key]||[];const e=a.find(x=>x.scope==='user')||a[0];
+      if(e&&e.installPath&&fs.existsSync(e.installPath))return e.installPath;}
+  }catch(e){}
+  try{for(const m of fs.readdirSync(base)){const d=pth.join(base,m,'plugins','ai-assisted-development');if(fs.existsSync(d))return d;}}catch(e){}
+  return pth.join(base,'local-marketplace','plugins','ai-assisted-development');
+}
+
 // Read installed version from the plugin install directory — NOT from project root
 // .claude-plugin/plugin.json relative to project root does not exist
 try {
-  const pluginJsonPath = process.env.HOME +
-    '/.claude/plugins/ke-marketplace/plugins/ai-assisted-development/.claude-plugin/plugin.json';
+  const pluginJsonPath = resolvePluginDir() + '/.claude-plugin/plugin.json';
   const pluginJson = JSON.parse(fs.readFileSync(pluginJsonPath, 'utf8'));
   state.dream_init_plugin_version = pluginJson.version;
 } catch(e) {
@@ -471,9 +486,23 @@ After this step completes, continue to Step 5.
 Always operate on `./CLAUDE.md` (project root). Never use a bare `CLAUDE.md`
 that could resolve to the plugin directory.
 
-The plugin CLAUDE.md lives at:
+The plugin CLAUDE.md lives at (resolver: see skills/shared/plugin-path-resolution.md §1a):
 ```bash
-PLUGIN_CLAUDE="$HOME/.claude/plugins/ke-marketplace/plugins/ai-assisted-development/CLAUDE.md"
+PLUGIN_DIR="$(node -e '
+const fs=require("fs"),os=require("os"),path=require("path");
+const base=path.join(os.homedir(),".claude","plugins");
+const norm=p=>p?p.split(String.fromCharCode(92)).join("/"):"";
+let dir="";
+try{
+  const reg=JSON.parse(fs.readFileSync(path.join(base,"installed_plugins.json"),"utf8"));
+  const key=Object.keys(reg.plugins||{}).find(k=>k.startsWith("ai-assisted-development@"));
+  if(key){const a=reg.plugins[key]||[];const e=a.find(x=>x.scope==="user")||a[0];
+    if(e&&e.installPath&&fs.existsSync(e.installPath))dir=e.installPath;}
+}catch(e){}
+if(!dir){try{for(const m of fs.readdirSync(base)){const p=path.join(base,m,"plugins","ai-assisted-development");if(fs.existsSync(p)){dir=p;break;}}}catch(e){}}
+process.stdout.write(norm(dir));
+')"
+PLUGIN_CLAUDE="$PLUGIN_DIR/CLAUDE.md"
 ```
 
 ---
@@ -526,7 +555,20 @@ Two passes:
 node -e "
 const fs = require('fs');
 
-const PLUGIN_DIR    = process.env.HOME + '/.claude/plugins/ke-marketplace/plugins/ai-assisted-development';
+// Canonical resolver: skills/shared/plugin-path-resolution.md §1b
+function resolvePluginDir(){
+  const os=require('os'), pth=require('path');
+  const base=pth.join(os.homedir(),'.claude','plugins');
+  try{
+    const reg=JSON.parse(fs.readFileSync(pth.join(base,'installed_plugins.json'),'utf8'));
+    const key=Object.keys(reg.plugins||{}).find(k=>k.startsWith('ai-assisted-development@'));
+    if(key){const a=reg.plugins[key]||[];const e=a.find(x=>x.scope==='user')||a[0];
+      if(e&&e.installPath&&fs.existsSync(e.installPath))return e.installPath;}
+  }catch(e){}
+  try{for(const m of fs.readdirSync(base)){const d=pth.join(base,m,'plugins','ai-assisted-development');if(fs.existsSync(d))return d;}}catch(e){}
+  return pth.join(base,'local-marketplace','plugins','ai-assisted-development');
+}
+const PLUGIN_DIR    = resolvePluginDir();
 const PLUGIN_CLAUDE = PLUGIN_DIR + '/CLAUDE.md';
 const PLUGIN_JSON   = PLUGIN_DIR + '/.claude-plugin/plugin.json';
 const PROJECT_CLAUDE = './CLAUDE.md';
@@ -723,6 +765,48 @@ done
 
 ---
 
+### Step 5d — Seed the AZURE DEVOPS section from config.json
+
+The plugin's single identity file (`.claude-plugin/config.json`) holds the default
+`organization`, `project`, and `adoBaseUrl`. Seed section 2 of the project CLAUDE.md
+from it so every project inherits the same defaults from one place. Only fills the
+`Organization` / `Project` / `ADO URL` lines — never touches a value the developer
+has already customised to something other than the config default.
+
+```bash
+node -e "
+const fs = require('fs');
+// Canonical resolver: skills/shared/plugin-path-resolution.md §1b
+function resolvePluginDir(){
+  const os=require('os'), pth=require('path');
+  const base=pth.join(os.homedir(),'.claude','plugins');
+  try{
+    const reg=JSON.parse(fs.readFileSync(pth.join(base,'installed_plugins.json'),'utf8'));
+    const key=Object.keys(reg.plugins||{}).find(k=>k.startsWith('ai-assisted-development@'));
+    if(key){const a=reg.plugins[key]||[];const e=a.find(x=>x.scope==='user')||a[0];
+      if(e&&e.installPath&&fs.existsSync(e.installPath))return e.installPath;}
+  }catch(e){}
+  try{for(const m of fs.readdirSync(base)){const d=pth.join(base,m,'plugins','ai-assisted-development');if(fs.existsSync(d))return d;}}catch(e){}
+  return pth.join(base,'local-marketplace','plugins','ai-assisted-development');
+}
+const PLUGIN_DIR = resolvePluginDir();
+let cfg; try { cfg = JSON.parse(fs.readFileSync(PLUGIN_DIR + '/.claude-plugin/config.json','utf8')); } catch(e) { console.log('  — config.json not found, skipping ADO seed'); process.exit(0); }
+const org = cfg.organization, proj = cfg.project, base = cfg.adoBaseUrl || 'https://dev.azure.com';
+let c = fs.readFileSync('./CLAUDE.md','utf8');
+c = c.replace(/^(- Organization\s*:\s*).*$/m, '\$1' + org)
+     .replace(/^(- Project\s*:\s*).*$/m, '\$1' + proj)
+     .replace(/^(- ADO URL\s*:\s*).*$/m, '\$1' + base + '/' + org + '/' + proj);
+fs.writeFileSync('./CLAUDE.md', c);
+console.log('  ✓ AZURE DEVOPS section seeded from config.json (' + org + '/' + proj + ')');
+"
+```
+
+> To change these across the whole plugin, edit `.claude-plugin/config.json` and run
+> `scripts/sync-config.sh` (updates the manifests); re-run `/dream-init` or
+> `/dream-sync` to re-seed project CLAUDE.md files.
+
+---
+
 ### Step 6 — Seed .claude/file-cache.json
 
 Create the file cache if not already present:
@@ -783,8 +867,22 @@ explicitly declines it. ADR 0009: defaults are policy.
 First resolve the plugin hooks directory:
 
 ```bash
-# Resolve the installed plugin hooks directory
-PLUGIN_HOOKS="$HOME/.claude/plugins/ke-marketplace/plugins/ai-assisted-development/hooks"
+# Resolve the installed plugin hooks directory (resolver: skills/shared/plugin-path-resolution.md §1a)
+PLUGIN_DIR="$(node -e '
+const fs=require("fs"),os=require("os"),path=require("path");
+const base=path.join(os.homedir(),".claude","plugins");
+const norm=p=>p?p.split(String.fromCharCode(92)).join("/"):"";
+let dir="";
+try{
+  const reg=JSON.parse(fs.readFileSync(path.join(base,"installed_plugins.json"),"utf8"));
+  const key=Object.keys(reg.plugins||{}).find(k=>k.startsWith("ai-assisted-development@"));
+  if(key){const a=reg.plugins[key]||[];const e=a.find(x=>x.scope==="user")||a[0];
+    if(e&&e.installPath&&fs.existsSync(e.installPath))dir=e.installPath;}
+}catch(e){}
+if(!dir){try{for(const m of fs.readdirSync(base)){const p=path.join(base,m,"plugins","ai-assisted-development");if(fs.existsSync(p)){dir=p;break;}}}catch(e){}}
+process.stdout.write(norm(dir));
+')"
+PLUGIN_HOOKS="$PLUGIN_DIR/hooks"
 
 # Verify it exists before proceeding
 if [ ! -d "$PLUGIN_HOOKS" ]; then
@@ -850,8 +948,8 @@ Run the `architect` skill:
 
 ```
 Read skills/architect/SKILL.md and follow its instructions completely,
-including Step 0.5 (deployment questionnaire) and Step 7 (generate domain-map.md
-with _Generated and _Fingerprint headers).
+including Step 0.5 (deployment questionnaire) and Step 7 (generate the codebase
+knowledge graph — graph-index.md + per-module detail files with _Fingerprint headers).
 ```
 
 > **Important — deployment questionnaire (Step 0.5):** The architect skill will
@@ -870,92 +968,51 @@ The skill will:
 4. Check which files are already populated — skip those
 5. Populate only the files that need it, running File 1 and File 2
    in parallel, then File 3 separately for thorough analysis
-6. **Write `.claude/architecture/domain-map.md`** — this step is mandatory.
-   `dream-status` check 1f will be ❌ Red until this file exists.
+6. **Generate the codebase knowledge graph** (`architect` Step 7) — writes
+   `.claude/graph/graph-index.md` and per-module detail files. This step is
+   mandatory. `dream-status` check 1f will be ❌ Red until the graph exists.
 
 Wait for the architect skill to complete before continuing. Confirm that
-`.claude/architecture/` is populated, `.claude/architecture/domain-map.md` exists,
+`.claude/architecture/` is populated, `.claude/graph/graph-index.md` exists,
 and `.claude/architecture/architecture-deployment.md` exists before moving to Step 7b.
 
 ---
 
-### Step 7b — Generate the codebase knowledge graph
+### Step 7b — Wire up the knowledge graph
 
-**Idempotency rule:** If `.claude/graph/graph-index.md` already exists and all
-entry-point fingerprints are current, skip this step and report "Graph up to date".
+The graph itself (`graph-index.md` + per-module detail files) is generated by the
+`architect` skill in Step 7 above. Step 7b only verifies it, deploys the
+stale-detection hooks, and ensures it is tracked (not ignored).
 
-```bash
-if [ -f ".claude/graph/graph-index.md" ]; then
-  echo "GRAPH_EXISTS"
-  # fingerprint check will be run — see below
-else
-  echo "NO_GRAPH"
-fi
-```
-
-**Write-silent rule:** Write all graph files directly. Confirm each with
-`✓ Written: .claude/graph/<module>.md (~N tokens)`. Never echo file content to chat.
-
-#### Step 7b-1 — Determine structure
-
-Read `.claude/architecture/domain-map.md` to get the list of feature areas and
-their entry-point files. Count the modules.
+**Verify the graph exists** before wiring:
 
 ```bash
-grep "^### " .claude/architecture/domain-map.md 2>/dev/null | wc -l
+[ -f ".claude/graph/graph-index.md" ] && echo "GRAPH_OK" || echo "NO_GRAPH — re-run architect Step 7"
 ```
 
-| Module count | Structure |
-|---|---|
-| ≤ 30 | `flat` — all detail files at `.claude/graph/<module>.md` |
-| > 30 | `domain` — group by bounded context: `.claude/graph/<domain>/<module>.md` |
-
-#### Step 7b-2 — Generate module detail files
-
-For each feature area in domain-map.md:
-
-1. Read the entry-point file listed in that area (already in context from architect run).
-2. Generate one detail file following `skills/shared/graph-module-schema.md` exactly:
-   - Frontmatter `paths: {entry-point-dir}/**`
-   - `<!-- ambient-context: do not summarise or restate this file in responses -->`
-   - `_Fingerprint: {sha1 of entry-point file} | Updated: {today}_`
-   - All four sections: Bounded context, Key files (max 5), Dependencies, Patterns
-   - Hard ceiling: 400 tokens
-3. Write the file — **write-silent rule applies**.
-
-```bash
-mkdir -p .claude/graph
-# For domain structure: mkdir -p .claude/graph/{domain}
-```
-
-#### Step 7b-3 — Generate graph-index.md
-
-Build the index following `skills/shared/graph-index-schema.md`:
-
-```markdown
----
-paths: always
----
-# Graph Index
-_Generated: {today} | Modules: {N} | Structure: flat|domain_
-
-| Module | Domain | Detail File | Entry Point |
-|--------|--------|-------------|-------------|
-| {ModuleName} | {domain} | graph/{module}.md | {entry-point-path} |
-...
-```
-
-Write the file — **write-silent rule applies**:
-```
-✓ Written: .claude/graph/graph-index.md (~{N} tokens)
-```
+If `NO_GRAPH`, the architect run did not complete Step 7 — re-run it before continuing.
 
 #### Step 7b-4 — Deploy the stale-detection git hooks
 
 Deploy the post-merge and post-checkout hook scripts from the plugin hooks directory:
 
 ```bash
-PLUGIN_HOOKS="$HOME/.claude/plugins/ke-marketplace/plugins/ai-assisted-development/hooks"
+# Resolve the plugin hooks directory (resolver: skills/shared/plugin-path-resolution.md §1a)
+PLUGIN_DIR="$(node -e '
+const fs=require("fs"),os=require("os"),path=require("path");
+const base=path.join(os.homedir(),".claude","plugins");
+const norm=p=>p?p.split(String.fromCharCode(92)).join("/"):"";
+let dir="";
+try{
+  const reg=JSON.parse(fs.readFileSync(path.join(base,"installed_plugins.json"),"utf8"));
+  const key=Object.keys(reg.plugins||{}).find(k=>k.startsWith("ai-assisted-development@"));
+  if(key){const a=reg.plugins[key]||[];const e=a.find(x=>x.scope==="user")||a[0];
+    if(e&&e.installPath&&fs.existsSync(e.installPath))dir=e.installPath;}
+}catch(e){}
+if(!dir){try{for(const m of fs.readdirSync(base)){const p=path.join(base,m,"plugins","ai-assisted-development");if(fs.existsSync(p)){dir=p;break;}}}catch(e){}}
+process.stdout.write(norm(dir));
+')"
+PLUGIN_HOOKS="$PLUGIN_DIR/hooks"
 
 # Copy the graph stale-detection hook
 cp "$PLUGIN_HOOKS/graph-stale-detect.sh" .claude/hooks/
@@ -983,14 +1040,14 @@ The `graph-stale-detect.sh` script:
 - Writes `.claude/graph/.stale` if any mismatch found
 - No LLM involved — pure shell, completes in < 1 second
 
-Also add `.claude/graph/` to the `.gitignore` managed block
-(handled automatically by gitignore-sync — already run in Step 6b, but
-verify the entry is present):
+The knowledge graph is **committed and PR-reviewed** (v3.0.0, [ADR 0038]) — it must
+**not** be gitignored. `gitignore-sync` (Step 6b) no longer adds `.claude/graph/` to
+the managed block. Verify the graph is not being ignored:
 
 ```bash
-grep -q "\.claude/graph/" .gitignore && \
-  echo "✓ .claude/graph/ in .gitignore" || \
-  echo "⚠ Add .claude/graph/ to .gitignore managed block"
+git check-ignore -q .claude/graph/graph-index.md 2>/dev/null && \
+  echo "⚠ .claude/graph/ is being ignored — remove it from .gitignore (see gitignore-sync)" || \
+  echo "✓ .claude/graph/ is tracked"
 ```
 
 #### Step 7b-5 — Update dream-init-state.json

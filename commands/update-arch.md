@@ -1,5 +1,5 @@
 ---
-description: Targeted architecture doc refresh — re-reads only changed parts of the codebase and updates domain-map.md and architecture.md without a full re-scan. Uses the fingerprint to detect exactly which entry-point files changed. Much cheaper than re-running the full architect skill.
+description: Targeted architecture doc refresh — re-reads only changed parts of the codebase and updates the prose architecture docs (architecture.md) without a full re-scan. Also re-runs the deployment questionnaire via --deployment. For the codebase module graph, use /graph-sync (incremental, fingerprint-based). Much cheaper than re-running the full architect skill.
 argument-hint: "[--deployment | path]  —  --deployment re-runs the deployment questionnaire; a path (e.g. src/services/matters/) refreshes that subtree; omit to auto-detect changed areas"
 ---
 
@@ -15,17 +15,24 @@ See `skills/shared/model-routing-spec.md` for the full specification.
 
 # /update-arch — Targeted architecture doc refresh
 
-Refreshes `.claude/architecture/domain-map.md` and the relevant sections of
-`architecture.md` for areas that have changed since the last architect run.
-Costs 5–10% of a full architect skill run for incremental changes.
+Refreshes the relevant sections of the prose `architecture.md` for areas that have
+changed since the last architect run, and (via `--deployment`) re-runs the
+deployment questionnaire. Costs 5–10% of a full architect skill run for incremental
+changes.
+
+> **Orientation graph:** the codebase module graph (`.claude/graph/`) is refreshed
+> **separately** by `/graph-sync` — it is fingerprint-based and incremental
+> ([ADR 0038](../docs/adr/0038-knowledge-graph-orientation.md)). `/update-arch`
+> no longer touches orientation data (the former `domain-map.md` was retired in
+> v3.0.0). Run `/graph-sync` after structural changes; run `/update-arch` to keep
+> the prose docs current.
 
 Use this after:
-- Adding a new service, controller, or Angular component
-- Moving or renaming a module
-- After the fingerprint check in `dream-status` shows ⚠️ Amber
+- A change that alters the system overview or layer responsibilities in `architecture.md`
 - With `--deployment` to capture or re-capture the deployment questionnaire
 
 For a complete re-scan of all architecture docs, use `dream-init` instead.
+For module/orientation refresh, use `/graph-sync`.
 
 ---
 
@@ -67,6 +74,14 @@ If `MODE=error`, output and stop:
 ---
 
 ### Step 0 (deployment mode) — Re-run the deployment questionnaire
+
+> **Refresh `architecture-deployment.md` when any of these change** (it has no
+> automated fingerprint — treat it as stale if any changed since its `_Generated:` date):
+> CI/CD pipeline YAML (`azure-pipelines*.yml`, `.github/workflows/*`); IIS publish
+> profiles (`*.pubxml`) or `web.config`; Docker/container config; the environment
+> list or promotion order; the auth strategy (Entra ID tenant, API key scheme, JWT
+> issuer). Consumed by `app-readiness` (blocks if missing), `icea-feature` (Context),
+> and `plugin-readiness` (AI-1 scoring).
 
 This is an explicit **re-capture** request, so it overrides the architect's normal
 "already complete → skip" short-circuit. Run the questionnaire even if
@@ -143,74 +158,46 @@ target subtree. Otherwise proceed to Step 2 to auto-detect changed areas.
 
 ---
 
-## Step 2 — Read current domain-map and detect changed areas
+## Step 2 — Detect changed areas
+
+Read the current prose docs and identify which source areas changed since the last refresh.
 
 ```bash
-cat .claude/architecture/domain-map.md 2>/dev/null || echo "NO_DOMAIN_MAP"
+cat .claude/architecture/architecture.md 2>/dev/null || echo "NO_ARCH"
+# Source areas touched by recent commits (rename/add/delete + modifications)
+git log -1 --name-only --format="" 2>/dev/null | sed 's#/[^/]*$##' | sort -u
 ```
 
-If `NO_DOMAIN_MAP`:
+If `NO_ARCH`:
 ```
-⚠ No domain-map.md found at .claude/architecture/domain-map.md.
-Run /dream-init to generate it from scratch.
+⚠ No architecture.md found at .claude/architecture/architecture.md.
+Run /dream-init to generate the architecture docs from scratch.
 ```
 And stop.
 
-Extract the current fingerprint:
-```bash
-grep "_Fingerprint:" .claude/architecture/domain-map.md | sed 's/.*_Fingerprint: \([a-f0-9]*\).*/\1/'
-```
+**If a path argument was given (Step 1):** scope detection to that subtree.
+**If no argument:** use the changed source areas from the git listing above.
 
-Extract all entry-point file paths from the domain-map:
-```bash
-grep "^\- \*\*Entry point\*\*:" .claude/architecture/domain-map.md \
-  | sed 's/.*`\(.*\)`.*/\1/'
-```
+> The module orientation graph is **not** refreshed here — if `.claude/graph/.stale`
+> is present, tell the developer to run `/graph-sync` (it refreshes only stale
+> modules). `/update-arch` refreshes the prose `architecture.md` only.
 
-Compute the current fingerprint of those files:
-```bash
-# For each entry-point path found above:
-sha1sum {entry-point-file} 2>/dev/null | awk '{print $1, $2}'
-# Then hash all results together (sorted for stability):
-echo "{all sha1sum outputs sorted}" | sha1sum | cut -d' ' -f1
+If nothing relevant changed:
 ```
+✅ architecture.md is current — no structural changes detected. Nothing to update.
+   (For module orientation, run /graph-sync if the graph is stale.)
+```
+And stop.
 
 ---
 
-## Step 3 — Identify which areas need refreshing
+## Step 3 — Report refresh scope
 
-Compare current entry-point hashes against the stored fingerprint.
-
-**If a path argument was given (Step 1):** refresh only the domain-map areas
-whose entry-point files fall under that path.
-
-**If no argument:** refresh only areas where the entry-point file hash has
-changed since the stored fingerprint. If all hashes match, report:
 ```
-✅ domain-map.md is current — no entry-point files have changed.
-   Fingerprint verified. Nothing to update.
-```
-And stop.
-
-Also check for new directories that don't appear in any existing area:
-```bash
-# Detect top-level source directories not mapped in domain-map
-find . -mindepth 2 -maxdepth 3 -type d \
-  -not -path "./.git/*" \
-  -not -path "./node_modules/*" \
-  -not -path "./.angular/*" \
-  -not -path "./dist/*" \
-  -not -path "./bin/*" \
-  -not -path "./obj/*" \
-  | sort
-```
-
-Report what will be refreshed:
-```
-🔄 Architecture refresh scope
-  Changed areas : {list of AreaName from domain-map whose entry-points changed}
-  New dirs found: {list of directories not yet in domain-map, if any}
-  Unchanged     : {count} areas — skipping
+🔄 Architecture prose refresh scope
+  Changed areas : {list of source areas whose files changed}
+  Graph note    : {"graph is stale — run /graph-sync" | "graph current"}
+  architecture.md sections to touch : {list}
 ```
 
 ---
@@ -223,57 +210,20 @@ Before reading any source file, apply `skills/shared/source-file-consent.md`
 ```
 📂 Source file scan request
 
-  Files   : {list entry-point files for changed areas}
-  Why     : The domain-map fingerprint shows these entry-point files changed
-            since the last architecture update. Reading them refreshes the
-            domain-map entries for {list of area names}.
+  Files   : {entry-point files for the changed areas}
+  Why     : These areas changed since the last architecture update. Reading them
+            refreshes the affected sections of architecture.md.
   Looking for: Class/component structure, public interface, key dependencies
   Token cost: ~{N files × estimate each}
 
-Read these files to update the architecture? (yes / no / read fewer files)
+Read these files to update architecture.md? (yes / no / read fewer files)
 ```
 
-If declined → preserve existing domain-map entries for those areas unchanged.
-  Add a note: "Entry-point file not read — map entry may be stale."
+If declined → leave the affected `architecture.md` sections unchanged and note it.
 If partial → read only the confirmed files; mark others as "not refreshed".
 
-For each area confirmed:
-1. Read only the entry-point file listed in the domain-map for that area
-2. Read the key files listed under that area (max 3)
-3. Do NOT read any other files — use directory names and file names for new areas
-
-For the domain-map schema and fingerprint format, refer to:
-`skills/shared/domain-map-spec.md` and `skills/architect/SKILL.md` Step 7.
-
----
-
-## Step 5 — Update domain-map.md
-
-For each changed area:
-- Update the `### {AreaName}` block with accurate entry-point, key files, and notes
-- For new directories: add a new `### {AreaName}` block
-
-For unchanged areas: copy them verbatim — do not re-derive them.
-
-Recompute the fingerprint over ALL entry-point files (changed and unchanged):
-```bash
-grep "^\- \*\*Entry point\*\*:" .claude/architecture/domain-map.md \
-  | sed 's/.*`\(.*\)`.*/\1/' | sort | xargs sha1sum 2>/dev/null \
-  | sha1sum | cut -d' ' -f1
-```
-
-Write the updated file:
-```bash
-!node -e "
-const fs = require('fs');
-const today = new Date().toISOString().slice(0,10);
-const content = String.raw\`REPLACE_WITH_UPDATED_DOMAIN_MAP\`;
-fs.writeFileSync('.claude/architecture/domain-map.md', content, 'utf8');
-console.log('Written: .claude/architecture/domain-map.md');
-"
-```
-
-The header must include updated `_Generated:` and `_Fingerprint:` lines.
+For each area confirmed, read only the representative entry-point file(s) — do NOT
+read unrelated files.
 
 ---
 
@@ -294,26 +244,25 @@ Write back using the same Node.js pattern as Step 5.
 ## Step 7 — Confirm
 
 ```
-✅ Architecture docs updated
+✅ architecture.md updated
 
-  Updated areas : {list}
-  New areas     : {list, or "none"}
-  Fingerprint   : {new fingerprint value}
-  Generated     : {today's date}
+  Updated sections : {list}
+  Generated        : {today's date}
 
   Files written:
-    .claude/architecture/domain-map.md
-    .claude/architecture/architecture.md  {(if changed) | (unchanged)}
+    .claude/architecture/architecture.md
 
-Next: run /dream-status to confirm check 1f is ✅ Green.
+  Graph: {"⚠ stale — run /graph-sync" | "current"}
+
+Next: run /dream-status to confirm the architecture checks are ✅ Green.
 ```
 
 ---
 
 ## Hard Rules
 
-- NEVER read source files for unchanged areas — use the existing domain-map entries
-- NEVER overwrite the full domain-map with a blank re-scan — preserve unchanged areas verbatim
-- NEVER remove an area from the map — only add or update
-- If an entry-point file no longer exists, mark that area with a `⚠ Entry point not found` note
-  rather than deleting the area silently
+- NEVER read source files for unchanged areas
+- NEVER touch the knowledge graph (`.claude/graph/`) — that is `/graph-sync`'s job
+- Update only the `architecture.md` sections whose source areas changed — leave the rest verbatim
+- If an entry-point file no longer exists, note it in the affected section rather than
+  silently removing content

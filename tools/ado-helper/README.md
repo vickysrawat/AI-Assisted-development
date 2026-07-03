@@ -39,4 +39,4 @@ ado_raw 81469 | node -e "..."
 
 PATs should be scoped to **Work Items (Read)** only for read operations.
 Rotate immediately if a PAT appears in any log or transcript.
-Revoke at: https://dev.azure.com/kirklandandellis/_usersSettings/tokens
+Revoke at: https://dev.azure.com/<your-org>/_usersSettings/tokens  (your org is in CLAUDE.md §2 / .claude-plugin/config.json)

@@ -1,7 +1,9 @@
 {
-  "name": "ke-marketplace",
-  "owner": { "name": "Product Engineering" },
-  "description": "Kirkland & Ellis internal Claude Code plugins",
+  "name": "local-marketplace",
+  "owner": {
+    "name": "Product Engineering"
+  },
+  "description": "Your Company internal Claude Code plugins",
   "plugins": [
     {
       "name": "ai-assisted-development",

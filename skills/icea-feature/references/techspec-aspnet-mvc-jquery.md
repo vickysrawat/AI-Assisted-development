@@ -239,7 +239,7 @@ one view. Prefer existing Bootstrap utility classes over custom CSS.
 | Response (guard fired) | 200 OK · application/json · {empty/error} |
 | Response (unauthenticated) | 302 redirect to login |
 
-> This endpoint is internal to {Project}. Not part of the Kirkland Data
+> This endpoint is internal to {Project}. Not part of the {Company} Data
 > API and not exposed externally. No API gateway or CORS config needed.
 
 ### Change to outbound API call (if applicable)

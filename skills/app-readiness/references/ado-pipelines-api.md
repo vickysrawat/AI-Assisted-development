@@ -12,7 +12,7 @@ Organisation and project are read from CLAUDE.md or `.claude/architecture/archit
 ## Authentication
 
 Build the auth header once before making any calls. **Always use `--ssl-no-revoke -4`** on
-the Kirkland network — see `../../../tools/ado-helper/README.md` for why both flags are required.
+a corporate network — see `../../../tools/ado-helper/README.md` for why both flags are required.
 
 ```bash
 ADO_AUTH=$(printf ':%s' "$AZURE_DEVOPS_PAT" | base64 -w 0)

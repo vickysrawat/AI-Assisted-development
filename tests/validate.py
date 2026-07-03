@@ -24,15 +24,12 @@ def warn(msg):
     if strict: errors.append(msg)
     else: warnings.append(msg)
 
-# ── 1. Canonical stub list ────────────────────────────────────────────────────
-CANONICAL_STUBS = [
-    "dream.md","dream-health.md","dream-init.md","dream-status.md","dream-rollback.md",
-    "security-review.md","code-review.md","token-analysis.md","product-docs.md",
-    "sprint-metrics.md","session-start.md","bug.md","checkin.md","update-arch.md",
-    "explain.md","fix.md","app-readiness.md","plugin-readiness.md","dynamic-scan.md",
-    "ado-tasks.md","icea-feature.md","critic.md","gitignore-sync.md",
-    "dismiss.md","sync-dirs.md","dream-audit.md","dream-sync.md",
-]
+# ── 1. Canonical stub list (derived from disk — self-maintaining) ─────────────
+# The command-stubs directory is the source of truth for the deployable set.
+# Deriving the list (rather than hardcoding it) means it can never fall behind
+# disk again — the deploy loops in dream-init.md / dream-sync SKILL.md and the
+# dream-status report line must all agree with this count (checks below + check 35).
+CANONICAL_STUBS = sorted(os.path.basename(p) for p in glob.glob("skills/command-stubs/*.md"))
 N = len(CANONICAL_STUBS)
 
 ds = open("skills/dream-status/SKILL.md").read()
@@ -93,22 +90,61 @@ for fpath in glob.glob("commands/*.md") + glob.glob("skills/**/*.md", recursive=
     if re.search(r"^- B[1-7]:", content, re.MULTILINE):
         err(f"{fpath}: inline B1-B7 list — replace with load of skills/shared/business-context-severity.md")
 
-# ── 7. No hardcoded ADO org in skill bodies ───────────────────────────────────
-for fpath in [p for p in glob.glob("skills/**/*.md", recursive=True) if "/references/" not in p]:
-    content = open(fpath).read()
-    if "kirklandandellis" in content:
-        if "ADO_ORG" not in content and "from CLAUDE.md" not in content:
-            err(f"{fpath}: hardcoded ADO org 'kirklandandellis' with no dynamic read from CLAUDE.md")
+# ── 7. Identity is centralised in .claude-plugin/config.json ──────────────────
+# Organization / project / company must never be hardcoded in skills, commands, or
+# their reference docs. Skills read org/project at runtime from CLAUDE.md §2 (seeded
+# from config.json); illustrative docs use <your-org>/<your-project> placeholders.
+CONFIG_PATH = ".claude-plugin/config.json"
+if not os.path.exists(CONFIG_PATH):
+    err(f"{CONFIG_PATH}: missing — the single source of truth for organization/project/company/repo identity")
+    cfg_ident = {}
+else:
+    try:
+        cfg_ident = json.load(open(CONFIG_PATH))
+    except Exception as e:
+        err(f"{CONFIG_PATH}: invalid JSON ({e})")
+        cfg_ident = {}
+    for k in ["company", "organization", "project", "adoBaseUrl", "pluginRepoName"]:
+        if not cfg_ident.get(k):
+            err(f"{CONFIG_PATH}: missing required key '{k}'")
+
+# The plugin ships company-agnostic: the configured org is a placeholder ("your-org")
+# until an install/rebrand sets a real one. Only enforce "no hardcoded real org" once a
+# real org is configured — and never flag the "<your-org>" example placeholder itself.
+org_slug = cfg_ident.get("organization", "")
+_is_placeholder = (not org_slug) or org_slug.startswith("your-")
+if not _is_placeholder:
+    for fpath in glob.glob("skills/**/*.md", recursive=True) + glob.glob("commands/*.md"):
+        if org_slug in open(fpath).read():
+            err(f"{fpath}: hardcoded ADO org '{org_slug}' — read it at runtime from CLAUDE.md §2, "
+                f"or use a <your-org> placeholder in examples (identity lives in {CONFIG_PATH})")
+
+# 7b. Manifests must stay in sync with config.json (run scripts/sync-config.sh).
+if cfg_ident:
+    clone_url = f"{cfg_ident['adoBaseUrl']}/{cfg_ident['organization']}/{cfg_ident['project']}/_git/{cfg_ident['pluginRepoName']}"
+    _pj = json.load(open(".claude-plugin/plugin.json"))
+    if _pj.get("repository") != clone_url:
+        err(f"plugin.json repository '{_pj.get('repository')}' != config-derived '{clone_url}' — run scripts/sync-config.sh")
+    if _pj.get("author", {}).get("name") != cfg_ident["company"]:
+        err(f"plugin.json author.name != config company '{cfg_ident['company']}' — run scripts/sync-config.sh")
+    if os.path.exists(".claude-plugin/marketplace.json"):
+        _mk = json.load(open(".claude-plugin/marketplace.json"))
+        want = f"{cfg_ident['company']} internal Claude Code plugins"
+        if _mk.get("description") != want:
+            err(f"marketplace.json description != config-derived '{want}' — run scripts/sync-config.sh")
 
 # ── 8. dream-health trigger uses hyphen not space ─────────────────────────────
 dh = open("commands/dream-health.md").read()
 if re.search(r"`/dream health`", dh):
     err("commands/dream-health.md: trigger should be '/dream-health' (hyphen), not '/dream health' (space)")
 
-# ── 9. domain-map-spec no individual skill version pins ───────────────────────
-dm = open("skills/shared/domain-map-spec.md").read()
-if re.search(r"architect ≥|icea-feature ≥|icea-review ≥", dm):
-    err("skills/shared/domain-map-spec.md: remove individual skill version pins — use plugin-level version")
+# ── 9. knowledge-graph schemas present (single orientation layer, ADR 0038) ──
+# domain-map was retired in v3.0.0; the graph index + module schemas replace it.
+for gs in ["skills/shared/graph-index-schema.md", "skills/shared/graph-module-schema.md"]:
+    if not os.path.exists(gs):
+        err(f"{gs}: missing — the knowledge graph is the single orientation layer (ADR 0038)")
+if os.path.exists("skills/shared/domain-map-spec.md"):
+    err("skills/shared/domain-map-spec.md still exists — it was retired in v3.0.0 (ADR 0038); remove it")
 
 # ── 10. source-file-consent table has all skills ─────────────────────────────
 consent = open("skills/shared/source-file-consent.md").read()
@@ -150,7 +186,7 @@ on_disk = set(os.path.basename(os.path.dirname(p)) for p in glob.glob("skills/*/
 for s in registered - on_disk:
     err(f"plugin.json: skill '{s}' registered but skills/{s}/SKILL.md not found")
 for s in on_disk - registered:
-    warn(f"plugin.json: skill '{s}' folder exists but not registered in components.skills")
+    err(f"plugin.json: skill '{s}' folder exists but not registered in components.skills")
 
 # ── 14. Test scenarios — warn for missing (not error) ────────────────────────
 existing_tests = set(os.path.splitext(f)[0] for f in os.listdir("tests/skill-scenarios") if f.endswith(".yaml"))
@@ -453,6 +489,35 @@ if os.path.exists("plugin-guide-v9.html"):
         if spec.lower() not in pg and spec.replace("-", " ").lower() not in pg:
             warn(f"plugin-guide-v9.html: shared spec '{spec}' not mentioned — "
                  f"architecture documentation incomplete")
+
+# ── 35. Commands manifest ↔ disk + stub coverage (drift guard) ───────────────
+# The plugin's own manifest must mirror commands/ exactly, every command must
+# ship a deploy stub, and every stub named in a deploy loop must exist as a file.
+# Guards the v2.6.x drift this check was added for: the icea-*/pr-* commands had
+# fallen out of components.commands, and graph-sync.md was named in a deploy loop
+# with no stub file behind it (so /graph-sync never deployed into projects).
+cmd_disk = {os.path.splitext(os.path.basename(p))[0] for p in glob.glob("commands/*.md")}
+cmd_registered = set(pj["components"]["commands"])
+for c in sorted(cmd_registered - cmd_disk):
+    err(f"plugin.json: command '{c}' registered but commands/{c}.md not found")
+for c in sorted(cmd_disk - cmd_registered):
+    err(f"plugin.json: commands/{c}.md exists but is not in components.commands")
+
+stub_disk = {os.path.splitext(os.path.basename(p))[0] for p in glob.glob("skills/command-stubs/*.md")}
+for c in sorted(cmd_disk - stub_disk):
+    err(f"skills/command-stubs/{c}.md missing — /{c} will not deploy via dream-init/dream-sync")
+for s in sorted(stub_disk - cmd_disk):
+    warn(f"skills/command-stubs/{s}.md has no matching commands/{s}.md (orphan stub)")
+
+# Every stub filename named inside a deploy loop must have a real stub file.
+for src in ["commands/dream-init.md", "skills/dream-sync/SKILL.md"]:
+    loop = re.search(r"for stub in\s+(.*?)\bdo\b", open(src).read(), re.DOTALL)
+    if not loop:
+        err(f"{src}: could not locate the 'for stub in ... do' deploy loop")
+        continue
+    for tok in re.findall(r"[a-z0-9][a-z0-9-]*\.md", loop.group(1)):
+        if not os.path.exists(f"skills/command-stubs/{tok}"):
+            err(f"{src}: deploy loop names '{tok}' but skills/command-stubs/{tok} does not exist")
 
 # ── Report ────────────────────────────────────────────────────────────────────
 print(f"\n{'='*64}")

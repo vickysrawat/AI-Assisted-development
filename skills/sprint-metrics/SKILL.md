@@ -208,7 +208,7 @@ Rising overrides are the earliest warning that a gate has become friction.
 
 **Manifest predictability** — for each ICEA in the sprint with a recorded
 `Manifest accuracy:` line, aggregate precision and recall (median, per tier and
-per feature area from the domain-map). This is the trust-calibration trend
+per module from the knowledge graph). This is the trust-calibration trend
 (change-manifest-spec §6): sustained high accuracy per category is the evidence
 basis for any future flow-mode recommendation; it is reported as
 PREDICTABILITY, never as correctness.

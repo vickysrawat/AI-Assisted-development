@@ -20,7 +20,7 @@ Both skills must implement these flags identically.
 | `--area backend` | Only `*.cs` files | (no git filter; file-type filter only) |
 | `--area frontend` | Only `*.ts` and `*.html` files | (no git filter; file-type filter only) |
 | `--area config` | Only `*.json`, `*.yml`, `*.yaml`, `*.env`, `Dockerfile`, `*.tf` | (no git filter; file-type filter only) |
-| `--area <Name>` | Entry-point + key files for domain-map area `<Name>` | (read `.claude/architecture/domain-map.md`) |
+| `--area <Name>` | Entry-point + key files for knowledge-graph module `<Name>` | (read `.claude/graph/graph-index.md`, then `.claude/graph/<module>.md`) |
 | `--continue` | Resume pending files from checkpoint | (read `.claude/{skill}-checkpoint.json`) |
 | (none) | Default: cache-aware full-project scan with 40-file budget cap | (all files, but skip cache-hits; auto-generate continuation commands if > 40) |
 
@@ -160,36 +160,36 @@ User invoked: /security-review --pr
 
 ## `--area <Name>` error handling
 
-When the developer passes `--area <Name>` (where `<Name>` is a domain area, not
-`backend`, `frontend`, or `config`), skills must handle two failure cases before
-attempting to enumerate files:
+When the developer passes `--area <Name>` (where `<Name>` is a knowledge-graph
+module, not `backend`, `frontend`, or `config`), skills must handle two failure
+cases before attempting to enumerate files:
 
-### Case 1 — domain-map.md is missing
+### Case 1 — the knowledge graph is missing
 
 ```bash
-ls .claude/architecture/domain-map.md 2>/dev/null || echo "MISSING"
+ls .claude/graph/graph-index.md 2>/dev/null || echo "MISSING"
 ```
 
 If MISSING, emit and fall back to full scan:
 
 ```
-⚠ --area requires .claude/architecture/domain-map.md.
-  Run /dream-init (or /update-arch) to generate it.
+⚠ --area requires the knowledge graph (.claude/graph/graph-index.md).
+  Run /dream-init (or /graph-sync) to generate it.
   Falling back to full scan.
 ```
 
 Then continue with the full-scan file enumeration. Do not abort.
 
-### Case 2 — named area not found in domain-map
+### Case 2 — named module not found in the graph index
 
-After reading domain-map.md, check whether `<Name>` appears as an area heading.
+After reading `graph-index.md`, check whether `<Name>` appears in the Module column.
 If not found, emit and prompt the developer to choose:
 
 ```
-⚠ Area "{Name}" not found in domain-map.md.
+⚠ Module "{Name}" not found in graph-index.md.
 
-Available areas:
-  {list each area name from domain-map, one per line}
+Available modules:
+  {list each Module from the index table, one per line}
 
 Re-run with one of the names above, or omit --area for a full scan.
 ```
@@ -197,12 +197,12 @@ Re-run with one of the names above, or omit --area for a full scan.
 Then stop — do not fall back to full scan in this case, as the developer's intent
 was a targeted scan and a full scan may be undesirable.
 
-### Case 3 — area found, extract files
+### Case 3 — module found, extract files
 
 ```bash
-# Extract entry-point file and key files for the named area from domain-map.md
-grep -A 10 "^## {Name}" .claude/architecture/domain-map.md 2>/dev/null | \
-  grep -E "entry-point|key files" | head -5
+# Find the module's detail file from the index, then read its Key files
+DETAIL=$(grep -E "^\| *{Name} *\|" .claude/graph/graph-index.md 2>/dev/null | awk -F'|' '{print $4}' | tr -d ' ')
+sed -n '/\*\*Key files\*\*/,/^\*\*/p' ".claude/$DETAIL" 2>/dev/null
 ```
 
 Use these files as the candidate list. The `--area` flag is not subject to the

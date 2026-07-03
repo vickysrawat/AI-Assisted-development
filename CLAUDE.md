@@ -4,7 +4,7 @@
 #        Supported backends: .NET Core · ASP.NET Framework 4.x · Java/Spring Boot · Python (FastAPI/Django/Flask) · Node.js
 #        Supported frontends: Angular · React. Tracking: Azure DevOps.
 # Last updated: keep this file updated when conventions change
-# Plugin version: 2.6.0 (update this line after dream-init or plugin upgrade)
+# Plugin version: 3.0.0 (update this line after dream-init or plugin upgrade)
 
 ---
 
@@ -107,10 +107,18 @@ ICEA files are saved to `docs/Release{R}/Sprint{S}/UserStory{ID}/ADO-{ID}-{featu
 
 ## 2. AZURE DEVOPS
 
-- Organization  : kirklandandellis
-- Project       : KE
+> These values are the per-project runtime source of truth — skills read
+> Organization/Project from this section at execution time. Their **defaults**
+> come from the plugin's single identity file `.claude-plugin/config.json`
+> (`organization`, `project`, `adoBaseUrl`); `dream-init` seeds this section from
+> it. To change the org/project/company across the whole plugin, edit
+> `.claude-plugin/config.json` and run `scripts/sync-config.sh` — do not edit
+> scattered copies. See DEVELOPER-GUIDE.md > Rebranding / forking.
+
+- Organization  : {ADO_ORG}
+- Project       : {ADO_PROJECT}
 - Repository    : [set per project — update this line after dream-init]
-- ADO URL       : https://dev.azure.com/kirklandandellis/KE
+- ADO URL       : {ADO_URL}
 - PAT storage   : Option A — Windows User Environment Variables → AZURE_DEVOPS_PAT (recommended)
                 : Option B — .claude/settings.json → env.AZURE_DEVOPS_PAT (only if gitignored)
 - Target branch : dev

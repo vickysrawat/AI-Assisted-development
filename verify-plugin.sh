@@ -108,10 +108,10 @@ header "Hook deployment paths"
 
 for file in "$PLUGIN_DIR/commands/dream-init.md" \
             "$PLUGIN_DIR/skills/dream-sync/SKILL.md"; do
-  if grep -q "ke-marketplace.*hooks\|PLUGIN_HOOKS" "$file" 2>/dev/null; then
+  if grep -q "plugins/ai-assisted-development.*hooks\|PLUGIN_HOOKS" "$file" 2>/dev/null; then
     pass "$(basename $file): uses resolved hook path"
   else
-    fail "$(basename $file): missing resolved hook path (ke-marketplace or PLUGIN_HOOKS)"
+    fail "$(basename $file): missing resolved hook path (glob-discovered plugin dir or PLUGIN_HOOKS)"
   fi
 done
 
@@ -431,7 +431,7 @@ grep -q "Auto-Capture.*Write an entry" "$PLUGIN_DIR/commands/dream-init.md" && \
   pass "dream-init Step 5: no hardcoded inline section content"
 
 # Step 5 must read from PLUGIN_CLAUDE path
-grep -q 'PLUGIN_CLAUDE.*ke-marketplace.*CLAUDE\.md' "$PLUGIN_DIR/commands/dream-init.md" && \
+grep -q 'PLUGIN_CLAUDE.*plugins/ai-assisted-development.*CLAUDE\.md' "$PLUGIN_DIR/commands/dream-init.md" && \
   pass "dream-init Step 5: reads sections from plugin CLAUDE.md" || \
   fail "dream-init Step 5: plugin CLAUDE.md source path MISSING"
 
@@ -708,7 +708,7 @@ grep -q "require('\.claude-plugin/plugin\.json')\|require(\".claude-plugin/plugi
   pass "dream-init Step 4: wrong relative path removed"
 
 # Step 4 must read from the plugin install dir
-grep -q "ke-marketplace.*plugins.*ai-assisted-development.*plugin\.json" \
+grep -q "plugins/ai-assisted-development.*plugin\.json\|plugins.*ai-assisted-development.*\.claude-plugin" \
   "$PLUGIN_DIR/commands/dream-init.md" && \
   pass "dream-init Step 4: reads plugin.json from correct install path" || \
   fail "dream-init Step 4: correct plugin.json path MISSING"

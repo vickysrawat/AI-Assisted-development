@@ -28,7 +28,7 @@ classify from the predicted scope in the request and re-classify once the diff e
 ```
 T3 if ANY of:
   - touches authentication, authorization, or session-handling files
-    (paths matching the auth globs in domain-map.md)
+    (paths matching the auth module in the knowledge graph)
   - adds or modifies a public API endpoint
   - adds a new external dependency (package manifest changes)
   - touches data-handling code flagged B1–B7 in business-context-severity.md

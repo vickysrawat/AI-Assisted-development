@@ -12,7 +12,7 @@ cache file at a time.
 |---|---|---|
 | `.claude/file-cache.json` | code-review, security | code-review, security, dream-status |
 | `token-analysis/token-graph.json` | token-analysis | token-analysis, dream-status |
-| `.claude/architecture/domain-map.md` | architect | icea-feature, icea-review, dream-status |
+| `.claude/graph/` (index + module files) | architect (full), graph-sync (incremental) | icea-feature, icea-review, code-review, security, dream-status |
 | `.claude/dream-init-state.json` | dream-init | dream-init (idempotency check on re-run) |
 | `security/security-ledger.md` | security | fix, checkin, pr-create |
 | `dynamic-scan/dynamic-scan-ledger.md` | dynamic-scan | fix, checkin, pr-create |

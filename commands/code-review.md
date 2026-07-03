@@ -22,7 +22,7 @@ Parse the invocation arguments:
 | `--area backend` | SCOPE_FLAG = `--area backend` — .NET/C# files only |
 | `--area frontend` | SCOPE_FLAG = `--area frontend` — TypeScript/HTML files only |
 | `--area config` | SCOPE_FLAG = `--area config` — config/IaC/env files only |
-| `--area <Name>` | SCOPE_FLAG = `--area <Name>` — domain-map area files only |
+| `--area <Name>` | SCOPE_FLAG = `--area <Name>` — knowledge-graph module files only |
 | `--continue` | SCOPE_FLAG = `--continue` — resume from checkpoint |
 | a file/folder path | SCOPE_FLAG = (default), restrict candidate list to that path |
 | (nothing) | SCOPE_FLAG = (default) — cache-aware full scan with budget cap |

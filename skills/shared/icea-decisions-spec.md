@@ -18,7 +18,7 @@ drafting, identify genuine forks via mechanical signals plus judgment:
 Mechanical fork signals (any one triggers evaluation):
 - new external dependency would be introduced
 - database schema change or new table vs extending existing
-- a pattern not present in the architecture docs / domain-map would be introduced
+- a pattern not present in the architecture docs / knowledge graph would be introduced
 - cross-layer placement question (logic could live in 2+ layers)
 - synchronous vs asynchronous boundary decision
 
@@ -36,7 +36,7 @@ For every option:
   articulated, DELETE the option. Two real options beat three decorative ones;
   one real option means there was no fork — say so and skip the block.
 - **Repo evidence required** for the recommendation: cite this codebase —
-  existing patterns (with locations from the domain-map), prior decisions from
+  existing patterns (with locations from the knowledge graph), prior decisions from
   memory, measured constraints. Best-practice generalities ("queues improve
   scalability") are filler and the critic flags them.
 

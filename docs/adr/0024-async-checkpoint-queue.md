@@ -1,6 +1,6 @@
 # 0024 — Async checkpoint queue (proposal, v0.9)
 Status: Proposal · Date: 2026-06-11
-Governs: `skills/shared/async-checkpoint-queue.md`
+Governs: `docs/proposals/async-checkpoint-queue.md`
 
 ## Problem
 Human gates are synchronous interrupts — every ICEA approval, every critic

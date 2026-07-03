@@ -64,7 +64,7 @@ Announce what will be loaded:
 | `--area backend` | Only `*.cs` files — .NET layer scan |
 | `--area frontend` | Only `*.ts` and `*.html` files — Angular layer scan |
 | `--area config` | Only `*.json`, `*.yml`, `*.yaml`, `*.env`, `Dockerfile`, `*.tf` — IaC/config scan |
-| `--area <AreaName>` | Entry-point file + key files for that domain-map area |
+| `--area <ModuleName>` | Entry-point file + key files for that knowledge-graph module |
 | `--continue` | Resume from `.claude/security-checkpoint.json` |
 | (none) | Default: cache-aware full-project scan with budget cap (see Step 0b2) |
 
@@ -723,7 +723,7 @@ Load in Step 0e (before analysis):
 | `../shared/source-file-consent.md` | Always — consent category enforcement |
 | `../shared/file-cache-schema.md` | On first cache-write only |
 | `../shared/scope-flags-spec.md` (v1.4) | On first scope resolution only |
-| `../shared/domain-map-spec.md` (v1.1) | domain-map.md schema, staleness rules, and fingerprint contract |
+| `../shared/graph-index-schema.md` · `../shared/graph-module-schema.md` | Knowledge-graph schema (index + per-module detail) used for `--area` orientation |
 
 ---
 

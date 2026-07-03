@@ -72,7 +72,7 @@ When a skill needs to read a source file (Category B), it must use this format:
 
   File    : {path/to/file.ts}
   Why     : {specific question — e.g. "The ICEA says the filter applies in
-             MatterListComponent but the domain-map shows it might be in
+             MatterListComponent but the knowledge graph shows it might be in
              MatterFilterService — I need to verify which file the AC refers to
              before writing the compliance finding."}
   Looking for: {specific target — e.g. "the filterMatters() method and whether
@@ -111,7 +111,7 @@ Scan these files? (yes / no / scan only changed files / tell me which ones)
 ## Justification quality standard
 
 A justification must answer:
-- What specific information is missing from architecture docs, domain-map, or the git diff?
+- What specific information is missing from architecture docs, the knowledge graph, or the git diff?
 - Why is that information necessary for the current task (not just "would be helpful")?
 - What is the minimum number of files needed?
 
@@ -126,8 +126,8 @@ Good justification:
 > in the diff but not whether the validation was added inside the method body.
 > Reading this file confirms or denies AC-3 compliance."
 
-> "The domain-map lists DataImportService as the entry point for the Bulk Import
-> area, but the diff touches three files in that area. I need to read
+> "The knowledge graph lists DataImportService as the entry point for the Bulk Import
+> module, but the diff touches three files in that module. I need to read
 > DataImportService.cs to understand the call chain and determine whether the
 > change in BulkImportValidator.cs (one of the three) is in scope for ICEA AC-5."
 

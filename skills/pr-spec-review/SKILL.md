@@ -36,15 +36,15 @@ waived by any flag or instruction.
 
 ---
 
-## Codebase Orientation (optional — run if domain-map.md exists)
+## Codebase Orientation (optional — run if the knowledge graph exists)
 
-> Schema: `../shared/domain-map-spec.md`
+> Schema: `../shared/graph-index-schema.md` · `../shared/graph-module-schema.md`
 
 Before executing, check for orientation files — do not scan source:
 
-1. **Read `.claude/architecture/domain-map.md`** if present — use it to identify the feature area, layer, and entry-point file for context in output.
-2. **Staleness check**: if `.claude/architecture/domain-map.md` modification date is >7 days older than the last structural git change, note it inline — do not block.
-3. If `.claude/architecture/domain-map.md` is missing, continue without orientation.
+1. **Read `.claude/graph/graph-index.md`** if present — use it to identify the module, domain, and entry-point file for context in output; read the matching `.claude/graph/<module>.md` for detail.
+2. **Staleness check**: if `.claude/graph/.stale` exists, note it inline (run `/graph-sync`) — do not block.
+3. If `.claude/graph/graph-index.md` is missing, continue without orientation.
 
 
 ## Model routing

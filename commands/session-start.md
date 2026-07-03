@@ -63,7 +63,7 @@ cat memory/MEMORY.md 2>/dev/null || echo "NO_MEMORY"
 ls memory/topic-*.md 2>/dev/null | head -5
 cat memory/dream-log.md 2>/dev/null | tail -20
 cat .claude/architecture/architecture.md 2>/dev/null | head -60
-cat .claude/architecture/domain-map.md 2>/dev/null | head -80
+cat .claude/graph/graph-index.md 2>/dev/null
 ```
 
 ---
@@ -102,7 +102,7 @@ Run these silently. Only surface ❌ Red results — do not report ✅ Green ite
 ```bash
 ls CLAUDE.md 2>/dev/null || echo "MISSING: CLAUDE.md"
 ls memory/MEMORY.md 2>/dev/null || echo "MISSING: memory/MEMORY.md"
-ls .claude/architecture/domain-map.md 2>/dev/null || echo "MISSING: domain-map.md — run /dream-init"
+ls .claude/graph/graph-index.md 2>/dev/null || echo "MISSING: graph-index.md — run /dream-init"
 ls .claude/architecture/architecture-deployment.md 2>/dev/null || echo "MISSING: architecture-deployment.md — run /update-arch --deployment"
 ls .claude/file-cache.json 2>/dev/null || echo "MISSING: file-cache.json — run /dream-init"
 ls token-analysis/token-graph.json 2>/dev/null || echo "MISSING: token-graph.json — run /dream-init"
@@ -236,7 +236,7 @@ Output this block and nothing else. Keep it under 20 lines:
 
   Last decision : {most recent architecture/approach decision from memory}
   Last fix      : {most recent error-resolved entry from memory}
-  Active areas  : {feature areas from domain-map, comma-separated}
+  Active areas  : {modules from graph-index, comma-separated}
 
   Sessions since last /dream: {calculate from dream-log.md last run date}
   {⚠ Run /dream soon — N sessions since last consolidation  |  (omit if ≤5 sessions)}

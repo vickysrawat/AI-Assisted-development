@@ -53,15 +53,18 @@ Do NOT trigger for:
 
 ## Codebase Orientation (run before Step 1)
 
-> Schema: `../shared/domain-map-spec.md`
+> Schema: `../shared/graph-index-schema.md` · `../shared/graph-module-schema.md`
 
 Before intercepting the feature request, orient yourself to the project without
 reading raw source files:
 
 1. **Read `.claude/architecture/architecture.md`** if it exists — this gives the
    system overview, layer responsibilities, and key patterns.
-2. **Read `.claude/architecture/domain-map.md`** if it exists — this gives the feature area map with
-   entry-point files for each domain area.
+2. **Read `.claude/graph/graph-index.md`** if it exists — the module table
+   (Module · Domain · Detail File · Entry Point) is the codebase breadth index.
+   Match the feature request to the closest **Module** row, then **read that
+   module's detail file** (`.claude/graph/<module>.md`) for bounded context,
+   key files, dependencies, and patterns.
 3. **Read `.claude/architecture/architecture-deployment.md`** if it exists — this gives the
    hosting model (IIS / container / App Service), auth strategy (Entra ID / JWT / API key),
    environment list, and CI/CD pipeline. Reference this when drafting ACs for API endpoints,
@@ -94,26 +97,20 @@ reading raw source files:
    ```
 5. Do NOT scan `src/`, read controller files, or open any source file.
    This skill is Category C under `../shared/source-file-consent.md` —
-   it operates on architecture docs and domain-map only. The domain-map
+   it operates on architecture docs and the knowledge graph only. The graph
    was built from source; use it instead of re-reading source files.
 
-6. **Staleness check** — after reading domain-map.md, verify it is fresh:
-   ```bash
-   # Get domain-map.md modification date
-   stat -c '%Y' .claude/architecture/domain-map.md 2>/dev/null || echo "0"
-   # Get last structural git commit date (renames, new files, deletes)
-   git log -1 --diff-filter=ARD --format="%ct" -- . 2>/dev/null || echo "0"
+6. **Staleness check** — if `.claude/graph/.stale` exists (set by the post-merge
+   git hook when tracked entry-point files change), the graph may be behind the
+   working tree:
    ```
-   If domain-map.md is more than 7 days older than the last structural change, warn:
-   ```
-   ⚠ .claude/architecture/domain-map.md may be stale (last updated: {date}, last structural change: {date}).
-   Run the architect skill to refresh it for accurate orientation.
-   Continuing with current map…
+   ⚠ .claude/graph may be stale — run /graph-sync to refresh it for accurate orientation.
+   Continuing with current graph…
    ```
    Then proceed — do not block execution.
-7. From the domain-map, identify which feature area the request touches. Note the
-   entry-point file and key files for that area — reference them in the ICEA's
-   Context section without opening them.
+7. From the graph, identify which module the request touches. Note the module's
+   entry-point and key files — reference them in the ICEA's Context section
+   without opening them.
 
 ## Execution Steps
 

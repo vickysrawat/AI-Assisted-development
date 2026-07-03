@@ -38,13 +38,13 @@ defaults below.
 
 ## Codebase Orientation (optional — run if architecture docs exist)
 
-> Schema: `../shared/domain-map-spec.md`
+> Schema: `../shared/graph-index-schema.md` · `../shared/graph-module-schema.md`
 
 Before executing, check for orientation files — do not scan source:
 
 1. **Read `.claude/architecture/architecture.md`** if present — use it to identify the active layers (backend/frontend/middleware) for this project. This determines which task categories to include.
-2. **Read `.claude/architecture/domain-map.md`** if present — use it to identify the feature area, layer, and entry-point file for context in output.
-3. **Staleness check**: if `.claude/architecture/domain-map.md` modification date is >7 days older than the last structural git change, note it inline — do not block.
+2. **Read `.claude/graph/graph-index.md`** if present — use it to identify the module, domain, and entry-point file for context in output; read the matching `.claude/graph/<module>.md` for detail.
+3. **Staleness check**: if `.claude/graph/.stale` exists, note it inline (run `/graph-sync`) — do not block.
 4. If neither architecture file exists, continue with the default stack above.
 
 ## Execution Steps
@@ -100,8 +100,8 @@ ADO_ORG=$(grep -E "^- Organization\s*:" CLAUDE.md 2>/dev/null | sed 's/.*: *//')
 ADO_PROJECT=$(grep -E "^- Project\s*:" CLAUDE.md 2>/dev/null | sed 's/.*: *//')
 ```
 
-Fetch the work item — **always include `--ssl-no-revoke -4`** on the
-Kirkland network (see `references/ado-connection-guide.md` for why):
+Fetch the work item — **always include `--ssl-no-revoke -4`** on a
+corporate network (see `references/ado-connection-guide.md` for why):
 
 ```bash
 curl -s --ssl-no-revoke -4 \
