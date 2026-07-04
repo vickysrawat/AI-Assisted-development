@@ -484,7 +484,19 @@ renaming it would break every stub and doc reference. `pluginRepoName` is only t
 `~/.claude/plugins/` created at install — it is **derived from the organization**
 (`{organization}-marketplace`, or `local-marketplace` when no real org is set) by the
 installer and `sync-config.sh`. Skills find the plugin by glob, so the name is free and
-`--update`/`--uninstall` locate the install regardless of its name.
+`--update`/`--uninstall` locate the install regardless of its name. `--uninstall` (`-Uninstall`)
+removes all global config — the cache dir (every version), any caches orphaned by a past
+rename, and stale `extraKnownMarketplaces` entries — via `scripts/uninstall-cleanup.js`. It
+shows a dry-run plan and prompts before deleting; pass `--yes` (`-Yes`) to skip the prompt.
+It does **not** touch per-project `.claude/` provisioning or credentials.
+
+**CLAUDE.md context budget.** CLAUDE.md loads whole every session, so keep it lean — target
+**≤ ~200 lines**. This is an *instruction-adherence* budget, **not** a context-window limit
+(a 150-line file is ~1% of a 200K window). The plugin's injected governance has a practical
+floor (~126–148 lines) because always-active gates and the required §2 ADO config must stay;
+that floor was accepted by design, not driven lower. Rationale + target table:
+`skills/shared/claude-md-budget-spec.md`; decision: [ADR 0040](docs/adr/0040-claude-md-context-budget.md).
+`scripts/claude-md-audit.js` (surfaced by `dream-init`/`dream-health`) flags projects over budget.
 
 `validate.py` check 7 fails the build only once a **real** org is configured (not the
 `your-org` placeholder) if that org is hardcoded in a skill/command, and always if the
@@ -495,16 +507,23 @@ command, or reference doc, and if the manifests drift from `config.json`.
 
 ## Releasing a new version
 
-> **Use the bump script.** Running `./scripts/bump-version.sh <X.Y.Z>` updates
-> `plugin.json`, `CLAUDE.md`, and prepends a CHANGELOG stub in one atomic operation,
-> then runs the validator. Never update these files manually — they drift apart.
+> **Single source of truth: `.claude-plugin/plugin.json` → `version`.** Runtime readers
+> (`dream-init`, `dream-sync`, `install.sh`/`.ps1`) read it live and never drift. `marketplace.json`
+> carries **no** version (it references the plugin by `source`; the version is plugin.json's).
+> The only static copy derived from it is the `CLAUDE.md` `# Plugin version:` label.
+
+> **Use the bump command — never hand-edit the version.**
+> `./scripts/bump-version.sh <X.Y.Z>` (full release pass: also re-syncs hooks + runs the Python
+> validator when present) or, if Python is unavailable, `node scripts/bump-version.js <X.Y.Z>`.
+> It sets `plugin.json`, propagates the `CLAUDE.md` label, prepends a CHANGELOG stub, warns on
+> guide staleness, and runs the drift guard. Version writes are all Node — no Python needed.
 
 1. Make all changes on a feature branch.
-2. Update `CHANGELOG.md` — prepend a `## [X.Y.Z] — YYYY-MM-DD` section summarising every change. Be specific: list affected files and the exact behaviour change.
-3. Bump `version` in `.claude-plugin/plugin.json`.
-4. Update the version badge at the top of `README.md`.
-5. If model defaults changed, follow the [updating model defaults](#updating-model-defaults) checklist.
-6. Run `node tests/runner.js` and confirm all scenarios pass.
+2. Run the bump command above, then fill in the prepended `CHANGELOG.md` stub — be specific: list affected files and the exact behaviour change.
+3. Optionally refresh narrative version mentions (the `README.md` headline, the `*.html` guides) — these are *documentation*, not the canonical version; the bump command warns when guides lag.
+4. If model defaults changed, follow the [updating model defaults](#updating-model-defaults) checklist.
+5. Run `node tests/runner.js` and confirm all scenarios pass.
+6. Confirm no drift: `node scripts/check-version-consistency.js` (also suitable for CI — exits non-zero on any mismatch).
 7. Open a PR to `main`. PR title format: `[vX.Y.Z] Short description`.
 8. After merge, tag the commit: `git tag vX.Y.Z && git push --tags`.
 

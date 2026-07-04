@@ -1,3 +1,113 @@
+## [3.4.0] — 2026-07-03
+
+### Changed — Version single source of truth
+Different files showed different versions on every bump (e.g. `marketplace.json` stuck at
+2.5.0, guides at 3.0.0) because the version was duplicated and the bump tool didn't cover
+all copies and required Python.
+
+- **`.claude-plugin/plugin.json` `version` is now the single source of truth.** Runtime
+  readers (`dream-init`, `dream-sync`, `install.sh`/`.ps1`) already read it live.
+  `marketplace.json` no longer embeds a version (it references the plugin by `source`); the
+  only static derived copy is the `CLAUDE.md` `# Plugin version:` label.
+- **`scripts/bump-version.js`** (new, Node — no Python) is the sole writer: sets
+  `plugin.json`, propagates the `CLAUDE.md` label, prepends a CHANGELOG stub, warns on guide
+  staleness. `scripts/bump-version.sh` is now a thin wrapper that adds git-hook re-sync and
+  runs the Python validator only when it is available.
+- **`scripts/check-version-consistency.js`** (new drift guard) fails on any mismatch between
+  `plugin.json` and the `CLAUDE.md` label, or if `marketplace.json` embeds a version —
+  CI-friendly, Python-free. Guide stamps are warned, not failed (separate doc lifecycle).
+- `DEVELOPER-GUIDE.md` "Releasing a new version" rewritten around the single source + guard,
+  removing the manual "bump plugin.json / update README badge" steps that caused the drift.
+
+### Documentation
+- CLAUDE.md context budget formalised — [ADR 0040](docs/adr/0040-claude-md-context-budget.md)
+  + `skills/shared/claude-md-budget-spec.md`: target ≤ ~200 lines is an *instruction-adherence*
+  budget, not a context-window limit.
+- Guides brought current (plugin-guide + user-guide: version displays, stamps, and a
+  "what's new since 3.0.0" section). Fixed `validate.py`'s guide-freshness check, which
+  pointed at a nonexistent `plugin-guide-v9.html` instead of `plugin-guide.html`.
+
+---
+
+## [3.3.0] — 2026-07-03
+
+### Added — Knowledge graph becomes an actual graph (`graph.json`, ADR 0039)
+The codebase knowledge graph gains a machine-readable **structure of record**,
+`.claude/graph/graph.json`, from which the always-loaded index and per-module detail
+files are now a generated **projection**. This closes the FAIR *Interoperable* gap
+(relationships become queryable, validatable data) while keeping the auto-loaded
+context lean — `graph.json` carries no `paths:` frontmatter and never auto-loads.
+
+- **New shared spec** `skills/shared/graph-json-schema.md` — typed nodes
+  (`service`/`repository`/`ui`/`datastore`/`external-api`/`shared-lib`/`domain`), typed
+  directed edges (`depends`/`calls`/`reads`/`publishes`/`extends`) with a
+  `EXTRACTED`/`INFERRED`/`AMBIGUOUS` confidence tag, hub (god-node) flags, and
+  deterministic serialization to minimise merge diffs. `graph.json` is the single
+  source of truth; the markdown is projected from it (no dual-source drift, ADR 0038).
+- **Correctness fix — module-wide fingerprints.** Staleness detection now hashes *all*
+  files under a module's `paths`, not a single entry-point file — a change to any file
+  in a module now marks it stale (the single-file anchor silently missed those).
+  Applied consistently in `architect`, `/graph-sync`, and the git hook.
+- **Missing hook created.** `hooks/graph-stale-detect.sh` (referenced by `dream-init`
+  but absent on disk) is now implemented with the module-wide fingerprint; wired to the
+  existing post-merge + post-checkout hooks.
+- **`/graph-sync` overhaul** — reconciliation (confirm-then-remove dead modules, rename
+  detection that carries curated prose forward, orphan repair), typed edges derived
+  from source imports (`EXTRACTED`), reverse-edge (`Depended on by`) projection, hub
+  detection, multi-root modules, and stack-derived ignore globs.
+- **Validation** — `validate.py` check 9 now registers `graph-json-schema.md`, asserts
+  the generator/refresher reference it, and (when a `graph.json` exists) enforces no
+  orphans, no dangling edges, unique ids, index/detail projection agreement, and warns
+  on dependency cycles.
+- New ADR `docs/adr/0039-graph-json-sidecar.md`.
+
+### Added — `/graph-viz` knowledge-graph visualization
+New command + skill `graph-viz` renders the graph as a **self-contained, offline** HTML
+view at `.claude/graph/graph.html` (gitignored). Reads `graph.json` only (Category C —
+never application source): nodes grouped/coloured by type, edges styled by type and
+confidence (solid = extracted, dashed = inferred/ambiguous), hub (god) nodes and stale
+modules flagged, and hover reveals a module's dependencies and dependents (impact
+analysis). Default 2D SVG needs no dependencies; opt-in `--3d` uses a **locally vendored**
+WebGL library (no external download) and falls back to 2D when absent.
+
+### Changed — CLAUDE.md context footprint slimmed (no governance change)
+CLAUDE.md is loaded whole every session, so its length is a recurring per-session token cost.
+The plugin injected ~180 governance lines into every project (own template was 239 lines).
+
+- **Injected sections compressed** — `## 0. WRITE GATE`, `## 0a. Keyword Handlers`,
+  `## 0b. Shell & Git`, `## Feature Gate`, `# Dream` slimmed with **every operative rule kept**
+  (the gate, the full keyword table, the feature-gate constraint). Supporting detail/rationale
+  moved to new shared specs `skills/shared/write-gate-spec.md` and `dream-reference.md`.
+- **De-duplicated** — `## 3. DESIGN PHILOSOPHY` → pointer to `rules/project-rules.md` (already
+  the enforced copy); `## 4. MODEL ROUTING` → pointer to `skills/shared/model-routing-spec.md`.
+- **Latent injector bug fixed** — `# Dream` (an H1) was extracted through EOF, swallowing
+  `## Data Access Convention` + `## Feature Gate` and duplicating them into consumers. `# Dream`
+  moved to the end of CLAUDE.md; extraction is now clean. Plugin CLAUDE.md 239 → ~153 lines.
+- **Governance-aware size advisory** — new read-only `scripts/claude-md-audit.js` classifies
+  sections as governance (must stay) vs movable, and (only when over ~200 lines with meaningful
+  movable content) suggests targets. Surfaced in `dream-init` (one-time, at creation) and
+  `dream-health` (size card). Never edits CLAUDE.md; never suggests moving an always-active gate.
+- Existing projects: `dream-sync` stale-detection refreshes the verbose WRITE GATE / Keyword
+  Handlers to the slim versions (both H2-bounded — no neighbour clobber). Migration `013-3.3.0`.
+
+## [3.0.2] — 2026-07-03
+
+### Fixed — Uninstall now removes all global plugin config
+`--uninstall` / `-Uninstall` previously removed only the current marketplace source dir and
+one `extraKnownMarketplaces` key, relying on `claude plugin uninstall` for the cache. It left
+behind: the plugin **cache** dir (all versions), caches **orphaned by a marketplace rename or
+past version bumps** (e.g. an old `ke-marketplace/ai-assisted-development` tree with 5
+stranded versions), and **stale `extraKnownMarketplaces` entries** for renamed marketplaces.
+
+- New shared engine `scripts/uninstall-cleanup.js` (cross-platform Node) computes and applies
+  the cleanup. "Our marketplaces" = the current name plus any under `plugins/cache/*` that
+  hosted this plugin — so rename orphans are caught while unrelated marketplaces are never
+  touched. It refuses to delete anything outside `~/.claude/plugins`.
+- Both installers now run it: **dry-run plan → confirm → apply**. Pass `--yes` (`-Yes`) to skip
+  the prompt. Non-interactive shells abort unless `--yes` is given — never a silent delete.
+- Scope is global machine config only. Per-project `.claude/` provisioning and credentials are
+  intentionally not touched.
+
 ## [3.0.1] — 2026-07-02
 
 ### Fixed — Fast, unambiguous plugin-path & stack resolution

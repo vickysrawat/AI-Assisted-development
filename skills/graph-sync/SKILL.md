@@ -2,9 +2,12 @@
 name: graph-sync
 description: >
   Incremental refresh of the codebase knowledge graph in .claude/graph/.
-  Checks entry-point fingerprints for all modules, regenerates only stale detail
-  files, detects new source modules, and restructures flat→domain layout when
-  the project crosses 30 modules. Deletes the .stale flag on success.
+  graph.json is the authoritative structure (typed nodes, typed edges with
+  confidence, module-wide fingerprints); the markdown index and per-module detail
+  files are its generated projection. Recomputes module-wide fingerprints, regenerates
+  only stale modules, detects new/removed/renamed modules, derives typed dependency
+  edges from source imports, flags hub (god) nodes, and restructures flat→domain past
+  30 modules. Deletes the .stale flag on success.
   Triggered by /ai-assisted-development:graph-sync.
   Also triggers on: "refresh knowledge graph", "update graph", "graph is stale",
   "sync the graph", "knowledge graph stale".
@@ -12,260 +15,283 @@ description: >
 
 # Graph Sync Skill
 
-_Skill version: 1.0 · Last changed: 2026-06-20 · Plugin compatibility: ≥2.6.0 · Consent: B_
+_Skill version: 2.0 · Last changed: 2026-07-03 · Plugin compatibility: ≥3.3.0 · Consent: B_
 
 Effort tier: **low** (infrastructure, deterministic structure). Use `--effort medium`
 only when module layout has significantly changed and boundaries are ambiguous.
 
-**Write-silent rule:** Write all graph files directly to disk. Confirm each with
-`✓ Written: .claude/graph/<module>.md (~N tokens)`. Never echo file content to chat.
+**Consent (Category B):** graph-sync reads entry-point and source files to derive
+module content and dependency edges. It is plugin infrastructure with no B1–B7
+business sensitivity of its own (see `skills/shared/business-context-severity.md` for
+the severity model it does not trigger), but it still announces the source read per
+`skills/shared/source-file-consent.md` before reading beyond the graph files.
 
-See `skills/shared/graph-index-schema.md` and `skills/shared/graph-module-schema.md`
-for the authoritative schemas.
+**Write-silent rule:** Write all graph files directly to disk. Confirm each with
+`✓ Written: .claude/graph/<file> (~N tokens)`. Never echo file content to chat.
+
+**Authoritative schemas** (single sources of truth — follow exactly):
+- `skills/shared/graph-json-schema.md` — `.claude/graph/graph.json` (structure of record)
+- `skills/shared/graph-index-schema.md` — `.claude/graph/graph-index.md` (breadth projection)
+- `skills/shared/graph-module-schema.md` — `.claude/graph/<module>.md` (depth projection)
+
+**Source-of-truth rule:** `graph.json` is authoritative for nodes, edges, types, and
+fingerprints. The markdown files are a **projection** written *from* `graph.json` in
+Step 8 — never hand-edited for structure. This prevents the dual-source drift that
+[ADR 0038](../../docs/adr/0038-knowledge-graph-orientation.md) retired `domain-map.md`
+to eliminate.
 
 ---
 
-## Step 1 — Guard: verify graph-index.md exists
+## Shared helper — module-wide fingerprint
+
+Every fingerprint (here, in `architect`, and in `hooks/graph-stale-detect.sh`) is a
+hash over **all source files under the module's `paths`**, not a single entry-point
+file — a change to any file in the module marks it stale.
 
 ```bash
-cat .claude/graph/graph-index.md 2>/dev/null || echo "NO_INDEX"
+graph_module_fingerprint() {
+  { for root in "$@"; do
+      [ -e "$root" ] || continue
+      find "$root" -type f \
+        -not -path '*/.git/*'   -not -path '*/node_modules/*' \
+        -not -path '*/bin/*'    -not -path '*/obj/*' \
+        -not -path '*/dist/*'   -not -path '*/.angular/*' \
+        -not -path '*/migrations/*' -not -path '*/__pycache__/*' \
+        -print0 2>/dev/null
+    done; } \
+  | sort -z | xargs -0 sha1sum 2>/dev/null | sha1sum | cut -d' ' -f1
+}
+```
+Extend the ignore globs from the detected stack (`.claude/dream-init-state.json`
+`detected_stacks`; see `skills/shared/plugin-path-resolution.md`) rather than
+hardcoding — e.g. add `*/target/*` for Java, `*/.venv/*` for Python.
+
+---
+
+## Step 1 — Guard: verify the graph exists
+
+```bash
+test -f .claude/graph/graph.json && test -f .claude/graph/graph-index.md \
+  && echo OK || echo "NO_GRAPH"
 ```
 
-If `NO_INDEX`:
+If `NO_GRAPH`:
 ```
-⚠ No knowledge graph found at .claude/graph/graph-index.md.
+⚠ No knowledge graph found in .claude/graph/.
   The graph is created by dream-init — run /dream-init first.
 ```
-Stop here.
-
-Parse the index to extract:
-- `Structure` value (flat or domain) from the header line
-- All module rows: `Module`, `Domain`, `Detail File`, `Entry Point`
-
-```bash
-# Read the Structure field
-grep "^_Generated:" .claude/graph/graph-index.md \
-  | sed 's/.*Structure: \(flat\|domain\).*/\1/'
-
-# Read module rows (skip header and separator lines)
-awk '/^\| [A-Z]/' .claude/graph/graph-index.md
-```
+Stop here. (A pre-3.2 project may have the markdown but no `graph.json`; in that case
+build `graph.json` from the existing index + detail files as a one-time migration,
+then continue.)
 
 ---
 
-## Step 2 — Check the .stale flag
+## Step 2 — Load state and check the .stale flag
+
+Read `graph.json` (authoritative) into memory: `meta`, `nodes[]`, `edges[]`.
+Cross-check the index row set matches `nodes` (report any mismatch as an orphan in
+Step 5).
 
 ```bash
 cat .claude/graph/.stale 2>/dev/null && echo "STALE_FLAG_PRESENT" || echo "NO_STALE_FLAG"
 ```
-
-Record whether the flag is present — it is deleted in Step 7 on success.
-The flag does not change which modules are checked; fingerprint comparison
-in Step 3 is always authoritative.
+The flag (written by the git hook, listing drifted module ids) is a hint only —
+Step 3 fingerprint comparison is always authoritative. It is deleted in Step 9.
 
 ---
 
 ## Step 3 — Fingerprint check for all modules
 
-For each module row in the index, read the `_Fingerprint_` value from its detail file
-and compare against the current sha1 of the entry-point file.
+For each node, recompute its module-wide fingerprint over `node.paths` and compare to
+`node.fingerprint`:
 
 ```bash
-# For each module (loop over parsed rows from Step 1):
-DETAIL_FILE=".claude/{detail-file-path}"
-ENTRY_POINT="{entry-point-path}"
-
-# Read stored fingerprint
-STORED=$(grep "_Fingerprint:" "$DETAIL_FILE" 2>/dev/null \
-  | sed 's/.*Fingerprint: \([a-f0-9]*\).*/\1/')
-
-# Compute current fingerprint
-CURRENT=$(sha1sum "$ENTRY_POINT" 2>/dev/null | cut -d' ' -f1)
-
-if [ "$STORED" = "$CURRENT" ]; then
-  echo "UNCHANGED $DETAIL_FILE"
-else
-  echo "STALE $DETAIL_FILE $CURRENT"
-fi
+# roots = node.paths with trailing /** stripped
+current="$(graph_module_fingerprint $roots)"
+[ "$current" = "$node_fingerprint" ] && echo "UNCHANGED $id" || echo "STALE $id $current"
 ```
 
-Build three lists:
-- `UNCHANGED` — fingerprint matches, skip regeneration
-- `STALE` — fingerprint differs, must regenerate
-- `MISSING_ENTRY` — entry-point file not found on disk (warn, do not delete detail file)
+Build:
+- `UNCHANGED` — matches; skip regeneration
+- `STALE` — differs; regenerate detail + re-derive edges (Step 7)
+- `MISSING_ROOTS` — none of `node.paths` exist on disk (candidate removal/rename — Step 5)
 
 ---
 
 ## Step 4 — Detect new modules
 
-Scan for top-level source directories that are not represented in the index.
+Scan for top-level source directories not represented by any node's `paths`. Derive
+ignore globs from the detected stack instead of a fixed list:
 
 ```bash
-# Detect candidate source roots (adjust patterns to match the project's layout)
 find . -mindepth 2 -maxdepth 3 -type d \
-  -not -path "./.git/*" \
-  -not -path "./node_modules/*" \
-  -not -path "./.angular/*" \
-  -not -path "./dist/*" \
-  -not -path "./bin/*" \
-  -not -path "./obj/*" \
-  -not -path "./.claude/*" \
-  -not -path "./token-analysis/*" \
+  -not -path "./.git/*" -not -path "./.claude/*" \
+  -not -path "./node_modules/*" -not -path "./dist/*" \
+  -not -path "./bin/*" -not -path "./obj/*" -not -path "./.angular/*" \
   | sort
 ```
-
-Cross-reference against the index. Any directory not matched by an existing module
-row is a candidate new module. Cross-reference against `architecture.md` for the
-system overview if a new module's purpose is unclear:
-
-```bash
-cat .claude/architecture/architecture.md 2>/dev/null || echo "NO_ARCH"
-```
-
-New candidates become `NEW_MODULES` — they are generated in Step 5b.
+Cross-reference with `.claude/architecture/architecture.md` when a new module's
+purpose is unclear. Directories matched by no node become `NEW_MODULES` (Step 7b).
 
 ---
 
-## Step 5 — Check module count and determine structure
+## Step 5 — Reconcile removed, renamed, and orphaned modules
 
-```bash
-TOTAL_MODULES=$(( ${#UNCHANGED[@]} + ${#STALE[@]} + ${#NEW_MODULES[@]} ))
+- **Renamed** — a `MISSING_ROOTS` node *and* a `NEW_MODULES` candidate with high file
+  overlap (same filenames / similar tree): treat as a rename. **Carry the curated
+  bounded-context prose forward** to the new node instead of discarding it; update
+  `id`, `module`, `domain`, `paths`, `detailFile`, and rewrite edge endpoints that
+  referenced the old id. Do not double-count it as new.
+- **Removed** — a `MISSING_ROOTS` node with no rename match: **propose removal**
+  (relaxes the old "warn only" rule to confirm-then-remove):
+  ```
+  ⚠ Module '{id}' has no source on disk. Remove it from the graph? [confirm/skip]
+  ```
+  On confirm, drop the node, its detail file, and every edge that touches it.
+- **Orphans** — an index row or detail file with no node, or a node with no detail
+  file: repair so index rows == nodes == detail files.
+
+---
+
+## Step 6 — Structure and hub analysis
+
+```
+TOTAL = |UNCHANGED| + |STALE| + |NEW_MODULES| (after reconciliation)
 ```
 
 | Condition | Action |
-|-----------|--------|
-| `TOTAL_MODULES ≤ 30` AND current structure is `flat` | Stay flat — no restructure needed |
-| `TOTAL_MODULES > 30` AND current structure is `flat` | Trigger restructure to domain subfolders (Step 6) |
-| `TOTAL_MODULES > 30` AND current structure is `domain` | Stay domain — no restructure needed |
-| `TOTAL_MODULES ≤ 30` AND current structure is `domain` | Stay domain — do not revert (fewer modules may be transient) |
+|---|---|
+| `TOTAL ≤ 30`, structure `flat` | stay flat |
+| `TOTAL > 30`, structure `flat` | restructure flat→domain (Step 8) |
+| `TOTAL > 30`, structure `domain` | stay domain |
+| `TOTAL ≤ 30`, structure `domain` | stay domain (never revert) |
 
-Report the plan before any writes:
+**Community grouping (optional):** when restructuring, group modules by *edge-density
+community* (which modules actually depend on each other) rather than folder layout
+alone, when the coupling is clearer than the directory tree.
+
+**Hub (god-node) flag:** compute each node's total degree (in + out edges). Set
+`hub: true` when degree ≥ `max(6, ceil(1.5 × median degree))`. Hubs are excluded from
+traversal-load neighborhood expansion so a `Core`/`Common` module never blows the
+token budget.
+
+Report the plan before writing:
 ```
 🔄 graph-sync
-  Unchanged : {N} modules
-  Stale     : {N} modules — will regenerate
-  New       : {N} modules — will add
-  Structure : {flat|domain} {→ domain (restructure triggered) if applicable}
+  Unchanged : {N}   Stale : {N}   New : {N}   Removed : {N}   Renamed : {N}
+  Structure : {flat|domain} {→ domain (restructure) if applicable}
+  Hubs      : {list of hub module names, or "none"}
 ```
 
 ---
 
-## Step 5a — Regenerate stale module detail files
+## Step 7 — Regenerate stale/new nodes (build structure, not files yet)
 
-For each module in `STALE`:
+For each `STALE` and `NEW_MODULES` entry, update the in-memory node + its edges:
 
-1. Read the entry-point file to get current structure:
-   ```bash
-   head -100 "{entry-point-path}" 2>/dev/null
-   ```
-2. Cross-reference with `architecture.md` for the area description (if available).
-3. Generate a new detail file following `skills/shared/graph-module-schema.md` exactly:
-   - frontmatter `paths: src/{Module}/**`
-   - `<!-- ambient-context: do not summarise or restate this file in responses -->`
-   - Updated `_Fingerprint: {CURRENT_SHA1} | Updated: {TODAY}_`
-   - All four required sections (Bounded context, Key files, Dependencies, Patterns)
-   - Max 5 key files, max 400 tokens
-4. Write the file — **write-silent rule applies**:
-   ```
-   ✓ Written: .claude/graph/{module}.md (~{N} tokens)
-   ```
-   Never output the file content to chat.
+### 7a — Node fields
+- `type` — classify from the entry point / folder role: `service`, `repository`,
+  `ui`, `datastore`, `external-api`, `shared-lib`, or `domain`.
+- `fingerprint` — the recomputed value from Step 3.
+- `entryPoint`, `paths`, `module`, `domain`, `detailFile` — per the schema.
 
----
-
-## Step 5b — Generate new module detail files
-
-For each module in `NEW_MODULES`:
-
-1. Read up to 3 representative files from the candidate directory:
-   ```bash
-   find "{candidate-dir}" -name "*.cs" -o -name "*.ts" -o -name "*.py" -o -name "*.java" \
-     | head -3 | xargs head -60 2>/dev/null
-   ```
-2. Identify the single best entry-point file (the most-representative service, controller, or module class).
-3. Generate the detail file following `skills/shared/graph-module-schema.md`.
-4. Write the file — **write-silent rule applies**.
-5. Add a new row to the index table (Step 6 handles the index rewrite).
-
----
-
-## Step 6 — Rewrite graph-index.md
-
-Always rewrite the index if any of the following is true:
-- At least one module was regenerated (stale or new)
-- Structure changed (flat → domain)
-
-If no modules changed and no new modules were added: skip this step.
-
-Build the updated index following `skills/shared/graph-index-schema.md`:
-- `Structure: flat` if ≤ 30 modules and no prior domain structure
-- `Structure: domain` if > 30 modules or prior domain structure
-- One row per module (all modules, unchanged + refreshed + new)
-- Updated `Generated:` date and `Modules:` count
-
-**If restructuring flat → domain:**
-- Group modules by top-level source folder or bounded context
-- Move detail files to domain subfolders: `.claude/graph/{domain}/{module}.md`
-- Update `paths:` frontmatter in each moved file
-- Update `Detail File` paths in the index accordingly
-
-Write the index — **write-silent rule applies**:
+### 7b — Typed edges with confidence (accuracy over guesswork)
+Derive dependency edges from **actual source**, not prose:
+```bash
+# imports / usings / requires / includes referencing other modules' paths or namespaces
+rg -n --no-heading -e '^\s*(import|from|using|require|include)\b' {module files} 2>/dev/null
 ```
-✓ Written: .claude/graph/graph-index.md (~{N} tokens)
-```
+Map each referenced path/namespace to the owning node's `paths`. For each resolved
+target emit `{ from, to, type, confidence: "EXTRACTED", reason }`, choosing `type`:
+`calls`/`reads`/`publishes`/`extends` when evident, else `depends`. Where a dependency
+is only apparent from architecture prose (not parseable from imports), tag it
+`INFERRED`; tag `AMBIGUOUS` when unsure. **Never** emit an `EXTRACTED` edge you did not
+find in source. (tree-sitter/language-native parsing is an optional future upgrade;
+import-grep is the dependency-free default and works offline.)
+
+Drop edges whose target no longer resolves to a node (no dangling edges).
 
 ---
 
-## Step 7 — Update dream-init-state.json and clean up
+## Step 8 — Write graph.json, then project the markdown
+
+### 8a — Write `graph.json` (authoritative, deterministic)
+Sort `nodes` by `id`, `edges` by `(from, to, type)`; keep key order per
+`graph-json-schema.md`; 2-space indent; trailing newline. Recompute `meta`
+(`generatedAt`, `generator: "graph-sync"`, `structure`, `moduleCount = nodes.length`).
+
+```bash
+node -e '
+  const fs=require("fs"), p=".claude/graph/graph.json";
+  const g=JSON.parse(fs.readFileSync(process.argv[1]||p,"utf8"));  // in-memory model handed in
+  g.nodes.sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);
+  g.edges.sort((a,b)=>(a.from+a.to+a.type).localeCompare(b.from+b.to+b.type));
+  g.meta.moduleCount=g.nodes.length;
+  fs.writeFileSync(p, JSON.stringify(g,null,2)+"\n");
+'
+```
+Confirm: `✓ Written: .claude/graph/graph.json (~N tokens)`.
+
+### 8b — Project the detail files (only stale/new/renamed)
+For each changed node, write `.claude/graph/<detailFile>` per
+`graph-module-schema.md`: `paths:` frontmatter (first root), ambient-context comment,
+`_Fingerprint: {node.fingerprint} | Updated: {TODAY}_`, the four sections, and — when
+it fits under 400 tokens — a `**Depended on by:**` line listing the node's dependents
+(edges where `to == id`; derived, not stored). Write silently.
+
+### 8c — Project the index
+Rewrite `graph-index.md` per `graph-index-schema.md` (one row per node, updated
+`Generated`/`Modules`/`Structure`) whenever any node changed or structure changed.
+On flat→domain restructure, move detail files into `<domain>/`, update each file's
+`paths:` and the node `detailFile` values.
+
+---
+
+## Step 9 — Update state and clean up
 
 ```bash
 node -e "
-  const fs = require('fs');
-  const statePath = '.claude/dream-init-state.json';
-  let state = {};
-  try { state = JSON.parse(fs.readFileSync(statePath, 'utf8')); } catch(e) {}
-  state.graphGeneratedAt = new Date().toISOString().slice(0, 10);
-  state.graphStructure = '{flat|domain}';
-  fs.writeFileSync(statePath, JSON.stringify(state, null, 2));
-  console.log('✓ dream-init-state.json updated');
+  const fs=require('fs'), sp='.claude/dream-init-state.json';
+  let s={}; try{s=JSON.parse(fs.readFileSync(sp,'utf8'))}catch(e){}
+  s.graphGeneratedAt=new Date().toISOString().slice(0,10);
+  s.graphStructure='{flat|domain}';
+  fs.writeFileSync(sp, JSON.stringify(s,null,2));
 "
-```
-
-Delete the stale flag if it exists:
-```bash
 rm -f .claude/graph/.stale && echo "✓ .stale flag cleared"
 ```
 
 ---
 
-## Step 8 — Report
+## Step 10 — Report
 
 ```
 ✅ graph-sync complete
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   ✓ {N} unchanged
-  ↺ {N} refreshed  {(list module names)}
-  + {N} added      {(list module names, or "none")}
-  Structure: {flat|domain}
+  ↺ {N} refreshed  {module names}
+  + {N} added      {module names, or "none"}
+  − {N} removed    {module names, or "none"}
+  ⇄ {N} renamed    {old→new, or "none"}
+  Structure: {flat|domain}   Hubs: {names or none}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
-
-If any `MISSING_ENTRY` modules were found:
+If dependency **cycles** were found, list them (warn — do not fail):
 ```
-⚠ {N} module(s) have missing entry-point files — detail files preserved:
-  {list}
-  Verify the entry-point paths in those detail files or remove stale modules manually.
+⚠ Dependency cycle(s) detected (not an error — bidirectional deps can be legitimate):
+  orders → payments → orders
+  Add to an allowlist if intended, or refactor.
 ```
 
 ---
 
 ## Hard rules
 
+- `graph.json` is authoritative; markdown is projected from it — never the reverse
 - NEVER echo file content to chat — write-silent rule applies to all graph writes
-- NEVER regenerate unchanged modules — fingerprint must differ before regenerating
-- NEVER delete a detail file for a module whose entry-point is missing — warn only
+- NEVER regenerate unchanged modules — the module-wide fingerprint must differ first
+- NEVER emit an `EXTRACTED` edge not found in source; guessed edges are `INFERRED`/`AMBIGUOUS`
+- NEVER emit a dangling edge — drop edges whose endpoint is not a node
 - NEVER revert domain structure back to flat — only ever promote flat→domain
-- NEVER exceed 400 tokens in any detail file — cut key files to 3 if needed
-- NEVER include code snippets, method signatures, or SQL in detail files
-- Derive module content from the entry-point file directly (the graph is self-contained — there is no domain-map)
-- Each detail file must include the ambient-context suppression comment
+- NEVER exceed 400 tokens in any detail file, or 350 in the index
+- Removed modules are confirm-then-remove; renames carry curated prose forward
+- Write `graph.json` deterministically (stable sort + key order) so diffs stay minimal

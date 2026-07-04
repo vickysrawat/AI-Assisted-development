@@ -2,7 +2,7 @@
 # ai-assisted-development plugin — global install script
 # Run with: bash install.sh
 # Update:   bash install.sh --update
-# Uninstall: bash install.sh --uninstall
+# Uninstall: bash install.sh --uninstall   (add --yes to skip the confirmation prompt)
 
 PLUGIN_NAME="ai-assisted-development"
 
@@ -209,6 +209,10 @@ if [[ "$1" == "--uninstall" ]]; then
   echo -e "${YELLOW}Uninstalling $PLUGIN_NAME...${NC}"
   echo ""
 
+  # --yes may appear in any argument position — skips the confirmation prompt.
+  ASSUME_YES=""
+  for _a in "$@"; do [ "$_a" = "--yes" ] && ASSUME_YES="yes"; done
+
   if command -v claude &>/dev/null; then
     echo "  Uninstalling plugin from Claude Code..."
     claude plugin uninstall "$PLUGIN_NAME@$MARKETPLACE_NAME" --scope user 2>/dev/null || true
@@ -218,34 +222,34 @@ if [[ "$1" == "--uninstall" ]]; then
     echo -e "${YELLOW}  claude CLI not found — skipping plugin uninstall commands.${NC}"
   fi
 
-  if [ -d "$MARKETPLACE_DIR" ]; then
-    rm -rf "$MARKETPLACE_DIR"
-    echo "  ✓ Deleted $MARKETPLACE_DIR"
-  else
-    echo -e "${YELLOW}  — Plugin files not found at $MARKETPLACE_DIR, skipping.${NC}"
+  # Clean up global plugin config: cache dirs (all versions), caches orphaned by a
+  # marketplace rename/version bumps, and stale extraKnownMarketplaces entries.
+  if ! command -v node &>/dev/null; then
+    echo -e "${YELLOW}  node not found — cannot clean plugin config files.${NC}"
+    echo "  Install Node.js and re-run, or remove ~/.claude/plugins/$MARKETPLACE_NAME manually."
+    exit 1
   fi
 
-  SETTINGS_FILE="$HOME/.claude/settings.json"
-  WIN_SETTINGS_FILE="$(to_win_path "$SETTINGS_FILE")"
-  if [ -f "$SETTINGS_FILE" ] && command -v node &>/dev/null; then
-    node << JSEOF
-const fs = require('fs');
-const settingsPath = '$WIN_SETTINGS_FILE';
-const marketplaceName = '$MARKETPLACE_NAME';
-let settings = {};
-try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch(e) {}
-if (settings.extraKnownMarketplaces && settings.extraKnownMarketplaces[marketplaceName]) {
-  delete settings.extraKnownMarketplaces[marketplaceName];
-  if (Object.keys(settings.extraKnownMarketplaces).length === 0) delete settings.extraKnownMarketplaces;
-  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
-  console.log('  + Removed extraKnownMarketplaces.' + marketplaceName + ' from settings.json');
-} else {
-  console.log('  - extraKnownMarketplaces.' + marketplaceName + ' not found, skipping.');
-}
-JSEOF
-  else
-    echo -e "${YELLOW}  — settings.json not found or node missing, skipping.${NC}"
+  CLEANUP_JS="$SCRIPT_DIR/scripts/uninstall-cleanup.js"
+  # Dry-run first — show exactly what will be removed.
+  node "$CLEANUP_JS" --plugin "$PLUGIN_NAME" --marketplace "$MARKETPLACE_NAME"
+
+  if [ -z "$ASSUME_YES" ]; then
+    if [ -r /dev/tty ]; then
+      printf "  Proceed with removal? [y/N] "
+      read -r _ans < /dev/tty
+      case "$_ans" in [Yy]*) ASSUME_YES="yes";; esac
+    fi
   fi
+
+  if [ "$ASSUME_YES" != "yes" ]; then
+    echo ""
+    echo -e "${YELLOW}Aborted — nothing removed. Re-run with --yes to remove without a prompt.${NC}"
+    echo ""
+    exit 0
+  fi
+
+  node "$CLEANUP_JS" --plugin "$PLUGIN_NAME" --marketplace "$MARKETPLACE_NAME" --apply
 
   echo ""
   echo -e "${GREEN}✓ Plugin uninstalled successfully.${NC}"

@@ -4,61 +4,39 @@
 #        Supported backends: .NET Core · ASP.NET Framework 4.x · Java/Spring Boot · Python (FastAPI/Django/Flask) · Node.js
 #        Supported frontends: Angular · React. Tracking: Azure DevOps.
 # Last updated: keep this file updated when conventions change
-# Plugin version: 3.0.0 (update this line after dream-init or plugin upgrade)
+# Plugin version: 3.4.0 (update this line after dream-init or plugin upgrade)
 
 ---
 
 ## 0. WRITE GATE — Applies to source code and config files only
 
-**Source code and config files are never written to disk until the developer
-replies `APPROVE ADO-{ID}`. ICEA documents, Tech Specs, Epic docs, Trackers,
-and memory/ follow the draft-then-save flow below — not the APPROVE gate.**
+Source code and config files are NEVER written to disk until the developer replies
+`APPROVE ADO-{ID}`. ICEA/Tech Spec/Epic/Tracker docs and `memory/` follow the
+draft-then-save flow instead (see the `SAVE PLAN`/`SAVE ICEA`/`SAVE TECH` handlers in §0a).
 
-| Artefact | When written |
-|---|---|
-| `temp/ADO-{ID}-icea.md` | On SAVE PLAN — draft rendering aid, deleted on SAVE ICEA |
-| `temp/ADO-{ID}-tech.md` | On SAVE ICEA — draft rendering aid, deleted on SAVE TECH |
-| `*.plan.md` | On SAVE PLAN ADO-{ID} |
-| `*.icea.md` | On SAVE ICEA ADO-{ID} — after plan saved and ICEA reviewed in temp/ |
-| `*.techspec.md` | On SAVE TECH ADO-{ID} — after ICEA saved and Tech Spec reviewed in temp/ |
-| `*.epic.md` | On SAVE TECH ADO-{ID} — derived, no interaction |
-| `*.tracker.md` | On SAVE TECH ADO-{ID} — derived, no interaction |
-| `memory/` | Automatic on trigger — no gate (Dream pipeline) |
-| Source code, config files | Blocked until `APPROVE ADO-{ID}` |
+**Pre-plan gate:** ICEA drafting is BLOCKED until `SAVE PLAN ADO-{ID}` — not inline, not to
+temp/. Sequence is strictly Plan → `SAVE PLAN` → ICEA → `SAVE ICEA` → Tech Spec → `SAVE TECH`.
 
-**Pre-plan gate — enforced before any ICEA work begins:**
-ICEA drafting is BLOCKED until the plan is saved via `SAVE PLAN ADO-{ID}`.
-Do NOT draft or output ICEA content before this — not inline, not to temp/.
-Sequence is strictly: Plan → `SAVE PLAN` → ICEA draft → `SAVE ICEA` → Tech Spec → `SAVE TECH`.
-
-When a skill would normally write source code or config files it MUST instead:
-1. Show the changes using the following format:
-   - **Modifications to existing files:** show a unified diff (changed lines + 3 lines of surrounding context). Never re-output unchanged lines.
-   - **New files:** show the full intended content.
-2. Show the target file path
-3. Display this prompt and stop:
+When a skill would write source/config it MUST instead: (1) show the changes — a unified
+diff (changed lines + 3 lines of context) for edits, full content for new files; (2) show
+the target path; (3) display this prompt and stop:
 
 ```
 📁 WRITE PENDING — reply APPROVE ADO-{ID} to write, or SKIP to discard.
    Path: {full/file/path}
 ```
 
-Only after receiving `APPROVE ADO-{ID}` may source code or config files be
-written. Partial responses do not count. For multiple files, all paths are
-listed in a single prompt.
-
-No exceptions for source code and config files. This gate applies even when:
-- An ICEA has been approved
-- The critic has passed
-- A previous step already confirmed the approach
-- The developer seems impatient or in a hurry
+Only `APPROVE ADO-{ID}` unblocks the write (partial responses don't count; multiple files
+share one prompt). The gate holds even after an approved ICEA, a passing critic, or prior
+confirmation, and regardless of urgency. Full artefact-timing table + rationale:
+`skills/shared/write-gate-spec.md`.
 
 ---
 
 ## 0a. Keyword Handlers — recognised in any session, any message
 
-Claude recognises the following patterns globally. No /command needed.
-ADO ID is case-insensitive: ADO-1847, ADO #1847, and 1847 all work.
+Recognised globally, no /command needed. ADO ID is case-insensitive (`ADO-1847`, `ADO #1847`,
+`1847` all work). If a pattern matches, execute the skill immediately — priority over chat.
 
 | Pattern | Action |
 |---|---|
@@ -78,49 +56,38 @@ ADO ID is case-insensitive: ADO-1847, ADO #1847, and 1847 all work.
 | `STATUS ADO-{ID}` | Run icea-status skill for that ADO ID |
 | `BUG ADO-{ID} — {description}` | Log bug entry to tracker for that ADO ID |
 
-These handlers take priority over general conversation.
-If the pattern is recognised, execute the skill immediately.
-
 ---
 
 ## 0b. Shell & Git Configuration
 
-- Always use `{GIT_PATH}` for all git commands
-- Always use `{BASH_PATH}` as the shell when executing commands
-- Never rely on `HEAD` as a symbolic ref — resolve first with `git rev-parse HEAD` and use the resulting SHA
-- Never use `mcp__ide__executeCode` to run git or shell commands — use the Bash tool only
-- For git operations, always use the Bash tool directly, never Python subprocess via the IDE tool
+- Use `{GIT_PATH}` for git and `{BASH_PATH}` as the shell. Run git/shell via the Bash tool
+  only — never `mcp__ide__executeCode` or Python subprocess.
+- Never rely on `HEAD` as a symbolic ref — resolve with `git rev-parse HEAD` first.
 
-> Paths above are detected and written by `/dream-init`. If they show
-> `{GIT_PATH}` or `{BASH_PATH}`, run `/dream-sync` to resolve them.
+> `{GIT_PATH}`/`{BASH_PATH}` are written by `/dream-init`; run `/dream-sync` if unresolved.
 
 ---
 
 ## 1. PROJECT OVERVIEW
 
-This project uses a distributed team with PM, Developers, and QA in separate roles.
-All feature work is driven by ICEA documents (Intent · Context · Examples · Acceptance).
-No ticket moves to Active in Azure DevOps without an approved ICEA.
-ICEA files are saved to `docs/Release{R}/Sprint{S}/UserStory{ID}/ADO-{ID}-{feature}.icea.md` after approval.
+Distributed team (PM · Developers · QA). All feature work is driven by ICEA documents
+(Intent · Context · Examples · Acceptance) — no ticket goes Active without an approved ICEA.
+Approved ICEAs are saved to `docs/Release{R}/Sprint{S}/UserStory{ID}/ADO-{ID}-{feature}.icea.md`.
 
 ---
 
 ## 2. AZURE DEVOPS
 
-> These values are the per-project runtime source of truth — skills read
-> Organization/Project from this section at execution time. Their **defaults**
-> come from the plugin's single identity file `.claude-plugin/config.json`
-> (`organization`, `project`, `adoBaseUrl`); `dream-init` seeds this section from
-> it. To change the org/project/company across the whole plugin, edit
-> `.claude-plugin/config.json` and run `scripts/sync-config.sh` — do not edit
-> scattered copies. See DEVELOPER-GUIDE.md > Rebranding / forking.
+> Per-project runtime source of truth — skills read Organization/Project here at execution
+> time. Defaults come from `.claude-plugin/config.json`; to change org/project/company
+> plugin-wide, edit that file and run `scripts/sync-config.sh` (see DEVELOPER-GUIDE.md >
+> Rebranding / forking) — do not edit scattered copies.
 
 - Organization  : {ADO_ORG}
 - Project       : {ADO_PROJECT}
 - Repository    : [set per project — update this line after dream-init]
 - ADO URL       : {ADO_URL}
-- PAT storage   : Option A — Windows User Environment Variables → AZURE_DEVOPS_PAT (recommended)
-                : Option B — .claude/settings.json → env.AZURE_DEVOPS_PAT (only if gitignored)
+- PAT storage   : Windows env var `AZURE_DEVOPS_PAT` (recommended), or `.claude/settings.json` → env (only if gitignored)
 - Target branch : dev
 - Branch naming : feature/ADO-[ID]-short-description
 - Commit format : [ADO-ID] Short description of change
@@ -130,80 +97,20 @@ ICEA files are saved to `docs/Release{R}/Sprint{S}/UserStory{ID}/ADO-{ID}-{featu
 
 ## 3. DESIGN PHILOSOPHY
 
-**Simplicity first.** Do not over-complicate. Prefer the simplest solution that correctly solves the problem. If a simpler approach exists, take it — even if it means writing more lines. Complexity that cannot be justified by a concrete requirement is a defect.
-
-- **Readability** — optimise for the reader, not the writer
-- **Maintainability** — explicit and self-contained over clever abstractions
-- **Testability** — no hidden side effects, no global state, no deep coupling
-- **Do not assume** — if a requirement, instruction, or expected behaviour is vague, ambiguous, or complex enough to support more than one reasonable interpretation, stop and ask. Never guess and proceed. A wrong assumption costs more to unwind than the question costs to ask.
-- **Decision transparency** — for any complex logic or non-trivial design choice, document the decision inline before the implementation. List all options considered, explain why each alternative was rejected, and state why the chosen approach was selected. Format:
-  ```
-  // DECISION: <what is being decided>
-  // Options considered:
-  //   A) <option> — rejected: <reason>
-  //   B) <option> — chosen: <reason>
-  ```
-  Apply when choosing between viable approaches, selecting a data structure, picking an algorithm, or making an architectural call that is not immediately obvious. Skip for trivial choices. Goal: the next developer understands **why**, not just **what**.
+Simplicity first · readability · maintainability · testability · **do not assume** (stop and
+ask when ambiguous) · **decision transparency** (document non-trivial choices inline with a
+`// DECISION:` options-considered comment). The full statement and the DECISION comment
+format live in `rules/project-rules.md`, which is loaded on every file edit — that rule is
+the enforced source of truth; this section is a pointer.
 
 ---
 
 ## 4. MODEL ROUTING
 
-Skills route to different models based on task type. Override via `.claude/settings.json`.
-
-| Variable | Default | Used by |
-|---|---|---|
-| `ICEA_MODEL` | `claude-opus-4-6` | icea-feature, ado-tasks, pr-describe, product-docs |
-| `REVIEW_MODEL` | `claude-sonnet-4-6` | icea-review, code-review, security, pr-spec-review |
-| `CRITIC_MODEL` | falls back to `REVIEW_MODEL` | critic (auto-runs in icea-feature; also `/critic`) |
-| `INFRA_MODEL`  | `claude-sonnet-4-6` | dream, architect, dream-status, dream-rollback, sprint-metrics, token-analysis, session-start, update-arch, checkin, explain, fix, prod-readiness |
-
-To override for this project, add to `.claude/settings.json`:
-```json
-{
-  "env": {
-    "ICEA_MODEL":   "claude-opus-4-6",
-    "REVIEW_MODEL": "claude-sonnet-4-6",
-    "INFRA_MODEL":  "claude-sonnet-4-6"
-  }
-}
-```
-
-If a variable is not set the skill uses its hardcoded default — no action needed
-unless you want to change the routing.
-
----
-
-# Dream
-
-## Auto-Capture
-
-Write an entry to `memory/MEMORY.md` whenever one of these triggers fires:
-
-| Trigger               | What to capture                                      |
-|-----------------------|------------------------------------------------------|
-| Plan approved         | Approach agreed, tools chosen, constraints set       |
-| Task completed        | Pattern that worked, convention confirmed            |
-| Error resolved        | Error + root cause + fix + gotcha to avoid repeating |
-| Approach abandoned    | What failed, why, what not to retry                  |
-| Architecture decision | Decision + rationale + alternatives rejected         |
-
-Format for auto-capture entries:
-```
-### [auto] YYYY-MM-DD — <topic>
-<what to remember>
-Trigger: <which trigger fired>
-Source: auto-capture
-```
-
-## Rules
-
-- Run `/dream` every 5–8 sessions to consolidate memory
-- Run `/dream-health` to see confidence scores and decay dashboard
-- Max entries promoted to this file: **20** — demote stale entries to topic files
-- `memory/topic-*.md` holds detail; this file holds only promoted, high-confidence facts
-- `memory/health.html` is generated — do not commit it (add to `.gitignore`)
-
+Skills route by task type via env vars — `ICEA_MODEL` (generation), `REVIEW_MODEL` (review),
+`CRITIC_MODEL` (falls back to `REVIEW_MODEL`), `INFRA_MODEL` (infrastructure). Override per
+project in `.claude/settings.json` → `env`. Full table, defaults, and per-skill assignments:
+`skills/shared/model-routing-spec.md`.
 
 ---
 
@@ -217,23 +124,30 @@ This applies to all new code and any code generated by skills.
 
 ## Feature Gate
 
-NEVER write implementation code for a new feature or capability without
-an approved ICEA document on disk with `Status: ✅ Approved`:
+NEVER write implementation code for a new feature or capability without an approved ICEA on
+disk with `Status: ✅ Approved` at
+`docs/Release{R}/Sprint{S}/UserStory{ID}/ADO-{ID}-*.icea.md` (the folder is always
+`UserStory{ID}` for both STORY and EPIC — the type is recorded inside the ICEA).
 
-```
-docs/Release{R}/Sprint{S}/UserStory{ID}/ADO-{ID}-*.icea.md
-```
+If asked to implement something new and no approved ICEA exists: say so, run
+`/ai-assisted-development:icea-feature`, and do not proceed until `APPROVE ADO-{ID}`. This is
+output-gated — orientation, questions, and reading architecture docs are always permitted;
+only implementation-code generation is blocked. Override: `/skip-icea` (warns once; not recommended).
 
-The folder is always `UserStory{ID}` regardless of whether the ICEA is a
-STORY or EPIC — the type is recorded inside the ICEA's Story Breakdown section.
+---
 
-If asked to implement something new and no approved ICEA exists:
-1. Say so explicitly
-2. Run `/ai-assisted-development:icea-feature`
-3. Do not proceed until `APPROVE ADO-{ID}` is received
+# Dream
 
-This is an output-gated constraint — orientation, questions, and reading
-architecture docs are always permitted. The constraint is on generating
-implementation code only.
+Write an entry to `memory/MEMORY.md` whenever one of these triggers fires:
 
-Override: `/skip-icea` warns once then proceeds. Not recommended.
+| Trigger               | What to capture                                      |
+|-----------------------|------------------------------------------------------|
+| Plan approved         | Approach agreed, tools chosen, constraints set       |
+| Task completed        | Pattern that worked, convention confirmed            |
+| Error resolved        | Error + root cause + fix + gotcha to avoid repeating |
+| Approach abandoned    | What failed, why, what not to retry                  |
+| Architecture decision | Decision + rationale + alternatives rejected         |
+
+Entry format, consolidation cadence (`/dream` every 5–8 sessions), the 20-entry promotion
+cap, topic-file demotion, and `/dream-health` are documented in
+`skills/shared/dream-reference.md`.

@@ -1,8 +1,14 @@
 # Graph Module Schema
-_Schema version: 1.0 · Single source of truth for `.claude/graph/<module>.md` detail files_
+_Schema version: 1.1 · Single source of truth for `.claude/graph/<module>.md` detail files_
 
 Each module detail file gives Claude focused context about one bounded context or top-level source folder.
 Target size: 200–400 tokens. Hard ceiling: 400 tokens.
+
+**Projection of `graph.json`.** As of the graph.json sidecar, each detail file is a
+**generated projection** of one node in `.claude/graph/graph.json` (see
+`skills/shared/graph-json-schema.md`) — written *from* the JSON by `architect` / `/graph-sync`,
+never hand-edited for structure. The JSON is authoritative for the node's type, edges,
+and fingerprint; this file is the human/model-readable depth view.
 
 ---
 
@@ -48,10 +54,14 @@ If the module spans multiple source roots (e.g. frontend + backend), use the mos
 
 ```markdown
 # <Module> Module
-_Fingerprint: <sha1-of-entry-point-file> | Updated: YYYY-MM-DD_
+_Fingerprint: <module-wide-sha1> | Updated: YYYY-MM-DD_
 ```
 
-- `Fingerprint` — sha1 of the entry-point file at generation time; used by `/graph-sync` for staleness detection
+- `Fingerprint` — the **module-wide** fingerprint (hash over all source files under the
+  module's `paths`, not a single file), mirrored from the node's `fingerprint` in
+  `graph.json`. See `skills/shared/graph-json-schema.md` for the exact `graph_module_fingerprint`
+  function; `/graph-sync` and `hooks/graph-stale-detect.sh` use it for staleness detection.
+  A change to *any* file in the module changes it.
 - `Updated` — date this detail file was last regenerated
 
 ---
@@ -82,13 +92,26 @@ Max 5 files. One line per file. File path + em-dash + one-line description.
 
 ### Dependencies
 
-Other *module names* this module depends on. Not file paths. Brief parenthetical reason.
+Other *module names* this module depends on. Not file paths. Each may carry a
+relationship type in parentheses — `depends` (default), `calls`, `reads`, `publishes`,
+or `extends` — plus a brief reason. These project the node's typed `edges` in `graph.json`.
 
 ```markdown
-**Dependencies:** Payments (for settlement), Customers (for delivery address lookup)
+**Dependencies:** Payments (calls, settlement), Customers (reads, delivery address)
 ```
 
 If the module has no dependencies on other modules, write: `**Dependencies:** none`
+
+### Depended on by (optional)
+
+The reverse edges — modules that depend on *this* one — for quick impact analysis
+("what breaks if I change this?"). Derived from `graph.json` (edges where `to` is this
+node). **Include only when the file still fits under 400 tokens**; otherwise omit it
+here (it is always available from `graph.json` / the visualization).
+
+```markdown
+**Depended on by:** Orders, Fulfilment
+```
 
 ### Patterns
 
@@ -115,9 +138,10 @@ Events published via MediatR; never call external services directly from the ser
 ## 400-token ceiling
 
 If the file would exceed 400 tokens (approx. 1,600 characters), cut in this order:
-1. Reduce Key files to 3 (the most-read ones)
-2. Shorten the bounded context to one sentence
-3. Remove parentheticals from Dependencies
+1. Drop the optional **Depended on by** line (always available from `graph.json`)
+2. Reduce Key files to 3 (the most-read ones)
+3. Shorten the bounded context to one sentence
+4. Remove parentheticals from Dependencies
 
 ---
 
@@ -152,7 +176,9 @@ Does not handle payment processing or customer identity.
 - `src/Orders/Validators/OrderValidator.cs` — FluentValidation rules
 - `src/Orders/Events/OrderPlacedEvent.cs` — domain event published on placement
 
-**Dependencies:** Payments (for settlement), Customers (for delivery address lookup)
+**Dependencies:** Payments (calls, settlement), Customers (reads, delivery address)
+
+**Depended on by:** Fulfilment
 
 **Patterns:** Repository pattern; all DB access via Dapper with parameterised SQL; no EF Core.
 Events published via MediatR; never call external services directly from the service layer.

@@ -100,7 +100,8 @@ for stub in dream.md dream-audit.md dream-health.md dream-init.md dream-rollback
             plugin-readiness.md dynamic-scan.md ado-tasks.md icea-feature.md \
             icea-approve.md icea-implement.md icea-revise.md icea-status.md \
             icea-review.md pr-create.md pr-describe.md pr-spec-review.md \
-            critic.md gitignore-sync.md dismiss.md sync-dirs.md graph-sync.md; do
+            critic.md gitignore-sync.md dismiss.md sync-dirs.md graph-sync.md \
+            graph-viz.md; do
   if [ ! -f ".claude/commands/$stub" ]; then
     cp "$PLUGIN_STUBS/$stub" ".claude/commands/$stub" 2>/dev/null && \
       echo "  ✓ deployed .claude/commands/$stub" || \

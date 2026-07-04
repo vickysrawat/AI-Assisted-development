@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- documents-plugin-version: 3.0.0 -->
+<!-- documents-plugin-version: 3.4.0 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>User Guide — ai-assisted-development v1.26.0</title>
+<title>User Guide — ai-assisted-development v3.4.0</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
 
@@ -425,7 +425,7 @@
   <div class="logo">ai-assisted-<em>development</em></div>
   <div class="vsep"></div>
   <div class="hdr-sub">User Guide</div>
-  <div class="hdr-badge">v1.26.0</div>
+  <div class="hdr-badge">v3.4.0</div>
 </header>
 
 <nav id="sidebar">
@@ -454,8 +454,8 @@
   <a href="#commands-ref"><span class="n-icon">◉</span>Plugin readiness</a>
 
   <div class="nav-label">Reference</div>
-  <a href="#commands-ref"><span class="n-icon">≡</span>All 22 commands</a>
-  <a href="#skills-ref"><span class="n-icon">≡</span>All 18 skills</a>
+  <a href="#commands-ref"><span class="n-icon">≡</span>All commands</a>
+  <a href="#skills-ref"><span class="n-icon">≡</span>All skills</a>
   <a href="#model-routing"><span class="n-icon">⇄</span>Model routing</a>
   <a href="#updating"><span class="n-icon">↺</span>Updating</a>
 </nav>
@@ -468,7 +468,7 @@
     <h1>ai-assisted-development</h1>
     <p>ICEA-driven development workflow for distributed teams using Azure DevOps — language-agnostic across <strong>.NET · Java/Spring Boot · Python · Node.js</strong> backends and Angular / React frontends. Every feature starts with a spec. Every PR is compliance-checked before it opens.</p>
     <div class="hero-chips">
-      <span class="chip">v1.26.0</span>
+      <span class="chip">v3.4.0</span>
       <span class="chip">.NET 8</span>
       <span class="chip">Angular 17+</span>
       <span class="chip">Node.js</span>
@@ -478,6 +478,16 @@
       <span class="chip">12 health checks</span>
     </div>
   </div>
+
+  <section style="margin:20px 0 0;padding:16px 20px;background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #f59e0b;border-radius:8px;font-size:14px;line-height:1.6;">
+    <strong>What's new since 3.0.0</strong>
+    <ul style="margin:8px 0 0;padding-left:20px;">
+      <li><strong>3.4.0</strong> — Internal release-tooling: the plugin version is now single-sourced across its files (no more mismatched version numbers between docs). No change to day-to-day usage.</li>
+      <li><strong>3.3.0</strong> — New <code>/graph-viz</code> renders an offline HTML map of your codebase (modules, dependencies, hot-spots); the project's <code>CLAUDE.md</code> is leaner, so each session starts with less overhead.</li>
+      <li><strong>3.0.2</strong> — Uninstalling the plugin now fully cleans up its machine config (old caches, stale registrations); it shows what it will remove and asks first (pass <code>--yes</code> to skip the prompt).</li>
+      <li><strong>3.0.1</strong> — Project setup and <code>/dream-sync</code> are faster and no longer trigger permission prompts.</li>
+    </ul>
+  </section>
 
   <!-- OVERVIEW -->
   <section id="overview">
@@ -800,6 +810,8 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
       </tbody>
     </table></div>
   </section>
+
+  <section id="pr-workflow">
     <h2>PR workflow</h2>
     <p>Three skills work together to take a branch from ready-to-review to open PR in ADO — or to a saved draft if ADO connectivity is unavailable:</p>
 
@@ -895,7 +907,7 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
     <h2>All commands</h2>
     <div class="cmd-grid">
       <div class="cmd-card"><div class="cmd-name">dream-init</div><div class="cmd-title">Project setup</div><div class="cmd-desc">One-time setup — seeds all infrastructure including deployment questionnaire. Safe to re-run.</div></div>
-      <div class="cmd-card"><div class="cmd-name">dream-status</div><div class="cmd-title">Health check</div><div class="cmd-desc">13-item infrastructure check with prioritised action list.</div></div>
+      <div class="cmd-card"><div class="cmd-name">dream-status</div><div class="cmd-title">Health check</div><div class="cmd-desc">Infrastructure health check with prioritised action list.</div></div>
       <div class="cmd-card"><div class="cmd-name">dream-sync</div><div class="cmd-title">Re-provision after upgrade</div><div class="cmd-desc">Brings an existing project current after a plugin upgrade — re-applies version-sensitive artifacts and re-stamps the version. Run when dream-status reports UPGRADE PENDING. Idempotent; never overwrites your content.</div></div>
       <div class="cmd-card"><div class="cmd-name">dream</div><div class="cmd-title">Memory consolidation</div><div class="cmd-desc">6-phase session-to-memory consolidation with tiered approval.</div></div>
       <div class="cmd-card"><div class="cmd-name">dream-health</div><div class="cmd-title">Memory dashboard</div><div class="cmd-desc">Generates memory/health.html with confidence and decay visualisations.</div></div>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- documents-plugin-version: 3.0.0 -->
+<!-- documents-plugin-version: 3.4.0 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -370,7 +370,7 @@
   <div class="hero-grid"></div>
   <div class="hero-glow"></div>
   <div class="hero-content">
-    <div class="hero-tag" style="margin-bottom:12px;">Claude Code Plugin · v3.0.0</div>
+    <div class="hero-tag" style="margin-bottom:12px;">Claude Code Plugin · v3.4.0</div>
     <h1>ai-assisted-<em>development</em></h1>
     <p class="sub">
       ICEA-driven development workflow for distributed .NET · Angular · Node.js teams.
@@ -378,7 +378,7 @@
       and guards code quality with scoped rules — all inside Claude Code.
     </p>
     <div class="hero-badges">
-        <span class="badge badge-gold">v3.0.0</span>
+        <span class="badge badge-gold">v3.4.0</span>
       <span class="badge badge-blue">.NET 8 / 10</span>
       <span class="badge badge-cyan">Angular 17+</span>
       <span class="badge badge-cyan">Java / Spring Boot</span>
@@ -389,6 +389,16 @@
     </div>
   </div>
 </header>
+
+<section style="max-width:1100px;margin:24px auto 0;padding:16px 20px;background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #f59e0b;border-radius:8px;font-size:14px;line-height:1.6;">
+  <strong style="color:#0f172a;">What's new since 3.0.0</strong>
+  <ul style="margin:8px 0 0;padding-left:20px;color:#334155;">
+    <li><strong>3.4.0</strong> — Plugin version is now single-source in <code>.claude-plugin/plugin.json</code> (<code>marketplace.json</code> no longer carries one); <code>scripts/bump-version.js</code> propagates it and <code>scripts/check-version-consistency.js</code> guards against drift. Guides + release docs brought current.</li>
+    <li><strong>3.3.0</strong> — Knowledge graph gains a machine-readable structure of record (<code>.claude/graph/graph.json</code>: typed nodes/edges + confidence, module-wide staleness fingerprints) with the markdown as its projection (<a href="docs/adr/0039-graph-json-sidecar.md">ADR 0039</a>); new <code>/graph-viz</code> renders an offline HTML graph view. CLAUDE.md context footprint slimmed — target ≤ ~200 lines as an <em>instruction-adherence</em> budget, not a context-window limit (<a href="docs/adr/0040-claude-md-context-budget.md">ADR 0040</a>, <code>skills/shared/claude-md-budget-spec.md</code>).</li>
+    <li><strong>3.0.2</strong> — <code>--uninstall</code> now removes all global config (cache dir, caches orphaned by a marketplace rename, stale <code>extraKnownMarketplaces</code> entries) via <code>scripts/uninstall-cleanup.js</code>: dry-run plan → confirm → apply (<code>--yes</code> to skip).</li>
+    <li><strong>3.0.1</strong> — Provisioning skills resolve the plugin dir/version from the registry (<code>installed_plugins.json</code>, fork-safe) with a glob fallback; <code>dream-status</code> stack detection is cache-first (<code>skills/shared/plugin-path-resolution.md</code>).</li>
+  </ul>
+</section>
 
 <div class="layout">
 
@@ -1261,8 +1271,8 @@ Recommended actions:
 │   └── skill-scenarios/                   <span class="cmt">YAML scenarios: 18 skills covered including all new commands</span>
 │
 ├── CLAUDE.md                              <span class="tag tag-recommended" style="font-size:10px;padding:1px 6px;">Project</span> plugin template — /init generates project version
-├── install.ps1                            <span class="cmt">Windows installer — v2.6.0</span>
-├── install.sh                             <span class="cmt">Mac / Linux / Git Bash installer — v2.6.0</span>
+├── install.ps1                            <span class="cmt">Windows installer</span>
+├── install.sh                             <span class="cmt">Mac / Linux / Git Bash installer</span>
 ├── CHANGELOG.md
 └── README.md</pre></div>
       </div>
@@ -2386,7 +2396,7 @@ skills/&lt;skill&gt;/SKILL.md and execute it from Step 0 to the end.</pre></div>
 </div>
 
 <footer>
-  <span>ai-assisted-development · Claude Code Plugin · v2.6.0</span>
+  <span>ai-assisted-development · Claude Code Plugin · v3.4.0</span>
   <span>Product Engineering</span>
 </footer>
 

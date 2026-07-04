@@ -1,11 +1,12 @@
 # ai-assisted-development plugin — install / update / uninstall
 # Run with: .\install.ps1
 # Update:   .\install.ps1 -Update
-# Uninstall: .\install.ps1 -Uninstall
+# Uninstall: .\install.ps1 -Uninstall   (add -Yes to skip the confirmation prompt)
 
 param(
   [switch]$Update,
-  [switch]$Uninstall
+  [switch]$Uninstall,
+  [switch]$Yes
 )
 
 $PLUGIN_NAME      = "ai-assisted-development"
@@ -144,38 +145,38 @@ if ($Uninstall) {
     Write-Yellow "  claude CLI not found — skipping plugin uninstall commands."
   }
 
-  if (Test-Path $MARKETPLACE_DIR) {
-    Remove-Item -Recurse -Force $MARKETPLACE_DIR
-    Write-Host "  Deleted $MARKETPLACE_DIR"
-  } else {
-    Write-Yellow "  Plugin files not found at $MARKETPLACE_DIR, skipping."
+  # Clean up global plugin config: cache dirs (all versions), caches orphaned by a
+  # marketplace rename/version bumps, and stale extraKnownMarketplaces entries.
+  if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+    Write-Yellow "  node not found — cannot clean plugin config files."
+    Write-Host  "  Install Node.js and re-run, or remove $MARKETPLACE_DIR manually."
+    exit 1
   }
 
-  if ((Test-Path $SETTINGS_FILE) -and (Get-Command node -ErrorAction SilentlyContinue)) {
-    $jsUninstall = @"
-const fs = require('fs');
-const settingsPath = '$($SETTINGS_FILE -replace '\\', '\\\\')';
-const marketplaceName = '$MARKETPLACE_NAME';
-let settings = {};
-try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch(e) {}
-if (settings.extraKnownMarketplaces && settings.extraKnownMarketplaces[marketplaceName]) {
-  delete settings.extraKnownMarketplaces[marketplaceName];
-  if (Object.keys(settings.extraKnownMarketplaces).length === 0) {
-    delete settings.extraKnownMarketplaces;
+  $cleanupJs = Join-Path $PSScriptRoot "scripts\uninstall-cleanup.js"
+  # Dry-run first — show exactly what will be removed.
+  & node $cleanupJs --plugin $PLUGIN_NAME --marketplace $MARKETPLACE_NAME
+
+  $doApply = $Yes
+  if (-not $doApply) {
+    $ans = Read-Host "  Proceed with removal? [y/N]"
+    if ($ans -match '^[Yy]') { $doApply = $true }
   }
-  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
-  console.log('  + Removed ' + marketplaceName + ' from settings.json');
-} else {
-  console.log('  - ' + marketplaceName + ' not found in settings.json, skipping.');
-}
-"@
-    Run-NodeScript $jsUninstall
-  } else {
-    Write-Yellow "  settings.json not found or node missing, skipping."
+
+  if (-not $doApply) {
+    Write-Host ""
+    Write-Yellow "Aborted — nothing removed. Re-run with -Yes to remove without a prompt."
+    Write-Host ""
+    exit 0
   }
+
+  & node $cleanupJs --plugin $PLUGIN_NAME --marketplace $MARKETPLACE_NAME --apply
 
   Write-Host ""
   Write-Green "Uninstalled successfully."
+  Write-Host ""
+  Write-Yellow "Note: If you stored AZURE_DEVOPS_PAT in .claude/settings.json, remove it manually —"
+  Write-Host  "  the uninstall does not clear credentials."
   Write-Host ""
   exit 0
 }

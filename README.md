@@ -2,13 +2,13 @@
 
 ICEA-driven development workflow for distributed teams using **Azure DevOps**. Language-agnostic across **.NET 8 · Java/Spring Boot · Python (FastAPI/Django/Flask) · Node.js** backends and **Angular / React** frontends — the active stack is detected per repo and drives detection, generation, review, and scanning.
 
-**Version 3.0.0** — The codebase knowledge graph (`.claude/graph/`) is now the **single codebase-orientation layer**; the former `domain-map.md` is **retired** ([ADR 0038](docs/adr/0038-knowledge-graph-orientation.md), supersedes ADR 0017). The `architect` skill generates the graph directly; ~20 skills orient by reading `graph-index.md` + the matching per-module detail file; staleness is the `.claude/graph/.stale` flag (refresh with `/graph-sync`). The graph is now **committed and PR-reviewed — no longer gitignored** — so orientation is version-controlled and shared across the team. `/update-arch` now refreshes only the prose `architecture.md` and the deployment questionnaire. **Breaking:** run `/dream-sync` after upgrading (see `docs/migrations/012-3.0.0.md`). (v2.6.0 introduced the knowledge graph alongside domain-map; v3.0.0 consolidates to one system.)
+**Version 3.4.0** — The codebase knowledge graph (`.claude/graph/`) is the **single codebase-orientation layer**, backed by a machine-readable `graph.json` (typed nodes/edges with confidence) that projects the always-loaded index + per-module detail files, with `/graph-viz` for an offline visual map ([ADR 0039](docs/adr/0039-graph-json-sidecar.md)). `CLAUDE.md` is kept lean under a ~200-line context budget ([ADR 0040](docs/adr/0040-claude-md-context-budget.md)), and the plugin version is single-sourced in `.claude-plugin/plugin.json`. See [CHANGELOG.md](CHANGELOG.md) for the full history. **Upgrading from an older version?** Run `/dream-sync`.
 
 ---
 
 ## What's included
 
-### Commands (slash commands) — 31 total
+### Commands (slash commands)
 
 | Command | What it does |
 |---|---|
@@ -42,9 +42,10 @@ ICEA-driven development workflow for distributed teams using **Azure DevOps**. L
 | `/ai-assisted-development:token-analysis` | Analyses token consumption. Persistent graph cache — subsequent runs process only new sessions and changed files. Writes to `token-analysis/`. |
 | `/ai-assisted-development:sprint-metrics` | Post-sprint KPI report via ADO REST API. Metrics: ICEA compliance rate, PR rejection rate, rework hours. Args: `sprint=<name>` or `from=<date> to=<date>`. |
 | `/ai-assisted-development:product-docs` | Generates Product Detail Document and/or User Guide as self-contained HTML. Always asks which documents to create before generating anything. |
-| `/ai-assisted-development:graph-sync` | Incremental refresh of the codebase knowledge graph in `.claude/graph/`. Checks entry-point fingerprints and regenerates only stale module detail files — unchanged modules skipped entirely. Detects new source modules, restructures flat→domain at 30+ modules, clears `.stale` flag on success. For first-time graph creation use `/dream-init` instead. |
+| `/ai-assisted-development:graph-sync` | Incremental refresh of the codebase knowledge graph in `.claude/graph/`. Recomputes module-wide fingerprints and regenerates only stale modules — unchanged modules skipped entirely. Reconciles removed/renamed/orphaned modules, derives typed dependency edges, updates `graph.json` (authoritative) and its markdown projection, restructures flat→domain at 30+ modules, clears `.stale` flag on success. For first-time graph creation use `/dream-init` instead. |
+| `/ai-assisted-development:graph-viz` | Renders the knowledge graph as a self-contained **offline** HTML visualization at `.claude/graph/graph.html` — nodes by type, edges by type/confidence, hub (god) nodes and stale modules flagged, hover shows dependencies and dependents. Reads `graph.json` only (never source); `graph.html` is gitignored. `--3d` uses a locally vendored WebGL library. |
 
-### Skills (auto-invoked by keyword) — 20 total
+### Skills (auto-invoked by keyword)
 
 | Skill | Trigger keywords | What it does |
 |---|---|---|
@@ -66,7 +67,8 @@ ICEA-driven development workflow for distributed teams using **Azure DevOps**. L
 | `app-readiness` | "is the app production ready", "app readiness", "go-live readiness", "enterprise architecture review" | 8-domain EA/SA production readiness assessment. Reads `architecture-deployment.md` for hosting-model-specific checks. |
 | `plugin-readiness` | "is the plugin production ready", "plugin readiness", "AI governance review" | 6-domain AI Architect readiness assessment. Plugin state files only — never reads application source. |
 | `critic` | "critique", "second opinion on this spec", "review this before saving", "is this over-engineered", "does this match the ICEA" | Second-pass generator-critic. Auto-runs inside `icea-feature` at two gates — after the ICEA draft (folds concerns into the gap list) and after code generation but **before disk write** (gates the write; up to 2 auto-retries then surfaces). ICEA mode checks completeness/testability/B1–B7/scope; code mode checks traceability/simplicity/rules/decision-transparency/hidden-assumptions. Ephemeral — no ledger, no fingerprints. Also available standalone via `/critic`. |
-| `graph-sync` | "refresh knowledge graph", "update graph", "graph is stale", "sync the graph", "knowledge graph stale" | Incremental knowledge graph refresh. Triggered by `/graph-sync` or keyword detection. Checks fingerprints, regenerates only stale modules, detects new modules, restructures flat→domain at 30+ modules. |
+| `graph-sync` | "refresh knowledge graph", "update graph", "graph is stale", "sync the graph", "knowledge graph stale" | Incremental knowledge graph refresh. Triggered by `/graph-sync` or keyword detection. Recomputes module-wide fingerprints, regenerates only stale modules, reconciles removed/renamed/orphaned modules, derives typed edges, updates `graph.json` + markdown projection, restructures flat→domain at 30+ modules. |
+| `graph-viz` | "visualize the graph", "show the knowledge graph", "graph diagram", "render the dependency graph", "graph visualization" | Renders the knowledge graph as a self-contained offline HTML view (`.claude/graph/graph.html`) — nodes by type, edges by type/confidence, hubs and stale modules flagged, hover shows dependencies/dependents. Reads `graph.json` only; `--3d` uses a locally vendored WebGL library. |
 
 ---
 
@@ -316,7 +318,7 @@ Reports green/amber/red on all 20 infrastructure items:
 1. `CLAUDE.md` — exists and has Dream section
 2. `memory/` — both files present
 3. `.claude/rules/` — all rule files deployed
-4. `.claude/commands/` — all 36 command stubs deployed
+4. `.claude/commands/` — all 37 command stubs deployed
 5. `.claude/architecture/` — templates populated by architect skill
 6. `.claude/graph/graph-index.md` — exists and not stale (`.claude/graph/.stale` flag)
 7. `architecture-deployment.md` — exists and fully answered
@@ -445,8 +447,8 @@ Requires `ANTHROPIC_API_KEY`. Estimated cost: ~$0.02 per full run.
 ```
 ai-assisted-development/
 ├── .claude-plugin/
-│   └── plugin.json                          ← v2.6.0
-├── commands/                                ← 31 command files
+│   └── plugin.json
+├── commands/                                ← command files
 │   ├── dream.md / dream-health.md / dream-init.md
 │   ├── dream-status.md / dream-rollback.md
 │   ├── session-start.md / update-arch.md
@@ -455,7 +457,7 @@ ai-assisted-development/
 │   ├── app-readiness.md / plugin-readiness.md
 │   ├── token-analysis.md / sprint-metrics.md / product-docs.md
 │   ├── ado-tasks.md / icea-feature.md / critic.md
-│   └── graph-sync.md                        ← knowledge graph refresh (v2.6.0)
+│   └── graph-sync.md                        ← knowledge graph refresh
 ├── skills/
 │   ├── shared/                              ← cross-skill primitives
 │   │   ├── README.md
@@ -465,8 +467,8 @@ ai-assisted-development/
 │   │   ├── file-cache-schema.md             ← .claude/file-cache.json schema
 │   │   ├── single-writer-assumption.md      ← concurrency constraints
 │   │   ├── model-routing-spec.md            ← model routing tiers, env vars, defaults
-│   │   ├── graph-index-schema.md            ← .claude/graph/graph-index.md schema (v2.6.0)
-│   │   └── graph-module-schema.md           ← .claude/graph/<module>.md schema (v2.6.0)
+│   │   ├── graph-index-schema.md            ← .claude/graph/graph-index.md schema
+│   │   └── graph-module-schema.md           ← .claude/graph/<module>.md schema
 │   ├── architect/                           ← deployment questionnaire + knowledge graph generation
 │   ├── icea-feature/                        ← ICEA gate with B1–B7 AC flags
 │   ├── icea-review/ / pr-describe/ / pr-create/ / pr-spec-review/
@@ -474,8 +476,8 @@ ai-assisted-development/
 │   ├── app-readiness/ / plugin-readiness/
 │   ├── dream-status/ / dream-rollback/
 │   ├── sprint-metrics/ / token-analysis/ / product-docs/
-│   ├── graph-sync/                          ← knowledge graph incremental refresh (v2.6.0)
-│   └── command-stubs/                       ← 36 stubs deployed by dream-init
+│   ├── graph-sync/                          ← knowledge graph incremental refresh
+│   └── command-stubs/                       ← 37 stubs deployed by dream-init
 ├── rules/                                   ← scoped rule files (dotnet/angular/nodejs/java/python/project)
 ├── memory/
 ├── tests/
@@ -484,6 +486,6 @@ ai-assisted-development/
 │   └── skill-scenarios/                     ← YAML scenario files (all skills covered)
 ├── .gitignore / CLAUDE.md / CHANGELOG.md
 ├── install.ps1 / install.sh
-├── plugin-guide.html                        ← full developer guide (v2.6.0)
+├── plugin-guide.html                        ← full developer guide
 └── README.md
 ```

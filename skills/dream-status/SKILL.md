@@ -107,7 +107,7 @@ Include in output report line:
 ### 1d — .claude/commands/ (stubs)
 
 ```bash
-for f in dream.md dream-audit.md dream-health.md dream-init.md dream-rollback.md dream-status.md dream-sync.md security-review.md code-review.md token-analysis.md product-docs.md sprint-metrics.md session-start.md bug.md checkin.md update-arch.md explain.md fix.md app-readiness.md plugin-readiness.md dynamic-scan.md ado-tasks.md icea-feature.md icea-approve.md icea-implement.md icea-revise.md icea-status.md icea-review.md pr-create.md pr-describe.md pr-spec-review.md critic.md gitignore-sync.md dismiss.md sync-dirs.md graph-sync.md; do
+for f in dream.md dream-audit.md dream-health.md dream-init.md dream-rollback.md dream-status.md dream-sync.md security-review.md code-review.md token-analysis.md product-docs.md sprint-metrics.md session-start.md bug.md checkin.md update-arch.md explain.md fix.md app-readiness.md plugin-readiness.md dynamic-scan.md ado-tasks.md icea-feature.md icea-approve.md icea-implement.md icea-revise.md icea-status.md icea-review.md pr-create.md pr-describe.md pr-spec-review.md critic.md gitignore-sync.md dismiss.md sync-dirs.md graph-sync.md graph-viz.md; do
   ls .claude/commands/$f 2>/dev/null && echo "EXISTS $f" || echo "MISSING $f"
 done
 ```
@@ -140,7 +140,7 @@ Status:
 ls .claude/graph/graph-index.md 2>/dev/null && echo "EXISTS" || echo "MISSING"
 # Get generated date from the index header if present
 grep "_Generated:" .claude/graph/graph-index.md 2>/dev/null || echo "NO_DATE"
-# Stale flag set by the post-merge git hook when entry-point files change
+# Stale flag set by the post-merge/post-checkout git hook when any module source files change
 ls .claude/graph/.stale 2>/dev/null && echo "STALE" || echo "FRESH"
 ```
 
@@ -585,23 +585,36 @@ Include in output report line:
 
 Only run if check 1s is ✅ Green (graph-index.md exists).
 
-For each module in the index, compare the stored `_Fingerprint_` in the detail file
-against the current sha1 of the entry-point file:
+For each node in `graph.json`, recompute the **module-wide** fingerprint (hash over all
+source files under the module's `paths`, not a single entry-point file — the same
+`graph_module_fingerprint` used by `/graph-sync` and `hooks/graph-stale-detect.sh`; see
+`skills/shared/graph-json-schema.md`) and compare it to the stored `fingerprint`:
 
 ```bash
-# Parse module rows from graph-index.md
-awk '/^\| [A-Z]/' .claude/graph/graph-index.md | while IFS='|' read _ module domain detail entry _; do
-  detail=$(echo "$detail" | xargs)
-  entry=$(echo "$entry" | xargs)
-  STORED=$(grep "_Fingerprint:" ".claude/$detail" 2>/dev/null | sed 's/.*Fingerprint: \([a-f0-9]*\).*/\1/')
-  CURRENT=$(sha1sum "$entry" 2>/dev/null | cut -d' ' -f1)
-  if [ -z "$STORED" ]; then
-    echo "MISSING_FINGERPRINT $detail"
-  elif [ "$STORED" != "$CURRENT" ]; then
-    echo "STALE $detail"
-  else
-    echo "CURRENT $detail"
-  fi
+graph_module_fingerprint() {
+  { for root in "$@"; do
+      [ -e "$root" ] || continue
+      find "$root" -type f \
+        -not -path '*/.git/*' -not -path '*/node_modules/*' \
+        -not -path '*/bin/*'  -not -path '*/obj/*' \
+        -not -path '*/dist/*' -not -path '*/.angular/*' \
+        -not -path '*/migrations/*' -not -path '*/__pycache__/*' -print0 2>/dev/null
+    done; } | sort -z | xargs -0 sha1sum 2>/dev/null | sha1sum | cut -d' ' -f1
+}
+
+node -e '
+  const fs=require("fs");
+  const g=JSON.parse(fs.readFileSync(".claude/graph/graph.json","utf8"));
+  for (const n of (g.nodes||[])) {
+    const roots=(n.paths||[]).map(p=>p.replace(/\/\*\*.*$/,"").replace(/\/\*$/,""));
+    process.stdout.write(`${n.id}\t${n.fingerprint||""}\t${roots.join(" ")}\n`);
+  }
+' | while IFS=$'\t' read -r id stored roots; do
+  [ -n "$id" ] || continue
+  CURRENT=$(graph_module_fingerprint $roots)
+  if [ -z "$stored" ]; then echo "MISSING_FINGERPRINT $id"
+  elif [ "$stored" != "$CURRENT" ]; then echo "STALE $id"
+  else echo "CURRENT $id"; fi
 done
 ```
 
@@ -655,7 +668,7 @@ Include in output report line:
   CLAUDE.md                          {✅ / ⚠️ / ❌}  {detail}
   memory/                            {✅ / ❌}       {detail}
   .claude/rules/                     {✅ / ⚠️}       {N/4 files present}
-  .claude/commands/                  {✅ / ⚠️}       {N/36 stubs deployed}
+  .claude/commands/                  {✅ / ⚠️}       {N/37 stubs deployed}
   .claude/architecture/              {✅ / ⚠️}       {N files, N populated}
   .claude/graph/graph-index.md       {✅ / ⚠️ / ❌}  {N modules | STALE — run /graph-sync | MISSING — run dream-init}
   architecture-deployment.md        {✅ / ⚠️ / ❌}  {answered: 0 unanswered | MISSING — run /update-arch --deployment}

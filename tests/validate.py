@@ -138,13 +138,81 @@ dh = open("commands/dream-health.md").read()
 if re.search(r"`/dream health`", dh):
     err("commands/dream-health.md: trigger should be '/dream-health' (hyphen), not '/dream health' (space)")
 
-# ── 9. knowledge-graph schemas present (single orientation layer, ADR 0038) ──
-# domain-map was retired in v3.0.0; the graph index + module schemas replace it.
-for gs in ["skills/shared/graph-index-schema.md", "skills/shared/graph-module-schema.md"]:
+# ── 9. knowledge-graph schemas present + graph.json integrity (ADR 0038 / 0039) ──
+# domain-map was retired in v3.0.0; the graph is the single orientation layer.
+# graph.json (v3.3.0, ADR 0039) is the authoritative structure; the index + detail
+# files are its projection.
+for gs in ["skills/shared/graph-index-schema.md",
+           "skills/shared/graph-module-schema.md",
+           "skills/shared/graph-json-schema.md"]:
     if not os.path.exists(gs):
-        err(f"{gs}: missing — the knowledge graph is the single orientation layer (ADR 0038)")
+        err(f"{gs}: missing — the knowledge graph is the single orientation layer (ADR 0038/0039)")
 if os.path.exists("skills/shared/domain-map-spec.md"):
     err("skills/shared/domain-map-spec.md still exists — it was retired in v3.0.0 (ADR 0038); remove it")
+
+# 9a. Wiring: the generator (architect) and refresher (graph-sync) must reference the
+# authoritative sidecar schema, or graph.json goes unmaintained.
+for fpath in ["skills/architect/SKILL.md", "skills/graph-sync/SKILL.md"]:
+    if os.path.exists(fpath) and "graph-json-schema" not in open(fpath).read():
+        err(f"{fpath}: does not reference graph-json-schema.md — graph.json generation unwired (ADR 0039)")
+
+# 9b. Self-contained graph.json integrity — dormant in the plugin repo (no graph.json),
+# active when validate.py runs inside a consuming project. Guards the FAIR invariants:
+# no orphans, no dangling edges, unique ids, index/detail projection agreement; cycles warn.
+_GRAPH_JSON = ".claude/graph/graph.json"
+if os.path.exists(_GRAPH_JSON):
+    try:
+        _g = json.load(open(_GRAPH_JSON))
+    except Exception as e:
+        err(f"{_GRAPH_JSON}: invalid JSON ({e})")
+        _g = None
+    if _g is not None:
+        _nodes = _g.get("nodes", [])
+        _edges = _g.get("edges", [])
+        _ids = [n.get("id") for n in _nodes]
+        _idset = set(_ids)
+        # unique ids
+        if len(_ids) != len(_idset):
+            err(f"{_GRAPH_JSON}: duplicate node ids "
+                f"{sorted({i for i in _ids if _ids.count(i) > 1})}")
+        # moduleCount agreement
+        if _g.get("meta", {}).get("moduleCount") != len(_nodes):
+            err(f"{_GRAPH_JSON}: meta.moduleCount != nodes.length ({len(_nodes)})")
+        # no dangling edges
+        for e in _edges:
+            for end in ("from", "to"):
+                if e.get(end) not in _idset:
+                    err(f"{_GRAPH_JSON}: dangling edge {end}='{e.get(end)}' resolves to no node")
+        # projection agreement: a detail file exists for every node; index row count matches
+        for n in _nodes:
+            df = os.path.join(".claude", n.get("detailFile", ""))
+            if not n.get("detailFile") or not os.path.exists(df):
+                err(f"{_GRAPH_JSON}: node '{n.get('id')}' detailFile missing on disk ({df})")
+        _idx = ".claude/graph/graph-index.md"
+        if os.path.exists(_idx):
+            _rows = len(re.findall(r"^\|\s*[A-Za-z]", open(_idx).read(), re.MULTILINE)) - 1  # minus header
+            if _rows != len(_nodes):
+                err(f"{_GRAPH_JSON}: index rows ({_rows}) != nodes ({len(_nodes)}) — projection drift")
+        # cycles: warn only (bidirectional deps can be legitimate)
+        _adj = {}
+        for e in _edges:
+            _adj.setdefault(e.get("from"), []).append(e.get("to"))
+        _WHITE, _GRAY, _BLACK = 0, 1, 2
+        _color = {i: _WHITE for i in _idset}
+        def _dfs(u, path):
+            _color[u] = _GRAY
+            for v in _adj.get(u, []):
+                if v not in _color:
+                    continue
+                if _color[v] == _GRAY:
+                    warn(f"{_GRAPH_JSON}: dependency cycle {' → '.join(path + [u, v])} "
+                         f"(not an error — allowlist if intended)")
+                elif _color[v] == _WHITE:
+                    _dfs(v, path + [u])
+            _color[u] = _BLACK
+        for _i in _idset:
+            if _color[_i] == _WHITE:
+                _dfs(_i, [])
 
 # ── 10. source-file-consent table has all skills ─────────────────────────────
 consent = open("skills/shared/source-file-consent.md").read()
@@ -428,8 +496,11 @@ for sf in sorted(glob.glob("skills/shared/*.md")):
                  f"the skill or command that consumes this spec")
 
 # ── 27. Hooks present and executable bits documented ──────────────────────────
+# graph-stale-detect.sh is deployed as the git post-merge/post-checkout hook by
+# dream-init (Step 7b-4); it must exist here or /dream-init fails when it tries to copy it.
 for hook in ["hooks/icea-floor.sh", "hooks/findings-gate-precommit.sh",
-             "hooks/validate-ledgers.py", "hooks/validate-pr-compliance.py", "hooks/README.md"]:
+             "hooks/validate-ledgers.py", "hooks/validate-pr-compliance.py",
+             "hooks/graph-stale-detect.sh", "hooks/README.md"]:
     if not os.path.exists(hook):
         err(f"missing {hook} — mechanical enforcement floor incomplete (ADR 0005)")
 
@@ -448,7 +519,7 @@ else:
 # Every guide carries a machine-readable stamp: <!-- documents-plugin-version: X.Y.Z -->
 # A guide more than one MINOR version behind plugin.json is an error (release
 # blocker); exactly one minor behind is a warning (update this release).
-GUIDES = ["user-guide.html", "plugin-guide-v9.html"]
+GUIDES = ["user-guide.html", "plugin-guide.html"]
 def minor_of(v):
     parts = v.split(".")
     return (int(parts[0]), int(parts[1]))

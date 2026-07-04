@@ -187,6 +187,8 @@ those live in the command reference table below.
 | `pr-describe` | C | Reads git diff only — no source file access |
 | `product-docs` | B | Gate before reading any source file for doc generation |
 | `architect` | B | Gate before reading entry-point files when building the map |
+| `graph-sync` | B | Gate before reading entry-point/source files when refreshing the graph |
+| `graph-viz` | C | Reads `.claude/graph/graph.json` only — never application source |
 | `ado-tasks` | C | Reads ADO API only — never reads source files |
 | `sprint-metrics` | C | Reads ADO API only — never reads source files |
 | `token-analysis` | C | Reads session history and graph cache only — never reads source |

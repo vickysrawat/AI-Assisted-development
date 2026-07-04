@@ -1,8 +1,15 @@
 # Graph Index Schema
-_Schema version: 1.0 · Single source of truth for `.claude/graph/graph-index.md`_
+_Schema version: 1.1 · Single source of truth for `.claude/graph/graph-index.md`_
 
 The graph index is the always-loaded entry point to the codebase knowledge graph.
 It must stay under 350 tokens. All module detail lives in per-module files — nothing else belongs here.
+
+**Companion `graph.json`.** The index (breadth) and the per-module detail files (depth)
+are the always-/lazy-loaded *projection* of `.claude/graph/graph.json`, which holds the
+authoritative structure — typed nodes, typed edges with confidence, module-wide
+fingerprints, and hub flags (see `skills/shared/graph-json-schema.md`). `graph.json`
+carries no `paths:` frontmatter, so it never auto-loads; the index remains the only
+always-loaded graph file. One row here must exist for every node in `graph.json`.
 
 ---
 
