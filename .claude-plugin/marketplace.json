@@ -8,7 +8,7 @@
     {
       "name": "ai-assisted-development",
       "source": "./plugins/ai-assisted-development",
-      "description": "ICEA-driven development workflow — v2.5.0"
+      "description": "ICEA-driven development workflow"
     }
   ]
 }

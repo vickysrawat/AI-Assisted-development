@@ -49,3 +49,5 @@ Rules:
 | 0036 | temp/ rendering aid pattern and TEMP_WRITE_EXEMPT convention | Accepted |
 | 0037 | Roadmap proposals live in docs/proposals/, outside shared specs and the manifest | Accepted |
 | 0038 | Knowledge graph is the single codebase-orientation layer (supersedes 0017; domain-map retired) | Accepted |
+| 0039 | graph.json sidecar — machine-readable structure of record; markdown is its projection (typed edges, confidence, module-wide fingerprints) | Accepted |
+| 0040 | CLAUDE.md context budget — ≤ ~200 lines, set by instruction adherence not context-window capacity | Accepted |

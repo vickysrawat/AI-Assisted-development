@@ -639,8 +639,9 @@ Flagged sections need manual input — search for ⚠ in the files.
 
 | File | Purpose |
 |---|---|
-| `../shared/graph-index-schema.md` | Schema for `.claude/graph/graph-index.md` (breadth index) |
-| `../shared/graph-module-schema.md` | Schema for `.claude/graph/<module>.md` (per-module depth) |
+| `../shared/graph-json-schema.md` | Schema for `.claude/graph/graph.json` (authoritative structure — typed nodes/edges, fingerprints) |
+| `../shared/graph-index-schema.md` | Schema for `.claude/graph/graph-index.md` (breadth index projection) |
+| `../shared/graph-module-schema.md` | Schema for `.claude/graph/<module>.md` (per-module depth projection) |
 | `../shared/scope-flags-spec.md` | Scope flag definitions (informational) |
 
 ## Model routing
@@ -688,9 +689,15 @@ needs codebase orientation — `icea-feature`, `icea-review`, `code-review`,
 `security`, and others — reads it instead of scanning raw source. It replaces the
 former `domain-map.md` (retired in v3.0.0, [ADR 0017](../../docs/adr/0017-domain-map.md) superseded).
 
-The graph has two parts, each with its own shared schema:
-- **`graph-index.md`** — an always-loaded breadth index (module → entry point). See `../shared/graph-index-schema.md`.
-- **`graph/<module>.md`** — one on-demand depth file per module (bounded context, key files, dependencies, patterns; ≤400 tokens; auto-loads via `paths:` frontmatter). See `../shared/graph-module-schema.md`.
+The graph has three parts:
+- **`graph.json`** — the **authoritative structure**: typed nodes, typed edges with
+  confidence, module-wide fingerprints, hub flags. See `../shared/graph-json-schema.md`.
+  Never auto-loaded (no `paths:`).
+- **`graph-index.md`** — an always-loaded breadth index (module → entry point), *projected
+  from* `graph.json`. See `../shared/graph-index-schema.md`.
+- **`graph/<module>.md`** — one on-demand depth file per module (bounded context, key files,
+  dependencies, patterns; ≤400 tokens; auto-loads via `paths:` frontmatter), *projected from*
+  `graph.json`. See `../shared/graph-module-schema.md`.
 
 The graph is **committed and PR-reviewed** — it is *not* gitignored (v3.0.0).
 
@@ -709,34 +716,47 @@ mkdir -p .claude/graph
 TODAY=$(date +%Y-%m-%d)
 ```
 
-### Step 7-2 — Generate one detail file per module
+### Step 7-2 — Build `graph.json` (authoritative structure — do this first)
 
-For each module, read its entry-point file (already in context from the architecture
-doc population above) and write a detail file following `../shared/graph-module-schema.md`
-exactly: `paths:` frontmatter, the ambient-context suppression comment,
-`_Fingerprint: {sha1 of entry-point file} | Updated: {TODAY}_`, and all four
-sections (Bounded context, Key files ≤5, Dependencies, Patterns). Hard ceiling 400 tokens.
-Write silently — confirm each with `✓ Written: .claude/graph/<module>.md (~N tokens)`.
+For each module, assemble a node per `../shared/graph-json-schema.md`: `id`, `module`,
+`domain`, `type` (classify: `service`/`repository`/`ui`/`datastore`/`external-api`/
+`shared-lib`/`domain`), `detailFile`, `entryPoint`, `paths` (source-root glob(s) — an
+array; multi-root modules list each), and the **module-wide** `fingerprint` computed
+over all files under `paths` (use the `graph_module_fingerprint` helper in
+`graph-json-schema.md` — *not* a single-file sha1). Then derive typed `edges` from
+source imports (`from`, `to`, `type`, `confidence: "EXTRACTED"` for edges found in
+source, `INFERRED`/`AMBIGUOUS` otherwise) and set `hub: true` on the most-connected
+nodes. Write `.claude/graph/graph.json` deterministically (sorted, stable key order).
+Confirm: `✓ Written: .claude/graph/graph.json (~N tokens)`.
 
-### Step 7-3 — Generate graph-index.md
+### Step 7-3 — Project one detail file per module
+
+For each node, write a detail file following `../shared/graph-module-schema.md` exactly:
+`paths:` frontmatter (first root), the ambient-context comment,
+`_Fingerprint: {node.fingerprint} | Updated: {TODAY}_`, the four sections (Bounded
+context, Key files ≤5, Dependencies with types, Patterns), and — when it fits under 400
+tokens — a `**Depended on by:**` line. Write silently — confirm each with
+`✓ Written: .claude/graph/<module>.md (~N tokens)`.
+
+### Step 7-4 — Project graph-index.md
 
 Build the index following `../shared/graph-index-schema.md` — `paths: always`
 frontmatter, header line (`Generated | Modules: N | Structure`), and one table row
-per module (`Module | Domain | Detail File | Entry Point`). The `Entry Point` column
-is the per-module fingerprint anchor used by `/graph-sync` and the stale-detection hook.
+per node (`Module | Domain | Detail File | Entry Point`), matching `graph.json` exactly.
 
 ### Rules
 - Do NOT invent modules — only map what exists in the directory tree
 - Omit test files, migrations, and auto-generated files
 - If a folder has only 1–2 files, merge it into the closest parent module
 - Overwrite existing graph files — they are generated, not human-maintained
-- Every detail file carries its own `_Fingerprint:` (per-module staleness);
-  there is no separate whole-repo fingerprint
+- `graph.json` is authoritative; the index and detail files are projected from it
+- Every node carries a **module-wide** `fingerprint` (per-module staleness over all its
+  files); there is no separate whole-repo fingerprint
 
 ### Confirm to developer
 After writing:
 ```
-✓ .claude/graph/ written — <N> modules mapped (index + detail files)
+✓ .claude/graph/ written — <N> modules mapped (graph.json + index + detail files)
   Used by: icea-feature · icea-review · code-review · security · …
   Refresh incrementally with /graph-sync
 ```

@@ -179,7 +179,7 @@ If it does, skip it. If it does not, copy it from
 | `graph-sync.md` | `/ai-assisted-development:graph-sync` |
 
 ```bash
-for stub in dream.md dream-audit.md dream-health.md dream-init.md dream-rollback.md dream-status.md dream-sync.md security-review.md code-review.md token-analysis.md product-docs.md sprint-metrics.md session-start.md bug.md checkin.md update-arch.md explain.md fix.md app-readiness.md plugin-readiness.md dynamic-scan.md ado-tasks.md icea-feature.md icea-approve.md icea-implement.md icea-revise.md icea-status.md icea-review.md pr-create.md pr-describe.md pr-spec-review.md critic.md gitignore-sync.md dismiss.md sync-dirs.md graph-sync.md; do
+for stub in dream.md dream-audit.md dream-health.md dream-init.md dream-rollback.md dream-status.md dream-sync.md security-review.md code-review.md token-analysis.md product-docs.md sprint-metrics.md session-start.md bug.md checkin.md update-arch.md explain.md fix.md app-readiness.md plugin-readiness.md dynamic-scan.md ado-tasks.md icea-feature.md icea-approve.md icea-implement.md icea-revise.md icea-status.md icea-review.md pr-create.md pr-describe.md pr-spec-review.md critic.md gitignore-sync.md dismiss.md sync-dirs.md graph-sync.md graph-viz.md; do
   if [ ! -f ".claude/commands/$stub" ]; then
     cp "$(dirname $0)/../skills/command-stubs/$stub" ".claude/commands/$stub"
     echo "  ✓ deployed $stub"
@@ -624,8 +624,10 @@ function replaceSection(content, sectionStartRegex, newSection) {
 // Triggers only on known-bad strings from old plugin versions.
 // Never fires on developer-customised content unless it contains the exact stale string.
 const staleSignals = [
-  ['## 0. WRITE GATE',       /Immediately after draft|draft ICEA inline|draft Tech Spec inline/, /^## 0\. WRITE GATE/],
-  ['## 0a. Keyword Handlers', /draft ICEA inline|draft Tech Spec inline/,                        /^## 0a\. Keyword Handlers/],
+  // v3.3.0: also refresh the pre-3.3.0 verbose WRITE GATE / Keyword Handlers to the slim versions.
+  // Both are H2 sections, so replaceSection is bounded to the section (no clobber of neighbours).
+  ['## 0. WRITE GATE',       /Immediately after draft|draft ICEA inline|draft Tech Spec inline|No exceptions for source code and config files/, /^## 0\. WRITE GATE/],
+  ['## 0a. Keyword Handlers', /draft ICEA inline|draft Tech Spec inline|Claude recognises the following patterns globally/,                     /^## 0a\. Keyword Handlers/],
 ];
 
 let replaced = 0;
@@ -761,6 +763,28 @@ echo "Sections present:"
 for marker in "Plugin version" "WRITE GATE" "Keyword Handlers" "Shell.*Git" "Data Access" "Feature Gate" "Dream"; do
   grep -qE "$marker" ./CLAUDE.md && echo "  ✅ $marker" || echo "  ❌ $marker"
 done
+```
+
+CLAUDE.md is loaded whole every session, so keep it lean. Run the governance-aware size
+advisory (read-only — it never edits CLAUDE.md, and never suggests moving the always-active
+WRITE GATE / Keyword Handlers / Shell·Git / Feature Gate). Resolver: skills/shared/plugin-path-resolution.md §1a.
+
+```bash
+PLUGIN_DIR="$(node -e '
+const fs=require("fs"),os=require("os"),path=require("path");
+const base=path.join(os.homedir(),".claude","plugins");
+const norm=p=>p?p.split(String.fromCharCode(92)).join("/"):"";
+let dir="";
+try{
+  const reg=JSON.parse(fs.readFileSync(path.join(base,"installed_plugins.json"),"utf8"));
+  const key=Object.keys(reg.plugins||{}).find(k=>k.startsWith("ai-assisted-development@"));
+  if(key){const a=reg.plugins[key]||[];const e=a.find(x=>x.scope==="user")||a[0];
+    if(e&&e.installPath&&fs.existsSync(e.installPath))dir=e.installPath;}
+}catch(e){}
+if(!dir){try{for(const m of fs.readdirSync(base)){const p=path.join(base,m,"plugins","ai-assisted-development");if(fs.existsSync(p)){dir=p;break;}}}catch(e){}}
+process.stdout.write(norm(dir));
+')"
+[ -n "$PLUGIN_DIR" ] && node "$PLUGIN_DIR/scripts/claude-md-audit.js" --file ./CLAUDE.md --budget 200
 ```
 
 ---
@@ -1034,11 +1058,11 @@ fi
 ```
 
 The `graph-stale-detect.sh` script:
-- Reads entry-point paths from `.claude/graph/graph-index.md`
-- Computes current `sha1sum` of each entry-point file
-- Compares against `_Fingerprint_` values in each detail file
-- Writes `.claude/graph/.stale` if any mismatch found
-- No LLM involved — pure shell, completes in < 1 second
+- Reads each node's `paths` and stored `fingerprint` from `.claude/graph/graph.json`
+- Recomputes the **module-wide** fingerprint (hash over all source files under the
+  module's paths, not a single entry-point file — see `skills/shared/graph-json-schema.md`)
+- Writes `.claude/graph/.stale` (listing the drifted module ids) if any mismatch found
+- No LLM involved — pure shell + one node JSON read, completes in < 1 second
 
 The knowledge graph is **committed and PR-reviewed** (v3.0.0, [ADR 0038]) — it must
 **not** be gitignored. `gitignore-sync` (Step 6b) no longer adds `.claude/graph/` to

@@ -89,6 +89,11 @@ For every knowledge entry across all memory files, record:
 - Entries at risk (confidence ≤ 0.3)
 - Entries ready to promote (confidence ≥ 0.85, not yet in CLAUDE.md)
 - MEMORY.md line count (flag if approaching 200)
+- CLAUDE.md **file size** (line count; flag if > ~200 — it loads whole every session). For a
+  governance-aware movable breakdown, run the read-only advisory (never edits the file):
+  `node "$PLUGIN_DIR/scripts/claude-md-audit.js" --file ./CLAUDE.md --budget 200`
+  (resolve `$PLUGIN_DIR` per skills/shared/plugin-path-resolution.md §1a). This is the file's
+  length — distinct from the promoted-entry count above.
 - Dream run count (from dream-log.md)
 - Sessions since last dream run
 - Dream frequency (average sessions between runs)
@@ -267,6 +272,7 @@ Summary:
 - N entries at risk (score ≤ 0.3)
 - N entries ready to promote (score ≥ 0.85)
 - MEMORY.md: N lines [status]
+- CLAUDE.md: N lines [status vs ~200 budget]
 - Last dream: N sessions ago
 ```
 

@@ -57,3 +57,7 @@ The **knowledge graph is the single orientation layer**; `domain-map.md` is reti
 ## Revisit when
 The graph index itself grows unwieldy (rare — it is one row per module), or Claude
 Code gains a native codebase-index that the plugin could consume instead.
+
+_Extended by [ADR 0039](0039-graph-json-sidecar.md): `graph.json` is now the
+machine-readable structure of record and the markdown (index + detail files) is its
+generated projection._

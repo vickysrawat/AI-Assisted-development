@@ -1,5 +1,5 @@
 ---
-description: Knowledge graph refresh — checks fingerprints of all module entry-point files, regenerates only stale detail files, detects new modules, and restructures flat→domain layout when the project crosses 30 modules. Deletes the .stale flag on success.
+description: Knowledge graph refresh — recomputes module-wide fingerprints, regenerates only stale modules, reconciles removed/renamed/orphaned modules, derives typed dependency edges, updates graph.json (authoritative) and its markdown projection, and restructures flat→domain past 30 modules. Deletes the .stale flag on success.
 argument-hint: "[--effort low|medium]  —  omit to use default (low); set medium if module structure is unusual or newly restructured"
 ---
 
@@ -16,8 +16,10 @@ See `skills/shared/model-routing-spec.md` for the full specification.
 # /graph-sync — Knowledge graph refresh
 
 Incrementally refreshes the codebase knowledge graph in `.claude/graph/`.
-Only regenerates module detail files whose entry-point fingerprint has changed —
-unchanged modules are skipped entirely. Typical run cost: 1–3 module scans.
+Only regenerates modules whose **module-wide fingerprint** has changed (a hash over all
+files under the module, not one entry-point file) — unchanged modules are skipped
+entirely. `graph.json` is the authoritative structure; the index and detail files are
+projected from it. Typical run cost: 1–3 module scans.
 
 Use this after:
 - `git pull` when session-start warns "⚠ Knowledge graph is stale"

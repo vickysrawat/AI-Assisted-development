@@ -1,0 +1,45 @@
+skill: graph-viz
+scenarios:
+  - id: generates-offline-html
+    description: "Should read graph.json and write a self-contained offline graph.html"
+    input: "Visualize the knowledge graph"
+    expect:
+      triggered: true
+      contains:
+        - "graph.json"
+        - "graph.html"
+
+  - id: guards-missing-graph
+    description: "Should stop cleanly when no graph.json exists"
+    input: |
+      Render the dependency graph. There is no .claude/graph/graph.json in this project.
+    expect:
+      triggered: true
+      contains:
+        - "dream-init"
+
+  - id: read-only-over-graph
+    description: "Never writes graph.json / index / detail files, never reads application source"
+    input: "Show the knowledge graph diagram"
+    expect:
+      triggered: true
+      not_contains:
+        - "writing graph.json"
+        - "regenerate graph-index"
+
+  - id: offline-no-network
+    description: "Output must be self-contained with no CDN / remote assets"
+    input: "Generate the graph visualization"
+    expect:
+      triggered: true
+      contains:
+        - "offline"
+
+  - id: threed-requires-vendored-lib
+    description: "3D mode falls back to 2D when no vendored WebGL library is present"
+    input: |
+      Visualize the graph in 3D. There is no .claude/graph/vendor/ directory.
+    expect:
+      triggered: true
+      contains:
+        - "2D"
