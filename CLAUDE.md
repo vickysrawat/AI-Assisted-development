@@ -1,5 +1,5 @@
 # CLAUDE.md — Project Intelligence File
-# Stack: <set per repo — e.g. ".NET 8 / C# · Angular 17+ · Node.js · Azure DevOps">
+# Stack: <set per repo — e.g. ".NET 8+ / C# · Angular 17+ · Node.js · Azure DevOps">
 #        dream-init / architect populate this from the detected repo type.
 #        Supported backends: .NET Core · ASP.NET Framework 4.x · Java/Spring Boot · Python (FastAPI/Django/Flask) · Node.js
 #        Supported frontends: Angular · React. Tracking: Azure DevOps.
