@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- documents-plugin-version: 3.4.0 -->
+<!-- documents-plugin-version: 3.5.0 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>User Guide — ai-assisted-development v3.4.0</title>
+<title>User Guide — ai-assisted-development v3.5.0</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
 
@@ -425,7 +425,7 @@
   <div class="logo">ai-assisted-<em>development</em></div>
   <div class="vsep"></div>
   <div class="hdr-sub">User Guide</div>
-  <div class="hdr-badge">v3.4.0</div>
+  <div class="hdr-badge">v3.5.0</div>
 </header>
 
 <nav id="sidebar">
@@ -468,7 +468,7 @@
     <h1>ai-assisted-development</h1>
     <p>ICEA-driven development workflow for distributed teams using Azure DevOps — language-agnostic across <strong>.NET · Java/Spring Boot · Python · Node.js</strong> backends and Angular / React frontends. Every feature starts with a spec. Every PR is compliance-checked before it opens.</p>
     <div class="hero-chips">
-      <span class="chip">v3.4.0</span>
+      <span class="chip">v3.5.0</span>
       <span class="chip">.NET 8</span>
       <span class="chip">Angular 17+</span>
       <span class="chip">Node.js</span>
@@ -482,6 +482,7 @@
   <section style="margin:20px 0 0;padding:16px 20px;background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #f59e0b;border-radius:8px;font-size:14px;line-height:1.6;">
     <strong>What's new since 3.0.0</strong>
     <ul style="margin:8px 0 0;padding-left:20px;">
+      <li><strong>3.5.0</strong> — The codebase knowledge graph's dependency links are now computed deterministically from your source's imports (more accurate "what depends on what"); parsing happens locally and never leaves your machine. No change to day-to-day usage.</li>
       <li><strong>3.4.0</strong> — Internal release-tooling: the plugin version is now single-sourced across its files (no more mismatched version numbers between docs). No change to day-to-day usage.</li>
       <li><strong>3.3.0</strong> — New <code>/graph-viz</code> renders an offline HTML map of your codebase (modules, dependencies, hot-spots); the project's <code>CLAUDE.md</code> is leaner, so each session starts with less overhead.</li>
       <li><strong>3.0.2</strong> — Uninstalling the plugin now fully cleans up its machine config (old caches, stale registrations); it shows what it will remove and asks first (pass <code>--yes</code> to skip the prompt).</li>

@@ -4,7 +4,7 @@
 #        Supported backends: .NET Core · ASP.NET Framework 4.x · Java/Spring Boot · Python (FastAPI/Django/Flask) · Node.js
 #        Supported frontends: Angular · React. Tracking: Azure DevOps.
 # Last updated: keep this file updated when conventions change
-# Plugin version: 3.4.0 (update this line after dream-init or plugin upgrade)
+# Plugin version: 3.5.0 (update this line after dream-init or plugin upgrade)
 
 ---
 

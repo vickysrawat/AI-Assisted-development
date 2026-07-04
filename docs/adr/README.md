@@ -51,3 +51,4 @@ Rules:
 | 0038 | Knowledge graph is the single codebase-orientation layer (supersedes 0017; domain-map retired) | Accepted |
 | 0039 | graph.json sidecar — machine-readable structure of record; markdown is its projection (typed edges, confidence, module-wide fingerprints) | Accepted |
 | 0040 | CLAUDE.md context budget — ≤ ~200 lines, set by instruction adherence not context-window capacity | Accepted |
+| 0041 | EXTRACTED graph edges derived deterministically by a script (import parsing), not by the model | Accepted |

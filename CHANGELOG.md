@@ -1,3 +1,28 @@
+## [3.5.0] — 2026-07-04
+
+### Added — Deterministic EXTRACTED graph edges (ADR 0041)
+`EXTRACTED` dependency edges in `.claude/graph/graph.json` were derived **by the model**
+(Claude ran `rg` and reasoned about import→module mapping) — non-deterministic, token-costly,
+approximate, and it pulled source into context. They're now derived by a script.
+
+- **New `scripts/graph-extract-edges.js`** (Node stdlib, offline): parses imports per language
+  — JS/TS relative specifiers, Python dotted/relative modules, C# `using`→namespace map +
+  `.csproj` `<ProjectReference>`, Java `import`→package map — resolves each to the owning module
+  via node `paths` globs, and rewrites **only** the `EXTRACTED` edges. Byte-deterministic and
+  idempotent (an unchanged repo → no diff).
+- **Merge policy:** preserves model-authored `INFERRED`/`AMBIGUOUS` edges, upgrades a matching
+  pair to `EXTRACTED` when source confirms it (keeping the curated `type`/`reason`), and drops
+  stale `EXTRACTED` + dangling edges. Never touches `nodes` or `fingerprint`s; raw source never
+  enters model context.
+- `skills/graph-sync/SKILL.md` (Step 7b builds only `INFERRED`/`AMBIGUOUS`; Step 8a runs the
+  extractor) and `skills/architect/SKILL.md` (Step 7-2 runs it after the node write) now call
+  it; `skills/shared/graph-json-schema.md` documents the deterministic producer.
+- Existing projects get parser-true `EXTRACTED` edges on the next `/graph-sync`
+  (migration `014-3.5.0`). Extends [ADR 0039]; a native harness code-index remains the
+  "revisit when" that would retire even this.
+
+---
+
 ## [3.4.0] — 2026-07-03
 
 ### Changed — Version single source of truth

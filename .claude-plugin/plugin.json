@@ -1,6 +1,6 @@
 {
   "name": "ai-assisted-development",
-  "version": "3.4.0",
+  "version": "3.5.0",
   "description": "ICEA-driven development workflow for distributed teams using Azure DevOps. Language-agnostic across .NET 8, Java/Spring Boot, Python (FastAPI/Django/Flask), Node.js, and Angular/React. Includes Dream memory system, architect skill, codebase knowledge graph (graph.json structure of record with typed edges + confidence, index+detail projection, module-wide fingerprints, git-hook staleness detection), cache-aware code review and security review, DAST dynamic scanning with OWASP ZAP, PR compliance gates, finding ledgers with dismiss workflow, sprint metrics, and product documentation.",
   "author": {
     "name": "Your Company"

@@ -195,21 +195,14 @@ For each `STALE` and `NEW_MODULES` entry, update the in-memory node + its edges:
 - `fingerprint` — the recomputed value from Step 3.
 - `entryPoint`, `paths`, `module`, `domain`, `detailFile` — per the schema.
 
-### 7b — Typed edges with confidence (accuracy over guesswork)
-Derive dependency edges from **actual source**, not prose:
-```bash
-# imports / usings / requires / includes referencing other modules' paths or namespaces
-rg -n --no-heading -e '^\s*(import|from|using|require|include)\b' {module files} 2>/dev/null
-```
-Map each referenced path/namespace to the owning node's `paths`. For each resolved
-target emit `{ from, to, type, confidence: "EXTRACTED", reason }`, choosing `type`:
-`calls`/`reads`/`publishes`/`extends` when evident, else `depends`. Where a dependency
-is only apparent from architecture prose (not parseable from imports), tag it
-`INFERRED`; tag `AMBIGUOUS` when unsure. **Never** emit an `EXTRACTED` edge you did not
-find in source. (tree-sitter/language-native parsing is an optional future upgrade;
-import-grep is the dependency-free default and works offline.)
-
-Drop edges whose target no longer resolves to a node (no dangling edges).
+### 7b — Typed edges with confidence (deterministic EXTRACTED)
+`EXTRACTED` edges (dependencies visible in source) are produced **deterministically by a
+script — not hand-derived** (see Step 8a; ADR 0041). In this step build only what a parser
+cannot see: `INFERRED` edges apparent from architecture prose, DI, or dynamic/config wiring,
+and `AMBIGUOUS` where unsure. You may set a specific `type`
+(`calls`/`reads`/`publishes`/`extends`) and a short `reason` on any edge; when source
+confirms that pair the extractor upgrades it to `EXTRACTED` while keeping your `type`/`reason`.
+**Never hand-write an `EXTRACTED` edge** — the extractor owns those, and drops stale/dangling.
 
 ---
 
@@ -230,7 +223,16 @@ node -e '
   fs.writeFileSync(p, JSON.stringify(g,null,2)+"\n");
 '
 ```
-Confirm: `✓ Written: .claude/graph/graph.json (~N tokens)`.
+Then derive the source-visible `EXTRACTED` edges **deterministically** (offline, Node stdlib;
+parses imports/usings/requires/ProjectReferences locally — raw source never enters context).
+Resolve `$PLUGIN_DIR` (see `../shared/plugin-path-resolution.md` §1a) and run:
+```bash
+node "$PLUGIN_DIR/scripts/graph-extract-edges.js"
+```
+It rewrites **only** the `EXTRACTED` edges — merging: it preserves your `INFERRED`/`AMBIGUOUS`
+edges (upgrading a matching pair to `EXTRACTED` when source confirms it) and drops stale/dangling
+ones — never touches `nodes` or `fingerprint`s, and re-emits `graph.json` in the deterministic
+format above. Confirm: `✓ Written: .claude/graph/graph.json (~N tokens)`.
 
 ### 8b — Project the detail files (only stale/new/renamed)
 For each changed node, write `.claude/graph/<detailFile>` per

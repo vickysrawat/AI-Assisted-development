@@ -723,11 +723,14 @@ For each module, assemble a node per `../shared/graph-json-schema.md`: `id`, `mo
 `shared-lib`/`domain`), `detailFile`, `entryPoint`, `paths` (source-root glob(s) — an
 array; multi-root modules list each), and the **module-wide** `fingerprint` computed
 over all files under `paths` (use the `graph_module_fingerprint` helper in
-`graph-json-schema.md` — *not* a single-file sha1). Then derive typed `edges` from
-source imports (`from`, `to`, `type`, `confidence: "EXTRACTED"` for edges found in
-source, `INFERRED`/`AMBIGUOUS` otherwise) and set `hub: true` on the most-connected
-nodes. Write `.claude/graph/graph.json` deterministically (sorted, stable key order).
-Confirm: `✓ Written: .claude/graph/graph.json (~N tokens)`.
+`graph-json-schema.md` — *not* a single-file sha1). Add any `edges` you can see that a
+parser cannot (`INFERRED`/`AMBIGUOUS`: DI, dynamic/config wiring, prose-only), and set
+`hub: true` on the most-connected nodes. Write `.claude/graph/graph.json` deterministically
+(sorted, stable key order). Then populate the source-visible `EXTRACTED` edges
+**deterministically** — resolve `$PLUGIN_DIR` (`../shared/plugin-path-resolution.md` §1a)
+and run `node "$PLUGIN_DIR/scripts/graph-extract-edges.js"` (parses imports locally, offline;
+rewrites only `EXTRACTED` edges; never touches `nodes`/`fingerprint`s; ADR 0041).
+**Never hand-write an `EXTRACTED` edge.** Confirm: `✓ Written: .claude/graph/graph.json (~N tokens)`.
 
 ### Step 7-3 — Project one detail file per module
 

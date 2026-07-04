@@ -108,6 +108,14 @@ byte-identical file so diffs stay minimal.
 `to == X`. Inverting the edge list is a single pass, so `dependents` is computed at
 query time — never materialised (keeps the file minimal and drift-free).
 
+**`EXTRACTED` edges are produced deterministically by `scripts/graph-extract-edges.js`**
+([ADR 0041](../../docs/adr/0041-deterministic-edge-extraction.md)) —
+it parses imports/usings/requires/ProjectReferences locally (Node stdlib, offline), resolves
+each to the owning module, and rewrites only the `EXTRACTED` edges (preserving model-authored
+`INFERRED`/`AMBIGUOUS`, upgrading a matching pair when source confirms it, dropping stale/
+dangling). It never touches `nodes` or `fingerprint`s. `architect`/`graph-sync` run it after
+writing nodes; the model authors only `INFERRED`/`AMBIGUOUS` edges. Never hand-write `EXTRACTED`.
+
 ---
 
 ## Module-wide fingerprint (correctness)
