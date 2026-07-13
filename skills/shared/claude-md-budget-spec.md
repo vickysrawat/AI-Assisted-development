@@ -1,8 +1,8 @@
 # Shared spec: CLAUDE.md context budget
 
 Canonical source for the CLAUDE.md length target used by the size advisory
-(`scripts/claude-md-audit.js --budget 200`) and reported by `dream-init` / `dream-health`.
-Decision record: [ADR 0040](../../docs/adr/0040-claude-md-context-budget.md).
+(`scripts/claude-md-audit.js --budget 200`) and reported by `setup-init` / `dream-health`.
+Decision record: ADR 0040.
 
 ## The budget is about adherence, not context-window capacity
 
@@ -43,7 +43,7 @@ a `paths`-scoped rule (which only fires at edit time): the WRITE GATE, Keyword H
 Shell/Git config, and the Feature Gate. Required config also stays — §2 AZURE DEVOPS is a
 hard dependency (`ado-tasks` and `sprint-metrics` grep `^- Organization:` from CLAUDE.md).
 This is why the plugin's injected footprint has a practical floor (~126–148 lines) and was
-deliberately not driven lower — see [ADR 0040](../../docs/adr/0040-claude-md-context-budget.md).
+deliberately not driven lower — see ADR 0040.
 
 ## What can be externalised
 

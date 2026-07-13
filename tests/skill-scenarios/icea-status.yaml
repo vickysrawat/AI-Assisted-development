@@ -1,0 +1,27 @@
+skill: icea-status
+scenarios:
+  - id: report-state-and-next-action
+    description: "Should show ICEA state and the exact next action for an ADO ID"
+    input: "STATUS ADO-1847"
+    expect:
+      triggered: true
+      contains:
+        - "ADO-1847"
+        - "next"
+
+  - id: re-entry-after-gap
+    description: "Should work as a re-entry point reading all state from disk"
+    input: "/icea-status ADO-1847"
+    expect:
+      triggered: true
+      contains:
+        - "ICEA"
+
+  - id: read-only-guarantee
+    description: "Should never modify files — status is read-only"
+    input: "Check the status of ADO-1847"
+    expect:
+      triggered: true
+      not_contains:
+        - "I'll write"
+        - "Writing"

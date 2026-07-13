@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ai-assisted-development · Developer Deep-Dive (Architecture)</title>
+<style>
+:root{
+  --navy:#1a3a5c; --navy-2:#2c5f8a; --gold:#c8a951;
+  --green:#00b894; --amber:#fdcb6e; --red:#e17055; --info:#5b9dff; --purple:#c792ea;
+  --bg:#f8f9fa; --card:#ffffff; --ink:#2d3436; --muted:#636e72; --line:#dfe6e9;
+  --mono:'Cascadia Code','SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+  --sans:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--sans);color:var(--ink);background:#0b1622;overflow:hidden}
+.deck{position:fixed;inset:0}
+.slide{position:absolute;inset:0;display:none;flex-direction:column;padding:4.6vh 5.5vw 5.6vh;background:var(--bg);animation:fade .4s ease;overflow:hidden}
+.slide.active{display:flex}
+@keyframes fade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.progress{position:fixed;top:0;left:0;height:5px;background:linear-gradient(90deg,var(--gold),#e6cd86);z-index:50;transition:width .3s}
+.counter{position:fixed;bottom:16px;right:22px;z-index:50;font-size:.78rem;color:var(--muted);font-variant-numeric:tabular-nums;background:rgba(255,255,255,.7);padding:4px 10px;border-radius:20px}
+.hint{position:fixed;bottom:16px;left:22px;z-index:50;font-size:.7rem;color:var(--muted);opacity:.7}
+.hint kbd{background:#fff;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:1px 6px;font-family:var(--mono);font-size:.66rem}
+h1{font-size:2.9rem;line-height:1.08;color:var(--navy);font-weight:800;letter-spacing:-.5px}
+h2{font-size:1.9rem;color:var(--navy);font-weight:800;letter-spacing:-.3px}
+h3{font-size:1.12rem;color:var(--navy);font-weight:700}
+p{font-size:1rem;line-height:1.5;color:var(--ink)}
+.lead{font-size:1.18rem;color:var(--muted);line-height:1.5}
+.eyebrow{text-transform:uppercase;letter-spacing:2.5px;font-size:.78rem;font-weight:700;color:var(--gold)}
+.muted{color:var(--muted)} strong{color:var(--navy)}
+code{font-family:var(--mono);background:#eef2f5;color:var(--navy);padding:2px 6px;border-radius:5px;font-size:.85em}
+.slide-head{display:flex;align-items:center;gap:12px;margin-bottom:2vh;flex:0 0 auto}
+.slide-head .dot{width:11px;height:11px;border-radius:3px;background:var(--gold)}
+.slide-head h2{font-size:1.5rem}
+.slide-head .tagr{margin-left:auto;font-size:.72rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);border:1px solid var(--line);padding:3px 10px;border-radius:20px}
+.body{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;justify-content:center}
+.title-slide{background:linear-gradient(135deg,var(--navy),var(--navy-2) 70%,#20486e);justify-content:center;color:#fff}
+.title-slide h1{color:#fff;font-size:3.3rem;max-width:20ch}
+.title-slide .lead{color:#cdd9e6;max-width:58ch;margin-top:16px}
+.badges{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px}
+.badge{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);color:#eaf1f8;padding:7px 15px;border-radius:30px;font-size:.88rem;font-weight:600}
+.badge b{color:var(--gold)}
+.presenter{margin-top:24px;color:#cdd9e6;font-size:1rem;letter-spacing:.3px}
+.title-foot{position:absolute;bottom:5.5vh;left:5.5vw;right:5.5vw;display:flex;justify-content:space-between;align-items:flex-end;color:#9db2c7;font-size:.88rem}
+.title-foot .v{color:var(--gold);font-weight:700;font-family:var(--mono)}
+.divider{background:linear-gradient(135deg,var(--navy),#12283d);justify-content:center;color:#fff}
+.divider .num{font-family:var(--mono);font-size:5rem;color:rgba(200,169,81,.28);font-weight:800;line-height:1}
+.divider .kick{font-size:.85rem;text-transform:uppercase;letter-spacing:2px;color:var(--gold);font-weight:700}
+.divider h2{color:#fff;font-size:2.5rem;max-width:24ch;margin-top:6px}
+.divider p{color:#b7c6d6;font-size:1.1rem;margin-top:12px;max-width:54ch}
+.grid{display:grid;gap:14px}
+.grid.c2{grid-template-columns:1fr 1fr}.grid.c3{grid-template-columns:repeat(3,1fr)}.grid.c4{grid-template-columns:repeat(4,1fr)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:16px 18px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.card .ico{font-size:1.4rem;margin-bottom:6px}
+.card h3{margin-bottom:5px}
+.card p{font-size:.88rem;color:var(--muted);line-height:1.45}
+.card.accent{border-top:4px solid var(--gold)}
+.checklist{list-style:none;display:flex;flex-direction:column;gap:10px}
+.checklist li{display:flex;gap:11px;align-items:flex-start;font-size:.98rem;line-height:1.4}
+.checklist li::before{content:"";flex:0 0 auto;width:21px;height:21px;border-radius:6px;background:rgba(0,184,148,.14);margin-top:1px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%2300b894' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:34px;align-items:center;height:100%}
+.narr{display:flex;flex-direction:column;gap:14px}
+.narr .nb{border-left:4px solid var(--line);padding-left:14px}
+.narr .nb .h{font-size:.72rem;text-transform:uppercase;letter-spacing:1px;font-weight:800;margin-bottom:3px}
+.narr .nb p{font-size:.98rem;line-height:1.45}
+.narr .nb.p{border-color:var(--red)} .narr .nb.p .h{color:var(--red)}
+.narr .nb.d{border-color:var(--green)} .narr .nb.d .h{color:var(--green)}
+.narr .nb.l{border-color:var(--info)} .narr .nb.l .h{color:var(--info)}
+.narr .rej{font-size:.83rem;color:var(--muted);margin-top:5px}
+.dwrap{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;box-shadow:0 2px 10px rgba(0,0,0,.05);display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center}
+.flowv{display:flex;flex-direction:column;gap:8px;align-items:center}
+.mini{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:.86rem;text-align:center;min-width:120px}
+.mini.bad{border-color:var(--red);color:var(--red);background:rgba(225,112,85,.06)}
+.mini.good{border-color:var(--green);color:var(--green);background:rgba(0,184,148,.06)}
+.mini b{color:var(--navy)}
+.dgm{display:flex;flex-direction:column;gap:9px}
+.layer{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 16px;display:flex;align-items:center;gap:16px}
+.layer .lname{font-weight:800;color:var(--navy);width:220px;flex:0 0 auto;font-size:.96rem}
+.layer .ldesc{color:var(--muted);font-size:.85rem}
+.layer.l0{border-left:5px solid var(--info)}.layer.l1{border-left:5px solid var(--green)}
+.layer.l2{border-left:5px solid var(--gold)}.layer.l3{border-left:5px solid var(--purple)}
+.layer.out{border-left:5px solid var(--muted);background:#eef2f5}
+.dwn{text-align:center;color:var(--gold);font-weight:800;font-size:1.1rem;line-height:.6}
+.flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center}
+.node{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.04);min-width:92px}
+.node .nt{font-weight:700;color:var(--navy);font-size:.9rem}
+.node .ns{font-size:.7rem;color:var(--muted);font-family:var(--mono);margin-top:2px}
+.node.hi{border-color:var(--gold);border-width:2px}
+.arr{color:var(--gold);font-weight:800;font-size:1.3rem}
+.ladder{display:flex;flex-direction:column;gap:10px;max-width:860px;margin:0 auto}
+.rung{display:flex;align-items:center;gap:16px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 18px}
+.rung .tier{font-family:var(--mono);font-weight:800;color:#fff;background:var(--navy);border-radius:8px;padding:6px 12px;flex:0 0 auto}
+.rung .rt{font-weight:700;color:var(--navy)}
+.rung .rd{color:var(--muted);font-size:.85rem}
+.rung.a{border-left:5px solid var(--amber)}.rung.b{border-left:5px solid var(--info)}.rung.c{border-left:5px solid var(--green)}
+.story{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.qbox{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:13px 16px}
+.qbox .qh{font-size:.72rem;text-transform:uppercase;letter-spacing:1px;font-weight:800;margin-bottom:6px}
+.qbox p{font-size:.92rem;line-height:1.45}
+.qbox.problem{border-left:4px solid var(--red)} .qbox.problem .qh{color:var(--red)}
+.qbox.decision{border-left:4px solid var(--green)} .qbox.decision .qh{color:var(--green)}
+.qbox.rejected{border-left:4px solid var(--amber)} .qbox.rejected .qh{color:#b3861f}
+.qbox.lesson{border-left:4px solid var(--info)} .qbox.lesson .qh{color:var(--info)}
+.adrtag{display:inline-block;font-family:var(--mono);font-size:.78rem;font-weight:700;color:var(--gold);background:rgba(200,169,81,.12);border:1px solid var(--gold);padding:2px 10px;border-radius:20px;margin-left:8px}
+.footnote{margin-top:14px;background:#eef2f5;border:1px dashed var(--line);border-radius:9px;padding:11px 15px;font-size:.86rem;color:var(--muted)}
+.footnote b{color:var(--navy)}
+/* raw text blocks — white-space:pre-wrap is the fix (preserve newlines) */
+.tree{white-space:pre-wrap;font-family:var(--mono);font-size:.9rem;line-height:1.7;background:#0f1720;border-radius:10px;padding:16px 20px;color:#d6e0ea;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.tree .d{color:#7fd1de;font-weight:600}
+.tree .c{color:#6d7f92}
+.tree .g{color:var(--gold)}
+.codebox{white-space:pre-wrap;background:#0f1720;border-radius:10px;padding:14px 18px;font-family:var(--mono);font-size:.84rem;color:#d6e0ea;line-height:1.6;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.codebox .k{color:#7fd1de}.codebox .s{color:#c3e88d}.codebox .c{color:#6d7f92}.codebox .g{color:var(--gold)}
+.spectable{width:100%;border-collapse:collapse;background:var(--card);border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);font-size:.82rem}
+.spectable th{background:var(--navy);color:#fff;text-align:left;padding:8px 12px;font-size:.72rem;text-transform:uppercase;letter-spacing:.4px}
+.spectable td{padding:7px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.spectable td:first-child{font-family:var(--mono);color:var(--navy);font-weight:600;white-space:nowrap}
+.spectable tr:last-child td{border-bottom:none}
+.demo{background:linear-gradient(135deg,#12283d,#1a3a5c);color:#fff;border-radius:13px;padding:22px 26px;border-left:6px solid var(--gold)}
+.demo .tag{display:inline-flex;align-items:center;gap:8px;background:var(--gold);color:#1a2b17;font-weight:800;padding:5px 13px;border-radius:20px;font-size:.78rem;letter-spacing:.5px}
+.demo h3{color:#fff;font-size:1.35rem;margin:11px 0 6px}
+.demo ol{margin:7px 0 0 20px;color:#d3e0ec}.demo ol li{margin:5px 0;line-height:1.4;font-size:.95rem}
+.demo .expect{margin-top:11px;font-size:.86rem;color:var(--gold)}
+.term{background:#0f1720;border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.25);overflow:hidden;font-family:var(--mono);font-size:.85rem}
+.term-bar{background:#1b2733;padding:8px 13px;display:flex;align-items:center;gap:7px}
+.term-bar .b{width:10px;height:10px;border-radius:50%}
+.term-bar .b.r{background:#ff5f56}.term-bar .b.y{background:#ffbd2e}.term-bar .b.g{background:#27c93f}
+.term-bar .ttl{margin-left:10px;color:#7d8ea0;font-size:.76rem}
+.term-body{padding:14px 16px;color:#d6e0ea;line-height:1.55}
+.term-body .cmd{color:#7fd1de}.term-body .ok{color:#3ecf8e}.term-body .warn{color:var(--amber)}.term-body .err{color:#ff7a7a}.term-body .dim{color:#6d7f92}.term-body .gold{color:var(--gold)}
+.term-body .box{border:1px solid #2a3b4d;border-radius:6px;padding:9px 11px;margin:8px 0;background:#0b131c}
+.pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.pill.crit{background:rgba(214,48,49,.12);color:#d63031;border:1px solid #d63031}
+.pill.b2{background:rgba(200,169,81,.16);color:#9a7d1e;border:1px solid var(--gold)}
+.pill.ok{background:rgba(0,184,148,.12);color:var(--green);border:1px solid var(--green)}
+.graphwrap{background:#0f1115;border-radius:12px;padding:8px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:9px;font-size:.78rem;color:var(--muted)}
+.legend .k{display:inline-flex;align-items:center;gap:6px}
+.legend .sw{width:11px;height:11px;border-radius:3px;display:inline-block}
+.close-slide{background:linear-gradient(135deg,var(--navy),#12283d);color:#fff;justify-content:center}
+.close-slide h1{color:#fff}.close-slide .lead{color:#cdd9e6}
+.close-slide .takeaways{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:28px;max-width:1000px}
+.close-slide .tk{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:15px}
+.close-slide .tk .n{color:var(--gold);font-weight:800;font-family:var(--mono)}
+.close-slide .tk p{color:#dce6f0;font-size:.86rem;margin-top:5px}
+.notes-panel{position:fixed;left:0;right:0;bottom:0;max-height:40vh;overflow:auto;background:#12283d;color:#dbe6f0;border-top:3px solid var(--gold);padding:16px 24px;z-index:60;display:none;box-shadow:0 -8px 24px rgba(0,0,0,.3)}
+.notes-panel.show{display:block}
+.notes-panel h4{color:var(--gold);font-size:.78rem;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:7px}
+.notes-panel p{color:#c6d4e2;font-size:.92rem;line-height:1.5}
+.overview{position:fixed;inset:0;background:rgba(8,16,26,.97);z-index:70;display:none;padding:4vh 4vw;overflow:auto}
+.overview.show{display:block}
+.overview h3{color:#fff;margin-bottom:16px}
+.ov-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.ov-item{background:#16283b;border:1px solid #2a3f56;border-radius:8px;padding:10px;cursor:pointer;transition:.15s}
+.ov-item:hover{border-color:var(--gold);transform:translateY(-2px)}
+.ov-item .oi-n{font-family:var(--mono);color:var(--gold);font-size:.72rem}
+.ov-item .oi-t{font-weight:700;color:#fff;font-size:.8rem;margin-top:3px}
+@media print{.slide{display:flex!important;position:relative;page-break-after:always;height:100vh}.progress,.counter,.hint,.notes-panel,.overview{display:none!important}}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+
+<!-- 1 TITLE -->
+<section class="slide title-slide active" data-title="Title"
+ data-notes="Architecture-heavy edition of the developer deep-dive. This crowd wants internals. We organize by importance: the five subsystems that carry the plugin — ICEA, the knowledge graph, Dream memory, model routing, and personas/consent — on a foundation of the component model and the shared-spec layer. ~3 demos. Press S for notes, O for the map.">
+  <div class="eyebrow">Developer Deep-Dive · 60 min · Architecture</div>
+  <h1>The internals — by what matters most.</h1>
+  <p class="lead">A structural tour of <strong style="color:#fff">ai-assisted-development</strong>: the five subsystems that carry it — ICEA · graph · Dream · routing · personas — on a foundation of components and shared specs.</p>
+  <div class="badges">
+    <div class="badge"><b>v3.6.0</b></div>
+    <div class="badge">7 architecture diagrams</div>
+    <div class="badge"><b>20</b> shared specs</div>
+    <div class="badge">~3 live demos 🎬</div>
+  </div>
+  <div class="presenter">Presented by <strong style="color:#fff">Vivek Rawat</strong> &nbsp;·&nbsp; July 7, 2026</div>
+  <div class="title-foot"><div>Audience: <strong style="color:#eaf1f8">Developers — architecture focus</strong></div><div>Plugin version <span class="v">3.6.0</span></div></div>
+</section>
+
+<!-- 2 AGENDA -->
+<section class="slide" data-title="Agenda"
+ data-notes="Set the order of importance explicitly. Two foundation layers first — the component model and the shared-spec layer — because everything sits on them. Then the five subsystems that actually carry the product: ICEA lifecycle, the knowledge graph, Dream memory, model routing, and personas/consent. Findings and enforcement come last — and that's also the one place the file-cache matters, so we cover it there, briefly, rather than up front.">
+  <div class="slide-head"><span class="dot"></span><h2>Ordered by what carries the plugin</h2></div>
+  <div class="body">
+    <p class="muted" style="margin-bottom:12px;font-size:.92rem">Foundation first, then the five subsystems that do the heavy lifting:</p>
+    <div class="grid c3">
+      <div class="card"><div class="ico">🧱</div><h3>Foundation</h3><p>Component model + the 20-spec shared layer.</p></div>
+      <div class="card accent"><div class="ico">📋</div><h3>1 · ICEA lifecycle</h3><p>The gate &amp; state machine — on disk.</p></div>
+      <div class="card accent"><div class="ico">🕸️</div><h3>2 · Knowledge graph</h3><p>Deterministic edges, graph.json, staleness.</p></div>
+      <div class="card accent"><div class="ico">🧠</div><h3>3 · Dream memory</h3><p>Capture → consolidate → promote/decay.</p></div>
+      <div class="card accent"><div class="ico">🔀</div><h3>4 · Model routing</h3><p>Generation / review / infra tiers.</p></div>
+      <div class="card accent"><div class="ico">🎭</div><h3>5 · Personas &amp; consent</h3><p>Expert lenses + A/B/C source access.</p></div>
+    </div>
+    <p class="muted" style="text-align:center;margin-top:14px">Findings, ledgers &amp; enforcement close it out — the one place <code>file-cache</code> actually matters.</p>
+  </div>
+</section>
+
+<!-- 3 DESIGN PRINCIPLES -->
+<section class="slide" data-title="Design principles"
+ data-notes="Two principles govern the whole structure: stateless is expensive, so state and orientation are shared and cached; and governance must be mechanical, so enforcement is layered from prompt to CI. Keep this short — it's the lens for everything that follows.">
+  <div class="slide-head"><span class="dot"></span><h2>Two principles behind the structure</h2></div>
+  <div class="body">
+    <div class="grid c2">
+      <div class="card"><div class="ico">♻️</div><h3>Share &amp; cache everything reusable</h3><p>Orientation, findings, and behavior are computed once and reused — statelessness is the enemy of cost. 80–95% reduction after baseline.</p></div>
+      <div class="card"><div class="ico">🪜</div><h3>Enforce mechanically, in layers</h3><p>Every rule lives at the lowest tier that can hold it: prompt → hook → server-side. "Prompts propose, hooks dispose."</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 DIVIDER: FOUNDATION — COMPONENT MODEL -->
+<section class="slide divider" data-title="Foundation · Component model"
+ data-notes="Foundation first — the component model. Boxes and who calls whom. Everything else stacks on this.">
+  <div class="kick">Foundation</div>
+  <h2>The component model</h2><p>Thin entry points, a fat shared core, a deterministic floor.</p>
+</section>
+
+<!-- 5 DIAGRAM 1 -->
+<section class="slide" data-title="Layered stack"
+ data-notes="Diagram 1. A command is a thin stub. It routes to a skill, which reads orientation and delegates to shared specs — the real logic. Rules auto-load per file type during edits. Hooks wrap everything as a deterministic floor. Outputs land in .claude/ and memory/. Call direction is strictly downward.">
+  <div class="slide-head"><span class="dot"></span><h2>Layered stack &amp; call direction</h2><span class="tagr">Diagram 1 of 7</span></div>
+  <div class="body">
+    <div class="dgm">
+      <div class="layer l0"><span class="lname">commands/ (36)</span><span class="ldesc">Thin stubs — parse args, route to a skill. No logic.</span></div>
+      <div class="dwn">▼ routes to</div>
+      <div class="layer l1"><span class="lname">skills/ (25)</span><span class="ldesc">Behavior. Read orientation (graph + architecture docs), then delegate.</span></div>
+      <div class="dwn">▼ delegates to</div>
+      <div class="layer l2"><span class="lname">skills/shared/ (20)</span><span class="ldesc">Single source of truth — routing, consent, severity, gates, schemas.</span></div>
+      <div class="dwn">▼ governs</div>
+      <div class="layer l3"><span class="lname">rules/ (40+)</span><span class="ldesc">Auto-load per file type during Write/Edit — enforce conventions.</span></div>
+      <div class="dwn">▼ produces / enforced by</div>
+      <div class="layer out"><span class="lname">hooks · .claude/ · memory/</span><span class="ldesc">Deterministic floor · generated artifacts · persistent memory.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 6 REPO LAYOUT (tree, fixed) -->
+<section class="slide" data-title="Repo layout"
+ data-notes="The repo layout. Commands and skills mirror each other by name; skills/shared holds the specs; rules are stack-scoped; hooks are enforcement scripts; docs/adr is the decision trail; and .claude/ (in a consuming project) holds the generated graph, cache, and settings. The mental map for navigating the plugin itself.">
+  <div class="slide-head"><span class="dot"></span><h2>How the repo is laid out</h2></div>
+  <div class="body">
+    <div class="split">
+      <div class="tree"><span class="d">.claude-plugin/</span>   <span class="c"># plugin.json (version)</span>
+<span class="d">commands/</span>         <span class="c"># 36 thin stubs</span>
+<span class="d">skills/</span>           <span class="c"># 25 skill folders</span>
+  <span class="d">shared/</span>         <span class="g"># 20 shared specs ← SSOT</span>
+<span class="d">rules/</span>            <span class="c"># 40+ stack-scoped rules</span>
+<span class="d">hooks/</span>            <span class="c"># enforcement scripts</span>
+<span class="d">docs/adr/</span>         <span class="c"># 45 decision records</span>
+<span class="d">docs/migrations/</span>  <span class="c"># upgrade steps</span>
+<span class="d">scripts/</span>          <span class="c"># graph-extract-edges.js</span></div>
+      <div class="tree"><span class="c"># generated in a consuming project</span>
+<span class="d">.claude/</span>
+  <span class="d">graph/</span>          <span class="g"># graph.json + projections</span>
+  <span class="d">architecture/</span>  <span class="c"># architecture docs</span>
+  file-cache.json  <span class="c"># change detection</span>
+  settings.json    <span class="c"># env, hooks, routing</span>
+<span class="d">memory/</span>           <span class="c"># MEMORY.md, dream-log.md</span>
+<span class="d">CodeReviews/  security/  dynamic-scan/</span>
+                   <span class="c"># FP-fingerprinted ledgers</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 7 SKILL ANATOMY (codebox, fixed) -->
+<section class="slide" data-title="Skill anatomy"
+ data-notes="Anatomy of a skill. Every SKILL.md opens with a Step 0 that declares its model tier and its source-file consent category (A announce, B ask-per-file, C never) — that's the forward-reference to the routing and personas/consent subsystems we cover later. Then it reads orientation, delegates to shared specs, and produces artifacts.">
+  <div class="slide-head"><span class="dot"></span><h2>Anatomy of a skill</h2></div>
+  <div class="body">
+    <div class="split">
+      <div class="codebox"><span class="c"># skills/code-review/SKILL.md</span>
+<span class="k">Step 0</span> — model tier: <span class="g">REVIEW_MODEL</span>
+         consent: <span class="g">Category A</span> (announce)
+<span class="k">Step 1</span> — read orientation (graph, arch)
+<span class="k">Step 2</span> — delegate to shared specs:
+         <span class="g">model-routing</span>, <span class="g">source-consent</span>,
+         <span class="g">business-severity</span>, <span class="g">findings-gate</span>
+<span class="k">Step 3</span> — write FP-fingerprinted ledger</div>
+      <div>
+        <ul class="checklist" style="font-size:.95rem">
+          <li><strong>Step 0 declares tier + consent</strong> — every skill, no exceptions.</li>
+          <li><strong>Consent A/B/C</strong> — announce · ask-per-file · never-reads-source.</li>
+          <li><strong>Delegates, never reinvents</strong> — shared specs do the work.</li>
+          <li><strong>Ephemeral vs persistent</strong> — critic leaves no ledger; scanners do.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 8 DIVIDER: FOUNDATION — SHARED LAYER -->
+<section class="slide divider" data-title="Foundation · Shared layer"
+ data-notes="Second foundation layer — the shared specs. The single source of truth that keeps 36 commands consistent.">
+  <div class="kick">Foundation</div>
+  <h2>The shared-spec layer</h2><p>20 specs. Defined once. Delegated verbatim.</p>
+</section>
+
+<!-- 9 THE 20 SPECS -->
+<section class="slide" data-title="20 shared specs"
+ data-notes="The full shared layer — group them rather than reading rows: governance (consent, severity, gates, write-gate), orientation (graph schemas), workflow (icea-decisions, change-tier), routing (model-routing), and efficiency (file-cache, scope-flags — noted, but they only matter for the scanners). The promotion rule on the next slide keeps this list honest.">
+  <div class="slide-head"><span class="dot"></span><h2>The 20 shared specs</h2></div>
+  <div class="body">
+    <table class="spectable">
+      <thead><tr><th>Spec</th><th>Governs</th><th>Spec</th><th>Governs</th></tr></thead>
+      <tbody>
+        <tr><td>write-gate-spec</td><td>APPROVE-before-write</td><td>graph-json-schema</td><td>authoritative graph</td></tr>
+        <tr><td>icea-decisions-spec</td><td>D-block decision forks</td><td>graph-index-schema</td><td>breadth projection</td></tr>
+        <tr><td>source-file-consent</td><td>A/B/C consent</td><td>graph-module-schema</td><td>per-module depth</td></tr>
+        <tr><td>business-context-severity</td><td>B1–B7 escalation</td><td>model-routing-spec</td><td>model tiers</td></tr>
+        <tr><td>findings-gate</td><td>Critical/High gate</td><td>personas-spec</td><td>expert review lenses</td></tr>
+        <tr><td>dismissed-reconciliation</td><td>Rule 5 re-open</td><td>change-tier-spec</td><td>T1/T2/T3 sizing</td></tr>
+        <tr><td>claude-md-budget-spec</td><td>~200-line budget</td><td>change-manifest-spec</td><td>manifest parsing</td></tr>
+        <tr><td>vcs-detect-spec</td><td>Git vs TFVC</td><td>plugin-path-resolution</td><td>path discovery</td></tr>
+        <tr><td>dream-reference</td><td>consolidation rules</td><td>single-writer-assumption</td><td>cache concurrency</td></tr>
+        <tr><td>file-cache-schema <span class="muted">*</span></td><td>change detection</td><td>scope-flags-spec <span class="muted">*</span></td><td>--changed/--pr/--full</td></tr>
+      </tbody>
+    </table>
+    <p class="muted" style="margin-top:10px;font-size:.82rem"><span class="muted">*</span> efficiency primitives — engaged only by <code>code-review</code> / <code>security</code> (covered in Findings).</p>
+  </div>
+</section>
+
+<!-- 10 SSOT + file-cache footnote -->
+<section class="slide" data-title="Single source of truth"
+ data-notes="Why the shared layer exists and the rule that keeps it clean. Problem was three copies of every scan bug. The promotion rule: a behavior touched by 2+ skills moves to shared; local copies forbidden; the validator enforces delegation. This is ADR 0003. And note the footnote: the efficiency primitives (file-cache, scope-flags) live here too, but they only come into play for code-review and security — so we cover them in the Findings section, not up front.">
+  <div class="slide-head"><span class="dot"></span><h2>The rule that keeps it honest<span class="adrtag">ADR 0003</span></h2></div>
+  <div class="body">
+    <div class="split">
+      <div class="narr">
+        <div class="nb p"><div class="h">Problem</div><p>Three skills, three copies of every scan bug; a fix in one never propagated. Gate logic diverged between <code>pr-create</code> and <code>checkin</code>.</p></div>
+        <div class="nb d"><div class="h">Decision</div><p>Used by 2+ skills → promote to <code>skills/shared/</code>; local copies forbidden; the validator enforces delegation.</p></div>
+        <div class="nb l"><div class="h">Lesson</div><p>Define once, maintain once. New skills reuse routing, consent, severity, gates — cheap to add.</p></div>
+        <div class="rej"><strong>Rejected:</strong> copy-paste · big library up-front · "just document it".</div>
+        <div class="footnote" style="font-size:.82rem"><b>Note:</b> file-cache + scope-flags also live here, but only matter for scanners — covered in Findings.</div>
+      </div>
+      <div class="dwrap">
+        <div style="display:flex;gap:9px"><div class="mini bad">code-review 🐞</div><div class="mini bad">security 🐞</div><div class="mini bad">ICEA 🐞</div></div>
+        <div class="arr" style="transform:rotate(90deg)">→</div>
+        <div class="mini good" style="width:80%;text-align:center"><strong>skills/shared/</strong><br>fix once → all callers updated</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 11 DIVIDER: ICEA -->
+<section class="slide divider" data-title="Subsystem 1 · ICEA"
+ data-notes="Subsystem one — the ICEA lifecycle. The gate is the heart of the plugin, so it leads. It's a state machine that lives entirely on disk.">
+  <div class="kick">Subsystem 1</div>
+  <h2>ICEA lifecycle</h2><p>The gate as a disk-based state machine — resumable in any session.</p>
+</section>
+
+<!-- 12 ICEA STATE MACHINE (D5) -->
+<section class="slide" data-title="ICEA state machine"
+ data-notes="Diagram 5. The ICEA Status line IS the workflow state, on disk. DRAFT (temp → docs) → Approved (APPROVE) → IN PROGRESS (first AC written) → COMPLETE (last AC). REVISE rewrites Status back to DRAFT and re-arms the floor hook. All skills read this from disk every invocation, so the workflow resumes in any session — you can approve from one machine and implement from another.">
+  <div class="slide-head"><span class="dot"></span><h2>ICEA state machine</h2><span class="tagr">Diagram 5 of 7</span></div>
+  <div class="body">
+    <div class="flow" style="margin-bottom:16px">
+      <div class="node"><div class="nt">DRAFT</div><div class="ns">temp/ → docs/</div></div><span class="arr">→</span>
+      <div class="node hi"><div class="nt">✅ Approved</div><div class="ns">APPROVE</div></div><span class="arr">→</span>
+      <div class="node"><div class="nt">IN PROGRESS</div><div class="ns">first AC</div></div><span class="arr">→</span>
+      <div class="node"><div class="nt">COMPLETE</div><div class="ns">last AC</div></div>
+    </div>
+    <div class="grid c2">
+      <div class="card"><h3>Revise re-gates</h3><p><code>REVISE</code> rewrites <code>Status:</code> → DRAFT; the floor hook re-arms and code is blocked again (ADR 0027/0031).</p></div>
+      <div class="card"><h3>State from disk, every call</h3><p>No skill relies on chat context — approve on one machine, implement on another.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 13 WRITE GATE TIMING -->
+<section class="slide" data-title="Write gate timing"
+ data-notes="The write-gate artefact timing. Source and config are NEVER written until APPROVE — the diff is shown first. Docs follow a draft-then-save flow: plans and ICEAs draft to temp/ for review, then SAVE promotes them to docs/. Memory writes on triggers. The rule: code is hard-gated; documents are review-gated; orientation is free.">
+  <div class="slide-head"><span class="dot"></span><h2>What's gated, and when</h2></div>
+  <div class="body">
+    <table class="spectable" style="font-size:.9rem">
+      <thead><tr><th>Artefact</th><th>Flow</th><th>Unblocks on</th></tr></thead>
+      <tbody>
+        <tr><td>Source &amp; config</td><td>hard write gate — diff shown first</td><td><code>APPROVE ADO-####</code></td></tr>
+        <tr><td>Plan / ICEA / Tech Spec</td><td>draft to <code>temp/</code> → review</td><td><code>SAVE PLAN/ICEA/TECH</code></td></tr>
+        <tr><td>Memory entries</td><td>auto-write on trigger; consolidate later</td><td><code>/dream</code> approval</td></tr>
+        <tr><td>Orientation / questions</td><td>always free</td><td>—</td></tr>
+      </tbody>
+    </table>
+    <p class="muted" style="text-align:center;margin-top:14px">Code is hard-gated · documents are review-gated · orientation is free.</p>
+  </div>
+</section>
+
+<!-- 14 DIVIDER: GRAPH -->
+<section class="slide divider" data-title="Subsystem 2 · Graph"
+ data-notes="Subsystem two — the knowledge graph. Orientation as structured data, not prose.">
+  <div class="kick">Subsystem 2</div>
+  <h2>The knowledge graph</h2><p>Deterministic edges, an authoritative JSON, and honest staleness.</p>
+</section>
+
+<!-- 15 DIAGRAM 3 -->
+<section class="slide" data-title="Graph pipeline"
+ data-notes="Diagram 3. Source feeds graph-extract-edges.js, which resolves imports/usings/requires deterministically into EXTRACTED edges. The model only adds INFERRED/AMBIGUOUS edges (DI, dynamic wiring). All of it writes graph.json — the structure of record. From there we project the always-loaded index and lazy per-module detail files. graph-viz renders offline. Nothing reads source for orientation after this.">
+  <div class="slide-head"><span class="dot"></span><h2>Graph pipeline, end to end</h2><span class="tagr">Diagram 3 of 7</span></div>
+  <div class="body">
+    <div class="flow" style="margin-bottom:16px">
+      <div class="node"><div class="nt">source</div></div><span class="arr">→</span>
+      <div class="node hi"><div class="nt">extract-edges.js</div><div class="ns">EXTRACTED</div></div><span class="arr">→</span>
+      <div class="node hi"><div class="nt">graph.json</div><div class="ns">SSOT</div></div><span class="arr">→</span>
+      <div class="node"><div class="nt">index.md</div><div class="ns">always-loaded</div></div>
+      <span class="arr">+</span>
+      <div class="node"><div class="nt">module .md</div><div class="ns">lazy</div></div><span class="arr">→</span>
+      <div class="node"><div class="nt">graph.html</div></div>
+    </div>
+    <div class="grid c3">
+      <div class="card"><h3>Deterministic vs inferred</h3><p>Script owns import edges; model owns only DI / dynamic / prose edges.</p></div>
+      <div class="card"><h3>Projection, not duplication</h3><p>Markdown is generated from <code>graph.json</code> — one source, many views.</p></div>
+      <div class="card"><h3>Lazy detail</h3><p>Index always loads (~200 tok); per-module detail loads on demand.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 16 GRAPH.JSON SCHEMA (codebox, fixed) -->
+<section class="slide" data-title="graph.json schema"
+ data-notes="What's actually in graph.json. meta, typed nodes (service/repository/ui/datastore/external-api/shared-lib, each with a fingerprint), typed edges (depends/calls/publishes/reads/extends, each with a confidence tag), and a directoryCatalog. Because it's structured, it's queryable and validatable — unlike the old free-text 'Dependencies: X, Y'.">
+  <div class="slide-head"><span class="dot"></span><h2>Inside graph.json</h2></div>
+  <div class="body">
+    <div class="split">
+      <div class="codebox">{
+  <span class="k">"meta"</span>: { <span class="k">"version"</span>: <span class="s">"1.0"</span> },
+  <span class="k">"nodes"</span>: [{
+    <span class="k">"id"</span>: <span class="s">"Orders"</span>, <span class="k">"type"</span>: <span class="s">"service"</span>,
+    <span class="k">"fingerprint"</span>: <span class="s">"a3f1…"</span>   <span class="c">// SHA-1</span>
+  }],
+  <span class="k">"edges"</span>: [{
+    <span class="k">"from"</span>: <span class="s">"Orders"</span>, <span class="k">"to"</span>: <span class="s">"OrdersRepo"</span>,
+    <span class="k">"type"</span>: <span class="s">"depends"</span>,
+    <span class="k">"confidence"</span>: <span class="g">"EXTRACTED"</span>
+  }],
+  <span class="k">"directoryCatalog"</span>: { }
+}</div>
+      <div>
+        <ul class="checklist" style="font-size:.94rem">
+          <li><strong>Typed nodes</strong> — service · repository · ui · datastore · external-api · shared-lib.</li>
+          <li><strong>Typed edges</strong> — depends · calls · publishes · reads · extends.</li>
+          <li><strong>Confidence</strong> — EXTRACTED · INFERRED · AMBIGUOUS.</li>
+          <li><strong>Queryable</strong> — validatable, not free-text prose.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 17 STALENESS -->
+<section class="slide" data-title="Staleness"
+ data-notes="How staleness stays honest. Each module carries a SHA-1 over its files — module-wide, not just the entry point (that was the old bug). A post-merge/post-checkout git hook re-hashes and touches .claude/graph/.stale on any mismatch. session-start surfaces it; graph-sync regenerates only the stale modules and clears the flag. Orientation is never silently wrong.">
+  <div class="slide-head"><span class="dot"></span><h2>Staleness you can trust</h2></div>
+  <div class="body">
+    <div class="flow" style="margin-bottom:16px">
+      <div class="node"><div class="nt">git merge/checkout</div></div><span class="arr">→</span>
+      <div class="node"><div class="nt">post-merge hook</div><div class="ns">re-hash modules</div></div><span class="arr">→</span>
+      <div class="node hi"><div class="nt">.stale</div><div class="ns">on mismatch</div></div><span class="arr">→</span>
+      <div class="node"><div class="nt">/graph-sync</div><div class="ns">stale only</div></div><span class="arr">→</span>
+      <div class="node"><div class="nt">clear flag</div></div>
+    </div>
+    <div class="grid c2">
+      <div class="card"><h3>Module-wide fingerprint</h3><p>SHA-1 over all files in a module — catches edits the entry-point-only hash missed (ADR 0039).</p></div>
+      <div class="card"><h3>Incremental refresh</h3><p><code>/graph-sync</code> regenerates only modules whose fingerprint changed — typically 1–3.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 18 DEMO graph-viz -->
+<section class="slide" data-title="🎬 Demo · graph-viz"
+ data-notes="Demo 1. Open graph.html / run /graph-viz. Hover to light up dependents; gold ring = hub, red = stale. Emphasize: reads graph.json only, never source, offline at file://. Fallback: narrate the mockup.">
+  <div class="split">
+    <div>
+      <div class="demo" style="margin-bottom:14px">
+        <div class="tag">🎬 DEMO 1</div>
+        <h3>graph-viz</h3>
+        <ol><li><code style="color:var(--gold);background:transparent">/graph-viz</code> → hover for dependents.</li><li>Gold ring = hub · red = stale.</li><li>Reads <code style="color:var(--gold);background:transparent">graph.json</code> only, offline.</li></ol>
+      </div>
+      <p class="muted" style="font-size:.9rem">Hubs (many dependents) are your risky refactor targets.</p>
+    </div>
+    <div>
+      <div class="graphwrap">
+        <svg viewBox="0 0 420 280" width="100%" height="250">
+          <line x1="210" y1="140" x2="110" y2="66" stroke="#5b6472" stroke-width="1.5"/>
+          <line x1="210" y1="140" x2="330" y2="66" stroke="#5b6472" stroke-width="1.5"/>
+          <line x1="210" y1="140" x2="90" y2="220" stroke="#5b6472" stroke-width="1.5"/>
+          <line x1="210" y1="140" x2="330" y2="222" stroke="#5b6472" stroke-width="1.5"/>
+          <circle cx="210" cy="140" r="26" fill="#5b9dff" stroke="#ffd15c" stroke-width="3"/><text x="210" y="144" text-anchor="middle" fill="#0f1115" font-size="10" font-weight="700" font-family="sans-serif">Orders</text>
+          <circle cx="110" cy="66" r="17" fill="#3ecf8e" stroke="#0f1115" stroke-width="2"/>
+          <circle cx="330" cy="66" r="17" fill="#c792ea" stroke="#0f1115" stroke-width="2"/>
+          <circle cx="90" cy="220" r="17" fill="#f0a35e" stroke="#0f1115" stroke-width="2"/>
+          <circle cx="330" cy="222" r="17" fill="#ff6b8a" stroke="#ff5c5c" stroke-width="3"/>
+        </svg>
+      </div>
+      <div class="legend">
+        <span class="k"><span class="sw" style="background:#5b9dff"></span>service</span>
+        <span class="k"><span class="sw" style="background:#3ecf8e"></span>repo</span>
+        <span class="k"><span class="sw" style="border:2px solid #ffd15c;background:transparent"></span>hub</span>
+        <span class="k"><span class="sw" style="border:2px solid #ff5c5c;background:transparent"></span>stale</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 19 DIVIDER: DREAM -->
+<section class="slide divider" data-title="Subsystem 3 · Dream"
+ data-notes="Subsystem three — Dream memory. How the plugin learns across sessions.">
+  <div class="kick">Subsystem 3</div>
+  <h2>Dream memory</h2><p>Capture, consolidate, promote, decay — all auditable.</p>
+</section>
+
+<!-- 20 DIAGRAM 6 -->
+<section class="slide" data-title="Dream 6-phase"
+ data-notes="Diagram 6, the 6-phase consolidation. Phase 1 analyzes sessions for trigger events. Phase 2 scores confidence and dedupes against topic files. Phase 3 proposes ADD/UPDATE/DELETE/PROMOTE with justification, tiered by confidence. Phase 4 applies approved changes. Phase 5 enforces the 20-entry promotion cap, demoting the weakest to topic files. Phase 6 writes the audit log. Rollback replays the log.">
+  <div class="slide-head"><span class="dot"></span><h2>Dream — six phases</h2><span class="tagr">Diagram 6 of 7</span></div>
+  <div class="body">
+    <div class="flow">
+      <div class="node"><div class="nt">1 · analyze</div><div class="ns">sessions</div></div><span class="arr">→</span>
+      <div class="node"><div class="nt">2 · score</div><div class="ns">+ dedupe</div></div><span class="arr">→</span>
+      <div class="node hi"><div class="nt">3 · propose</div><div class="ns">tiered approval</div></div><span class="arr">→</span>
+      <div class="node"><div class="nt">4 · apply</div></div><span class="arr">→</span>
+      <div class="node"><div class="nt">5 · cap/decay</div><div class="ns">≤20 · demote</div></div><span class="arr">→</span>
+      <div class="node"><div class="nt">6 · audit</div><div class="ns">dream-log</div></div>
+    </div>
+    <p class="muted" style="text-align:center;margin-top:14px">Tier 1 high-confidence auto-adds · Tier 2 you approve · Tier 3 always reviewed. Every run reversible via <code>/dream-rollback</code>.</p>
+  </div>
+</section>
+
+<!-- 21 MEMORY LAYOUT (tree, fixed) -->
+<section class="slide" data-title="Memory layout"
+ data-notes="The memory files. MEMORY.md holds up to 20 promoted, always-loaded facts. topic-*.md hold demoted detail, read on demand. dream-log.md is an append-only audit trail. health.html is the gitignored dashboard. The 20-cap plus decay keeps session warm-up cheap — that's the whole point.">
+  <div class="slide-head"><span class="dot"></span><h2>Memory on disk</h2></div>
+  <div class="body">
+    <div class="split">
+      <div class="tree"><span class="d">memory/</span>
+  MEMORY.md        <span class="g"># ≤20 promoted, always-loaded</span>
+  topic-auth.md    <span class="c"># demoted detail, on demand</span>
+  topic-gotchas.md
+  dream-log.md     <span class="g"># append-only audit trail</span>
+  health.html      <span class="c"># gitignored dashboard</span></div>
+      <ul class="checklist" style="font-size:.95rem">
+        <li><strong>20-entry cap</strong> keeps the always-loaded surface small.</li>
+        <li><strong>Decay</strong> demotes unmentioned facts to topic files.</li>
+        <li><strong>Append-only log</strong> makes every run reversible.</li>
+        <li><strong>Warm-up cost</strong> drops from thousands of tokens to hundreds.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 22 DEMO dream-health -->
+<section class="slide" data-title="🎬 Demo · dream-health"
+ data-notes="Demo 2. Open memory/health.html / run /dream-health. Show confidence, decay curve, promote candidates; click a justification panel for the evidence trail. Self-contained offline dashboard.">
+  <div class="split">
+    <div>
+      <div class="demo" style="margin-bottom:14px">
+        <div class="tag">🎬 DEMO 2</div>
+        <h3>dream-health</h3>
+        <ol><li><code style="color:var(--gold);background:transparent">/dream-health</code> → confidence + decay.</li><li>Click a justification panel for evidence.</li></ol>
+      </div>
+      <p class="muted" style="font-size:.9rem">Shows exactly why each fact was promoted and how fresh it is.</p>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3>memory/health.html</h3><span class="pill ok">healthy</span></div>
+      <div style="display:flex;gap:18px;align-items:center">
+        <div style="position:relative;width:130px;display:grid;place-items:center">
+          <svg width="130" height="130" viewBox="0 0 150 150"><circle cx="75" cy="75" r="60" fill="none" stroke="#e9ecef" stroke-width="14"/><circle cx="75" cy="75" r="60" fill="none" stroke="#00b894" stroke-width="14" stroke-linecap="round" stroke-dasharray="377" stroke-dashoffset="64" transform="rotate(-90 75 75)"/></svg>
+          <div style="position:absolute;text-align:center"><b style="font-size:1.7rem;color:var(--navy)">0.83</b><br><span style="font-size:.68rem;color:var(--muted)">avg confidence</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span class="pill ok">14 promoted</span>
+          <span class="pill" style="background:rgba(253,203,110,.18);color:#b3861f;border:1px solid var(--amber)">3 decaying</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 23 DIVIDER: ROUTING & PERSONAS -->
+<section class="slide divider" data-title="Subsystem 4-5 · Routing & personas"
+ data-notes="Subsystems four and five — model routing and personas/consent. How the right model and the right expert lens get applied to each task, and how source access is governed.">
+  <div class="kick">Subsystems 4 &amp; 5</div>
+  <h2>Model routing &amp; personas</h2><p>The right model, the right expert lens, governed source access.</p>
+</section>
+
+<!-- 24 DIAGRAM 7 ROUTING (codebox, fixed) -->
+<section class="slide" data-title="Model routing"
+ data-notes="Diagram 7, model routing. Three env-var tiers: ICEA_MODEL (Opus) for generation, REVIEW_MODEL (Sonnet) for review/security with a CRITIC_MODEL override, INFRA_MODEL (Sonnet) for infra/state work. Every skill's Step 0 declares its tier; resolution is a simple env fallback chain. Override per project in settings.json. This keeps Opus spend to consequential generation only.">
+  <div class="slide-head"><span class="dot"></span><h2>Model routing tiers</h2><span class="tagr">Diagram 7 of 7</span></div>
+  <div class="body">
+    <div class="split">
+      <div class="dgm">
+        <div class="layer l0"><span class="lname">ICEA_MODEL</span><span class="ldesc">Opus — ICEA, code, ado-tasks, product-docs.</span></div>
+        <div class="layer l1"><span class="lname">REVIEW_MODEL / CRITIC_MODEL</span><span class="ldesc">Sonnet — review, security, dynamic-scan, critic.</span></div>
+        <div class="layer l2"><span class="lname">INFRA_MODEL</span><span class="ldesc">Sonnet — dream, graph, metrics, checkin, explain, fix.</span></div>
+      </div>
+      <div class="codebox"><span class="c"># resolution is a fallback chain</span>
+MODEL=${<span class="g">ICEA_MODEL</span>:-claude-opus-4-6}
+MODEL=${<span class="g">REVIEW_MODEL</span>:-claude-sonnet-4-6}
+MODEL=${<span class="g">CRITIC_MODEL</span>:-\
+       ${REVIEW_MODEL:-claude-sonnet-4-6}}
+<span class="c"># override in settings.json → env</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 25 PERSONAS & CONSENT (NEW) -->
+<section class="slide" data-title="Personas & consent"
+ data-notes="Subsystem five — personas and consent, two shared specs that shape how review skills behave. The personas-spec gives each review skill an expert lens — a SAST reviewer, a release manager, a QA lead — so it scrutinizes the right things; personas set what to scrutinize, never a license to assume. The source-file-consent spec is the transparency contract: every skill declares Category A (announce before reading), B (ask per file with reason + cost), or C (never reads source). Together: the right expert, reading only what you allowed, and telling you why.">
+  <div class="slide-head"><span class="dot"></span><h2>Personas &amp; consent — governed review</h2></div>
+  <div class="body">
+    <div class="grid c2">
+      <div class="card accent"><div class="ico">🎭</div><h3>personas-spec — expert lenses</h3><p>Each review skill adopts a named expert persona (SAST reviewer, release manager, QA lead) so it scrutinizes the right things. Personas set <strong>what to scrutinize</strong> — never a license to assume results.</p></div>
+      <div class="card accent"><div class="ico">🔓</div><h3>source-file-consent — A / B / C</h3><p><strong>A</strong> announce before reading · <strong>B</strong> ask per file (file, why, token cost) · <strong>C</strong> never reads source. Every skill declares one; it's the transparency contract.</p></div>
+    </div>
+    <p class="muted" style="text-align:center;margin-top:16px">Together: the right expert lens, reading <strong>only what you allowed</strong>, and telling you why. "Opacity is poison" (ADR 0013).</p>
+  </div>
+</section>
+
+<!-- 26 DIVIDER: FINDINGS & ENFORCEMENT -->
+<section class="slide divider" data-title="Findings & enforcement"
+ data-notes="Last section — findings, ledgers, and the enforcement wiring. This is also the one place the file-cache matters: the scanners use it to skip unchanged files.">
+  <div class="kick">Findings &amp; enforcement</div>
+  <h2>Findings &amp; enforcement</h2><p>Fingerprinted ledgers, deterministic reconciliation, a layered floor.</p>
+</section>
+
+<!-- 27 DIAGRAM 4 LEDGER FLOW -->
+<section class="slide" data-title="Ledger flow"
+ data-notes="Diagram 4. code-review, security-review, and dynamic-scan each write to their own ledger but share the schema and the findings-gate functions. checkin's Check D and pr-create call get_open_critical_high() across all three. fix and dismiss mutate entries. This is where the file-cache earns its keep: the scanners compute a per-file checksum and skip unchanged files — that's the 80-95% saving, and it's scoped to exactly these three commands.">
+  <div class="slide-head"><span class="dot"></span><h2>Findings data flow</h2><span class="tagr">Diagram 4 of 7</span></div>
+  <div class="body">
+    <div class="flow" style="margin-bottom:14px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div class="node"><div class="nt">code-review</div></div>
+        <div class="node"><div class="nt">security-review</div></div>
+        <div class="node"><div class="nt">dynamic-scan</div></div>
+      </div>
+      <span class="arr">→</span>
+      <div class="node hi"><div class="nt">ledgers (shared schema)</div><div class="ns">FP · Open/Fixed/Dismissed/Regression</div></div>
+      <span class="arr">→</span>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div class="node"><div class="nt">/checkin · /pr-create</div><div class="ns">get_open_critical_high()</div></div>
+        <div class="node"><div class="nt">/fix · /dismiss</div></div>
+      </div>
+    </div>
+    <div class="footnote"><b>Here's where <code>file-cache</code> matters</b> — these three scanners checksum each file and skip the unchanged ones. That delta detection is the 80–95% saving, scoped to exactly these commands (ADR 0016).</div>
+  </div>
+</section>
+
+<!-- 28 LEDGER SCHEMA (codebox, fixed) -->
+<section class="slide" data-title="Ledger schema"
+ data-notes="The ledger schema. A summary line, then five sections: Open, Fixed (with git who/when), Dismissed (reason + justification + verify-flag), Regressions, and Baseline (first-run findings that never gate). Each finding header is [FP-xxxxxxxx] TYPE — Severity. The fingerprint is a hash of file+location+type+pattern, so it's stable across line moves.">
+  <div class="slide-head"><span class="dot"></span><h2>One schema, five sections</h2></div>
+  <div class="body">
+    <div class="split">
+      <div class="codebox"><span class="c">## Summary — Open:3 Fixed:9 Dismissed:2</span>
+
+<span class="g">## Open Findings</span>
+### [<span class="g">FP-9a3f21c8</span>] NULL_DEREF — High
+    Orders.cs:88 · first-seen 2026-07-01
+
+<span class="g">## Fixed Findings</span>    <span class="c"># who/when from git</span>
+<span class="g">## Dismissed</span>         <span class="c"># reason + verify-flag</span>
+<span class="g">## Regressions</span>        <span class="c"># fixed → reappeared</span>
+<span class="g">## Baseline</span>           <span class="c"># first run · never gates</span></div>
+      <div>
+        <ul class="checklist" style="font-size:.94rem">
+          <li><strong>FP fingerprint</strong> = hash(file + location + type + pattern).</li>
+          <li><strong>Fixed</strong> carries git author / commit / date.</li>
+          <li><strong>Dismissed</strong> keeps reason + justification (required).</li>
+          <li><strong>Baseline</strong> never gates — boy-scout on touched files.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 29 RULE 5 -->
+<section class="slide" data-title="Rule 5 reconciliation"
+ data-notes="Rule 5, the reconciliation logic that makes dismissals safe. On re-scan, if a dismissed finding reappears, check git log since the dismissal date for that file. If unchanged, keep it dismissed and update last-seen silently. If it changed, set a verify-flag, re-open it, and preserve the original dismissal reason as a note. So you can dismiss a false positive without it hiding a real regression later.">
+  <div class="slide-head"><span class="dot"></span><h2>Rule 5 — dismissals that don't hide regressions</h2></div>
+  <div class="body">
+    <div class="flow" style="margin-bottom:16px">
+      <div class="node"><div class="nt">re-scan finds dismissed FP</div></div><span class="arr">→</span>
+      <div class="node hi"><div class="nt">git log since dismissal?</div></div>
+      <span class="arr">→</span>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="node"><div class="nt">file unchanged</div><div class="ns">keep dismissed</div></div>
+        <div class="node hi"><div class="nt">file changed</div><div class="ns">re-open + verify-flag</div></div>
+      </div>
+    </div>
+    <p class="muted" style="text-align:center">Re-opened findings preserve the original dismissal reason as a note — auditable, never silently forgotten.</p>
+  </div>
+</section>
+
+<!-- 30 DEMO checkin/code-review -->
+<section class="slide" data-title="🎬 Demo · checkin + review"
+ data-notes="Demo 3. Run /code-review --pr to show cache-aware scanning (cache-hit %, seconds). Then /checkin to show the four checks and Check D blocking on a B2-escalated Critical. Two flows, one screen — the ledger consumed by the gate.">
+  <div class="split">
+    <div class="demo">
+      <div class="tag">🎬 DEMO 3</div>
+      <h3>Scan → gate</h3>
+      <ol><li><code style="color:var(--gold);background:transparent">/code-review --pr</code> — cache-aware, seconds.</li><li><code style="color:var(--gold);background:transparent">/checkin</code> — 4 checks; D reads the ledger.</li><li>B2 escalates a Low to <strong style="color:#fff">Critical</strong> → blocked.</li></ol>
+      <div class="expect">The ledger the scanner wrote is the gate the commit reads.</div>
+    </div>
+    <div class="term">
+      <div class="term-bar"><span class="b r"></span><span class="b y"></span><span class="b g"></span><span class="ttl">/checkin</span></div>
+      <div class="term-body">
+        <div><span class="cmd">&gt;</span> /code-review --pr</div>
+        <div class="ok">✓ 8.4s · cache hit 94%</div>
+        <div><span class="cmd">&gt;</span> /checkin</div>
+        <div class="ok">✓ A ✓ B ✓ C</div>
+        <div class="err">✗ D — 1 open Critical</div>
+        <div class="box"><span class="err">FP-4c17ee02</span> · <span class="gold">B2 → Critical</span> · commit blocked</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 31 DIAGRAM 2 LADDER -->
+<section class="slide" data-title="Enforcement ladder"
+ data-notes="Diagram 2, the enforcement ladder, with the actual hooks. Tier A model instructions (judgment). Tier B PreToolUse hook icea-floor.sh (blocks Write/Edit without an approved ICEA). Tier C git pre-commit findings-gate + CI validate-ledgers.py and validate-pr-compliance.py as required build validation. Server-side is authoritative and unbypassable; a local --no-verify becomes a CI failure — telemetry.">
+  <div class="slide-head"><span class="dot"></span><h2>Enforcement ladder &amp; the real hooks</h2><span class="tagr">Diagram 2 of 7</span></div>
+  <div class="body">
+    <div class="ladder">
+      <div class="rung a"><span class="tier">A</span><div><div class="rt">Model instructions</div><div class="rd">CLAUDE.md + skills — judgment, probabilistic.</div></div></div>
+      <div class="rung b"><span class="tier">B</span><div><div class="rt">PreToolUse hook · <code>icea-floor.sh</code></div><div class="rd">Deterministic per Write/Edit — blocks source writes without an approved ICEA.</div></div></div>
+      <div class="rung c"><span class="tier">C</span><div><div class="rt">Git pre-commit + CI · <code>validate-*.py</code></div><div class="rd">Unbypassable — required build validation; a <code>--no-verify</code> becomes a CI failure.</div></div></div>
+    </div>
+    <p class="muted" style="text-align:center;margin-top:14px">Each rule lives at the lowest tier that can hold it (ADR 0005/0009).</p>
+  </div>
+</section>
+
+<!-- 32 STORY graph trio -->
+<section class="slide" data-title="Story · the graph"
+ data-notes="A decision story tied to the graph subsystem. Two overlapping maps with drift risk; prose relationships; entry-point-only staleness; a missing hook. Fixed by: single orientation layer, authoritative graph.json with typed edges + module-wide fingerprints, deterministic edge extraction. Lesson: one source of truth; correctness before richness; mechanical work in scripts.">
+  <div class="slide-head"><span class="dot"></span><h2>Why the graph is structured data<span class="adrtag">ADR 0038·0039·0041</span></h2></div>
+  <div class="body">
+    <div class="split">
+      <div class="narr">
+        <div class="nb p"><div class="h">Problem</div><p>Two overlapping maps (drift); prose relationships (unqueryable); entry-point-only staleness; a referenced git hook that didn't exist.</p></div>
+        <div class="nb d"><div class="h">Decision</div><p>Single orientation layer; authoritative <code>graph.json</code>, typed edges + module fingerprints; edges by script.</p></div>
+        <div class="nb l"><div class="h">Lesson</div><p>One source of truth; correctness before richness; mechanical work in scripts.</p></div>
+        <div class="rej"><strong>Rejected:</strong> keep both maps · gitignore the graph · model-extracted edges.</div>
+      </div>
+      <div class="dwrap">
+        <div class="flow"><div class="node"><div class="nt">source</div></div><span class="arr">→</span><div class="node hi"><div class="nt">extract-edges.js</div><div class="ns">deterministic</div></div><span class="arr">→</span><div class="node hi"><div class="nt">graph.json</div><div class="ns">typed + confidence</div></div></div>
+        <div class="arr" style="transform:rotate(90deg)">→</div>
+        <div class="flow"><div class="node"><div class="nt">index.md</div><div class="ns">always-loaded</div></div><div class="node"><div class="nt">module .md</div><div class="ns">lazy</div></div></div>
+        <p class="muted" style="font-size:.84rem;text-align:center">Queryable + committed — not prose.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 33 STORY disk state -->
+<section class="slide" data-title="Story · disk state"
+ data-notes="A story tied to the ICEA state machine: disk-based state. Approve/implement assumed a live session; state lived in chat, so reopening broke it. Fixed by making the Status line the single source of truth, read from disk every invocation. Lesson: state belongs on disk — that's what makes the whole workflow resumable and lets an approval from Teams be actioned with one phrase.">
+  <div class="slide-head"><span class="dot"></span><h2>Why state lives on disk<span class="adrtag">ADR 0031</span></h2></div>
+  <div class="body">
+    <div class="split">
+      <div class="narr">
+        <div class="nb p"><div class="h">Problem</div><p>Approve/implement assumed a live session; state lived in chat, so <code>APPROVE</code> after reopening did nothing.</p></div>
+        <div class="nb d"><div class="h">Decision</div><p>The ICEA <code>Status:</code> line is the single source of workflow state; skills read it from disk every invocation.</p></div>
+        <div class="nb l"><div class="h">Lesson</div><p>State on disk = resumable anywhere; approval from email/Teams actionable with one phrase.</p></div>
+        <div class="rej"><strong>Rejected:</strong> session-only state · dual truth (chat + file).</div>
+      </div>
+      <div class="dwrap">
+        <div class="flowv">
+          <div class="node"><div class="nt">DRAFT</div></div><div class="arr" style="transform:rotate(90deg)">→</div>
+          <div class="node hi"><div class="nt">✅ Approved</div><div class="ns">Status: on disk</div></div><div class="arr" style="transform:rotate(90deg)">→</div>
+          <div class="node"><div class="nt">IN PROGRESS</div></div><div class="arr" style="transform:rotate(90deg)">→</div>
+          <div class="node"><div class="nt">COMPLETE</div></div>
+        </div>
+        <p class="muted" style="font-size:.84rem;text-align:center">Every skill reads from disk — no session needed.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 34 CLOSE -->
+<section class="slide close-slide" data-title="Wrap-up"
+ data-notes="Recap the wiring and open Q&A. Three structural takeaways: thin skills over a shared core; the five subsystems (ICEA, graph, Dream, routing, personas) carry the product; enforcement is layered from prompt to unbypassable CI. Point to the decisions-heavy companion deck for the full ADR narrative, and skills/shared for the source of truth. Questions.">
+  <div class="eyebrow">Thanks — questions?</div>
+  <h1>The structure, in three lines</h1>
+  <div class="takeaways">
+    <div class="tk"><div class="n">01</div><p><strong style="color:#fff">Thin skills, shared core.</strong> 20 specs are the single source of truth.</p></div>
+    <div class="tk"><div class="n">02</div><p><strong style="color:#fff">Five subsystems carry it.</strong> ICEA · graph · Dream · routing · personas.</p></div>
+    <div class="tk"><div class="n">03</div><p><strong style="color:#fff">Layered enforcement.</strong> Prompt → hook → unbypassable CI.</p></div>
+  </div>
+  <p class="lead" style="margin-top:26px">The full "why" is in the <strong style="color:#fff">decisions-heavy</strong> companion deck + 45 ADRs.</p>
+</section>
+
+</div>
+
+<div class="counter" id="counter">1 / 34</div>
+<div class="hint"><kbd>←</kbd> <kbd>→</kbd> nav · <kbd>S</kbd> notes · <kbd>O</kbd> overview · <kbd>F</kbd> full</div>
+<div class="notes-panel" id="notes"><h4>Speaker notes</h4><div id="notes-body"></div></div>
+<div class="overview" id="overview"><h3>Slide overview — click to jump</h3><div class="ov-grid" id="ov-grid"></div></div>
+
+<script>
+(function(){
+  const slides=[...document.querySelectorAll('.slide')];
+  const total=slides.length; let i=0;
+  const progress=document.getElementById('progress'),counter=document.getElementById('counter'),notes=document.getElementById('notes'),notesBody=document.getElementById('notes-body'),overview=document.getElementById('overview');
+  function render(){slides.forEach((s,n)=>s.classList.toggle('active',n===i));progress.style.width=((i+1)/total*100)+'%';counter.textContent=(i+1)+' / '+total;notesBody.textContent=slides[i].dataset.notes||'—';location.hash='slide-'+(i+1);}
+  function go(n){i=Math.max(0,Math.min(total-1,n));render();}
+  function next(){go(i+1);} function prev(){go(i-1);}
+  document.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();next();}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev();}
+    else if(e.key==='Home'){go(0);} else if(e.key==='End'){go(total-1);}
+    else if(e.key.toLowerCase()==='s'){notes.classList.toggle('show');}
+    else if(e.key.toLowerCase()==='o'){overview.classList.toggle('show');}
+    else if(e.key.toLowerCase()==='f'){if(!document.fullscreenElement)document.documentElement.requestFullscreen();else document.exitFullscreen();}
+    else if(e.key==='Escape'){overview.classList.remove('show');}
+  });
+  document.getElementById('deck').addEventListener('click',e=>{if(e.target.closest('a,button'))return;const x=e.clientX/window.innerWidth;x>0.3?next():prev();});
+  const ov=document.getElementById('ov-grid');
+  slides.forEach((s,n)=>{const d=document.createElement('div');d.className='ov-item';d.innerHTML='<div class="oi-n">'+(n+1).toString().padStart(2,'0')+'</div><div class="oi-t">'+(s.dataset.title||'')+'</div>';d.onclick=()=>{go(n);overview.classList.remove('show');};ov.appendChild(d);});
+  const m=location.hash.match(/slide-(\d+)/); if(m)i=Math.min(total-1,+m[1]-1);
+  render();
+})();
+</script>
+</body>
+</html>

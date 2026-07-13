@@ -67,7 +67,7 @@ this tier independently of the generation and review tiers.
 Skills in this tier:
 - `dream` — memory consolidation (6-phase session analysis)
 - `architect` — knowledge graph and architecture doc generation
-- `dream-status` — health check (read-only, Haiku would suffice)
+- `setup-status` — health check (read-only, Haiku would suffice)
 - `dream-rollback` — memory revert from audit trail
 - `dream-health` — health dashboard generation
 - `graph-sync` — knowledge graph staleness detection and module regeneration
@@ -170,7 +170,7 @@ an `--effort` override flag.
 |----------|---------------|-----------|
 | Generation (ICEA, tech spec, code generation) | `high` | Run once per feature; quality errors cause rework |
 | Review (icea-review, code-review, security, critic) | `medium` | Analysis needed; exhaustive thinking rarely adds value |
-| Infrastructure (graph-sync, dream-status, dream-init, session-start, token-analysis) | `low` | Deterministic structure; extended thinking wastes tokens |
+| Infrastructure (graph-sync, setup-status, setup-init, session-start, token-analysis) | `low` | Deterministic structure; extended thinking wastes tokens |
 | Knowledge graph (graph-sync) | `low` | File fingerprinting and template filling; no reasoning required |
 
 Skills that accept `--effort`:

@@ -24,9 +24,9 @@ projected from it. Typical run cost: 1–3 module scans.
 Use this after:
 - `git pull` when session-start warns "⚠ Knowledge graph is stale"
 - Adding or renaming a module
-- After dream-sync reports "run /graph-sync to refresh"
+- After setup-sync reports "run /graph-sync to refresh"
 
-For first-time graph creation, use `/dream-init` instead.
+For first-time graph creation, use `/setup-init` instead.
 
 ---
 

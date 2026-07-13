@@ -1,7 +1,7 @@
 # token-graph.json — Schema Reference
 
 Location: `token-analysis/token-graph.json` (project root)
-Gitignored: yes — added by `dream-init` via `token-analysis/` entry in `.gitignore`
+Gitignored: yes — added by `setup-init` via `token-analysis/` entry in `.gitignore`
 
 ## Purpose
 
@@ -107,7 +107,7 @@ it is machine-generated and user-specific.
 }
 ```
 
-## Empty graph (seeded by dream-init)
+## Empty graph (seeded by setup-init)
 
 ```json
 {

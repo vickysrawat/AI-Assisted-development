@@ -38,15 +38,18 @@ ai-assisted-development/
 │   └── <skill-name>/
 │       ├── SKILL.md             ← skill implementation
 │       └── references/          ← reference data loaded lazily by the skill
-├── skills/command-stubs/        ← thin stubs deployed to .claude/commands/ by dream-init
-├── rules/                       ← scoped rules deployed to .claude/rules/ by dream-init
+├── _project-deploy/             ← all files deployed to target projects
+│   ├── commands/                ←   command stubs (was skills/command-stubs/)
+│   ├── hooks/                   ←   enforcement hooks (was hooks/)
+│   ├── rules/                   ←   scoped rule files (was rules/)
+│   └── skills/                  ←   project-specific skill context files
 ├── tests/
 │   ├── runner.js                ← Node.js test harness (Anthropic API)
 │   └── skill-scenarios/         ← YAML scenario files per skill
 ├── memory/                      ← Dream memory files (per-project, gitignored)
 ├── install.ps1                  ← Windows installer
 ├── install.sh                   ← Unix installer
-├── CLAUDE.md                    ← per-project AI context file (seeded by dream-init)
+├── CLAUDE.md                    ← per-project AI context file (seeded by setup-init)
 ├── README.md                    ← end-user documentation
 ├── DEVELOPER-GUIDE.md           ← this file
 └── CHANGELOG.md                 ← append-only version history
@@ -61,7 +64,7 @@ ai-assisted-development/
 3. **Commands** (`commands/*.md`) are invoked explicitly via `/ai-assisted-development:<name>`.
 4. **Skills** (`skills/<name>/SKILL.md`) are invoked automatically when the developer's message matches trigger keywords listed in the skill's YAML frontmatter `description` field.
 5. **Rules** (`rules/*.md`) are loaded automatically when Claude edits a file matching the rule's `paths` glob.
-6. `skills/command-stubs/` are thin forwarding stubs deployed by `dream-init` into `.claude/commands/` — they make commands visible in VS Code's slash-command picker without requiring the full plugin path prefix.
+6. `_project-deploy/commands/` are thin forwarding stubs deployed by `setup-init` into `.claude/commands/` — they make commands visible in VS Code's slash-command picker without requiring the full plugin path prefix.
 
 ---
 
@@ -112,7 +115,7 @@ Add the skill name to `components.skills` in `.claude-plugin/plugin.json`.
 
 ### 5. Add a command stub (if the skill should also be slash-invokable)
 
-Create `skills/command-stubs/<skill-name>.md` with a brief description and forwarding instruction. Update `dream-init` to deploy the stub.
+Create `_project-deploy/commands/<skill-name>.md` with a brief description and forwarding instruction. Update `setup-init` to deploy the stub.
 
 ### 6. Add a test scenario
 
@@ -126,7 +129,7 @@ Create `tests/skill-scenarios/<skill-name>.yaml` covering at minimum:
 
 > **Use the scaffold script.** Running `./scripts/new-command.sh <name>` creates the
 > command file, stub, test scenario placeholder, and registers in plugin.json. The script
-> will remind you of the manual steps (dream-init loop, dream-status loop, README row).
+> will remind you of the manual steps (setup-init loop, setup-status loop, README row).
 
 Commands are Markdown files in `commands/`. They differ from skills in that they are always invoked explicitly — there is no keyword trigger detection.
 
@@ -153,7 +156,7 @@ Add the command name (without `/`) to `components.commands`.
 
 ### Add a stub
 
-Create `skills/command-stubs/<command-name>.md` and update `dream-init` to deploy it.
+Create `_project-deploy/commands/<command-name>.md` and update `setup-init` to deploy it.
 
 ---
 
@@ -228,7 +231,7 @@ Skills belong to one of three routing tiers. The tier determines which model the
 |---|---|---|---|
 | Generation | `ICEA_MODEL` | `claude-opus-4-6` | ICEA planning, code generation, ADO task breakdown, product docs |
 | Review | `REVIEW_MODEL` | `claude-sonnet-4-6` | Static analysis, compliance checks, security scanning, spec review |
-| Infrastructure | `INFRA_MODEL` | `claude-sonnet-4-6` | Dream, architect, dream-status, sprint-metrics, token-analysis |
+| Infrastructure | `INFRA_MODEL` | `claude-sonnet-4-6` | Dream, architect, setup-status, sprint-metrics, token-analysis |
 
 Every skill's `## Model routing` section documents which tier it belongs to and which env var to set to override. Skills read the env var at the start of their first step and fall back to the hardcoded default if it is not set.
 
@@ -245,7 +248,7 @@ Model defaults are declared in `.claude-plugin/plugin.json` under `recommended_m
 }
 ```
 
-`dream-status` check `1l` reads this and warns when `last_reviewed` is older than `review_cadence_days`. When Anthropic releases a new model that should become the default:
+`setup-status` check `1l` reads this and warns when `last_reviewed` is older than `review_cadence_days`. When Anthropic releases a new model that should become the default:
 
 1. Update `generation` and/or `review` in `plugin.json`.
 2. Update the `last_reviewed` date to today.
@@ -265,14 +268,14 @@ Two persistent cache files reduce token cost on repeated runs:
 Stores the character count of every scanned file. On each run, the skill compares the current character count against the cached value. If they match, the file is skipped. Schema is defined in `skills/shared/file-cache-schema.md`.
 
 **Writer:** `code-review` and `security` skills (last-write-wins, see single-writer assumption).
-**Reader:** `code-review`, `security`, `dream-status`.
+**Reader:** `code-review`, `security`, `setup-status`.
 
 ### `token-analysis/token-graph.json` (token-analysis)
 
 Stores per-session and per-file token usage. On each run, only new sessions and changed files are processed. Schema is defined in `skills/token-analysis/references/`.
 
 **Writer:** `token-analysis` skill.
-**Reader:** `token-analysis`, `dream-status`.
+**Reader:** `token-analysis`, `setup-status`.
 
 ### CI usage
 
@@ -298,7 +301,7 @@ If you change the graph schema, you must:
 1. Update `skills/shared/graph-index-schema.md` and/or `graph-module-schema.md` and bump the schema version.
 2. Update `skills/architect/SKILL.md` Step 7 to write the new format.
 3. Update `skills/graph-sync/SKILL.md` and the orientation-reading sections of the consumer skills.
-4. Update `skills/dream-status/SKILL.md` check `1f`.
+4. Update `skills/setup-status/SKILL.md` check `1f`.
 
 ---
 
@@ -332,7 +335,37 @@ Phase 0 (before session search) runs a pre-flight check. Soft warnings at >200 `
 
 ### Rollback
 
-`/dream-rollback` reverts the last consolidation using the `dream-log.md` audit trail. After a rollback, `dream-status` check `1j` shows ⚠️ Amber until `/dream` is run again to re-consolidate.
+`/dream-rollback` reverts the last consolidation using the `dream-log.md` audit trail. After a rollback, `setup-status` check `1j` shows ⚠️ Amber until `/dream` is run again to re-consolidate.
+
+### Memory auto-capture (Stop hook)
+
+The CLAUDE.md `# Dream` section instructs Claude to write to `memory/MEMORY.md` when specific
+triggers fire (plan approved, task completed, error resolved, approach abandoned, architecture
+decision). This is reinforced by a **Stop hook** (`hooks/memory-capture.sh`) that fires after
+every Claude turn and injects a compact capture checklist back to the model via the
+`hookSpecificOutput.additionalContext` mechanism — not plain stdout, which would not reach
+the model.
+
+The hook and both its settings.json entries (PreToolUse `icea-floor.sh` + Stop
+`memory-capture.sh`) are deployed and wired automatically by `setup-init` and `setup-sync`
+via `scripts/setup-init-bootstrap.cjs`. No manual wiring is needed.
+
+**If entries are not appearing in `memory/MEMORY.md`:**
+
+1. Confirm `.claude/settings.json` contains `hooks.Stop` with `memory-capture.sh`:
+   ```json
+   { "hooks": { "Stop": [{ "hooks": [{"type":"command","command":"bash .claude/hooks/memory-capture.sh"}] }] } }
+   ```
+2. Confirm `.claude/hooks/memory-capture.sh` exists and is executable (`chmod +x`).
+3. Re-run `/setup-sync` — the bootstrap in sync mode wires both hooks automatically.
+4. Verify Stop hook injection: add a test entry temporarily to `.claude/settings.json`:
+   ```json
+   { "hooks": { "Stop": [{ "hooks": [{"type":"command","command":"bash -c 'node -e \\'process.stdout.write(JSON.stringify({hookSpecificOutput:{hookEventName:\"Stop\",additionalContext:\"STOP_HOOK_TEST\"}}))\\''"}]}] } }
+   ```
+   If Claude's next response acknowledges `STOP_HOOK_TEST`, injection is working.
+
+**Design note:** plain `echo` / `cat` from a Stop hook does NOT reach the model; output must
+be JSON with `hookSpecificOutput.additionalContext` (see ADR 0049).
 
 ---
 
@@ -356,7 +389,7 @@ into or out of the Dismissed state. Manual ledger edits are not supported.
 The `pr-create` and `sprint-metrics` skills use `$AZURE_DEVOPS_PAT`. The recommended storage order (documented in `pr-create/SKILL.md` Step 1) is:
 
 1. **Windows User Environment Variable** — never touches the repo
-2. **`.claude/settings.json`** — only if gitignored; `dream-status` flags this as ❌ Red if unprotected
+2. **`.claude/settings.local.json`** — gitignored secret store; NEVER `.claude/settings.json`, which is committed & team-shared and guarded against secrets (`check-settings-secrets.cjs`)
 3. **Interactive prompt** — held in memory for the single API call only, then not referenced again
 
 When a PAT is passed interactively, the skill must not reference the variable after the API call in Step 5 completes.
@@ -367,7 +400,7 @@ When a PAT is passed interactively, the skill must not reference the variable af
 
 ### `.gitignore` coverage
 
-`dream-init` creates or updates `.gitignore` automatically in three phases: plugin-required entries (always added), root-level well-known artifacts (auto-detected), and a full repo walk for build artifacts (`bin/`, `obj/`, `dist/`, `.env`, etc.) with a developer selection prompt before writing. Developer-declined entries are tracked in `.claude/dream-init-state.json` and not re-prompted. `dream-status` check `1i` verifies coverage of all 11 required entries. The most critical entry is `.claude/settings.json` — if it exists but is not gitignored, `dream-status` reports ❌ Red and the recommended action list prioritises it above all other fixes.
+`setup-init` creates or updates `.gitignore` automatically in three phases: plugin-required entries (always added), root-level well-known artifacts (auto-detected), and a full repo walk for build artifacts (`bin/`, `obj/`, `dist/`, `.env`, etc.) with a developer selection prompt before writing. Developer-declined entries are tracked in `.claude/dream-init-state.json` and not re-prompted. `setup-status` check `1i` verifies coverage of the required entries. The managed block deliberately **shares** `.claude/settings.json` (team config), `.claude/architecture/` (docs), and the three review ledgers (via `!<dir>/<ledger>.md` negations), while ignoring `.claude/settings.local.json` (the secret store), the dated reports, and all `dynamic-scan/*` scan artifacts (which can hold plaintext credentials). The most critical entry is `.claude/settings.local.json` — if the secret store is not ignored, `setup-status` reports ❌ Red; it also reports ❌ Red if a secret is found inside the shared `.claude/settings.json`.
 
 ---
 
@@ -421,7 +454,7 @@ The following skills currently have no test scenarios and should be added in the
 
 - `security` — highest-priority given its size and recent pattern additions
 - `architect` — fingerprint writing should be validated
-- `dream-status` — all 12 checks should have a corresponding scenario
+- `setup-status` — all 12 checks should have a corresponding scenario
 - `token-analysis` — cache miss and delta behaviour
 
 ### CI integration
@@ -464,7 +497,7 @@ the shown default), write your answers into the installed `config.json`, and run
    that must carry literals: `plugin.json` (`author.name`, `author.url` from
    `companyUrl`, `repository` = `{adoBaseUrl}/{organization}/{project}/_git/{pluginRepoName}`)
    and `marketplace.json` (`name` from `marketplaceName`, `description`).
-3. Re-run `/dream-init` (or `/dream-sync`) in each consuming project — its **Step 5d**
+3. Re-run `/setup-init` (or `/setup-sync`) in each consuming project — its **Step 5d**
    seeds the CLAUDE.md §2 `Organization` / `Project` / `ADO URL` lines from the config.
 
 **What reads from where:**
@@ -473,8 +506,8 @@ the shown default), write your answers into the installed `config.json`, and run
 |---|---|
 | `install.sh` / `install.ps1` | Prompt on fresh install → write `config.json`; derive clone URL + marketplace name/description; generic placeholder fallbacks only |
 | `plugin.json`, `marketplace.json` | Written by `scripts/sync-config.sh` from `config.json` |
-| Runtime skills (`ado-tasks`, `pr-create`, …) | Read `Organization` / `Project` from **CLAUDE.md §2** (seeded from config by `dream-init` Step 5d) |
-| Skills locating the plugin dir (`dream-init`, `dream-sync`) | **Registry read** — `~/.claude/plugins/installed_plugins.json`, matching any key starting with `ai-assisted-development@` (fork-agnostic), preferring the `user` scope; falls back to the source-tree glob if the registry is absent. Canonical snippet: `skills/shared/plugin-path-resolution.md` |
+| Runtime skills (`ado-tasks`, `pr-create`, …) | Read `Organization` / `Project` from **CLAUDE.md §2** (seeded from config by `setup-init` Step 5d) |
+| Skills locating the plugin dir (`setup-init`, `setup-sync`) | **Registry read** — `~/.claude/plugins/installed_plugins.json`, matching any key starting with `ai-assisted-development@` (fork-agnostic), preferring the `user` scope; falls back to the source-tree glob if the registry is absent. Canonical snippet: `skills/shared/plugin-path-resolution.md` |
 | Reference docs & guides | Use `<your-org>` / `<your-project>` placeholders — never real values |
 
 The command namespace `ai-assisted-development` (used in every `/ai-assisted-development:cmd`)
@@ -496,7 +529,7 @@ It does **not** touch per-project `.claude/` provisioning or credentials.
 floor (~126–148 lines) because always-active gates and the required §2 ADO config must stay;
 that floor was accepted by design, not driven lower. Rationale + target table:
 `skills/shared/claude-md-budget-spec.md`; decision: [ADR 0040](docs/adr/0040-claude-md-context-budget.md).
-`scripts/claude-md-audit.js` (surfaced by `dream-init`/`dream-health`) flags projects over budget.
+`scripts/claude-md-audit.js` (surfaced by `setup-init`/`dream-health`) flags projects over budget.
 
 `validate.py` check 7 fails the build only once a **real** org is configured (not the
 `your-org` placeholder) if that org is hardcoded in a skill/command, and always if the
@@ -508,7 +541,7 @@ command, or reference doc, and if the manifests drift from `config.json`.
 ## Releasing a new version
 
 > **Single source of truth: `.claude-plugin/plugin.json` → `version`.** Runtime readers
-> (`dream-init`, `dream-sync`, `install.sh`/`.ps1`) read it live and never drift. `marketplace.json`
+> (`setup-init`, `setup-sync`, `install.sh`/`.ps1`) read it live and never drift. `marketplace.json`
 > carries **no** version (it references the plugin by `source`; the version is plugin.json's).
 > The only static copy derived from it is the `CLAUDE.md` `# Plugin version:` label.
 
@@ -554,7 +587,7 @@ Run this checklist when Anthropic releases a new model that should become a rout
 - [ ] Add CHANGELOG entry describing the model change and the reason
 - [ ] Bump patch version
 
-The 90-day review cadence (`review_cadence_days` in `plugin.json`) means `dream-status` will surface an amber warning approximately quarterly, prompting maintainers to run through this checklist proactively rather than waiting for developers to notice stale defaults.
+The 90-day review cadence (`review_cadence_days` in `plugin.json`) means `setup-status` will surface an amber warning approximately quarterly, prompting maintainers to run through this checklist proactively rather than waiting for developers to notice stale defaults.
 
 ---
 
@@ -565,9 +598,9 @@ or reordering them causes downstream skills to fail with confusing errors.
 
 | Step | Command / Action | Creates | Required by |
 |---|---|---|---|
-| 1 | `/dream-init` | `memory/`, `.claude/rules/`, `.claude/commands/` stubs | Everything |
-| 2 | Architect questionnaire (runs inside dream-init Step 7) | `.claude/architecture/architecture-deployment.md` | `app-readiness`, `icea-feature`, `plugin-readiness` |
-| 3 | Architect skill (runs inside dream-init Step 7) | `.claude/architecture/*.md`, `.claude/graph/` (index + module files) | `icea-feature`, `icea-review`, `code-review`, `security-review` |
+| 1 | `/setup-init` | `memory/`, `.claude/rules/`, `.claude/commands/` stubs | Everything |
+| 2 | Architect questionnaire (runs inside setup-init Step 7) | `.claude/architecture/architecture-deployment.md` | `app-readiness`, `icea-feature`, `plugin-readiness` |
+| 3 | Architect skill (runs inside setup-init Step 7) | `.claude/architecture/*.md`, `.claude/graph/` (index + module files) | `icea-feature`, `icea-review`, `code-review`, `security-review` |
 | 4 | `/session-start` | — (verifies setup) | — |
 | 5 | Normal workflow | `docs/icea/`, `CodeReviews/`, `security/` | — |
 
@@ -599,9 +632,10 @@ For every edit, immediately ask: **what else references this data?**
 
 | If you change | Also update |
 |---|---|
-| A stub list (add/remove a command stub) | `commands/dream-init.md` stub table + bash loop + Step 10 summary, `skills/dream-status/SKILL.md` check 1d loop + `N/19` count, `skills/command-stubs/` |
+| A stub list (add/remove a command stub) | `commands/setup-init.md` stub table + bash loop + Step 10 summary, `skills/setup-status/SKILL.md` check 1d loop + `N/19` count, `_project-deploy/commands/` |
 | A check count or table row count | Every place in the same file that cites the count (score descriptions, report templates, bash comments) |
 | A shared spec (source-file-consent, business-context-severity, graph-index-schema) | Every SKILL.md that references it — run `grep -r "spec-name" skills/` to find all referencing files |
+| An architect template (`skills/architect/templates/`) | Templates are composed from `_shared/` (stack-agnostic base) + `<stack>/` overrides (ADR 0051). Edit the common `decisions`/`integrations`/`security`/`data` files in `_shared/` — **but if you change a file that `dotnet-api` (or a frontend/`js-library` `data.md`) overrides, update that override too** (it won't inherit). Every stack must still compose to 8 files — `node tests/validate.js` enforces this. |
 | A step that reads a new file | Add it to the source-file-consent.md table row for that skill |
 | A numbered list in any skill's Codebase Orientation | Check for duplicate numbers before committing |
 | The plugin version in `plugin.json` | `CLAUDE.md` Plugin version line, `CHANGELOG.md` entry |
@@ -635,8 +669,8 @@ A version is ready to release when all of the following are true:
 [ ] CLAUDE.md Plugin version line matches plugin.json
 [ ] All new scan skills (producing finding ledgers) delegate Rule 5 (Dismissed) to dismissed-findings-reconciliation.md — no inline copies
 [ ] All new skills have a row in business-context-severity.md (or reference it)
-[ ] All new commands are in the dream-init stub table AND bash loop AND Step 9 summary
-[ ] All new commands have a stub in skills/command-stubs/
+[ ] All new commands are in the setup-init stub table AND bash loop AND Step 9 summary
+[ ] All new commands have a stub in _project-deploy/commands/
 [ ] All modified shared specs have been grep'd for all referencing skills — all updated
 [ ] No consecutive --- separators in any SKILL.md or command file
 [ ] No hardcoded ADO org in any SKILL.md body (reference files excepted)

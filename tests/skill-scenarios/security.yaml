@@ -34,3 +34,25 @@ scenarios:
         - "--full"
       not_contains:
         - "Files skipped (cache): [^0]"
+
+  - id: free-form-risk-analysis-final-pass
+    description: "After structured SAST, skill must run free-form LLM risk analysis labelled as hypotheses"
+    input: "Run a security review on this codebase"
+    expect:
+      triggered: true
+      contains:
+        - "Free-form Risk Analysis"
+        - "LLM-inferred risk hypotheses"
+      not_contains:
+        - "CVSS"
+
+  - id: static-dir-validation-prompt
+    description: "§0.5 must ask developer to confirm no custom static-serving directories are missing"
+    input: "Run a security review — the graph catalog is unavailable"
+    expect:
+      triggered: true
+      contains:
+        - "custom names"
+        - "none"
+      not_contains:
+        - "reviewed: true"

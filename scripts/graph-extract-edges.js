@@ -26,7 +26,7 @@ let graph;
 try { graph = JSON.parse(fs.readFileSync(GRAPH, 'utf8')); }
 catch (e) { console.error('graph-extract-edges: cannot read ' + GRAPH + ' — ' + e.message); process.exit(2); }
 const nodes = graph.nodes || [];
-if (!nodes.length) { console.error('graph-extract-edges: no nodes in graph — run architect/dream-init first'); process.exit(2); }
+if (!nodes.length) { console.error('graph-extract-edges: no nodes in graph — run architect/setup-init first'); process.exit(2); }
 
 // ── path helpers ──────────────────────────────────────────────────────────────
 const norm = p => p.split(path.sep).join('/').replace(/^\.\//, '');

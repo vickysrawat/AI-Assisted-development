@@ -5,6 +5,7 @@
 //   • the plugin cache dir (all versions) under ~/.claude/plugins/cache/<marketplace>/<plugin>
 //   • caches orphaned by a marketplace rename or past version bumps
 //   • stale extraKnownMarketplaces entries in ~/.claude/settings.json
+//   • plugin entries in ~/.claude/plugins/installed_plugins.json
 //
 // Dry-run by default (prints the plan); pass --apply to actually delete.
 // Only ever touches paths under ~/.claude/plugins. Invoked by install.sh / install.ps1.
@@ -22,9 +23,10 @@ const PLUGIN     = argVal('--plugin') || 'ai-assisted-development';
 const CURRENT_MP = argVal('--marketplace') || '';
 const APPLY      = args.includes('--apply');
 
-const PLUGINS_ROOT = path.join(os.homedir(), '.claude', 'plugins');
-const CACHE_ROOT   = path.join(PLUGINS_ROOT, 'cache');
-const SETTINGS     = path.join(os.homedir(), '.claude', 'settings.json');
+const PLUGINS_ROOT     = path.join(os.homedir(), '.claude', 'plugins');
+const CACHE_ROOT       = path.join(PLUGINS_ROOT, 'cache');
+const SETTINGS         = path.join(os.homedir(), '.claude', 'settings.json');
+const INSTALLED_PLUGINS = path.join(PLUGINS_ROOT, 'installed_plugins.json');
 
 // ── helpers ─────────────────────────────────────────────────────────────────────
 function exists(p) { try { fs.accessSync(p); return true; } catch (e) { return false; } }
@@ -84,13 +86,26 @@ if (exists(SETTINGS)) {
   }
 }
 
+// installed_plugins.json entries to strip (keyed as "<plugin>@<marketplace>")
+let installedPlugins = null;
+const installedKeys = [];
+if (exists(INSTALLED_PLUGINS)) {
+  try { installedPlugins = JSON.parse(fs.readFileSync(INSTALLED_PLUGINS, 'utf8')); } catch (e) { installedPlugins = null; }
+  if (installedPlugins && installedPlugins.plugins) {
+    for (const key of Object.keys(installedPlugins.plugins)) {
+      if (key === PLUGIN || key.startsWith(PLUGIN + '@')) installedKeys.push(key);
+    }
+  }
+}
+
 // ── print plan ──────────────────────────────────────────────────────────────────
 console.log('  Plugin config cleanup (' + (APPLY ? 'APPLYING' : 'dry-run') + '):');
-if (dirPlan.length === 0 && settingsKeys.length === 0) {
+if (dirPlan.length === 0 && settingsKeys.length === 0 && installedKeys.length === 0) {
   console.log('    (nothing to remove — already clean)');
 }
-for (const d of dirPlan)     console.log('    dir : ' + d.path + '   [' + d.why + ']');
-for (const k of settingsKeys) console.log('    key : settings.json  extraKnownMarketplaces.' + k);
+for (const d of dirPlan)       console.log('    dir : ' + d.path + '   [' + d.why + ']');
+for (const k of settingsKeys)  console.log('    key : settings.json  extraKnownMarketplaces.' + k);
+for (const k of installedKeys) console.log('    key : installed_plugins.json  plugins.' + k);
 
 if (!APPLY) {
   console.log('  (dry-run — re-run with --apply to remove)');
@@ -111,5 +126,10 @@ if (settings && settingsKeys.length) {
   if (Object.keys(settings.extraKnownMarketplaces).length === 0) delete settings.extraKnownMarketplaces;
   fs.writeFileSync(SETTINGS, JSON.stringify(settings, null, 2));
   console.log('    ✓ removed ' + settingsKeys.length + ' stale extraKnownMarketplaces entr' + (settingsKeys.length === 1 ? 'y' : 'ies'));
+}
+if (installedPlugins && installedKeys.length) {
+  for (const k of installedKeys) delete installedPlugins.plugins[k];
+  fs.writeFileSync(INSTALLED_PLUGINS, JSON.stringify(installedPlugins, null, 2));
+  console.log('    ✓ removed ' + installedKeys.length + ' installed_plugins.json entr' + (installedKeys.length === 1 ? 'y' : 'ies'));
 }
 console.log('  Cleanup complete.');

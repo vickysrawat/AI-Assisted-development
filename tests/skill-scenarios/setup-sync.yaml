@@ -1,0 +1,29 @@
+skill: setup-sync
+scenarios:
+  - id: re-provision-on-upgrade
+    description: "Should re-provision hooks and stubs via the bootstrap script in sync mode"
+    input: "Run setup-sync after a plugin upgrade"
+    expect:
+      triggered: true
+      contains:
+        - "bootstrap"
+        - "hooks"
+        - "version"
+
+  - id: restore-missing-rules
+    description: "Should restore missing rule files from deployed_rules[]"
+    input: "Sync the project after upgrading the plugin"
+    expect:
+      triggered: true
+      contains:
+        - "deployed_rules"
+        - "rules"
+
+  - id: never-overwrite-developer-content
+    description: "Should never overwrite developer-authored content"
+    input: "Run setup-sync"
+    expect:
+      triggered: true
+      not_contains:
+        - "overwrite your"
+        - "I'll replace your"

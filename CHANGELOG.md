@@ -1,3 +1,212 @@
+## [3.12.0] — 2026-07-12
+
+### Added — Shared non-secret `settings.json` with a secret guard, plus shared durable artifacts
+- **The problem.** The plugin gitignored **both** `.claude/settings.json` and
+  `.claude/settings.local.json` ("PAT credential storage — NEVER commit"), which also trapped the
+  non-secret team config the plugin needs (hooks, `customInstructions`, model-routing `env`) behind
+  an un-shareable file. Several output dirs were ignored wholesale too, hiding durable team
+  knowledge (architecture docs) and tracking state (finding ledgers) alongside genuinely
+  regenerable/credential-bearing output.
+- **The split.** `.claude/settings.json` is now **committed and team-shared** — secret-free by
+  policy. Secrets (`AZURE_DEVOPS_PAT`) and machine-specific `permissions` live in the gitignored
+  `.claude/settings.local.json` (or an OS env var). Claude Code deep-merges `settings.local.json`
+  over `settings.json` at runtime, so nothing is lost.
+- **The guard** — new `_project-deploy/hooks/check-settings-secrets.cjs` (deployed to
+  `.claude/hooks/`). Blocks any secret from reaching the shared file at **write-time** (a `node …
+  --hook` PreToolUse hook, wired by `stepWireSettings` next to `icea-floor.sh`) and at
+  **commit-time** (`findings-gate-precommit.sh` now runs it with `--staged`; override with
+  `SKIP_FINDINGS_GATE=1`). Detects secret-shaped keys and known token formats (ADO PAT, `ghp_`/
+  `github_pat_`, AWS `AKIA`, Slack, JWT, PEM); allows placeholders, env references, and `*_MODEL`.
+- **Shared durable artifacts.** The managed ignore block now shares `.claude/architecture/` and the
+  three review ledgers (`code-review-ledger.md`, `security-ledger.md`, `dynamic-scan-ledger.md`)
+  via `!<dir>/<ledger>.md` negations, while keeping dated reports and all `dynamic-scan/`
+  `*.session`/`*.context` (plaintext-credential risk) ignored. `token-analysis/` and
+  `prod-readiness/` remain fully ignored.
+- **setup-status check 1i inverted** — RED is now "a secret is present in the committed
+  `settings.json`" or "the secret store `settings.local.json` is not ignored", replacing the old
+  "settings.json not ignored" premise.
+- **Upgrade path:** run `/setup-sync` (see `docs/migrations/022-3.12.0.md`). Projects that stored a
+  PAT in `settings.json` must move it (and any `permissions`) to `settings.local.json` — the guards
+  and check 1i surface it if missed.
+- Follow-up (not in this release): the three HTML guides still describe the old
+  "settings.json is gitignored" model and will be refreshed to the shared/guarded model.
+
+## [3.11.1] — 2026-07-12
+
+### Fixed — CLAUDE.md managed sections no longer duplicate on repeated `setup-sync`
+- **Root cause:** `extractSection()` in `setup-init-bootstrap.cjs` found a section's end with an
+  **LF-only** separator match (`/\n---\n/`). The plugin's own `CLAUDE.md` template ships with
+  **CRLF** endings, so `\n---\n` never matched (`\r\n---\r\n`); on failure the function returned
+  everything from the section header to end-of-file. Each managed section that was (re-)appended
+  therefore dragged the entire template tail with it — so sections nearest the end of the template
+  (Feature Gate, Data Access Convention) multiplied the most across repeated runs. The section
+  **detection** regexes were never at fault; only the extraction was.
+- **Fix:** the separator match is now CRLF-tolerant (`/\r?\n---\r?\n/`), and `stepClaudeMd`
+  normalizes the template to LF immediately after reading it (defense-in-depth). A newly created
+  CLAUDE.md is now written with LF endings.
+- **Upgrade path:** run `/setup-sync` (see `docs/migrations/021-3.11.1.md`). No data migration; the
+  fix stops further growth but does not auto-collapse existing duplicates — clean a bloated file
+  with `/setup-teardown` then `/setup-sync` (recipe in the migration note).
+
+## [3.11.0] — 2026-07-12
+
+### Fixed — Dream captures now land in the repo `memory/`, not the machine profile
+- **Root cause:** Claude Code ships a built-in "auto memory" feature that is **on by default**.
+  It injects a per-turn instruction pointing at `~/.claude/projects/<slug>/memory/` (one file
+  per fact + frontmatter). That competes with — and out-competed — Dream's own capture path
+  (the `memory-capture.sh` UserPromptSubmit hook + the CLAUDE.md `# Dream` section), both of
+  which target the **repo-relative** `memory/MEMORY.md`. The net effect: Dream triggers wrote to
+  the per-machine profile directory (never committed, not shared, invisible to the dream cycle)
+  instead of the repo. Dream itself was correctly wired — the built-in feature was intercepting
+  the writes.
+- **Fix:** `setup-init-bootstrap.cjs` (`stepWireSettings`, runs on both init and sync) now sets
+  `"autoMemoryEnabled": false` in `.claude/settings.json` — **only when the key is unset**, so an
+  explicit developer value is preserved. This removes the competing target, leaving a single
+  memory system: Dream's repo-relative `memory/` (committed, dream-managed).
+- **Hardening:** the memory-capture hook and the CLAUDE.md `# Dream` section now name the target
+  explicitly as the **repo-root** `memory/MEMORY.md`, "NOT the `~/.claude` profile memory".
+- **Upgrade path:** run `/setup-sync` (see `docs/migrations/020-3.11.0.md`). No data migration —
+  entries already captured under the profile dir are left in place (fix-forward).
+
+## [3.10.0] — 2026-07-12
+
+### Fixed — Architecture-doc "populated?" detection no longer mistakes empty scaffolding for real content (ADR 0053)
+- **Root cause:** the `<!-- TEMPLATE -->` marker is a *pristine-template* flag, not a
+  *has-content* flag — and `setup-init-bootstrap.cjs` (`stepPreCopyArchTemplates`) **stripped
+  it on pre-copy**, so the architect skill read freshly-deployed empty scaffolding as
+  `POPULATED` and skipped its population pass (Steps 3–6). The docs stayed empty forever.
+  Bootstrap and architect disagreed on what marker-absence meant.
+- **Marker is now authoritative:** bootstrap pre-copies templates **verbatim with the marker
+  retained**; architect's Step 3 fallback copy also retains it. The marker is removed in exactly
+  **one** place — architect Step 5, after a genuine population pass.
+- **Two-signal detector** (new shared spec `skills/shared/arch-populated-detect.md`, used by
+  both `architect` and `setup-status`): a file is unfilled if the marker is on line 1 **or** the
+  body still contains a **population-proof** scaffold token (e.g. `[trust-zone diagram or list]`,
+  `<!-- From code:`). Deliberately **excludes** `⚠ Could not determine — needs manual input`,
+  which a fully populated file legitimately contains.
+- **Upgrade path:** projects provisioned under the old marker-stripping bootstrap have
+  marker-free-but-empty docs that still carry the scaffold tokens, so the secondary check flags
+  them as `NEEDS_POPULATION` on the next architect / setup-status run automatically — no data
+  migration required.
+
+## [3.9.0] — 2026-07-10
+
+### Added — Critic runs at both planning-time drafts, not only on generated code (ADR 0052)
+- The critic was documented as firing "inside `icea-feature` at two gates" but was **never
+  invoked** there — only the CODE-mode gate in `icea-implement` (Step 4a) was wired, so
+  ICEA↔design divergence went uncaught until code generation, the latest and costliest point.
+- Wired **two planning-time gates** into `icea-feature`, each firing on the in-context draft
+  before it is written to `temp/`, with the bounded auto-revise loop (max 2 retries):
+  - **Step 5 — `icea` gate** on the ICEA draft (completeness, testability, B1–B7, scope).
+  - **Step 8 — `tech` gate** on the Tech Spec draft beside its on-disk ICEA.
+- Added a new first-class **`tech` critic mode** that owns the ICEA↔design checks —
+  **traceability** (every AC has a planned file; no planned file exceeds the ACs),
+  **D-option fidelity**, and the coverage-matrix / test-derivation / structural-conformance
+  checks (moved out of the dormant ICEA-mode block where they were never reached). At Step 8 the
+  ICEA is immutable — the loop regenerates the Tech Spec only, and a genuine ICEA fault is
+  surfaced with a `REVISE ADO-{ID}` recommendation.
+
+### Changed
+- The critic's REVISE loop, previously "CODE mode only", now applies to all three internal gates
+  (`icea`/`tech`/`code`); standalone `icea` still has no loop. `critic/SKILL.md` bumped to v1.1.
+- Corrected stale critic-gate descriptions in `critic/SKILL.md`, `change-tier-spec.md`,
+  `source-file-consent.md`, `README.md`, and the `/critic` command note (the code gate lives in
+  `icea-implement`, not `icea-feature`; the two `icea-feature` gates are Step 5 and Step 8).
+
+## [3.8.0] — 2026-07-10
+
+### Added — Architecture doc set expands from 4 to 8 + Mermaid diagrams (ADR 0050)
+- The `architect` skill now generates **8 architecture docs per stack** (was 4), closing four
+  structural blind spots present identically in all 11 stacks:
+  - **`architecture-data.md`** — data model / schema / entities / relationships / ownership
+    (stack-adaptive: backend = DB schema; frontend = client state + API DTOs; library = exported types).
+  - **`architecture-integrations.md`** — external dependencies with contract, timeout, retry,
+    circuit breaker, failure behavior, and SLA/ownership.
+  - **`architecture-security.md`** — trust boundaries + the authorization model
+    (Action → Role/Policy → Enforced-at); consumed by the `security` skill.
+  - **`architecture-decisions.md`** — append-only `AD-NNN` decision log, seeded from detectable
+    choices (rationale left for a human — never auto-invented).
+- **`architecture-deployment.md`** gains a **Non-Functional Requirements & Constraints** section,
+  populated from a short Step 0.5 NFR questionnaire block + hybrid code extraction.
+- **`architecture.md`** now carries two **Mermaid diagrams** — End-to-End (`flowchart LR`) and
+  Layered View (`flowchart TB`) — replacing the per-stack ASCII layer diagram.
+- New File 4–7 prompt sections added to all 11 stack prompt files; population follows the existing
+  copy-then-populate path.
+
+### Changed — Architect templates deduplicated: shared base + per-stack overrides (ADR 0051)
+- The eight per-stack templates were authored once and `cp`-distributed, leaving ~33 byte-identical
+  copies (`decisions`/`integrations`/`security` were identical across 10 stacks; `data` had 4 variants).
+- Introduced `skills/architect/templates/_shared/` for the stack-agnostic base; each stack folder now
+  keeps only its stack-specific files plus any override (`dotnet-api` overrides all four; the frontend
+  stacks and `js-library` override `data`). The bootstrap `stepPreCopyArchTemplates` now **composes**
+  `union(_shared, <stack>)` with the stack winning collisions — every stack still resolves to its exact
+  8-file set, byte-identical to before (verified by md5). Removes ~33 duplicate files; a fix to a common
+  template no longer has to be repeated per stack.
+
+### Added — `/update-arch` targeted doc-refresh flags
+- `--data`, `--integrations`, `--security` refresh a single architecture doc; `--decisions`
+  appends a new `AD-NNN` entry (never overwrites existing decisions).
+
+### Changed — architecture-doc consumers wired to the new docs
+- `security` (Step 0g) loads `architecture-security.md` + `architecture-integrations.md` as
+  review context (with a staleness caveat — docs map where to look; source remains the evidence).
+- `icea-feature` reads data/integrations docs and seeds `AC-NF` criteria from the NFR section.
+- `icea-review` uses the authorization model + data ownership for compliance checks.
+- `app-readiness` feeds NFR + security posture into resilience/observability/scalability scoring.
+
+> Note: v3.8.0 also includes the lifecycle-command rename `dream-* → setup-*` (see migration
+> `docs/migrations/018-3.8.0.md`). The rename now extends through the machinery: the bootstrap
+> scripts are renamed `setup-init-bootstrap.cjs` / `setup-teardown.cjs` (with every caller,
+> test, scenario fixture, and living doc updated), while the internal state file
+> `.claude/dream-init-state.json` and its `dream_init_*` keys are intentionally kept for
+> backward compatibility with already-provisioned projects.
+
+## [3.6.0] — 2026-07-07
+
+### Added — Frontmatter-based rule deployment + 43-file layered rule set (ADRs 0042, 0043)
+- Rule deployment is now **self-describing**: every `rules/*.md` carries a `detect:` frontmatter
+  block (`always` / `files` / `dependencies` / `excludeIfDependencies`). dream-init runs a discovery
+  loop instead of a hardcoded table, and records the deployed set in `dream-init-state.json`
+  `deployed_rules[]`; session-start validates against it.
+- Rule set expanded from 8 to **43 files**, organised in layers: frontend ecosystems (React, Vue,
+  Svelte, Solid, Next.js, Nuxt, Remix, Astro, Angular), cross-cutting languages + styling
+  (TypeScript, Tailwind, CSS/Sass/CSS-Modules), API/RPC + ORM (GraphQL client/server, tRPC, REST,
+  Prisma/Drizzle), backend concern layers (base, REST API, data-access, SQL, auth, api-security,
+  testing, observability, caching), databases (PostgreSQL, SQL Server, NoSQL), E2E testing
+  (Playwright, Cypress), and legacy/maintenance-only (.NET Framework 4.8, WCF, EF6, ADO.NET).
+  Backend Layer-1 concern files auto-deploy alongside any backend language.
+
+### Added — Expert Personas across all skills + inline-logic commands
+- New `skills/shared/personas-spec.md`: a 13-role registry (the *role lens* a skill reasons through)
+  — orthogonal to model routing. Judgment skills inline a compact identity card; mechanical/infra
+  skills carry a one-line lens. Personas are **stack-agnostic** (expertise binds to the project's
+  detected stack per layer) and **governance-subordinate** (never license assumption; reasoning-only,
+  never named in artifacts). Applied to all 26 skills and 7 inline-logic commands.
+
+### Added — dream-init bootstrap script
+- New `scripts/dream-init-bootstrap.cjs` performs all mechanical setup (directories, 37 command
+  stubs, hooks + `.hashes`, git pre-commit, settings wiring, state seeding, npm-deps, gitignore,
+  external-dir scan, CLAUDE.md managed sections, git/bash paths) in one deterministic, crash-safe,
+  idempotent pass, writing `_bootstrap-manifest.json`. dream-init reduces to bootstrap → LLM-only
+  work (`/init`, architect, graph-sync, rule deployment); dream-sync calls it in `--mode sync`.
+
+### Added — directoryCatalog in graph.json + security free-form risk pass (ADRs 0044, 0045)
+- `graph.json` gains an optional `directoryCatalog` (static-serving / config / test dirs), built
+  pre-write by graph-sync; the security skill consumes it (with a three-condition trust check and
+  `find` fallback) instead of enumerating at runtime.
+- Security skill adds a final free-form LLM risk pass (evidence-cited, no CVSS, no ledger writes,
+  clearly labelled hypotheses) and drops the 40-file budget cap.
+
+### Changed
+- Uninstall (`scripts/uninstall-cleanup.js`) now also clears `installed_plugins.json` entries and
+  plugin cache dirs. `external-dir-map` / `gitignore-sync` write scripts to `.cjs` files (never
+  `node -e`) to avoid shell-escaping and ESM-project failures.
+- `install.sh` now auto-re-execs under `winpty` on Windows Git Bash/mintty (interactive prompts
+  hung after the first one because mintty gives no usable child console), and reads prompts from
+  `/dev/tty`. Plain `bash install.sh` now works without the `winpty` prefix.
+
+---
+
 ## [3.5.0] — 2026-07-04
 
 ### Added — Deterministic EXTRACTED graph edges (ADR 0041)

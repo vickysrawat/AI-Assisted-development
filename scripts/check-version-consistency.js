@@ -2,7 +2,7 @@
 // Version drift guard.
 //
 // `.claude-plugin/plugin.json` "version" is the SINGLE SOURCE OF TRUTH for the plugin
-// version. Runtime readers (dream-init, dream-sync, install.sh/.ps1) already read it live.
+// version. Runtime readers (setup-init, setup-sync, install.sh/.ps1) already read it live.
 // This guard checks the few STATIC display copies that must be derived from it, and fails
 // (exit 1) on any mismatch. Node-only — no Python needed. Run from the plugin root.
 //

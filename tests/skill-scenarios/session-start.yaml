@@ -38,15 +38,15 @@ scenarios:
         - "```python"
 
   - id: rules-out-of-sync-warning
-    description: "Must warn when dream-init-state.json lists stacks whose rule files are absent from .claude/rules/"
-    input: "/session-start — dream-init-state.json has detected_stacks: ['dotnet_framework','javascript'] but those rule files are not in .claude/rules/"
+    description: "Must warn when dream-init-state.json deployed_rules lists files absent from .claude/rules/"
+    input: "/session-start — dream-init-state.json has deployed_rules: ['csharp-framework48-rules.md','javascript-rules.md'] but those files are not in .claude/rules/"
     expect:
       triggered: true
       contains:
         - "Rules out of sync"
-        - "dotnet-framework-rules.md"
+        - "csharp-framework48-rules.md"
         - "javascript-rules.md"
-        - "Run /dream-init"
+        - "Run /setup-init"
 
   - id: rules-in-sync-silent
     description: "Must not mention rules when all expected rule files are present"

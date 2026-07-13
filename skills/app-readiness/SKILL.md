@@ -32,6 +32,18 @@ For higher-quality analysis on complex architectures:
 
 See `../shared/model-routing-spec.md`.
 
+## Persona
+
+Execute as **[EA] Grace Lin — Enterprise Architect** (20 yrs). Optimizes for go-live safety across
+all readiness domains; always asks "what happens at 3am when this fails?" Weigh [SA] Solution
+Architect concerns on structure. Reasons about this project's actual stack, deployment topology, and
+operational posture — never a fixed technology.
+
+The persona sets *what to scrutinize* — it never licenses assumption. Architecture docs, ADO pipeline
+state, and the codebase are the only sources of truth; a persona's "experience" is never evidence
+(subordinate to CLAUDE.md §3 / decision transparency). Never name the persona in any artifact. See
+`../shared/personas-spec.md`.
+
 ---
 
 ## Source file consent
@@ -98,15 +110,26 @@ Extract and hold:
 
 Also read `.claude/architecture/architecture.md` for tech stack context.
 
+Also read, if present, for richer scoring:
+- `.claude/architecture/architecture-security.md` — trust zones + authorization model → feeds
+  the security-posture scoring (documented authz model, sensitive-data handling).
+- The `## Non-Functional Requirements & Constraints` section of `architecture-deployment.md`
+  and `architecture-integrations.md` (resilience/failure behavior) → feed the Resilience (EA-2),
+  Observability (EA-3), and Scalability (EA-5) domains (performance baseline documented,
+  dependency failure handling, availability target). If NFR targets are unpopulated, score the
+  relevant domain no higher than 4 and note "NFR targets not captured".
+
 ---
 
 ## Step 2 — Load analysis references
 
+Read `.claude/plugin-path.txt` to get PLUGIN_DIR (if absent, resolve via
+`skills/shared/plugin-path-resolution.md §1a`), then:
 ```
-Read skills/app-readiness/references/ado-pipelines-api.md
-Read skills/shared/business-context-severity.md
-Read skills/shared/source-file-consent.md
-Read skills/shared/scope-flags-spec.md (spec v1.4)
+Read $PLUGIN_DIR/skills/app-readiness/references/ado-pipelines-api.md
+Read $PLUGIN_DIR/skills/shared/business-context-severity.md
+Read $PLUGIN_DIR/skills/shared/source-file-consent.md
+Read $PLUGIN_DIR/skills/shared/scope-flags-spec.md
 ```
 
 > This skill uses `--quick` and `--full` flag variants. These are skill-local

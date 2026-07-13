@@ -22,7 +22,7 @@ Both skills must implement these flags identically.
 | `--area config` | Only `*.json`, `*.yml`, `*.yaml`, `*.env`, `Dockerfile`, `*.tf` | (no git filter; file-type filter only) |
 | `--area <Name>` | Entry-point + key files for knowledge-graph module `<Name>` | (read `.claude/graph/graph-index.md`, then `.claude/graph/<module>.md`) |
 | `--continue` | Resume pending files from checkpoint | (read `.claude/{skill}-checkpoint.json`) |
-| (none) | Default: cache-aware full-project scan with 40-file budget cap | (all files, but skip cache-hits; auto-generate continuation commands if > 40) |
+| (none) | Default: cache-aware full-project scan (no file cap) | (all matching files, skipping cache-hits) |
 
 ### `--ci` flag behaviour
 
@@ -96,19 +96,13 @@ spec rather than writing their own `find` invocations.
 
 ---
 
-## File budget cap
+## No file budget cap
 
-All default scans enforce a **40-file-per-session budget cap** to prevent context exhaustion.
-
-When the candidate file count exceeds 40 and no `--area` or `--continue` flag is set:
-1. Sort candidate files by priority (auth → controllers → data → config → components → tests)
-2. Take the first 40 files
-3. Write a checkpoint with all files listed
-4. After scanning, output continuation sub-scan commands
-5. Developer runs sub-scans or `/skill --continue` for remaining files
-
-The `--area` and `--continue` flags are **not subject to the budget cap** — they are
-already targeted scans and can safely scan all files in their scope.
+Scans are **not** capped at a fixed file count. A default scan processes all candidate files
+that are not cache-hits; `--full`/`--ci` process all files ignoring the cache. Cache-awareness
+(skipping unchanged files) and the `--area` / `--changed` / `--pr` scoping flags are the
+mechanisms for keeping a scan tractable — not a hard per-session file limit. `--continue`
+remains available to resume a scan interrupted by a connection drop.
 
 ## Scope report format
 
@@ -174,7 +168,7 @@ If MISSING, emit and fall back to full scan:
 
 ```
 ⚠ --area requires the knowledge graph (.claude/graph/graph-index.md).
-  Run /dream-init (or /graph-sync) to generate it.
+  Run /setup-init (or /graph-sync) to generate it.
   Falling back to full scan.
 ```
 
@@ -205,8 +199,8 @@ DETAIL=$(grep -E "^\| *{Name} *\|" .claude/graph/graph-index.md 2>/dev/null | aw
 sed -n '/\*\*Key files\*\*/,/^\*\*/p' ".claude/$DETAIL" 2>/dev/null
 ```
 
-Use these files as the candidate list. The `--area` flag is not subject to the
-40-file budget cap.
+Use these files as the candidate list — a `--area` scan is already scoped to the
+module's key files.
 
 ---
 

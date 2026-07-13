@@ -1,10 +1,35 @@
 # CLAUDE.md — Project Intelligence File
 # Stack: <set per repo — e.g. ".NET 8+ / C# · Angular 17+ · Node.js · Azure DevOps">
-#        dream-init / architect populate this from the detected repo type.
+#        setup-init / architect populate this from the detected repo type.
 #        Supported backends: .NET Core · ASP.NET Framework 4.x · Java/Spring Boot · Python (FastAPI/Django/Flask) · Node.js
 #        Supported frontends: Angular · React. Tracking: Azure DevOps.
 # Last updated: keep this file updated when conventions change
-# Plugin version: 3.5.0 (update this line after dream-init or plugin upgrade)
+# Plugin version: 3.12.0
+
+---
+
+# Dream
+
+**Hard rule:** When a trigger below fires, write to the repo-root `memory/MEMORY.md` **in this
+response** — before replying to the next user message. Do not defer to a later turn.
+This is the repo-relative `memory/` folder at the project root (committed, dream-managed) —
+**never** the `~/.claude/projects/<slug>/memory/` profile directory. The memory-capture hook
+will prompt you at the start of each new turn, but write proactively without waiting for it.
+`memory/` is explicitly exempt from the Write Gate.
+
+Write an entry to the repo-root `memory/MEMORY.md` whenever one of these triggers fires:
+
+| Trigger               | What to capture                                      |
+|-----------------------|------------------------------------------------------|
+| Plan approved         | Approach agreed, tools chosen, constraints set       |
+| Task completed        | Pattern that worked, convention confirmed            |
+| Error resolved        | Error + root cause + fix + gotcha to avoid repeating |
+| Approach abandoned    | What failed, why, what not to retry                  |
+| Architecture decision | Decision + rationale + alternatives rejected         |
+
+Entry format, consolidation cadence (`/dream` every 5–8 sessions), the 20-entry promotion
+cap, topic-file demotion, and `/dream-health` are documented in
+`skills/shared/dream-reference.md`.
 
 ---
 
@@ -60,11 +85,11 @@ Recognised globally, no /command needed. ADO ID is case-insensitive (`ADO-1847`,
 
 ## 0b. Shell & Git Configuration
 
-- Use `{GIT_PATH}` for git and `{BASH_PATH}` as the shell. Run git/shell via the Bash tool
+- Use `C:\Program Files\Git\mingw64\bin\git.exe` for git and `C:\Program Files\Git\usr\bin\bash.exe` as the shell. Run git/shell via the Bash tool
   only — never `mcp__ide__executeCode` or Python subprocess.
 - Never rely on `HEAD` as a symbolic ref — resolve with `git rev-parse HEAD` first.
 
-> `{GIT_PATH}`/`{BASH_PATH}` are written by `/dream-init`; run `/dream-sync` if unresolved.
+> `C:\Program Files\Git\mingw64\bin\git.exe`/`C:\Program Files\Git\usr\bin\bash.exe` are written by `/setup-init`; run `/setup-sync` if unresolved.
 
 ---
 
@@ -85,9 +110,9 @@ Approved ICEAs are saved to `docs/Release{R}/Sprint{S}/UserStory{ID}/ADO-{ID}-{f
 
 - Organization  : {ADO_ORG}
 - Project       : {ADO_PROJECT}
-- Repository    : [set per project — update this line after dream-init]
+- Repository    : [set per project — update this line after setup-init]
 - ADO URL       : {ADO_URL}
-- PAT storage   : Windows env var `AZURE_DEVOPS_PAT` (recommended), or `.claude/settings.json` → env (only if gitignored)
+- PAT storage   : Windows env var `AZURE_DEVOPS_PAT` (recommended), or `.claude/settings.local.json` → env (gitignored). NEVER in `.claude/settings.json` (committed/shared) — a write-time + pre-commit guard blocks secrets there.
 - Target branch : dev
 - Branch naming : feature/ADO-[ID]-short-description
 - Commit format : [ADO-ID] Short description of change
@@ -133,21 +158,3 @@ If asked to implement something new and no approved ICEA exists: say so, run
 `/ai-assisted-development:icea-feature`, and do not proceed until `APPROVE ADO-{ID}`. This is
 output-gated — orientation, questions, and reading architecture docs are always permitted;
 only implementation-code generation is blocked. Override: `/skip-icea` (warns once; not recommended).
-
----
-
-# Dream
-
-Write an entry to `memory/MEMORY.md` whenever one of these triggers fires:
-
-| Trigger               | What to capture                                      |
-|-----------------------|------------------------------------------------------|
-| Plan approved         | Approach agreed, tools chosen, constraints set       |
-| Task completed        | Pattern that worked, convention confirmed            |
-| Error resolved        | Error + root cause + fix + gotcha to avoid repeating |
-| Approach abandoned    | What failed, why, what not to retry                  |
-| Architecture decision | Decision + rationale + alternatives rejected         |
-
-Entry format, consolidation cadence (`/dream` every 5–8 sessions), the 20-entry promotion
-cap, topic-file demotion, and `/dream-health` are documented in
-`skills/shared/dream-reference.md`.

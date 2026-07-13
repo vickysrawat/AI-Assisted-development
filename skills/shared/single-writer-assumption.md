@@ -1,5 +1,5 @@
 # Single-Writer Assumption
-_Spec version: 1.1 · Last changed: 2026-06-03 · Applies to: code-review, security, token-analysis, dream-init_
+_Spec version: 1.1 · Last changed: 2026-06-03 · Applies to: code-review, security, token-analysis, setup-init_
 
 
 Skills that write to persistent cache files in this plugin operate under a
@@ -10,10 +10,10 @@ cache file at a time.
 
 | File | Writer(s) | Readers |
 |---|---|---|
-| `.claude/file-cache.json` | code-review, security | code-review, security, dream-status |
-| `token-analysis/token-graph.json` | token-analysis | token-analysis, dream-status |
-| `.claude/graph/` (index + module files) | architect (full), graph-sync (incremental) | icea-feature, icea-review, code-review, security, dream-status |
-| `.claude/dream-init-state.json` | dream-init | dream-init (idempotency check on re-run) |
+| `.claude/file-cache.json` | code-review, security | code-review, security, setup-status |
+| `token-analysis/token-graph.json` | token-analysis | token-analysis, setup-status |
+| `.claude/graph/` (index + module files) | architect (full), graph-sync (incremental) | icea-feature, icea-review, code-review, security, setup-status |
+| `.claude/dream-init-state.json` | setup-init | setup-init (idempotency check on re-run) |
 | `security/security-ledger.md` | security | fix, checkin, pr-create |
 | `dynamic-scan/dynamic-scan-ledger.md` | dynamic-scan | fix, checkin, pr-create |
 | `skills/shared/business-context-severity.md` | maintainers only | security, code-review, icea-review, checkin, pr-spec-review |

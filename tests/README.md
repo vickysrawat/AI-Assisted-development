@@ -18,7 +18,7 @@ tests/
 │   ├── checkin.yaml              ← pre-commit gate
 │   ├── code-review.yaml          ← trigger + scope flags + cache miss
 │   ├── dream-rollback.yaml       ← no-log guard + confirmation gate
-│   ├── dream-status.yaml         ← infrastructure checks
+│   ├── setup-status.yaml         ← infrastructure checks
 │   ├── explain.yaml              ← architecture-only Q&A
 │   ├── fix.yaml                  ← ledger-based fix application
 │   ├── icea-feature.yaml         ← trigger + hard rules + skip-icea
@@ -94,7 +94,7 @@ python3 tests/validate.py
 ```
 
 Checks performed:
-- All 22 command stubs present in dream-status check 1d loop and dream-init
+- All 22 command stubs present in setup-status check 1d loop and setup-init
 - No duplicate step numbers in icea-feature Codebase Orientation
 - plugin-readiness check count matches table row count
 - architecture-deployment.md referenced in all required files

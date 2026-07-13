@@ -6,7 +6,7 @@ patterns, models find meaning — **where machines exist**. The plugin discovers
 what exists per machine, runs the best of it, and is structurally incapable of
 confusing "unscanned" with "clean".
 
-**Callers:** `code-review`, `architect` (probe), `dream-status` (check 1q)
+**Callers:** `code-review`, `architect` (probe), `setup-status` (check 1q)
 
 ---
 
@@ -124,7 +124,7 @@ Phase D coverage: .cs → SecurityCodeScan 5.6.7 ✓ · .config → webconfig-ch
                   .js → NONE (no node toolchain) → probabilistic-fallback
 ```
 "No deterministic findings" and "not deterministically scanned" must never be
-confusable. dream-status check 1q reports coverage health per detected stack.
+confusable. setup-status check 1q reports coverage health per detected stack.
 
 ## Hard rules
 

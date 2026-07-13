@@ -51,5 +51,5 @@ if (fs.existsSync(mkPath)) {
   console.log(`✓ marketplace.json name="${mk.name}"  description="${mktDesc}"`);
 }
 
-console.log("Config synced. (Runtime skills read org/project from CLAUDE.md §2, seeded by dream-init.)");
+console.log("Config synced. (Runtime skills read org/project from CLAUDE.md §2, seeded by setup-init.)");
 '

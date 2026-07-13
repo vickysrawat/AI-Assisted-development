@@ -1,5 +1,5 @@
 ---
-description: Security review — scans codebase for OWASP, CWE, and IaC vulnerabilities. Writes HTML report to security/ and updates security/security-ledger.md with FP-fingerprinted findings. Use /fix FP-xxxxxxxx to apply remediations. Supports --changed, --pr, --full, --ci scope flags.
+description: Security review — scans codebase for OWASP, CWE, and IaC vulnerabilities. Writes HTML report to security/ and updates security/security-ledger.md with FP-fingerprinted findings. Use /fix FP-xxxxxxxx to apply remediations. Flags: --pr (git diff, PR changes only), --changed (git diff, uncommitted changes), --full (entire working tree, no limit), --ci, --area, --continue.
 argument-hint: [--changed | --pr | --full | --ci]
 ---
 
@@ -66,7 +66,7 @@ When you reach **Step 0c** in the skill, run the `find .` command exactly as wri
 scanning from the project root, not from `src/`.
 When you reach **Step 0d** in the skill:
 - If SCOPE_FLAG is `--full` or `--ci` → skip the cache entirely, scan all files
-- If SCOPE_FLAG is `--changed` or `--pr` → use the git file list, skip cache
+- If SCOPE_FLAG is `--changed` or `--pr` → use the git diff file list, skip cache
 - If no flag → apply cache comparison as normal
 
 Do not re-implement scope logic here. Use what the skill defines.

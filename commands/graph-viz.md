@@ -25,7 +25,7 @@ The view: nodes grouped and coloured by **type**, edges styled by **type** and
 
 This is a read-only consumer of the graph — it never writes `graph.json`, the index, or
 detail files, and `graph.html` is gitignored — regenerate it on demand with `/graph-viz`
-(cheap: a deterministic template fill from `graph.json`, no re-analysis). If there is no graph yet, run `/dream-init`;
+(cheap: a deterministic template fill from `graph.json`, no re-analysis). If there is no graph yet, run `/setup-init`;
 if it is stale, run `/graph-sync` first.
 
 ---

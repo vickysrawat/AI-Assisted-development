@@ -32,7 +32,7 @@ console.log('  ✓ plugin.json');
 // 2. CLAUDE.md label — the only static copy derived from the version
 let claude = fs.readFileSync('CLAUDE.md', 'utf8');
 claude = claude.replace(/^# Plugin version:.*$/m,
-  `# Plugin version: ${NEW} (update this line after dream-init or plugin upgrade)`);
+  `# Plugin version: ${NEW} (update this line after setup-init or plugin upgrade)`);
 fs.writeFileSync('CLAUDE.md', claude);
 console.log('  ✓ CLAUDE.md label');
 

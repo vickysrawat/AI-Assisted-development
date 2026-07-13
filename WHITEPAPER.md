@@ -306,11 +306,11 @@ A structural audit found the plugin's own manifest had drifted from disk: eight 
 
 | Component | Count | Location |
 |---|---|---|
-| Commands | 36 | `commands/` (+ mirrored stubs in `skills/command-stubs/`) |
+| Commands | 36 | `commands/` (+ mirrored stubs in `_project-deploy/commands/`) |
 | Skills | 25 | `skills/<name>/SKILL.md` |
 | Shared specs | 15 | `skills/shared/` |
-| Stack rules | 8 | `rules/` |
-| Enforcement hooks | 4 | `hooks/` |
+| Stack rules | 8 | `_project-deploy/rules/` |
+| Enforcement hooks | 4 | `_project-deploy/hooks/` |
 | Architecture Decision Records | 38 | `docs/adr/` |
 | Enforcement hooks (tiers) | 3 | model instructions · local hooks · CI validators |
 | Finding ledgers | 3 | code-review · security · dynamic-scan |

@@ -30,6 +30,11 @@ project defaults below.
 - Auth: Azure AD Bearer tokens
 - Tracking: Azure DevOps (ADO) work items
 
+## Business context severity
+
+ICEA acceptance criteria carry B1–B7 sensitivity flags where relevant (immigration IDs,
+privileged matter data, vulnerable-client data). See `../shared/business-context-severity.md`.
+
 ## Invocation
 
 This skill is invoked explicitly by the developer via `/ai-assisted-development:icea-feature`
@@ -89,10 +94,23 @@ reading raw source files:
    Mark individual ACs that reference auth, environment config, hosting, or routing
    with `⚠ [deployment context missing]` inline so reviewers know which ACs are
    generic placeholders versus verified architecture decisions.
+3a. **Read the domain/security/NFR docs if present** (still architecture-doc only, no source):
+   - `.claude/architecture/architecture-data.md` — entities, relationships, and data ownership
+     for the area the feature touches; use it to write precise data-related ACs.
+   - `.claude/architecture/architecture-integrations.md` — external dependencies the feature
+     may call; reference failure/timeout behavior when drafting resilience ACs.
+   - `.claude/architecture/architecture-security.md` — the authorization model; when the feature
+     adds or changes an action, draft an explicit authz AC (which role/policy gates it).
+   - **NFR seeding:** read the `Non-Functional Requirements & Constraints` section of
+     `architecture-deployment.md`; seed `AC-NF*` criteria (performance/availability/compliance)
+     from the documented targets. If that section is unpopulated, mark seeded NF ACs with
+     `⚠ [NFR target not captured]` and note it in Context (mirror the deployment advisory).
+   - If `architecture-security.md` or `architecture-data.md` is absent, note in Context:
+     "⚠ Security/data model not captured — run `/update-arch --security` / `--data`."
 4. If none of the above exist, prompt the developer:
    ```
    ⚠ No architecture docs found.
-   Run /dream-init to generate them — this makes ICEA significantly more accurate.
+   Run /setup-init to generate them — this makes ICEA significantly more accurate.
    Continuing without codebase context…
    ```
 5. Do NOT scan `src/`, read controller files, or open any source file.
@@ -115,6 +133,9 @@ reading raw source files:
 ## Execution Steps
 
 ### Step 1 — Intercept, Classify, and Collect Identifiers
+
+> **Acting as:** [PO] Priya Nair — Product Owner (through Step 6). Weigh [TL] feasibility concerns.
+> See `../shared/personas-spec.md`.
 
 **Collect three identifiers.** If any are missing, ask in a single prompt:
 
@@ -212,6 +233,11 @@ Open Questions:
 Review above. Correct anything wrong, answer open questions, or:
   SAVE PLAN ADO-{ADO_ID}
 ```
+
+> **Note — two senses of "persona":** the `Personas:` field above describes the product's
+> **end-users** (customer personas — who the feature is for). This is distinct from the **Expert
+> Persona** the model is *acting as* to do this planning ([PO], per `../shared/personas-spec.md`).
+> Fill the field with end-users; never put the Expert Persona there.
 
 **⛔ STOP — plan gate. Do not continue. Do not draft the ICEA. Do not write any file.**
 Wait for the developer to reply. The only valid next actions are:
@@ -324,6 +350,22 @@ Populate from the plan automatically — never re-ask answered questions:
 Remaining gaps ([?]) should only be system-context items not answerable
 from the plan — change tier, specific components, auth policy, error messages.
 
+**⛔ CRITIC GATE — run before writing the ICEA draft to temp:**
+
+With the ICEA draft still in context (nothing written yet), run the critic:
+```
+Read .claude/plugin-path.txt to get PLUGIN_DIR (if absent, use §1a resolver), then
+Read $PLUGIN_DIR/skills/critic/SKILL.md and execute it with mode = icea, source = internal.
+```
+The critic evaluates conformance, completeness, testability, B1–B7 coverage,
+scope, and (when a D block exists) decision quality — Category C, no source files
+read. On a `REVISE` verdict, follow the critic's bounded auto-revise loop
+(regenerate the ICEA draft in context, re-critique, max 2 retries). Only on
+`PASS` / `PASS WITH NOTES` proceed to write the temp file; fold any residual
+notes into the `⚠ ICEA GAPS` list below so the developer sees them. If the loop
+surfaces after 2 retries, honour the developer's `ACCEPT AS-IS` / `GUIDE` / `HALT`
+choice before writing.
+
 Write the draft to the temp folder (TEMP_WRITE_EXEMPT — see below):
 ```bash
 mkdir -p temp
@@ -406,6 +448,10 @@ Drafting Tech Spec now...
 
 ### Step 8 — Draft Tech Spec to temp file
 
+> **Acting as:** [TL] Marcus Reid — Tech Lead (Steps 7–10, Tech Spec phase). Weigh [SE]
+> implementation concerns. Expertise = this project's actual stack per layer. See
+> `../shared/personas-spec.md`.
+
 **⛔ MECHANICAL GATE — run this check before any Tech Spec work begins:**
 
 ```bash
@@ -460,10 +506,11 @@ Select overlay based on detected stacks:
 | `python` | `techspec-python-fastapi.md` *(future)* |
 | `unknown` or unrecognised | Use base template only — tell developer no overlay available for their stack |
 
-Read both files:
+Read `.claude/plugin-path.txt` to get PLUGIN_DIR (if absent, use §1a resolver),
+then read both files:
 ```
-skills/icea-feature/references/techspec-base.md
-skills/icea-feature/references/techspec-{overlay}.md
+$PLUGIN_DIR/skills/icea-feature/references/techspec-base.md
+$PLUGIN_DIR/skills/icea-feature/references/techspec-{overlay}.md
 ```
 
 The base template defines the skeleton. The overlay replaces the
@@ -522,6 +569,25 @@ Child ADO numbers are recorded when you run IMPLEMENT ADO-{ID} Story-{N}.
 ```
 
 The Story Breakdown table in the ICEA is also updated with this information.
+
+**⛔ CRITIC GATE — run before writing the Tech Spec draft to temp:**
+
+With the Tech Spec draft still in context and the approved ICEA at `$ICEA_FILE`
+(resolved by the mechanical gate above) on disk, run the critic:
+```
+Read .claude/plugin-path.txt to get PLUGIN_DIR (if absent, use §1a resolver), then
+Read $PLUGIN_DIR/skills/critic/SKILL.md and execute it with mode = tech, source = internal.
+```
+The critic evaluates ICEA↔design traceability (every AC has a planned file; no
+planned file exceeds the ACs), D-option fidelity, AC-coverage-matrix
+completeness, test derivation, and structural conformance — Category C, no source
+files read. On a `REVISE` verdict, follow the critic's bounded auto-revise loop
+regenerating **the Tech Spec only** (the ICEA is saved and immutable here); max 2
+retries. If the critic reports the concern is an **ICEA fault** (a missing AC, a
+contradictory Intent), do not rewrite the Tech Spec around it — surface it and
+tell the developer to run `REVISE ADO-{ADO_ID}` then re-run `TECH ADO-{ADO_ID}`.
+Only on `PASS` / `PASS WITH NOTES` proceed to write the temp file; carry residual
+notes into the Step 9 review.
 
 Write the draft to the temp folder (TEMP_WRITE_EXEMPT — see below):
 ```bash
@@ -675,6 +741,25 @@ This skill is in the **generation tier** — it uses `ICEA_MODEL`
 To override: set `ICEA_MODEL` in `.claude/settings.json`.
 See `../shared/model-routing-spec.md` for full routing documentation.
 
+## Persona
+
+This skill spans two expert phases (per-step markers appear in the Execution Steps):
+
+- **Steps 1–6 (Plan + ICEA) — Acting as [PO] Priya Nair, Product Owner** (11 yrs B2B SaaS).
+  Optimizes for user value + ruthless scope discipline; always asks "what user outcome does this
+  unlock, and what are we deliberately NOT doing?" Weigh [TL] feasibility concerns.
+- **Steps 7–10 (Tech Spec) — Acting as [TL] Marcus Reid, Tech Lead** (14 yrs across web, service,
+  and data layers). Optimizes for buildability + consistency with the existing architecture; always
+  asks "what breaks at 10×, and does this fit how we already build?" Weigh [SE] implementation concerns.
+
+Technical expertise is **this project's actual stack** (per architecture.md / detected_stacks),
+across every layer present — never a fixed technology. The persona sets *what to scrutinize* — it
+never licenses assumption. The codebase, architecture docs, and the developer's answers are the only
+sources of truth; a persona's "experience" is never evidence (subordinate to CLAUDE.md §3 / decision
+transparency). Never name the persona in any artifact — note this is distinct from the customer
+`Personas:` field in the plan/ICEA, which describes the product's end-users. See
+`../shared/personas-spec.md`.
+
 ## Hard Rules
 
 - NEVER write any file before SAVE PLAN ADO-{ID} is received
@@ -701,6 +786,8 @@ See `../shared/model-routing-spec.md` for full routing documentation.
 - ALWAYS end every Step 9 response with: `Review the Tech Spec in VS Code preview. When ready: SAVE TECH ADO-{ADO_ID}`
 - ALWAYS run the Step 5 mechanical gate check before drafting any ICEA content
 - ALWAYS run the Step 8 mechanical gate check before drafting any Tech Spec content
+- ALWAYS run the Step 5 critic gate (mode = icea) before writing the ICEA draft to temp — never write temp on a REVISE verdict
+- ALWAYS run the Step 8 critic gate (mode = tech) before writing the Tech Spec draft to temp — regenerate the Tech Spec only; route ICEA faults to REVISE ADO-{ID}
 - ALWAYS use mkdir -p before cp when writing permanent files
 - ALWAYS rewrite temp file after each iterative change so VS Code preview auto-refreshes
 - ALWAYS confirm each change with one line in chat: `✅ Updated — {section}. Refresh preview.`

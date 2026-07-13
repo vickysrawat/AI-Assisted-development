@@ -21,7 +21,7 @@ node "$SCRIPT_DIR/bump-version.js" "$NEW_VER"
 
 # 5. Re-sync deployed hooks so the floor never lags the plugin (ADR 0009).
 if [ -d .claude/hooks ]; then
-  cp hooks/*.sh hooks/*.py .claude/hooks/ 2>/dev/null || true
+  cp _project-deploy/hooks/*.sh _project-deploy/hooks/*.py .claude/hooks/ 2>/dev/null || true
   chmod +x .claude/hooks/*.sh .claude/hooks/*.py 2>/dev/null || true
   sha256sum .claude/hooks/* 2>/dev/null | grep -v ".hashes" > .claude/hooks/.hashes || true
   [ -f .git/hooks/pre-commit ] && cp .claude/hooks/findings-gate-precommit.sh .git/hooks/pre-commit

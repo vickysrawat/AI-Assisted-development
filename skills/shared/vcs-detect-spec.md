@@ -1,6 +1,6 @@
 # VCS Detection Spec
 _Spec version: 1.0 · Created: 2026-06-12_
-_Used by: gitignore-sync, dream-init, dream-status_
+_Used by: gitignore-sync, setup-init, setup-status_
 
 ---
 
@@ -76,8 +76,8 @@ Notes for the skill author running this:
 
 Both files carry the **same set of paths** — only the filename and the per-line
 syntax differ. The canonical managed-entry list lives with its consumer, in
-`dream-status` SKILL.md section 1i (the `for entry in …` array), which enumerates
-all 13 protected paths; the writer skills (`gitignore-sync`, `dream-init`) emit
+`setup-status` SKILL.md section 1i (the `for entry in …` array), which enumerates
+all 13 protected paths; the writer skills (`gitignore-sync`, `setup-init`) emit
 exactly that set. Keeping the list in one consuming skill rather than duplicating
 it here keeps this spec tool-agnostic and avoids three copies drifting apart.
 
@@ -109,13 +109,15 @@ For **TFVC**, transform each non-comment, non-blank managed line:
 
 ## The already-tracked credential file (TFVC only)
 
-`.tfignore` only blocks **new** adds. If the credential file (the plugin
-project-settings file) is already under source control, adding it to `.tfignore`
+`.tfignore` only blocks **new** adds. If the credential file
+(`.claude/settings.local.json` — where secrets and machine-specific permissions live;
+`.claude/settings.json` is intentionally committed and secret-free) is already under
+source control, adding it to `.tfignore`
 does nothing — it stays tracked and the PAT stays exposed. So on TFVC, after writing
 the managed block, the consuming skill must check whether that file is already
 tracked (`tf vc status <credential-file>` returns non-empty) and, if so, instruct
 removal rather than claiming protection. The concrete file path and the
-`SETTINGS_TRACKED` signal live in `dream-status` section 1i, where the rest of the
+`SETTINGS_TRACKED` signal live in `setup-status` section 1i, where the rest of the
 tool-specific wiring sits.
 
 Remediation when the credential file is tracked: `tf vc delete --keep-local <file>`

@@ -1,5 +1,10 @@
 # Skill: icea-approve
 
+_Skill version: 1.0 · Last changed: 2026-07-07 · Consent: C_
+
+> **Business context severity:** approves ICEAs whose acceptance criteria carry B1–B7
+> sensitivity flags — see `../shared/business-context-severity.md`.
+
 ## Purpose
 Approve an ICEA and Tech Spec by ADO ID. Works in any session, including
 after a session gap. State is read entirely from disk — no conversation
@@ -9,6 +14,13 @@ Triggered by:
 - `/icea-approve ADO-1847`
 - `APPROVE ADO-1847`
 - `APPROVE ADO-1847 Story-2`
+
+---
+
+## Persona
+Acts with a **[TL] Tech Lead** lens — confirm the ICEA/Tech Spec are genuinely ready before
+approving; always asks "is this actually complete and sound?" Lens only; never assume, never
+attribute in output. See `../shared/personas-spec.md`.
 
 ---
 

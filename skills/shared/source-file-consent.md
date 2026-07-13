@@ -57,9 +57,9 @@ Some skills must never read source files regardless of consent:
 | Skill | Hard rule |
 |---|---|
 | `session-start` | Architecture docs and memory only — never source |
-| `dream-status` | File system checks only — never source content |
+| `setup-status` | File system checks only — never source content |
 | `dream` | Session history only — never source |
-| `critic` (internal, or `icea` mode) | In-context artefact + ICEA + architecture docs only — never reads source from disk |
+| `critic` (internal `icea`/`tech`/`code`, or standalone `icea`) | In-context artefact + ICEA + architecture docs only — never reads source from disk |
 
 ---
 
@@ -193,12 +193,17 @@ those live in the command reference table below.
 | `sprint-metrics` | C | Reads ADO API only — never reads source files |
 | `token-analysis` | C | Reads session history and graph cache only — never reads source |
 | `dream-rollback` | C | Reads and writes memory files only — never reads source |
-| `dream-status` | C | File system checks only — never reads source content |
+| `setup-status` | C | File system checks only — never reads source content |
 | `app-readiness` | B | Bulk gate before targeted readiness reads |
 | `plugin-readiness` | C | Plugin state files only — never reads application source |
-| `critic` | C(internal,icea)\|A(code-standalone) | Internal & ICEA-mode read in-context artefact only (C); standalone code mode announces scope before reading changed files (A) |
+| `critic` | C(internal: icea/tech/code)\|A(code-standalone) | Internal `icea`/`tech`/`code` and standalone `icea` read the in-context artefact + ICEA + architecture docs only (C); standalone code mode announces scope before reading changed files (A) |
 | `dynamic-scan` | A(scan)\|B(finding-map) | Live scan is implicit-consent (A); mapping a finding back to a source file uses the per-file gate (B) |
 | `external-dir-map` | C | Reads manifest files (package.json, .csproj, pom.xml etc.) only — never reads application source |
+| `icea-approve` | C | Reads ICEA/Tech Spec + state from disk only — never reads application source |
+| `icea-implement` | B | Gate before reading codebase files to match patterns during implementation |
+| `icea-revise` | C | Reads existing ICEA/Tech Spec docs only — never reads application source |
+| `icea-status` | C | Reads ICEA state and tracker only — never reads application source |
+| `setup-sync` | C | Reads plugin state and runs the bootstrap script only — never reads application source |
 
 ### Command reference (informational — not validator-checked)
 

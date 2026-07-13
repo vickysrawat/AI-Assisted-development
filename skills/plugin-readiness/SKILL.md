@@ -24,6 +24,17 @@ This skill is in the **infrastructure tier** — uses `INFRA_MODEL`
 
 See `../shared/model-routing-spec.md`.
 
+## Persona
+
+Execute as **[AIA] Theo Brandt — AI Architect** (agent/LLM systems). Optimizes for reliable, governed
+AI tooling; always asks "is this deterministic where it must be, and governed where it can't be?"
+Reasons about model routing, governance rails, memory health, skill quality, and token budget.
+
+The persona sets *what to scrutinize* — it never licenses assumption. Plugin state files
+(plugin.json, .claude/, ledgers, memory) are the only sources of truth; a persona's "experience" is
+never evidence (subordinate to CLAUDE.md §3 / decision transparency). Never name the persona in any
+artifact. See `../shared/personas-spec.md`.
+
 ---
 
 ## Source file consent
@@ -51,10 +62,19 @@ Run all of these. Record the output — it drives every domain score.
 
 ```bash
 echo "=== Plugin version ==="
-python3 -c "import json; p=json.load(open('.claude-plugin/plugin.json')); print('VERSION:', p['version']); print('MODELS:', json.dumps(p.get('recommended_models',{}), indent=2))" 2>/dev/null
+node <<'JSEOF'
+const fs=require('fs'), os=require('os'), path=require('path');
+function pluginJson(){
+  const base=path.join(os.homedir(),'.claude','plugins');
+  try{const reg=JSON.parse(fs.readFileSync(path.join(base,'installed_plugins.json'),'utf8'));const key=Object.keys(reg.plugins||{}).find(k=>k.startsWith('ai-assisted-development@'));if(key){const a=reg.plugins[key]||[];const e=a.find(x=>x.scope==='user')||a[0];if(e&&e.installPath)return JSON.parse(fs.readFileSync(path.join(e.installPath,'.claude-plugin','plugin.json'),'utf8'));}}catch(e){}
+  try{for(const m of fs.readdirSync(base)){const p=path.join(base,m,'plugins','ai-assisted-development','.claude-plugin','plugin.json');if(fs.existsSync(p))return JSON.parse(fs.readFileSync(p,'utf8'));}}catch(e){}
+  return null;
+}
+try{const p=pluginJson();if(!p){console.log('VERSION: unknown');process.exit(0);}console.log('VERSION:',p.version);console.log('MODELS:',JSON.stringify(p.recommended_models||{},null,2));}catch(e){console.log('VERSION: unknown');}
+JSEOF
 
-echo "=== dream-status checks ==="
-# Check each of the 17 dream-status items directly
+echo "=== setup-status checks ==="
+# Check each of the 17 setup-status items directly
 ls CLAUDE.md memory/MEMORY.md memory/dream-log.md 2>/dev/null
 ls .claude/rules/ .claude/commands/ .claude/architecture/ 2>/dev/null
 ls .claude/graph/graph-index.md .claude/file-cache.json 2>/dev/null
@@ -99,16 +119,15 @@ ls memory/topic-*.md 2>/dev/null | wc -l
 tail -20 memory/dream-log.md 2>/dev/null
 
 echo "=== Model overrides ==="
-python3 -c "
-import json
-try:
-    s = json.load(open('.claude/settings.json'))
-    env = s.get('env', {})
-    print('ICEA_MODEL:', env.get('ICEA_MODEL','not set (default)'))
-    print('REVIEW_MODEL:', env.get('REVIEW_MODEL','not set (default)'))
-    print('INFRA_MODEL:', env.get('INFRA_MODEL','not set (default)'))
-except: print('NO_SETTINGS_FILE')
-" 2>/dev/null
+node <<'JSEOF'
+try{
+  const s=JSON.parse(require('fs').readFileSync('.claude/settings.json','utf8'));
+  const env=s.env||{};
+  console.log('ICEA_MODEL:',   env.ICEA_MODEL   || 'not set (default)');
+  console.log('REVIEW_MODEL:', env.REVIEW_MODEL || 'not set (default)');
+  console.log('INFRA_MODEL:',  env.INFRA_MODEL  || 'not set (default)');
+}catch(e){ console.log('NO_SETTINGS_FILE'); }
+JSEOF
 
 echo "=== ICEA governance ==="
 ls docs/icea/ 2>/dev/null | head -10
@@ -130,17 +149,15 @@ for f in ".claude/settings.json" ".claude/settings.local.json" ".claude/security
 done
 
 echo "=== Token analysis ==="
-python3 -c "
-import json
-try:
-    g = json.load(open('token-analysis/token-graph.json'))
-    sessions = g.get('sessions', {})
-    print('SESSIONS_CACHED:', len(sessions))
-    # Check for context limit hits
-    hits = [s for s in sessions.values() if s.get('tokens', 0) > 85000]
-    print('CONTEXT_LIMIT_HITS:', len(hits))
-except: print('NO_GRAPH')
-" 2>/dev/null
+node <<'JSEOF'
+try{
+  const g=JSON.parse(require('fs').readFileSync('token-analysis/token-graph.json','utf8'));
+  const sessions=g.sessions||{};
+  console.log('SESSIONS_CACHED:', Object.keys(sessions).length);
+  const hits=Object.values(sessions).filter(s=>(s.tokens||0)>85000);
+  console.log('CONTEXT_LIMIT_HITS:', hits.length);
+}catch(e){ console.log('NO_GRAPH'); }
+JSEOF
 
 echo "=== Last dream run ==="
 grep "^### dream —\|^## dream —" memory/dream-log.md 2>/dev/null | tail -3
@@ -162,7 +179,7 @@ find docs/icea/ -name "*.md" -newer memory/MEMORY.md 2>/dev/null | wc -l
 
 ### AI-1: Plugin infrastructure health
 
-Evaluate the 17 dream-status checks from the evidence collected in Step 1.
+Evaluate the 17 setup-status checks from the evidence collected in Step 1.
 
 | Check | Evidence | Score signal |
 |---|---|---|
@@ -179,19 +196,19 @@ Evaluate the 17 dream-status checks from the evidence collected in Step 1.
 | Model versions reviewed | last_reviewed within cadence | Required |
 | architecture-deployment.md present | File exists at `.claude/architecture/architecture-deployment.md` | Required for prod |
 | architecture-deployment.md answered | `grep -c "Not yet answered"` returns 0 | Required for prod |
-| dream-init plugin version | `dream_init_plugin_version` in state matches current `plugin.json` version | Good signal |
+| setup-init plugin version | `dream_init_plugin_version` in state matches current `plugin.json` version | Good signal |
 
 If `RULES_MISSING` is emitted instead of `RULES_IN_SYNC`, mark the rules check
 ❌ Red and include in the report:
 ```
 ❌ .claude/rules/ out of sync — missing: {file list}
-   Cause: plugin was updated after dream-init last ran.
-   Fix  : run /dream-init to deploy the missing rule files.
+   Cause: plugin was updated after setup-init last ran.
+   Fix  : run /setup-init to deploy the missing rule files.
 ```
 
 If `RULES_STATE_UNREADABLE` is emitted (no dream-init-state.json or no
 `detected_stacks` key), mark as ⚠ Yellow — project may not have run
-`dream-init` with v1.20.4 or later.
+`setup-init` with v1.20.4 or later.
 
 Score 1: 4 or more ❌ Red checks.
 Score 2: 2–3 ❌ Red checks.
@@ -283,8 +300,8 @@ grep -l "source-file-consent\|Category A\|Category B" \
   commands/code-review.md \
   commands/security-review.md 2>/dev/null | wc -l
 
-echo "=== Budget cap in scope ==="
-grep -c "FILE_BUDGET\|40 file\|budget cap" \
+echo "=== Cache-aware scanning + scope flags ==="
+grep -c "file-cache.json\|--area\|--changed" \
   skills/security/SKILL.md \
   skills/code-review/SKILL.md 2>/dev/null
 ```
@@ -292,16 +309,16 @@ grep -c "FILE_BUDGET\|40 file\|budget cap" \
 | Check | Required for production |
 |---|---|
 | graph-index-schema.md + graph-module-schema.md (per-module fingerprint) | ✓ |
-| scope-flags-spec.md v1.2 (--area, budget cap) | ✓ |
+| scope-flags-spec.md (--area, --continue, cache-aware) | ✓ |
 | source-file-consent.md present | ✓ |
 | business-context-severity.md B1–B7 complete | ✓ |
 | All review skills reference consent spec | ✓ |
-| Budget cap in security and code-review | ✓ |
+| Cache-aware scanning in security and code-review | ✓ |
 
 Score 1: Shared specs missing or pre-v1.6 versions.
 Score 2: Some specs present but consent governance not wired into review skills.
 Score 3: All shared specs present at correct versions. Consent in all review skills.
-Score 4: Score 3 + budget cap enforced. --area and --continue flags working.
+Score 4: Score 3 + cache-aware scanning working; --area and --continue flags working.
 Score 5: Score 4 + all 169 structural validator checks passing.
 
 ---
@@ -314,12 +331,12 @@ Evidence: token-graph context limit hits, scope flag usage.
 |---|---|
 | No sessions hitting context limit | token-graph shows 0 sessions > 85K tokens |
 | --area flags in use for large codebases | Evidence from recent security/code-review scope reports |
-| File budget cap configured | scope-flags-spec.md v1.2 |
+| Cache-aware scanning + --area scoping available | scope-flags-spec.md |
 | Security SKILL.md slimmed (< 700 lines) | Context cost reduced |
 
 Score 1: 3+ sessions hit context limit. No mitigations in place.
 Score 2: Context limit hit at least once. --area flags not yet in use.
-Score 3: Budget cap configured. --area flags available. No recent context limit hits.
+Score 3: Cache-aware scanning + --area flags available. No recent context limit hits.
 Score 4: Score 3 + token-analysis shows consistent session sizes well under limit.
 Score 5: Score 4 + --area workflow adopted by all developers, session budget monitored.
 
@@ -339,7 +356,7 @@ handles B1–B7 data → that is a blocking finding.
 
 | Verdict | Condition |
 |---|---|
-| ✅ **Plugin ready** | All 6 domains ≥ 3 AND the enforcement floor is installed and current (dream-status check 1p green) or formally declined with a recorded opt-out. |
+| ✅ **Plugin ready** | All 6 domains ≥ 3 AND the enforcement floor is installed and current (setup-status check 1p green) or formally declined with a recorded opt-out. |
 | ⚠️ **Conditionally ready** | AI-1 and AI-4 ≥ 3. AI-2, AI-3, AI-5, AI-6 may be at 2. |
 | 🔶 **Not ready** | AI-1 (Infrastructure) or AI-4 (Governance) < 3, OR the enforcement floor is absent without a recorded opt-out (check 1p red). |
 | 🔴 **Blocked** | Any domain at 1, OR security scan never run on a B1–B7 application. |
@@ -361,7 +378,7 @@ mkdir -p prod-readiness
 
 Report structure:
 1. **Executive summary** — overall verdict, score grid (6 domains RAG), top 3 actions
-2. **Infrastructure status** — the 17 dream-status checks summarised
+2. **Infrastructure status** — the 17 setup-status checks summarised
 3. **Domain findings** — each domain with score, evidence, gaps, specific fixes
 4. **Remediation roadmap** — Before go-live / Within 30 days / Next sprint
 5. **Strengths** — what is working well

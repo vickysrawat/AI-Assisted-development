@@ -1,0 +1,25 @@
+skill: icea-revise
+scenarios:
+  - id: revise-existing-icea
+    description: "Should revise an existing ICEA/Tech Spec from disk, not start from scratch"
+    input: "REVISE ADO-1847"
+    expect:
+      triggered: true
+      contains:
+        - "ADO-1847"
+
+  - id: re-gate-after-revision
+    description: "Should re-block the code-generation gate until re-approved"
+    input: "Revise the ICEA for ADO-1847 with the new open-question answers"
+    expect:
+      triggered: true
+      contains:
+        - "approve"
+
+  - id: never-from-scratch
+    description: "Should redirect to icea-feature when no existing document is found"
+    input: "Revise ADO-9999 (no ICEA exists yet)"
+    expect:
+      triggered: true
+      contains:
+        - "icea-feature"

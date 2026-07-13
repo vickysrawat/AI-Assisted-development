@@ -14,7 +14,7 @@ This command uses the **infrastructure tier** — `INFRA_MODEL`
 
 A single-purpose command that guarantees the repo's **ignore file exists and
 contains the plugin-required entries** — `.gitignore` on Git, `.tfignore` on TFVC
-(TFS). This is the same logic `dream-init` runs, extracted so it can be invoked
+(TFS). This is the same logic `setup-init` runs, extracted so it can be invoked
 directly and cannot be skipped inside a longer setup flow.
 
 It is safe to run any time: it **creates the ignore file if missing**, writes plugin
@@ -33,20 +33,22 @@ entries inside a **managed block**, and **never removes or reorders your own lin
 **Execute this now — do not describe it.** It resolves which ignore file is
 authoritative for this repo.
 
-```
-!node -e "
+Write the script below to `.claude/_gi-vcs.cjs`, run `node .claude/_gi-vcs.cjs`,
+capture the `VCS=` and `IGNORE_FILE=` lines, then delete `.claude/_gi-vcs.cjs`.
+
+```javascript
+// Written to .claude/_gi-vcs.cjs and executed as: node .claude/_gi-vcs.cjs
 const { execSync } = require('child_process');
 const fs = require('fs');
 function gitTree(){ try { execSync('git rev-parse --is-inside-work-tree', {stdio:'ignore'}); return true; } catch { return false; } }
 function tfvc(){
   try { execSync('tf vc status .', {stdio:'ignore'}); return true; } catch {}
-  if (fs.existsSync('\$tf') || fs.existsSync('.tf') || fs.existsSync('.tfignore')) return true;
+  if (fs.existsSync('$tf') || fs.existsSync('.tf') || fs.existsSync('.tfignore')) return true;
   return false;
 }
 let vcs = gitTree() ? 'git' : (tfvc() ? 'tfvc' : 'none');
 console.log('VCS=' + vcs);
 console.log('IGNORE_FILE=' + (vcs === 'tfvc' ? '.tfignore' : '.gitignore'));
-"
 ```
 
 Carry the `VCS` and `IGNORE_FILE` values into Step 1. `none` falls back to
@@ -57,27 +59,26 @@ the repo's VCS.
 
 ## Step 1 — Write the plugin entries (always)
 
-**Execute this command now — do not describe it.** It creates the ignore file if
-missing and idempotently (re)writes the managed block, in the syntax the detected
-VCS requires (Git: forward slashes, trailing slash on dirs; TFVC: backslashes, no
-trailing slash). Matching is whole-line exact (trimmed), never substring, so an
-existing `.claude/` line never masks `.claude/settings.json`.
+Write the script below to `.claude/_gi-write.cjs`, then run
+`node .claude/_gi-write.cjs git` (substitute the actual VCS value from Step 0 —
+`git` or `tfvc`). Capture the output, then delete `.claude/_gi-write.cjs`.
 
-Pass the detected VCS as an argument — substitute the `VCS=` value from Step 0:
-
-```
-!node -e "
+```javascript
+// Written to .claude/_gi-write.cjs and executed as: node .claude/_gi-write.cjs <vcs>
 const fs = require('fs');
-const VCS = process.argv[1] || 'git';                 // <- pass Step 0 VCS here
+const VCS = process.argv[2] || 'git';
 const F = VCS === 'tfvc' ? '.tfignore' : '.gitignore';
-const BASE = ['.claude/settings.json','.claude/settings.local.json','.claude/security-checkpoint.json','.claude/code-review-checkpoint.json','.claude/file-cache.json','.claude/dream-init-state.json','.claude/architecture/','memory/health.html','CodeReviews/','security/','dynamic-scan/','token-analysis/','prod-readiness/','temp/']; 
+// SYNC WITH: scripts/setup-init-bootstrap.cjs GITIGNORE_BASE — must be identical.
+// settings.json is NOT ignored (committed/shared, secret-free). Each `dir/*` entry MUST
+// precede its `!dir/<ledger>` re-include — git cannot re-include a file under an ignored dir.
+const BASE = ['.claude/settings.local.json','.claude/security-checkpoint.json','.claude/code-review-checkpoint.json','.claude/file-cache.json','.claude/dream-init-state.json','memory/health.html','CodeReviews/*','!CodeReviews/code-review-ledger.md','security/*','!security/security-ledger.md','dynamic-scan/*','!dynamic-scan/dynamic-scan-ledger.md','token-analysis/','prod-readiness/','temp/','.claude/plugin-path.txt'];
 // TFVC syntax: backslash separators, no trailing slash on directories.
-const ENTRIES = VCS === 'tfvc' ? BASE.map(e => e.replace(/\//g,'\\\\').replace(/\\\\\$/,'')) : BASE;
+const ENTRIES = VCS === 'tfvc' ? BASE.map(e => e.replace(/\//g,'\\').replace(/\\$/,'')) : BASE;
 const BEGIN = '# === ai-assisted-development (managed) ===';
 const END   = '# === end ai-assisted-development ===';
 let txt = fs.existsSync(F) ? fs.readFileSync(F,'utf8') : '';
 const created = !fs.existsSync(F);
-const reBlock = new RegExp('\\n?' + BEGIN.replace(/[.*+?^&{}()|[\\]\\\\]/g,'\\\\\$&') + '[\\s\\S]*?' + END.replace(/[.*+?^&{}()|[\\]\\\\]/g,'\\\\\$&') + '\\n?', 'g');
+const reBlock = new RegExp('\\n?' + BEGIN.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '[\\s\\S]*?' + END.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\n?', 'g');
 txt = txt.replace(reBlock, '\n');
 const outside = new Set(txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean));
 const blockEntries = ENTRIES.filter(e => !outside.has(e));
@@ -92,29 +93,31 @@ fs.writeFileSync(F, txt);
 console.log((created ? 'CREATED ' : 'UPDATED ') + F + ' (VCS=' + VCS + ')');
 console.log('WROTE=' + JSON.stringify(wrote));
 console.log('ALREADY_PRESENT=' + JSON.stringify(ENTRIES.filter(e=>!wrote.includes(e))));
-" "{VCS from Step 0}"
 ```
 
 ### Step 1b — TFVC only: check for an already-tracked credential file
 
 `.tfignore` only blocks **new** adds. If the credential file is already under TFVC
 control, the ignore entry does nothing — it stays tracked and the PAT stays exposed.
-When `VCS=tfvc`, run:
+The credential file is `.claude/settings.local.json` (secrets/permissions live there;
+`.claude/settings.json` is intentionally committed and secret-free). When `VCS=tfvc`, run:
 
-```
-!node -e "
+Write the script below to `.claude/_gi-tfvc.cjs`, run `node .claude/_gi-tfvc.cjs`,
+capture the output, then delete `.claude/_gi-tfvc.cjs`.
+
+```javascript
+// Written to .claude/_gi-tfvc.cjs and executed as: node .claude/_gi-tfvc.cjs
 const { execSync } = require('child_process');
 const fs = require('fs');
-if (!fs.existsSync('.claude/settings.json')) { console.log('NO_CREDENTIAL_FILE'); process.exit(0); }
+if (!fs.existsSync('.claude/settings.local.json')) { console.log('NO_CREDENTIAL_FILE'); process.exit(0); }
 let out = '';
-try { out = execSync('tf vc status .claude/settings.json', {encoding:'utf8'}); } catch {}
-if (out.trim()) console.log('SETTINGS_TRACKED — run: tf vc delete --keep-local .claude/settings.json  then check in the deletion');
+try { out = execSync('tf vc status .claude/settings.local.json', {encoding:'utf8'}); } catch {}
+if (out.trim()) console.log('SETTINGS_TRACKED — run: tf vc delete --keep-local .claude/settings.local.json  then check in the deletion');
 else console.log('SETTINGS_NOT_TRACKED — ignore entry is sufficient');
-"
 ```
 
 If `SETTINGS_TRACKED`, tell the developer plainly: the entry alone will not protect
-it — they must `tf vc delete --keep-local .claude/settings.json` and check in the
+it — they must `tf vc delete --keep-local .claude/settings.local.json` and check in the
 deletion, and ideally move the PAT to a Windows User Environment Variable (Option A).
 
 ---
@@ -145,19 +148,22 @@ are project-specific, not plugin-managed).
 Confirm the result from disk — never report success from intent. Pass the same
 `VCS` value from Step 0 so it verifies the right file in the right syntax.
 
-```
-!node -e "
-const fs=require('fs');
-const VCS = process.argv[1] || 'git';
+Write the script below to `.claude/_gi-verify.cjs`, run
+`node .claude/_gi-verify.cjs git` (substitute the actual VCS value from Step 0),
+capture the output, then delete `.claude/_gi-verify.cjs`.
+
+```javascript
+// Written to .claude/_gi-verify.cjs and executed as: node .claude/_gi-verify.cjs <vcs>
+const fs = require('fs');
+const VCS = process.argv[2] || 'git';
 const F = VCS === 'tfvc' ? '.tfignore' : '.gitignore';
-const BASE=['.claude/settings.json','.claude/settings.local.json','.claude/security-checkpoint.json','.claude/code-review-checkpoint.json','.claude/file-cache.json','.claude/dream-init-state.json','.claude/architecture/','memory/health.html','CodeReviews/','security/','dynamic-scan/','token-analysis/','prod-readiness/','temp/']; 
-const ENTRIES = VCS === 'tfvc' ? BASE.map(e => e.replace(/\//g,'\\\\').replace(/\\\\\$/,'')) : BASE;
-if(!fs.existsSync(F)){ console.log('VERIFY_FAIL: ' + F + ' does not exist'); process.exit(1); }
-const lines=new Set(fs.readFileSync(F,'utf8').split(/\r?\n/).map(l=>l.trim()));
-const missing=ENTRIES.filter(e=>!lines.has(e));
-if(missing.length){ console.log('VERIFY_FAIL missing='+JSON.stringify(missing)); process.exit(1); }
+const BASE = ['.claude/settings.local.json','.claude/security-checkpoint.json','.claude/code-review-checkpoint.json','.claude/file-cache.json','.claude/dream-init-state.json','memory/health.html','CodeReviews/*','!CodeReviews/code-review-ledger.md','security/*','!security/security-ledger.md','dynamic-scan/*','!dynamic-scan/dynamic-scan-ledger.md','token-analysis/','prod-readiness/','temp/','.claude/plugin-path.txt'];
+const ENTRIES = VCS === 'tfvc' ? BASE.map(e => e.replace(/\//g,'\\').replace(/\\$/,'')) : BASE;
+if (!fs.existsSync(F)) { console.log('VERIFY_FAIL: ' + F + ' does not exist'); process.exit(1); }
+const lines = new Set(fs.readFileSync(F,'utf8').split(/\r?\n/).map(l=>l.trim()));
+const missing = ENTRIES.filter(e=>!lines.has(e));
+if (missing.length) { console.log('VERIFY_FAIL missing='+JSON.stringify(missing)); process.exit(1); }
 console.log('VERIFY_OK: all '+ENTRIES.length+' plugin entries present in ' + F);
-" "{VCS from Step 0}"
 ```
 
 On `VERIFY_OK`, confirm:
@@ -175,7 +181,10 @@ On `VERIFY_FAIL`, do not claim success — re-run Step 1 and verify again.
 
 - ALWAYS run Step 0 first and branch on the detected VCS — writing `.gitignore` on
   a TFVC repo is the silent-failure this command exists to prevent.
-- ALWAYS execute the Step 1 command — never describe the write declaratively.
+- ALWAYS write each script to a `.cjs` file and run it — NEVER use `node -e "..."`.
+  Shell double-quote processing mangles backslash sequences in regexes, causing
+  `SyntaxError: Invalid regular expression` and `Unterminated group` failures.
+- ALWAYS execute the Step 1 script — never describe the write declaratively.
 - NEVER remove or reorder existing ignore-file lines — the plugin set lives only
   inside the managed block; everything else is the developer's.
 - On TFVC, ALWAYS run Step 1b — an ignore entry does not protect an already-tracked

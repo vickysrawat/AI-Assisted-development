@@ -16,7 +16,7 @@ scenarios:
     expect:
       triggered: true
       contains:
-        - "dream-init"
+        - "setup-init"
 
   - id: read-only-over-graph
     description: "Never writes graph.json / index / detail files, never reads application source"

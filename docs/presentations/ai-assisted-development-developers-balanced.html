@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ai-assisted-development · Developer Deep-Dive (Balanced)</title>
+<style>
+:root{
+  --navy:#1a3a5c; --navy-2:#2c5f8a; --gold:#c8a951;
+  --green:#00b894; --amber:#fdcb6e; --red:#e17055; --info:#5b9dff; --purple:#c792ea;
+  --bg:#f8f9fa; --card:#ffffff; --ink:#2d3436; --muted:#636e72; --line:#dfe6e9;
+  --mono:'Cascadia Code','SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+  --sans:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--sans);color:var(--ink);background:#0b1622;overflow:hidden}
+.deck{position:fixed;inset:0}
+.slide{position:absolute;inset:0;display:none;flex-direction:column;padding:4.6vh 5.5vw 5.6vh;background:var(--bg);animation:fade .4s ease;overflow:hidden}
+.slide.active{display:flex}
+@keyframes fade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.progress{position:fixed;top:0;left:0;height:5px;background:linear-gradient(90deg,var(--gold),#e6cd86);z-index:50;transition:width .3s}
+.counter{position:fixed;bottom:16px;right:22px;z-index:50;font-size:.78rem;color:var(--muted);font-variant-numeric:tabular-nums;background:rgba(255,255,255,.7);padding:4px 10px;border-radius:20px}
+.hint{position:fixed;bottom:16px;left:22px;z-index:50;font-size:.7rem;color:var(--muted);opacity:.7}
+.hint kbd{background:#fff;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:1px 6px;font-family:var(--mono);font-size:.66rem}
+h1{font-size:2.9rem;line-height:1.08;color:var(--navy);font-weight:800;letter-spacing:-.5px}
+h2{font-size:1.9rem;color:var(--navy);font-weight:800;letter-spacing:-.3px}
+h3{font-size:1.12rem;color:var(--navy);font-weight:700}
+p{font-size:1rem;line-height:1.5;color:var(--ink)}
+.lead{font-size:1.18rem;color:var(--muted);line-height:1.5}
+.eyebrow{text-transform:uppercase;letter-spacing:2.5px;font-size:.78rem;font-weight:700;color:var(--gold)}
+.muted{color:var(--muted)} strong{color:var(--navy)}
+code{font-family:var(--mono);background:#eef2f5;color:var(--navy);padding:2px 6px;border-radius:5px;font-size:.85em}
+.slide-head{display:flex;align-items:center;gap:12px;margin-bottom:2vh;flex:0 0 auto}
+.slide-head .dot{width:11px;height:11px;border-radius:3px;background:var(--gold)}
+.slide-head h2{font-size:1.55rem}
+.slide-head .tagr{margin-left:auto;font-size:.72rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);border:1px solid var(--line);padding:3px 10px;border-radius:20px}
+.body{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;justify-content:center}
+.title-slide{background:linear-gradient(135deg,var(--navy),var(--navy-2) 70%,#20486e);justify-content:center;color:#fff}
+.title-slide h1{color:#fff;font-size:3.3rem;max-width:20ch}
+.title-slide .lead{color:#cdd9e6;max-width:58ch;margin-top:16px}
+.badges{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px}
+.badge{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);color:#eaf1f8;padding:7px 15px;border-radius:30px;font-size:.88rem;font-weight:600}
+.badge b{color:var(--gold)}
+.presenter{margin-top:24px;color:#cdd9e6;font-size:1rem;letter-spacing:.3px}
+.title-foot{position:absolute;bottom:5.5vh;left:5.5vw;right:5.5vw;display:flex;justify-content:space-between;align-items:flex-end;color:#9db2c7;font-size:.88rem}
+.title-foot .v{color:var(--gold);font-weight:700;font-family:var(--mono)}
+.divider{background:linear-gradient(135deg,var(--navy),#12283d);justify-content:center;color:#fff}
+.divider .num{font-family:var(--mono);font-size:5.5rem;color:rgba(200,169,81,.28);font-weight:800;line-height:1}
+.divider h2{color:#fff;font-size:2.6rem;max-width:24ch;margin-top:6px}
+.divider p{color:#b7c6d6;font-size:1.1rem;margin-top:12px;max-width:54ch}
+.grid{display:grid;gap:14px}
+.grid.c2{grid-template-columns:1fr 1fr}.grid.c3{grid-template-columns:repeat(3,1fr)}.grid.c4{grid-template-columns:repeat(4,1fr)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:16px 18px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.card .ico{font-size:1.4rem;margin-bottom:6px}
+.card h3{margin-bottom:5px}
+.card p{font-size:.88rem;color:var(--muted);line-height:1.45}
+.card.accent{border-top:4px solid var(--gold)}
+.checklist{list-style:none;display:flex;flex-direction:column;gap:10px}
+.checklist li{display:flex;gap:11px;align-items:flex-start;font-size:.98rem;line-height:1.4}
+.checklist li::before{content:"";flex:0 0 auto;width:21px;height:21px;border-radius:6px;background:rgba(0,184,148,.14);margin-top:1px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%2300b894' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:34px;align-items:center;height:100%}
+.narr{display:flex;flex-direction:column;gap:14px}
+.narr .nb{border-left:4px solid var(--line);padding-left:14px}
+.narr .nb .h{font-size:.72rem;text-transform:uppercase;letter-spacing:1px;font-weight:800;margin-bottom:3px}
+.narr .nb p{font-size:.98rem;line-height:1.45}
+.narr .nb.p{border-color:var(--red)} .narr .nb.p .h{color:var(--red)}
+.narr .nb.d{border-color:var(--green)} .narr .nb.d .h{color:var(--green)}
+.narr .nb.l{border-color:var(--info)} .narr .nb.l .h{color:var(--info)}
+.narr .rej{font-size:.83rem;color:var(--muted);margin-top:5px}
+.dwrap{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;box-shadow:0 2px 10px rgba(0,0,0,.05);display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center}
+.flowv{display:flex;flex-direction:column;gap:8px;align-items:center}
+.gbar{width:100%;background:#e9ecef;border-radius:6px;height:28px;overflow:hidden}
+.gbar>span{display:flex;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--gold),#e6cd86);color:#1a2b17;font-weight:800;font-size:.78rem;align-items:center;justify-content:center;white-space:nowrap}
+.mini{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:.86rem;text-align:center;min-width:120px}
+.mini.bad{border-color:var(--red);color:var(--red);background:rgba(225,112,85,.06)}
+.mini.good{border-color:var(--green);color:var(--green);background:rgba(0,184,148,.06)}
+.mini b{color:var(--navy)}
+.quote{max-width:64ch}
+.quote .mark{font-size:4.4rem;color:var(--gold);line-height:.6;font-family:Georgia,serif}
+.quote blockquote{font-size:1.6rem;line-height:1.3;color:var(--navy);font-weight:700;margin:6px 0 14px}
+.quote cite{color:var(--muted);font-style:normal;font-size:.9rem}
+/* diagrams — light boxes/arrows */
+.dgm{display:flex;flex-direction:column;gap:9px}
+.layer{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 16px;display:flex;align-items:center;gap:16px}
+.layer .lname{font-weight:800;color:var(--navy);width:210px;flex:0 0 auto;font-size:.98rem}
+.layer .ldesc{color:var(--muted);font-size:.86rem}
+.layer.l0{border-left:5px solid var(--info)}.layer.l1{border-left:5px solid var(--green)}
+.layer.l2{border-left:5px solid var(--gold)}.layer.l3{border-left:5px solid var(--purple)}
+.layer.out{border-left:5px solid var(--muted);background:#eef2f5}
+.dwn{text-align:center;color:var(--gold);font-weight:800;font-size:1.1rem;line-height:.6}
+.flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center}
+.node{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.04);min-width:96px}
+.node .nt{font-weight:700;color:var(--navy);font-size:.92rem}
+.node .ns{font-size:.72rem;color:var(--muted);font-family:var(--mono);margin-top:2px}
+.node.hi{border-color:var(--gold);border-width:2px}
+.node.dk{background:#0f1720;border-color:#22303f}.node.dk .nt{color:#e6e6e6}.node.dk .ns{color:#7d8ea0}
+.arr{color:var(--gold);font-weight:800;font-size:1.3rem}
+/* ladder */
+.ladder{display:flex;flex-direction:column;gap:10px;max-width:820px;margin:0 auto}
+.rung{display:flex;align-items:center;gap:16px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:13px 18px}
+.rung .tier{font-family:var(--mono);font-weight:800;color:#fff;background:var(--navy);border-radius:8px;padding:6px 12px;flex:0 0 auto}
+.rung .rt{font-weight:700;color:var(--navy)}
+.rung .rd{color:var(--muted);font-size:.86rem}
+.rung.a{border-left:5px solid var(--amber)}.rung.b{border-left:5px solid var(--info)}.rung.c{border-left:5px solid var(--green)}
+/* story card */
+.story{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.qbox{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:13px 16px}
+.qbox .qh{font-size:.72rem;text-transform:uppercase;letter-spacing:1px;font-weight:800;margin-bottom:6px}
+.qbox p{font-size:.92rem;line-height:1.45}
+.qbox.problem{border-left:4px solid var(--red)} .qbox.problem .qh{color:var(--red)}
+.qbox.decision{border-left:4px solid var(--green)} .qbox.decision .qh{color:var(--green)}
+.qbox.rejected{border-left:4px solid var(--amber)} .qbox.rejected .qh{color:#b3861f}
+.qbox.lesson{border-left:4px solid var(--info)} .qbox.lesson .qh{color:var(--info)}
+.adrtag{display:inline-block;font-family:var(--mono);font-size:.78rem;font-weight:700;color:var(--gold);background:rgba(200,169,81,.12);border:1px solid var(--gold);padding:2px 10px;border-radius:20px;margin-left:8px}
+/* timeline */
+.tl{display:flex;flex-direction:column;gap:9px;overflow:auto}
+.tlrow{display:flex;gap:14px;align-items:flex-start}
+.tlrow .ver{font-family:var(--mono);font-weight:800;color:#fff;background:var(--navy);border-radius:6px;padding:4px 10px;flex:0 0 84px;text-align:center;font-size:.82rem}
+.tlrow .tc{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 13px;flex:1}
+.tlrow .tc b{color:var(--navy)}
+.tlrow .tc span{color:var(--muted);font-size:.86rem}
+/* demo */
+.demo{background:linear-gradient(135deg,#12283d,#1a3a5c);color:#fff;border-radius:13px;padding:22px 26px;border-left:6px solid var(--gold)}
+.demo .tag{display:inline-flex;align-items:center;gap:8px;background:var(--gold);color:#1a2b17;font-weight:800;padding:5px 13px;border-radius:20px;font-size:.78rem;letter-spacing:.5px}
+.demo h3{color:#fff;font-size:1.35rem;margin:11px 0 6px}
+.demo ol{margin:7px 0 0 20px;color:#d3e0ec}.demo ol li{margin:5px 0;line-height:1.4;font-size:.95rem}
+.demo .expect{margin-top:11px;font-size:.86rem;color:var(--gold)}
+.term{background:#0f1720;border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.25);overflow:hidden;font-family:var(--mono);font-size:.85rem}
+.term-bar{background:#1b2733;padding:8px 13px;display:flex;align-items:center;gap:7px}
+.term-bar .b{width:10px;height:10px;border-radius:50%}
+.term-bar .b.r{background:#ff5f56}.term-bar .b.y{background:#ffbd2e}.term-bar .b.g{background:#27c93f}
+.term-bar .ttl{margin-left:10px;color:#7d8ea0;font-size:.76rem}
+.term-body{padding:14px 16px;color:#d6e0ea;line-height:1.55}
+.term-body .cmd{color:#7fd1de}.term-body .ok{color:#3ecf8e}.term-body .warn{color:var(--amber)}.term-body .err{color:#ff7a7a}.term-body .dim{color:#6d7f92}.term-body .gold{color:var(--gold)}
+.term-body .box{border:1px solid #2a3b4d;border-radius:6px;padding:9px 11px;margin:8px 0;background:#0b131c}
+table.cmp{width:100%;border-collapse:collapse;background:var(--card);border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);font-size:.9rem}
+table.cmp th{background:var(--navy);color:#fff;text-align:left;padding:11px 14px;font-size:.78rem;text-transform:uppercase;letter-spacing:.5px}
+table.cmp td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+table.cmp tr:last-child td{border-bottom:none}
+.pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.pill.crit{background:rgba(214,48,49,.12);color:#d63031;border:1px solid #d63031}
+.pill.b2{background:rgba(200,169,81,.16);color:#9a7d1e;border:1px solid var(--gold)}
+.pill.ok{background:rgba(0,184,148,.12);color:var(--green);border:1px solid var(--green)}
+.barrow{display:flex;align-items:center;gap:14px;margin:10px 0}
+.barrow .name{flex:0 0 220px;font-size:.9rem}
+.barwrap{flex:1;background:#e9ecef;border-radius:6px;height:26px;overflow:hidden}
+.bar{height:100%;border-radius:6px;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;color:#fff;font-weight:700;font-size:.8rem}
+.bar.full{background:linear-gradient(90deg,#e17055,#eb8a72)}.bar.lean{background:linear-gradient(90deg,var(--green),#2fd3ac)}
+.graphwrap{background:#0f1115;border-radius:12px;padding:8px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:9px;font-size:.78rem;color:var(--muted)}
+.legend .k{display:inline-flex;align-items:center;gap:6px}
+.legend .sw{width:11px;height:11px;border-radius:3px;display:inline-block}
+.flowsteps{display:flex;align-items:center;gap:7px;justify-content:center;flex-wrap:wrap;font-family:var(--mono);font-size:.88rem}
+.flowsteps .step{background:#fff;border:1px solid var(--line);padding:8px 13px;border-radius:8px;color:var(--navy)}
+.flowsteps .step.key{background:var(--gold);color:#1a2b17;font-weight:800;border-color:var(--gold)}
+.palette{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+.palcol{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:13px 15px}
+.palcol h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.6px;color:var(--gold);border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:8px}
+.palcol code{display:inline-block;background:transparent;color:var(--ink);padding:1px 5px 1px 0;font-size:.76rem}
+.close-slide{background:linear-gradient(135deg,var(--navy),#12283d);color:#fff;justify-content:center}
+.close-slide h1{color:#fff}.close-slide .lead{color:#cdd9e6}
+.close-slide .takeaways{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:28px;max-width:1000px}
+.close-slide .tk{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:15px}
+.close-slide .tk .n{color:var(--gold);font-weight:800;font-family:var(--mono)}
+.close-slide .tk p{color:#dce6f0;font-size:.86rem;margin-top:5px}
+.notes-panel{position:fixed;left:0;right:0;bottom:0;max-height:40vh;overflow:auto;background:#12283d;color:#dbe6f0;border-top:3px solid var(--gold);padding:16px 24px;z-index:60;display:none;box-shadow:0 -8px 24px rgba(0,0,0,.3)}
+.notes-panel.show{display:block}
+.notes-panel h4{color:var(--gold);font-size:.78rem;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:7px}
+.notes-panel p{color:#c6d4e2;font-size:.92rem;line-height:1.5}
+.overview{position:fixed;inset:0;background:rgba(8,16,26,.97);z-index:70;display:none;padding:4vh 4vw;overflow:auto}
+.overview.show{display:block}
+.overview h3{color:#fff;margin-bottom:16px}
+.ov-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.ov-item{background:#16283b;border:1px solid #2a3f56;border-radius:8px;padding:10px;cursor:pointer;transition:.15s}
+.ov-item:hover{border-color:var(--gold);transform:translateY(-2px)}
+.ov-item .oi-n{font-family:var(--mono);color:var(--gold);font-size:.72rem}
+.ov-item .oi-t{font-weight:700;color:#fff;font-size:.8rem;margin-top:3px}
+@media print{.slide{display:flex!important;position:relative;page-break-after:always;height:100vh}.progress,.counter,.hint,.notes-panel,.overview{display:none!important}}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+
+<!-- 1 TITLE -->
+<section class="slide title-slide active" data-title="Title"
+ data-notes="Welcome to the 1-hour developer deep-dive, balanced edition. This is for engineers who'll actually use the plugin and want to understand how it works, why it's built the way it is, and how to drive it day to day. We balance three things: architecture, the decisions behind it, and live demos. Press S for notes, O for the map. Pace: ~1.6 min/slide, ~6 demos.">
+  <div class="eyebrow">Developer Deep-Dive · 60 min · Balanced</div>
+  <h1>Under the hood, and why it's built that way.</h1>
+  <p class="lead">A working developer's tour of <strong style="color:#fff">ai-assisted-development</strong> — the architecture, the decisions behind it, and the daily workflow.</p>
+  <div class="badges">
+    <div class="badge"><b>v3.6.0</b></div>
+    <div class="badge"><b>36</b> commands · <b>25</b> skills</div>
+    <div class="badge"><b>20</b> shared specs · <b>45</b> ADRs</div>
+    <div class="badge">~6 live demos 🎬</div>
+  </div>
+  <div class="presenter">Presented by <strong style="color:#fff">Vivek Rawat</strong> &nbsp;·&nbsp; July 7, 2026</div>
+  <div class="title-foot"><div>Audience: <strong style="color:#eaf1f8">Developers — balanced deep-dive</strong></div><div>Plugin version <span class="v">3.6.0</span></div></div>
+</section>
+
+<!-- 2 AGENDA -->
+<section class="slide" data-title="Agenda"
+ data-notes="The hour has four acts. First, why it exists — the three lessons that shaped it. Then the architecture: layered stack, graph, ledgers, memory, cost. Then the decision stories — the interesting 'why we chose X over Y'. Then the workflow you'll live in, plus setup. Demos are sprinkled throughout, marked with a clapperboard. We finish with a daily-loop cheat sheet and Q&A.">
+  <div class="slide-head"><span class="dot"></span><h2>The hour, in four acts</h2></div>
+  <div class="body">
+    <div class="grid c4">
+      <div class="card accent"><div class="ico">🎯</div><h3>1 · Why it exists</h3><p>Three lessons that shaped the whole design.</p></div>
+      <div class="card accent"><div class="ico">🏗️</div><h3>2 · Architecture</h3><p>Layers, graph, ledgers, memory, cost — with demos.</p></div>
+      <div class="card accent"><div class="ico">🧠</div><h3>3 · Decisions</h3><p>Why we chose X over Y — the ADR stories.</p></div>
+      <div class="card accent"><div class="ico">⚙️</div><h3>4 · Workflow</h3><p>The daily loop, commands, setup, evolution.</p></div>
+    </div>
+    <p class="muted" style="text-align:center;margin-top:16px">🎬 ~6 live demos · press <kbd style="font-family:var(--mono)">S</kbd> for speaker notes at any time.</p>
+  </div>
+</section>
+
+<!-- 3 WHY / 3 LESSONS -->
+<section class="slide" data-title="Why it exists"
+ data-notes="The plugin is the product of continuous iteration driven by three architectural lessons. One: stateless skills are expensive — the original re-scanned all 50 files daily even when 2 changed. Two: orientation documents beat source reads — read a graph generated once, in milliseconds, not the source on every call. Three: governance must be explicit and auditable — informal conventions drift, so consent categories, business severity, and a validator exist. These three ideas explain almost every design choice we'll see.">
+  <div class="slide-head"><span class="dot"></span><h2>Three lessons behind every decision</h2></div>
+  <div class="body">
+    <div class="grid c3">
+      <div class="card"><div class="ico">💸</div><h3>Stateless skills are expensive</h3><p>Code review re-scanned all 50 files daily even when 2 changed. Shared infrastructure fixed it.</p></div>
+      <div class="card"><div class="ico">🗺️</div><h3>Orientation beats source reads</h3><p>Read a graph generated once, in ms — not the source, on every invocation.</p></div>
+      <div class="card"><div class="ico">⚖️</div><h3>Governance must be auditable</h3><p>Consent categories, business severity, a validator — because informal conventions drift.</p></div>
+    </div>
+    <div class="quote" style="margin:24px auto 0;text-align:center;max-width:72ch">
+      <blockquote style="font-size:1.35rem">The shared primitives layer reduced daily review token cost by <span style="color:var(--gold)">80–95%</span> after the first baseline run.</blockquote>
+      <cite>— README · How this plugin evolved</cite>
+    </div>
+  </div>
+</section>
+
+<!-- 4 DIVIDER: ARCHITECTURE -->
+<section class="slide divider" data-title="Act 2 — Architecture"
+ data-notes="Now the architecture. We'll go layer by layer, then follow the data through the graph, the ledgers, and memory — with a demo at each stop.">
+  <div class="num">02</div>
+  <h2>Architecture &amp; internals</h2>
+  <p>How the pieces fit — and how data flows between them.</p>
+</section>
+
+<!-- 5 LAYERED STACK (diagram 1) -->
+<section class="slide" data-title="Layered stack"
+ data-notes="The component model. You invoke a command (thin stub). It routes to a skill. Skills never reinvent behavior — they delegate to the shared-specs layer, the single source of truth. Rules auto-load per file type on edits. Hooks enforce a deterministic floor around all of it. And everything produces artifacts under .claude/ and memory/. The key idea: commands and skills are thin; the shared layer is where the real logic lives, defined once.">
+  <div class="slide-head"><span class="dot"></span><h2>The layered stack</h2><span class="tagr">Diagram 1 of 7</span></div>
+  <div class="body">
+    <div class="dgm">
+      <div class="layer l0"><span class="lname">commands/ (36)</span><span class="ldesc">Thin entry points — <code>/icea-feature</code>, <code>/checkin</code> … route to a skill.</span></div>
+      <div class="dwn">▼</div>
+      <div class="layer l1"><span class="lname">skills/ (25)</span><span class="ldesc">The behavior. Read orientation + shared specs; never reinvent logic.</span></div>
+      <div class="dwn">▼</div>
+      <div class="layer l2"><span class="lname">skills/shared/ (20)</span><span class="ldesc">Single source of truth — cache, scope flags, model routing, severity, gates.</span></div>
+      <div class="dwn">▼</div>
+      <div class="layer l3"><span class="lname">rules/ (40+)</span><span class="ldesc">Auto-load per file type on edits — enforce stack conventions.</span></div>
+      <div class="dwn">▼</div>
+      <div class="layer out"><span class="lname">hooks + .claude/ + memory/</span><span class="ldesc">Deterministic enforcement floor · generated artifacts · persistent memory.</span></div>
+    </div>
+    <p class="muted" style="text-align:center;margin-top:14px">Commands &amp; skills stay thin; the <strong>shared layer</strong> holds the real logic — defined once (ADR 0003).</p>
+  </div>
+</section>
+
+<!-- 6 SHARED PRIMITIVES -->
+<section class="slide" data-title="Shared primitives"
+ data-notes="A tour of the shared layer — 20 specs, the ones you'll feel most. file-cache skips unchanged files. graph specs define the orientation layer. scope-flags standardize --changed/--pr/--full/--ci. model-routing tiers models. source-file-consent declares which skills read source and why. business-context-severity is the B1-B7 escalation. findings-gate and write-gate are the mechanical gates. The rule: once two or more skills need the same behavior, it moves here and callers delegate verbatim — no local copies.">
+  <div class="slide-head"><span class="dot"></span><h2>The shared layer you'll feel daily</h2></div>
+  <div class="body">
+    <div class="grid c4">
+      <div class="card"><h3>file-cache</h3><p>Per-file checksum; skip unchanged files across scans.</p></div>
+      <div class="card"><h3>graph-json / index / module</h3><p>The orientation layer's schemas.</p></div>
+      <div class="card"><h3>scope-flags</h3><p><code>--changed --pr --full --ci --area</code>.</p></div>
+      <div class="card"><h3>model-routing</h3><p>Generation / review / infra tiers.</p></div>
+      <div class="card"><h3>source-file-consent</h3><p>A/B/C — who reads source, and why.</p></div>
+      <div class="card"><h3>business-context-severity</h3><p>B1–B7 escalation triggers.</p></div>
+      <div class="card"><h3>findings-gate / write-gate</h3><p>The mechanical gates.</p></div>
+      <div class="card"><h3>dismissed-reconciliation</h3><p>Rule 5 — re-open on code change.</p></div>
+    </div>
+    <p class="muted" style="text-align:center;margin-top:14px">Promotion rule: used by <strong>2+ skills → moves here</strong>; callers delegate verbatim (no local copies).</p>
+  </div>
+</section>
+
+<!-- 7 KNOWLEDGE GRAPH PIPELINE (diagram 3) -->
+<section class="slide" data-title="Graph pipeline"
+ data-notes="The knowledge-graph pipeline. Source files feed a deterministic script — graph-extract-edges.js — which parses imports/usings/requires to produce EXTRACTED edges with certainty. That writes graph.json, the authoritative structure: typed nodes, typed edges with confidence. From graph.json we project the always-loaded index and per-module detail files. A git hook sets a .stale flag when entry points change; graph-sync regenerates only stale modules. graph-viz renders it offline. The point for devs: orientation is committed, queryable, and cheap.">
+  <div class="slide-head"><span class="dot"></span><h2>Knowledge-graph pipeline</h2><span class="tagr">Diagram 3 of 7</span></div>
+  <div class="body">
+    <div class="flow" style="margin-bottom:16px">
+      <div class="node"><div class="nt">source</div><div class="ns">*.cs *.ts *.py</div></div>
+      <span class="arr">→</span>
+      <div class="node hi"><div class="nt">extract-edges.js</div><div class="ns">deterministic</div></div>
+      <span class="arr">→</span>
+      <div class="node hi"><div class="nt">graph.json</div><div class="ns">authoritative</div></div>
+      <span class="arr">→</span>
+      <div class="node"><div class="nt">index + module .md</div><div class="ns">projection</div></div>
+      <span class="arr">→</span>
+      <div class="node"><div class="nt">graph.html</div><div class="ns">/graph-viz</div></div>
+    </div>
+    <div class="grid c3">
+      <div class="card"><h3>Typed &amp; confident</h3><p>Nodes + edges carry type &amp; confidence: <code>EXTRACTED</code> / <code>INFERRED</code> / <code>AMBIGUOUS</code>.</p></div>
+      <div class="card"><h3>Deterministic edges</h3><p>Imports parsed by script — reproducible, no model, source never enters context (ADR 0041).</p></div>
+      <div class="card"><h3>Staleness</h3><p>Git hook sets <code>.stale</code>; <code>/graph-sync</code> regenerates only changed modules.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 8 DEMO graph-viz -->
+<section class="slide" data-title="🎬 Demo · graph-viz"
+ data-notes="Demo 1. Open .claude/graph/graph.html or run /graph-viz. Hover nodes to light up dependents; gold ring = hub (refactor hotspot), red = stale. Emphasize it's reading graph.json only, never source, and works offline at file://. Fallback: narrate the mockup.">
+  <div class="split">
+    <div>
+      <div class="demo" style="margin-bottom:14px">
+        <div class="tag">🎬 DEMO 1</div>
+        <h3>graph-viz</h3>
+        <ol><li><code style="color:var(--gold);background:transparent">/graph-viz</code> → hover for dependents.</li><li>Gold ring = hub · red = stale.</li><li>Reads <code style="color:var(--gold);background:transparent">graph.json</code> only, offline.</li></ol>
+      </div>
+      <p class="muted" style="font-size:.9rem">Committed &amp; PR-reviewed like source — the whole team shares one map.</p>
+    </div>
+    <div>
+      <div class="graphwrap">
+        <svg viewBox="0 0 420 280" width="100%" height="250">
+          <line x1="210" y1="140" x2="110" y2="66" stroke="#5b6472" stroke-width="1.5"/>
+          <line x1="210" y1="140" x2="330" y2="66" stroke="#5b6472" stroke-width="1.5"/>
+          <line x1="210" y1="140" x2="90" y2="220" stroke="#5b6472" stroke-width="1.5"/>
+          <line x1="210" y1="140" x2="330" y2="222" stroke="#5b6472" stroke-width="1.5"/>
+          <line x1="110" y1="66" x2="330" y2="66" stroke="#5b6472" stroke-width="1" stroke-dasharray="4 3"/>
+          <circle cx="210" cy="140" r="26" fill="#5b9dff" stroke="#ffd15c" stroke-width="3"/><text x="210" y="144" text-anchor="middle" fill="#0f1115" font-size="10" font-weight="700" font-family="sans-serif">Orders</text>
+          <circle cx="110" cy="66" r="17" fill="#3ecf8e" stroke="#0f1115" stroke-width="2"/><text x="110" y="70" text-anchor="middle" fill="#0f1115" font-size="8" font-family="sans-serif">Repo</text>
+          <circle cx="330" cy="66" r="17" fill="#c792ea" stroke="#0f1115" stroke-width="2"/><text x="330" y="70" text-anchor="middle" fill="#0f1115" font-size="8" font-family="sans-serif">UI</text>
+          <circle cx="90" cy="220" r="17" fill="#f0a35e" stroke="#0f1115" stroke-width="2"/><text x="90" y="224" text-anchor="middle" fill="#0f1115" font-size="8" font-family="sans-serif">DB</text>
+          <circle cx="330" cy="222" r="17" fill="#ff6b8a" stroke="#ff5c5c" stroke-width="3"/><text x="330" y="226" text-anchor="middle" fill="#0f1115" font-size="8" font-family="sans-serif">API</text>
+        </svg>
+      </div>
+      <div class="legend">
+        <span class="k"><span class="sw" style="background:#5b9dff"></span>service</span>
+        <span class="k"><span class="sw" style="background:#3ecf8e"></span>repo</span>
+        <span class="k"><span class="sw" style="background:#c792ea"></span>ui</span>
+        <span class="k"><span class="sw" style="border:2px solid #ffd15c;background:transparent"></span>hub</span>
+        <span class="k"><span class="sw" style="border:2px solid #ff5c5c;background:transparent"></span>stale</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 9 LEDGER FLOW (diagram 4) -->
+<section class="slide" data-title="Findings/ledger flow"
+ data-notes="The findings data flow. Three scanners — code-review, security-review, dynamic-scan — write FP-fingerprinted findings to three ledgers. Fingerprints are computed from file+location+type+pattern, so a finding survives line moves. checkin's Check D and pr-create read the ledgers via the shared findings-gate. fix applies a remediation; dismiss suppresses with justification. Rule 5 reconciliation: a dismissed finding re-opens automatically if the file changes after dismissal. Nothing is silently forgotten.">
+  <div class="slide-head"><span class="dot"></span><h2>Findings &amp; ledger flow</h2><span class="tagr">Diagram 4 of 7</span></div>
+  <div class="body">
+    <div class="flow" style="margin-bottom:14px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div class="node"><div class="nt">code-review</div></div>
+        <div class="node"><div class="nt">security-review</div></div>
+        <div class="node"><div class="nt">dynamic-scan</div></div>
+      </div>
+      <span class="arr">→</span>
+      <div class="node hi"><div class="nt">FP-fingerprinted ledgers</div><div class="ns">Open/Fixed/Dismissed/Regression</div></div>
+      <span class="arr">→</span>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div class="node"><div class="nt">/checkin · /pr-create</div><div class="ns">findings-gate</div></div>
+        <div class="node"><div class="nt">/fix · /dismiss</div></div>
+      </div>
+    </div>
+    <div class="grid c3">
+      <div class="card"><h3>Fingerprints survive moves</h3><p>file + location + type + pattern → stable <code>FP-xxxxxxxx</code>.</p></div>
+      <div class="card"><h3>Rule 5 reconciliation</h3><p>Dismissed finding re-opens if the file changes after dismissal.</p></div>
+      <div class="card"><h3>Baseline never gates</h3><p>First run is a baseline; boy-scout on files you touch.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 10 DEMO checkin B2 -->
+<section class="slide" data-title="🎬 Demo · checkin + B2"
+ data-notes="Demo 2 — the wow moment. Stage a change that logs a client A-Number and run /checkin. Check D fails: a Low technical finding is escalated to Critical by the B2 immigration-identifier trigger, blocking the commit. Business context raises severity, never lowers it. Then /fix remediates. This makes governance tangible.">
+  <div class="split">
+    <div class="demo">
+      <div class="tag">🎬 DEMO 2</div>
+      <h3>checkin blocks a B2 finding</h3>
+      <ol><li>Stage a change that logs a client A-Number.</li><li><code style="color:var(--gold);background:transparent">/checkin</code> → Check D <strong style="color:#fff">fails</strong>.</li><li>Low → <strong style="color:#fff">Critical</strong> via B2.</li><li><code style="color:var(--gold);background:transparent">/fix FP-4c17ee02</code>.</li></ol>
+      <div class="expect">Business context raises severity — never lowers it.</div>
+    </div>
+    <div class="term">
+      <div class="term-bar"><span class="b r"></span><span class="b y"></span><span class="b g"></span><span class="ttl">/checkin</span></div>
+      <div class="term-body">
+        <div><span class="cmd">&gt;</span> /checkin</div>
+        <div class="ok">✓ A · Code quality — clean</div>
+        <div class="ok">✓ B · ICEA compliance — covered</div>
+        <div class="ok">✓ C · Secrets — clean</div>
+        <div class="err">✗ D · Findings gate — 1 open Critical</div>
+        <div class="box"><span class="err">FP-4c17ee02</span> CaseLogger.cs:42<br><span class="dim">   Logs client A-Number · </span><span class="gold">B2 → Critical</span></div>
+        <div class="dim">commit blocked — run /fix FP-4c17ee02</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 11 DEMO security/fix -->
+<section class="slide" data-title="🎬 Demo · security & fix"
+ data-notes="Demo 3. Run /security-review --changed (SAST) or /dynamic-scan against a local URL (DAST via ZAP). Findings land FP-fingerprinted in the ledger. /fix applies a source patch and marks Fixed; /dismiss suppresses a false positive but re-flags if that code changes. Pick whichever is easiest to run live.">
+  <div class="split">
+    <div class="demo">
+      <div class="tag">🎬 DEMO 3</div>
+      <h3>SAST/DAST → fix</h3>
+      <ol><li><code style="color:var(--gold);background:transparent">/security-review --changed</code> or <code style="color:var(--gold);background:transparent">/dynamic-scan --url …</code>.</li><li>Findings land in the ledger, fingerprinted.</li><li><code style="color:var(--gold);background:transparent">/fix FP-…</code> patches &amp; marks Fixed.</li></ol>
+    </div>
+    <table class="cmp">
+      <thead><tr><th>Finding</th><th>Reported</th></tr></thead>
+      <tbody>
+        <tr><td>SQL from request input <span class="muted">· Orders.cs:88</span></td><td><span class="pill crit">Critical</span></td></tr>
+        <tr><td>Logs client A-Number <span class="muted">· CaseLogger.cs:42</span></td><td><span class="pill crit">Critical</span> <span class="pill b2">B2</span></td></tr>
+        <tr><td>Missing header <span class="muted">· web.config</span></td><td><span class="pill ok">Dismissed</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 12 DREAM PIPELINE (diagram 6) -->
+<section class="slide" data-title="Dream pipeline"
+ data-notes="The memory pipeline. During work, triggers capture learnings into MEMORY.md — plan approved, task done, error resolved, decision made. Periodically /dream runs a 6-phase consolidation: analyze sessions, score confidence, propose ADD/UPDATE/DELETE/PROMOTE, tiered approval, write, audit. There's a 20-entry promotion cap; stale facts decay and demote to topic files. Every run is logged in dream-log.md and reversible via dream-rollback. Net: session warm-up drops from thousands of tokens to hundreds.">
+  <div class="slide-head"><span class="dot"></span><h2>Dream memory pipeline</h2><span class="tagr">Diagram 6 of 7</span></div>
+  <div class="body">
+    <div class="flow" style="margin-bottom:14px">
+      <div class="node"><div class="nt">triggers</div><div class="ns">plan/task/error/decision</div></div>
+      <span class="arr">→</span>
+      <div class="node"><div class="nt">MEMORY.md</div></div>
+      <span class="arr">→</span>
+      <div class="node hi"><div class="nt">/dream</div><div class="ns">6-phase, scored</div></div>
+      <span class="arr">→</span>
+      <div class="node"><div class="nt">promote / decay</div><div class="ns">cap 20 · topic files</div></div>
+      <span class="arr">→</span>
+      <div class="node"><div class="nt">dream-log.md</div><div class="ns">reversible</div></div>
+    </div>
+    <div class="grid c3">
+      <div class="card"><h3>Tiered approval</h3><p>High → auto; medium → you approve; low/urgent → always reviewed.</p></div>
+      <div class="card"><h3>Decay</h3><p>Unmentioned facts lose confidence each cycle and demote.</p></div>
+      <div class="card"><h3>Reversible</h3><p><code>/dream-rollback</code> undoes any run from the audit trail.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 13 DEMO dream-health -->
+<section class="slide" data-title="🎬 Demo · dream-health"
+ data-notes="Demo 4. Run /dream-health or open memory/health.html. Show confidence scores, the decay curve, promote candidates; click a justification panel to show the evidence trail. Point out it's a self-contained offline dashboard.">
+  <div class="split">
+    <div>
+      <div class="demo" style="margin-bottom:14px">
+        <div class="tag">🎬 DEMO 4</div>
+        <h3>dream-health</h3>
+        <ol><li><code style="color:var(--gold);background:transparent">/dream-health</code> → confidence + decay.</li><li>Click a justification panel for evidence.</li></ol>
+      </div>
+      <p class="muted" style="font-size:.9rem">Self-contained offline dashboard — confidence, decay curve, promote candidates.</p>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3>memory/health.html</h3><span class="pill ok">healthy</span></div>
+      <div style="display:flex;gap:18px;align-items:center">
+        <div style="position:relative;width:130px;display:grid;place-items:center">
+          <svg width="130" height="130" viewBox="0 0 150 150"><circle cx="75" cy="75" r="60" fill="none" stroke="#e9ecef" stroke-width="14"/><circle cx="75" cy="75" r="60" fill="none" stroke="#00b894" stroke-width="14" stroke-linecap="round" stroke-dasharray="377" stroke-dashoffset="64" transform="rotate(-90 75 75)"/></svg>
+          <div style="position:absolute;text-align:center"><b style="font-size:1.7rem;color:var(--navy)">0.83</b><br><span style="font-size:.68rem;color:var(--muted)">avg confidence</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span class="pill ok">14 promoted</span>
+          <span class="pill" style="background:rgba(253,203,110,.18);color:#b3861f;border:1px solid var(--amber)">3 decaying</span>
+          <div class="muted" style="font-size:.8rem">Decay curve<br><svg width="130" height="28" viewBox="0 0 150 34"><polyline points="0,6 30,9 60,14 90,13 120,20 150,26" fill="none" stroke="#fdcb6e" stroke-width="2"/></svg></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 14 COST (orientation-first) + MODEL ROUTING (diagram 7) -->
+<section class="slide" data-title="Do the work once, then route"
+ data-notes="The cost story, told orientation-first. The big saving isn't the cache — it's understanding the codebase ONCE: the knowledge graph + architecture docs + /session-start mean context arrives ready, so the model doesn't re-read source to orient every run. On top of that, file-cache + scope flags let the scanners skip unchanged files (the secondary, scanner-scoped delta, ADR 0016). Then routing: Opus for generation, Sonnet for review/infra — override via env. Levers you control: orientation (already built for you), scope flags, routing.">
+  <div class="slide-head"><span class="dot"></span><h2>Do the work once — then route the model</h2><span class="tagr">Diagram 7 of 7</span></div>
+  <div class="body">
+    <div class="split">
+      <div>
+        <p class="muted" style="margin-bottom:10px;font-size:.92rem"><strong>Understand the codebase once</strong> — graph + architecture docs + <code>/session-start</code> — then reuse it every run.</p>
+        <div class="barrow"><span class="name">Re-read + re-scan every run</span><div class="barwrap"><div class="bar full" style="width:100%">100%</div></div></div>
+        <div class="barrow"><span class="name">Oriented + cached (after baseline)</span><div class="barwrap"><div class="bar lean" style="width:13%">~13%</div></div></div>
+        <p class="muted" style="margin-top:12px;font-size:.84rem">Orientation is the primary saving; <code>file-cache</code> + scope flags are the secondary scanner delta (ADR 0016).</p>
+      </div>
+      <div>
+        <div class="dgm">
+          <div class="layer l0"><span class="lname">ICEA_MODEL</span><span class="ldesc">Opus — generation: ICEA, code, tasks, docs.</span></div>
+          <div class="layer l1"><span class="lname">REVIEW_MODEL / CRITIC_MODEL</span><span class="ldesc">Sonnet — review, security, critic.</span></div>
+          <div class="layer l2"><span class="lname">INFRA_MODEL</span><span class="ldesc">Sonnet — dream, graph, metrics, checkin.</span></div>
+        </div>
+        <p class="muted" style="margin-top:10px;font-size:.84rem">Override per project in <code>.claude/settings.json → env</code>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 15 DEMO code-review --pr -->
+<section class="slide" data-title="🎬 Demo · code-review --pr"
+ data-notes="Demo 5. Run /code-review --pr on a branch with changes. Show it scanning only the diff, hitting the cache for unchanged files, and finishing in seconds. Contrast with a full scan. Show the FP-fingerprinted findings in the ledger. This is the cache-awareness made visible.">
+  <div class="split">
+    <div class="demo">
+      <div class="tag">🎬 DEMO 5</div>
+      <h3>Cache-aware review</h3>
+      <ol><li><code style="color:var(--gold);background:transparent">/code-review --pr</code> on a branch.</li><li>Scans only the diff; cache hit on the rest.</li><li>Findings land FP-fingerprinted in the ledger.</li></ol>
+      <div class="expect">Seconds, not minutes — after the first baseline.</div>
+    </div>
+    <div class="term">
+      <div class="term-bar"><span class="b r"></span><span class="b y"></span><span class="b g"></span><span class="ttl">/code-review --pr</span></div>
+      <div class="term-body">
+        <div><span class="cmd">&gt;</span> /code-review --pr</div>
+        <div class="dim">Phase D — build + eslint (deterministic)</div>
+        <div class="dim">Phase P — data flow, nulls, leaks</div>
+        <div class="ok">✓ 8.4s · cache hit 94% (47/50 files skipped)</div>
+        <div class="box"><span class="warn">2 new findings</span> on the diff → CodeReviews/ledger.md</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 16 DIVIDER: DECISIONS -->
+<section class="slide divider" data-title="Act 3 — Decisions"
+ data-notes="Act three: the interesting part for engineers — why we chose what we chose, and what we rejected. Six stories.">
+  <div class="num">03</div>
+  <h2>Why we decided X over Y</h2>
+  <p>Six decision stories — problem, decision, alternatives rejected, lesson.</p>
+</section>
+
+<!-- 17 STORY 0001 -->
+<section class="slide" data-title="Story · ICEA gate"
+ data-notes="Story one: the ICEA approval gate. Problem: devs used AI inconsistently and rework dominated — most blockers traced to thin or absent specs. Decision: no code until an ICEA exists on disk and the dev approves. The ICEA is a contract, not documentation. Rejected: prompt-for-spec, review-then-code, optional ICEA. Lesson: the gate changes behavior by incentive — a bad ICEA blocks your OWN PR.">
+  <div class="slide-head"><span class="dot"></span><h2>The gate that blocks your own PR<span class="adrtag">ADR 0001</span></h2></div>
+  <div class="body">
+    <div class="split">
+      <div class="narr">
+        <div class="nb p"><div class="h">Problem</div><p>AI used inconsistently; rework dominated. Most blocked PRs traced to a thin or absent spec.</p></div>
+        <div class="nb d"><div class="h">Decision</div><p>No code until an ICEA is on disk and approved. "The ICEA is a contract, not documentation."</p></div>
+        <div class="nb l"><div class="h">Lesson</div><p>Incentive changes behavior: a bad ICEA blocks <em>your own</em> PR. One good spec prevents ~3 bounced PRs.</p></div>
+        <div class="rej"><strong>Rejected:</strong> prompt-for-spec · review-then-code · optional ICEA.</div>
+      </div>
+      <div class="dwrap">
+        <div class="flow"><div class="node"><div class="nt">ICEA spec</div></div><span class="arr">→</span><div class="node hi"><div class="nt">APPROVE</div></div><span class="arr">→</span><div class="node"><div class="nt">code</div></div></div>
+        <div class="flow"><div class="node"><div class="nt">no ICEA</div></div><span class="arr">→</span><div class="mini bad">✗ no code</div></div>
+        <p class="muted" style="font-size:.85rem;text-align:center">One good spec ≈ <strong>3 PRs that don't bounce</strong></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 18 STORY 0003 -->
+<section class="slide" data-title="Story · shared primitives"
+ data-notes="Story two: shared primitives. Problem: three copies of every scan bug; gate logic even diverged between pr-create and checkin. Decision: used by 2+ skills → promote to shared; validator enforces. Rejected: copy-paste, big library, just-document. Lesson: define once, maintain once.">
+  <div class="slide-head"><span class="dot"></span><h2>One bug, three copies, unfixed forever<span class="adrtag">ADR 0003</span></h2></div>
+  <div class="body">
+    <div class="split">
+      <div class="narr">
+        <div class="nb p"><div class="h">Problem</div><p>Three skills, three copies of every scan bug; a fix in one never propagated. Gate logic even diverged between <code>pr-create</code> and <code>checkin</code>.</p></div>
+        <div class="nb d"><div class="h">Decision</div><p>Used by 2+ skills → promote to <code>skills/shared/</code>; local copies forbidden; validator enforces delegation.</p></div>
+        <div class="nb l"><div class="h">Lesson</div><p>Define once, maintain once. New skills reuse flags, routing, consent, severity — cheap to add.</p></div>
+        <div class="rej"><strong>Rejected:</strong> copy-paste ownership · big shared library up-front · "just document it".</div>
+      </div>
+      <div class="dwrap">
+        <div class="flow"><div class="mini bad">code-review 🐞</div><div class="mini bad">security 🐞</div><div class="mini bad">ICEA 🐞</div></div>
+        <div class="arr" style="transform:rotate(90deg)">→</div>
+        <div class="mini good" style="width:80%;text-align:center"><strong>skills/shared/</strong><br>fix once → all callers updated</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 19 STORY graph trio -->
+<section class="slide" data-title="Story · the graph"
+ data-notes="Story three: the knowledge graph trio ADR 0038/39/41. Problem: two overlapping maps, prose relationships, blind staleness, missing hook. Decision: single orientation layer, authoritative graph.json, deterministic edges. Rejected: keep both, gitignore, model edges. Lesson: one source of truth; mechanical work in scripts.">
+  <div class="slide-head"><span class="dot"></span><h2>Why the graph isn't just a pretty file<span class="adrtag">ADR 0038·0039·0041</span></h2></div>
+  <div class="body">
+    <div class="split">
+      <div class="narr">
+        <div class="nb p"><div class="h">Problem</div><p>Two overlapping maps (drift); relationships as prose (unqueryable); entry-point-only staleness; a referenced git hook that didn't exist.</p></div>
+        <div class="nb d"><div class="h">Decision</div><p>Single orientation layer (0038); authoritative <code>graph.json</code> with typed edges + module fingerprints (0039); EXTRACTED edges by script (0041).</p></div>
+        <div class="nb l"><div class="h">Lesson</div><p>One source of truth; correctness before richness; mechanical edge extraction belongs in scripts.</p></div>
+        <div class="rej"><strong>Rejected:</strong> keep both maps · gitignore the graph · model-extracted edges.</div>
+      </div>
+      <div class="dwrap">
+        <div class="flow"><div class="node"><div class="nt">source</div></div><span class="arr">→</span><div class="node hi"><div class="nt">extract-edges.js</div><div class="ns">deterministic</div></div><span class="arr">→</span><div class="node hi"><div class="nt">graph.json</div><div class="ns">typed + confidence</div></div></div>
+        <div class="arr" style="transform:rotate(90deg)">→</div>
+        <div class="flow"><div class="node"><div class="nt">index.md</div><div class="ns">always-loaded</div></div><div class="node"><div class="nt">module .md</div><div class="ns">lazy</div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 20 STORY 0031 -->
+<section class="slide" data-title="Story · disk-based state"
+ data-notes="Story four: disk-based state. Problem: approve/implement assumed a live session; state lived in chat. Decision: Status line is the single source, read from disk. Rejected: session-only, dual-truth. Lesson: close/reopen freely; Teams approval actionable with one phrase.">
+  <div class="slide-head"><span class="dot"></span><h2>Approval that works across Slack<span class="adrtag">ADR 0031</span></h2></div>
+  <div class="body">
+    <div class="split">
+      <div class="narr">
+        <div class="nb p"><div class="h">Problem</div><p>Approve/implement assumed a live session; <code>APPROVE</code> after reopening did nothing — state lived in chat, not on disk.</p></div>
+        <div class="nb d"><div class="h">Decision</div><p>The ICEA <code>Status:</code> line is the single source of workflow state; skills read from disk every invocation.</p></div>
+        <div class="nb l"><div class="h">Lesson</div><p>Close/reopen freely; approval from email or Teams is actionable with one phrase.</p></div>
+        <div class="rej"><strong>Rejected:</strong> session-only state · dual truth chat+file.</div>
+      </div>
+      <div class="dwrap">
+        <div class="flowv">
+          <div class="node"><div class="nt">DRAFT</div></div><div class="arr" style="transform:rotate(90deg)">→</div>
+          <div class="node hi"><div class="nt">✅ Approved</div><div class="ns">Status: on disk</div></div><div class="arr" style="transform:rotate(90deg)">→</div>
+          <div class="node"><div class="nt">IN PROGRESS</div></div><div class="arr" style="transform:rotate(90deg)">→</div>
+          <div class="node"><div class="nt">COMPLETE</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 21 STORY ladder + diagram 2 -->
+<section class="slide" data-title="Story · enforcement ladder"
+ data-notes="Story five: the enforcement ladder. Problem: all rules were model instructions — probabilistic; local hooks bypassable. Decision: three tiers, each rule at the lowest tier that can hold it. Rejected: all-prompts, all-hooks, trust. Lesson: a local bypass becomes a CI failure — telemetry.">
+  <div class="slide-head"><span class="dot"></span><h2>Prompts propose, hooks dispose<span class="adrtag">ADR 0005·0009</span></h2><span class="tagr">Diagram 2 of 7</span></div>
+  <div class="body">
+    <div class="split">
+      <div class="narr">
+        <div class="nb p"><div class="h">Problem</div><p>Every hard rule was a model instruction — probabilistic. Local hooks bypassable (<code>--no-verify</code>); only opt-in teams install them.</p></div>
+        <div class="nb d"><div class="h">Decision</div><p>Three tiers; each rule at the lowest tier that can hold it. "Prompts propose, hooks dispose."</p></div>
+        <div class="nb l"><div class="h">Lesson</div><p>A local bypass becomes a CI failure — telemetry, not a silent skip.</p></div>
+        <div class="rej"><strong>Rejected:</strong> all-prompts · all-hooks · trust developers.</div>
+      </div>
+      <div class="dwrap">
+        <div class="ladder" style="width:100%;max-width:100%">
+          <div class="rung a"><span class="tier" style="font-size:.72rem;padding:4px 8px">A</span><div><div class="rt" style="font-size:.88rem">Model instructions</div><div class="rd" style="font-size:.78rem">Judgment — probabilistic.</div></div></div>
+          <div class="rung b"><span class="tier" style="font-size:.72rem;padding:4px 8px">B</span><div><div class="rt" style="font-size:.88rem">PreToolUse hooks</div><div class="rd" style="font-size:.78rem">Deterministic per tool call.</div></div></div>
+          <div class="rung c"><span class="tier" style="font-size:.72rem;padding:4px 8px">C</span><div><div class="rt" style="font-size:.88rem">Git / CI server-side</div><div class="rd" style="font-size:.78rem">Unbypassable — required build validation.</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 22 STORY 0015 -->
+<section class="slide" data-title="Story · business severity"
+ data-notes="Story six: business-context severity. Problem: CVSS 'medium' exposing immigration IDs or privileged matter isn't medium here. Decision: B1-B7 triggers escalate one band across all review skills. Rejected: per-skill overrides, manual bumps, ignore context. Lesson: domain context is non-optional.">
+  <div class="slide-head"><span class="dot"></span><h2>The business knows what "medium" means<span class="adrtag">ADR 0015</span></h2></div>
+  <div class="body">
+    <div class="split">
+      <div class="narr">
+        <div class="nb p"><div class="h">Problem</div><p>A CVSS "medium" exposing immigration IDs or privileged matter isn't medium here. Generic scores don't know the business.</p></div>
+        <div class="nb d"><div class="h">Decision</div><p>Seven triggers (B1–B7) escalate one band across all review skills; visible in the ledger; dismissible with justification.</p></div>
+        <div class="nb l"><div class="h">Lesson</div><p>Domain context is non-optional; severity without it is folklore. Extensible — new categories follow B8+.</p></div>
+        <div class="rej"><strong>Rejected:</strong> per-skill hard-coded overrides · manual bumps · ignore context.</div>
+      </div>
+      <div class="dwrap">
+        <div style="width:100%;display:flex;gap:8px;align-items:center;justify-content:center">
+          <div class="mini" style="border-color:var(--muted)">CVSS<br><strong>Low</strong></div>
+          <span style="font-size:1.5rem;color:var(--gold);font-weight:800">+</span>
+          <div class="mini" style="border-color:var(--gold);font-size:.82rem">B2 trigger<br><span style="color:var(--muted)">logs A-Number</span></div>
+          <span class="arr">→</span>
+          <div class="mini bad"><strong>Critical</strong></div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;width:100%;justify-content:center">
+          <span style="background:#eef2f5;border-radius:5px;padding:3px 7px;font-size:.75rem">B1 privilege</span>
+          <span style="background:#eef2f5;border-radius:5px;padding:3px 7px;font-size:.75rem">B2 immigration ID</span>
+          <span style="background:#eef2f5;border-radius:5px;padding:3px 7px;font-size:.75rem">B3 case timeline</span>
+          <span style="background:#eef2f5;border-radius:5px;padding:3px 7px;font-size:.75rem">B4 vulnerable client</span>
+          <span style="background:#eef2f5;border-radius:5px;padding:3px 7px;font-size:.75rem">B5–B7 …</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 23 DIVIDER: WORKFLOW -->
+<section class="slide divider" data-title="Act 4 — Workflow"
+ data-notes="Final act: the workflow you'll live in, the commands, setup, and the evolution that got us here.">
+  <div class="num">04</div>
+  <h2>The daily workflow</h2>
+  <p>What you'll actually type — and how the loop resumes across sessions.</p>
+</section>
+
+<!-- 24 ICEA STATE MACHINE (diagram 5) -->
+<section class="slide" data-title="ICEA state machine"
+ data-notes="The ICEA lifecycle, on disk. Drafts live in temp/ during review; on save they move to docs/Release/Sprint/UserStory. The Status line drives everything: DRAFT → Approved (on APPROVE) → IN PROGRESS (first AC written) → COMPLETE (last AC). Revising an approved ICEA rewrites Status back to DRAFT, which re-arms the gate. Because it's all on disk, you resume in any session.">
+  <div class="slide-head"><span class="dot"></span><h2>ICEA lifecycle — all on disk</h2><span class="tagr">Diagram 5 of 7</span></div>
+  <div class="body">
+    <div class="flow" style="margin-bottom:18px">
+      <div class="node"><div class="nt">DRAFT</div><div class="ns">temp/ → docs/</div></div><span class="arr">→</span>
+      <div class="node hi"><div class="nt">✅ Approved</div><div class="ns">APPROVE ADO-####</div></div><span class="arr">→</span>
+      <div class="node"><div class="nt">IN PROGRESS</div><div class="ns">first AC written</div></div><span class="arr">→</span>
+      <div class="node"><div class="nt">COMPLETE</div><div class="ns">last AC written</div></div>
+    </div>
+    <div class="grid c2">
+      <div class="card"><h3>Revise re-gates</h3><p><code>REVISE</code> rewrites <code>Status:</code> back to DRAFT — the floor hook re-arms and code is blocked again (ADR 0027).</p></div>
+      <div class="card"><h3>Path is the record</h3><p><code>docs/Release{R}/Sprint{S}/UserStory{ID}/ADO-####-*.icea.md</code> — resumable in any session.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 25 KEYWORD HANDLERS -->
+<section class="slide" data-title="Keyword handlers"
+ data-notes="Keyword handlers mean you rarely need slash commands. The canonical flow: SAVE PLAN drafts the plan+ICEA to temp; SAVE ICEA promotes and drafts the tech spec; SAVE TECH writes it; APPROVE unlocks code; IMPLEMENT generates it. IDs are case-insensitive. STATUS ADO-#### is the re-entry point after any gap.">
+  <div class="slide-head"><span class="dot"></span><h2>Keyword handlers — no slash needed</h2></div>
+  <div class="body">
+    <div class="flowsteps" style="margin-bottom:20px">
+      <span class="step">SAVE PLAN</span><span class="arr">→</span><span class="step">SAVE ICEA</span><span class="arr">→</span><span class="step">SAVE TECH</span><span class="arr">→</span><span class="step key">APPROVE ADO-####</span><span class="arr">→</span><span class="step">IMPLEMENT ADO-####</span>
+    </div>
+    <div class="grid c2">
+      <div class="card"><h3>Any message, any session</h3><p><code>APPROVE</code>, <code>REVISE</code>, <code>STATUS</code>, <code>IMPLEMENT</code>, <code>BUG ADO-#### — …</code> — recognised over chat.</p></div>
+      <div class="card"><h3>Re-entry point</h3><p><code>STATUS ADO-####</code> — status, open questions, exact next action.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 26 COMMAND PALETTE -->
+<section class="slide" data-title="Command palette"
+ data-notes="The 36 commands grouped by job. Don't read them all — point at the six buckets and let people scan. Note most auto-trigger by keyword too.">
+  <div class="slide-head"><span class="dot"></span><h2>36 commands, six jobs</h2></div>
+  <div class="body">
+    <div class="palette">
+      <div class="palcol"><h3>Plan &amp; spec</h3><code>icea-feature</code> <code>icea-approve</code> <code>icea-implement</code> <code>icea-revise</code> <code>icea-status</code> <code>ado-tasks</code> <code>bug</code> <code>critic</code></div>
+      <div class="palcol"><h3>Quality &amp; security</h3><code>code-review</code> <code>security-review</code> <code>dynamic-scan</code> <code>checkin</code> <code>fix</code> <code>dismiss</code></div>
+      <div class="palcol"><h3>Orientation</h3><code>graph-sync</code> <code>graph-viz</code> <code>explain</code> <code>update-arch</code> <code>session-start</code> <code>sync-dirs</code></div>
+      <div class="palcol"><h3>Memory (Dream)</h3><code>dream</code> <code>dream-health</code> <code>dream-audit</code> <code>dream-rollback</code> <code>dream-status</code></div>
+      <div class="palcol"><h3>Delivery &amp; metrics</h3><code>pr-describe</code> <code>pr-create</code> <code>pr-spec-review</code> <code>icea-review</code> <code>sprint-metrics</code> <code>token-analysis</code></div>
+      <div class="palcol"><h3>Setup &amp; docs</h3><code>dream-init</code> <code>dream-sync</code> <code>gitignore-sync</code> <code>product-docs</code> <code>app-readiness</code> <code>plugin-readiness</code></div>
+    </div>
+    <p class="muted" style="text-align:center;margin-top:14px">Most also auto-trigger by keyword — "build", "review this PR", "is this secure?".</p>
+  </div>
+</section>
+
+<!-- 27 DEMO icea-feature -->
+<section class="slide" data-title="🎬 Demo · icea-feature"
+ data-notes="Demo 6 — the full loop. Describe a feature or run /icea-feature ADO-1847. The critic flags a gap; you fix it; APPROVE; IMPLEMENT hits the write gate. This ties the whole workflow together in 90 seconds.">
+  <div class="split">
+    <div class="demo">
+      <div class="tag">🎬 DEMO 6</div>
+      <h3>Plan → approve → implement</h3>
+      <ol><li><code style="color:var(--gold);background:transparent">/icea-feature ADO-1847</code>.</li><li>Critic flags a gap in the draft.</li><li><code style="color:var(--gold);background:transparent">APPROVE ADO-1847</code>.</li><li><code style="color:var(--gold);background:transparent">IMPLEMENT ADO-1847</code> → gated write.</li></ol>
+      <div class="expect">No source until the spec is approved.</div>
+    </div>
+    <div class="term">
+      <div class="term-bar"><span class="b r"></span><span class="b y"></span><span class="b g"></span><span class="ttl">icea-feature</span></div>
+      <div class="term-body">
+        <div><span class="cmd">&gt;</span> /icea-feature ADO-1847</div>
+        <div class="ok">✓ ICEA draft — I/C/E/A</div>
+        <div class="warn">⚠ critic: AC-4 not testable — add error shape</div>
+        <div><span class="cmd">&gt;</span> APPROVE ADO-1847</div>
+        <div class="ok">✓ Approved · code unlocked</div>
+        <div><span class="cmd">&gt;</span> IMPLEMENT ADO-1847</div>
+        <div class="box"><span class="gold">📁 WRITE PENDING</span> — APPROVE ADO-1847</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 28 EVOLUTION TIMELINE -->
+<section class="slide" data-title="Evolution"
+ data-notes="How it got here, briefly. Each version solved a concrete pain: write gate + hierarchical ICEA (1.31), session-independent workflow (2.0), single-responsibility skills + draft-then-save (2.1), the knowledge graph (2.6), graph as single orientation layer (3.0), graph.json authoritative (3.3), deterministic edges (3.5), and today 3.6. The pattern: every release fixed a real cost, not a hypothetical.">
+  <div class="slide-head"><span class="dot"></span><h2>How it got here</h2></div>
+  <div class="body">
+    <div class="tl">
+      <div class="tlrow"><span class="ver">1.31</span><div class="tc"><b>Write gate + hierarchical ICEA</b> <span>— a moment to review every write; no more filename collisions.</span></div></div>
+      <div class="tlrow"><span class="ver">2.0</span><div class="tc"><b>Session-independent workflow</b> <span>— approve/implement/status from disk; action approvals from Teams.</span></div></div>
+      <div class="tlrow"><span class="ver">2.1</span><div class="tc"><b>Single-responsibility + draft-then-save</b> <span>— review plans before ICEA, ICEA before tech spec.</span></div></div>
+      <div class="tlrow"><span class="ver">2.6</span><div class="tc"><b>Knowledge graph + /graph-sync</b> <span>— stop re-reading the codebase every morning.</span></div></div>
+      <div class="tlrow"><span class="ver">3.0</span><div class="tc"><b>Graph = single orientation layer</b> <span>— domain-map retired; graph committed &amp; reviewed.</span></div></div>
+      <div class="tlrow"><span class="ver">3.3</span><div class="tc"><b>graph.json authoritative</b> <span>— typed edges + confidence; module-wide fingerprints.</span></div></div>
+      <div class="tlrow"><span class="ver">3.5→3.6</span><div class="tc"><b>Deterministic EXTRACTED edges</b> <span>— imports parsed by script, not the model.</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 29 DAILY LOOP -->
+<section class="slide" data-title="Daily loop"
+ data-notes="The muscle-memory cheat sheet. Start: /session-start. New work: describe it or /icea-feature → APPROVE → IMPLEMENT. Before commit: /checkin. Ship: /pr-describe → /pr-create. After a gap: STATUS ADO-####. That's the whole day in six commands.">
+  <div class="slide-head"><span class="dot"></span><h2>Your day, in six commands</h2></div>
+  <div class="body">
+    <div class="term" style="max-width:900px;margin:0 auto;width:100%">
+      <div class="term-bar"><span class="b r"></span><span class="b y"></span><span class="b g"></span><span class="ttl">a day with the plugin</span></div>
+      <div class="term-body" style="font-size:.95rem;line-height:1.9">
+        <div><span class="dim"># start</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="cmd">/session-start</span></div>
+        <div><span class="dim"># new feature</span> <span class="cmd">/icea-feature ADO-1847</span> → <span class="gold">APPROVE</span> → <span class="gold">IMPLEMENT ADO-1847</span></div>
+        <div><span class="dim"># pre-commit</span> &nbsp; <span class="cmd">/checkin</span></div>
+        <div><span class="dim"># ship</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="cmd">/pr-describe</span> → <span class="cmd">/pr-create</span></div>
+        <div><span class="dim"># after a gap</span> <span class="gold">STATUS ADO-1847</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 30 SETUP -->
+<section class="slide" data-title="Setup & extensibility"
+ data-notes="Getting started and staying current. dream-init: one-time setup — architect Q&A, seeds cache + token-graph, deploys stubs and stack rules, populates architecture docs, generates the graph, writes the managed .gitignore block. dream-status: read-only 20-item health check. dream-sync: re-provision after a plugin upgrade via docs/migrations. Rules deploy per detected stack. 45 ADRs document the why. Forkable — org/project live in config.json.">
+  <div class="slide-head"><span class="dot"></span><h2>Turn it on, keep it fresh</h2></div>
+  <div class="body">
+    <div class="grid c3">
+      <div class="card accent"><div class="ico">🚀</div><h3>/dream-init</h3><p>One-time: architect Q&amp;A, cache seed, stubs, rules, graph, <code>.gitignore</code>.</p></div>
+      <div class="card accent"><div class="ico">🩺</div><h3>/dream-status</h3><p>Read-only 20-item health check.</p></div>
+      <div class="card accent"><div class="ico">🔄</div><h3>/dream-sync</h3><p>Re-provision after upgrade via <code>docs/migrations/</code>.</p></div>
+    </div>
+    <p class="muted" style="text-align:center;margin-top:16px">Stack-aware rules · 45 ADRs record the "why" · forkable via <code>config.json</code>.</p>
+  </div>
+</section>
+
+<!-- 31 CLOSE -->
+<section class="slide close-slide" data-title="Wrap-up"
+ data-notes="Recap and Q&A. Three takeaways: the architecture is a shared layer with thin skills on top; the decisions all trace to three lessons (stateless is costly, orientation beats source reads, governance must be auditable); the daily loop is six commands. Point to README, DEVELOPER-GUIDE, and the 45 ADRs. Offer the architecture-heavy and decisions-heavy companion decks for deeper dives. Open the floor.">
+  <div class="eyebrow">Thanks — questions?</div>
+  <h1>Three things to take with you</h1>
+  <div class="takeaways">
+    <div class="tk"><div class="n">01</div><p><strong style="color:#fff">Thin skills, shared core.</strong> The real logic lives once in <code>skills/shared/</code>.</p></div>
+    <div class="tk"><div class="n">02</div><p><strong style="color:#fff">Every decision traces to 3 lessons.</strong> Stateless is costly · orientation beats source · governance must be auditable.</p></div>
+    <div class="tk"><div class="n">03</div><p><strong style="color:#fff">Six commands a day.</strong> session-start → icea → checkin → PR.</p></div>
+  </div>
+  <p class="lead" style="margin-top:26px">Go deeper: the <strong style="color:#fff">architecture-heavy</strong> and <strong style="color:#fff">decisions-heavy</strong> companion decks.</p>
+</section>
+
+</div>
+
+<div class="counter" id="counter">1 / 31</div>
+<div class="hint"><kbd>←</kbd> <kbd>→</kbd> nav · <kbd>S</kbd> notes · <kbd>O</kbd> overview · <kbd>F</kbd> full</div>
+<div class="notes-panel" id="notes"><h4>Speaker notes</h4><div id="notes-body"></div></div>
+<div class="overview" id="overview"><h3>Slide overview — click to jump</h3><div class="ov-grid" id="ov-grid"></div></div>
+
+<script>
+(function(){
+  const slides=[...document.querySelectorAll('.slide')];
+  const total=slides.length; let i=0;
+  const progress=document.getElementById('progress'),counter=document.getElementById('counter'),notes=document.getElementById('notes'),notesBody=document.getElementById('notes-body'),overview=document.getElementById('overview');
+  function render(){slides.forEach((s,n)=>s.classList.toggle('active',n===i));progress.style.width=((i+1)/total*100)+'%';counter.textContent=(i+1)+' / '+total;notesBody.textContent=slides[i].dataset.notes||'—';location.hash='slide-'+(i+1);}
+  function go(n){i=Math.max(0,Math.min(total-1,n));render();}
+  function next(){go(i+1);} function prev(){go(i-1);}
+  document.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();next();}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev();}
+    else if(e.key==='Home'){go(0);} else if(e.key==='End'){go(total-1);}
+    else if(e.key.toLowerCase()==='s'){notes.classList.toggle('show');}
+    else if(e.key.toLowerCase()==='o'){overview.classList.toggle('show');}
+    else if(e.key.toLowerCase()==='f'){if(!document.fullscreenElement)document.documentElement.requestFullscreen();else document.exitFullscreen();}
+    else if(e.key==='Escape'){overview.classList.remove('show');}
+  });
+  document.getElementById('deck').addEventListener('click',e=>{if(e.target.closest('a,button'))return;const x=e.clientX/window.innerWidth;x>0.3?next():prev();});
+  const ov=document.getElementById('ov-grid');
+  slides.forEach((s,n)=>{const d=document.createElement('div');d.className='ov-item';d.innerHTML='<div class="oi-n">'+(n+1).toString().padStart(2,'0')+'</div><div class="oi-t">'+(s.dataset.title||'')+'</div>';d.onclick=()=>{go(n);overview.classList.remove('show');};ov.appendChild(d);});
+  const m=location.hash.match(/slide-(\d+)/); if(m)i=Math.min(total-1,+m[1]-1);
+  render();
+})();
+</script>
+</body>
+</html>

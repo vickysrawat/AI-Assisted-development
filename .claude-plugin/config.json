@@ -1,5 +1,5 @@
 {
-  "_comment": "Single source of truth for identity — the plugin ships company-agnostic. The installer (install.sh / install.ps1) prompts for organization / project / company / adoBaseUrl and writes them here; any field left blank keeps the placeholder below. Runtime skills read org/project from CLAUDE.md section 2 (seeded from these values by dream-init Step 5d), and locate the plugin dir by glob so the marketplace name is free. After editing by hand, run scripts/sync-config.sh to propagate into plugin.json (author, repository) and marketplace.json. See DEVELOPER-GUIDE.md > Rebranding / forking.",
+  "_comment": "Single source of truth for identity — the plugin ships company-agnostic. The installer (install.sh / install.ps1) prompts for organization / project / company / adoBaseUrl and writes them here; any field left blank keeps the placeholder below. Runtime skills read org/project from CLAUDE.md section 2 (seeded from these values by setup-init Step 5d), and locate the plugin dir by glob so the marketplace name is free. After editing by hand, run scripts/sync-config.sh to propagate into plugin.json (author, repository) and marketplace.json. See DEVELOPER-GUIDE.md > Rebranding / forking.",
   "company": "Your Company",
   "companyUrl": "",
   "organization": "your-org",

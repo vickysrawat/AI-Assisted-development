@@ -3,7 +3,7 @@ _Spec version: 1.0 · Last changed: 2026-05-30 · Compatible skill versions: cod
 
 
 This file lives at `.claude/file-cache.json` in the project root.
-It is seeded by `dream-init` and read/written by `code-review` and `security`
+It is seeded by `setup-init` and read/written by `code-review` and `security`
 skills to skip files unchanged since the last run.
 
 ---
@@ -54,7 +54,7 @@ skills to skip files unchanged since the last run.
 |---|---|---|
 | `_schema` | string | Schema version — always `"1.0"` |
 | `_description` | string | Human-readable note — do not modify |
-| `_seeded` | date | ISO date when dream-init first created this file |
+| `_seeded` | date | ISO date when setup-init first created this file |
 | `_lastUpdated` | date | ISO date of the most recent write by any skill |
 | `files` | object | Map of relative file path → entry |
 | `files[path].charCount` | number | Character count at last scan time |

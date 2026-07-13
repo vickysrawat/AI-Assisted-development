@@ -1,10 +1,10 @@
 skill: update-arch
 scenarios:
   - id: stops-if-no-domain-map
-    description: "Should stop and direct to dream-init if no domain-map"
+    description: "Should stop and direct to setup-init if no domain-map"
     input: "/update-arch"
     expect:
-      contains: ["dream-init", "domain-map.md"]
+      contains: ["setup-init", "domain-map.md"]
       not_contains: ["Updated areas"]
 
   - id: preserves-unchanged-areas
@@ -13,3 +13,29 @@ scenarios:
     expect:
       contains: ["Unchanged", "skipping"]
       not_contains: ["deleted", "removed"]
+
+  - id: flag-security-refreshes-one-doc
+    description: "--security refreshes only architecture-security.md via the File 6 prompt"
+    input: "/update-arch --security"
+    expect:
+      triggered: true
+      contains:
+        - "architecture-security.md"
+
+  - id: flag-data-refreshes-one-doc
+    description: "--data refreshes only architecture-data.md"
+    input: "/update-arch --data"
+    expect:
+      triggered: true
+      contains:
+        - "architecture-data.md"
+
+  - id: flag-decisions-appends-never-overwrites
+    description: "--decisions appends a new AD-NNN entry and never overwrites existing ones"
+    input: "/update-arch --decisions"
+    expect:
+      triggered: true
+      contains:
+        - "append"
+      not_contains:
+        - "overwrite existing"

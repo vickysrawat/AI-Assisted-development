@@ -1,5 +1,10 @@
 # Skill: icea-status
 
+_Skill version: 1.0 · Last changed: 2026-07-07 · Consent: C_
+
+> **Business context severity:** reports status only — no security findings. See
+> `../shared/business-context-severity.md` for the B1–B7 model it does not trigger.
+
 ## Purpose
 Show the current state of all ICEA files for an ADO ID and tell the developer
 exactly what to do next. The perfect re-entry point after a session gap.
@@ -7,6 +12,13 @@ exactly what to do next. The perfect re-entry point after a session gap.
 Triggered by:
 - `/icea-status ADO-1847`
 - `STATUS ADO-1847`
+
+---
+
+## Persona
+Acts with a **[DL] Delivery Lead** lens — surface true state and the single next action; always asks
+"where is this actually blocked?" Lens only; never assume, never attribute in output. See
+`../shared/personas-spec.md`.
 
 ---
 

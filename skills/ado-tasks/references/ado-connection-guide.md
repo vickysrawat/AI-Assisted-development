@@ -44,7 +44,7 @@ Common failure signatures and fixes:
 | Option | How | Notes |
 |--------|-----|-------|
 | **A — Windows User Environment Variable** | Win+S → "environment variables" → User variables → New → `AZURE_DEVOPS_PAT` | Survives restarts, never touches the repo. **Recommended for all developers.** |
-| **B — `.claude/settings.json`** | `{ "env": { "AZURE_DEVOPS_PAT": "..." } }` | Only if this file is in `.gitignore`. Run `dream-status` to verify. |
+| **B — `.claude/settings.json`** | `{ "env": { "AZURE_DEVOPS_PAT": "..." } }` | Only if this file is in `.gitignore`. Run `setup-status` to verify. |
 | **C — Paste at prompt** | Entered when the skill asks | Emergency use only. PAT exists only for the current tool call. |
 
 **Never** put the raw PAT in a bash command that appears in a transcript or history.

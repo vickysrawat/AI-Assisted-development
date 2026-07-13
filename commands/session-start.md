@@ -1,5 +1,5 @@
 ---
-description: Zero-cost session warm-up — loads CLAUDE.md, memory, and architecture context in one pass so you can start working immediately without re-establishing context manually. Also surfaces any red dream-status items.
+description: Zero-cost session warm-up — loads CLAUDE.md, memory, and architecture context in one pass so you can start working immediately without re-establishing context manually. Also surfaces any red setup-status items.
 argument-hint: (no arguments needed)
 ---
 
@@ -10,6 +10,11 @@ This command uses the **infrastructure tier** — `INFRA_MODEL`
 
 To override: `{{ "env": {{ "INFRA_MODEL": "claude-opus-4-6" }} }}` in `.claude/settings.json`.
 See `skills/shared/model-routing-spec.md` for the full specification.
+
+## Persona
+Acts with a **[DL] Delivery Lead** lens — orient fast on true project state and the next action;
+always asks "what does the developer need to know to start?" Lens only; never assume, never attribute
+in output. See `skills/shared/personas-spec.md`.
 
 ---
 
@@ -102,18 +107,18 @@ Run these silently. Only surface ❌ Red results — do not report ✅ Green ite
 ```bash
 ls CLAUDE.md 2>/dev/null || echo "MISSING: CLAUDE.md"
 ls memory/MEMORY.md 2>/dev/null || echo "MISSING: memory/MEMORY.md"
-ls .claude/graph/graph-index.md 2>/dev/null || echo "MISSING: graph-index.md — run /dream-init"
+ls .claude/graph/graph-index.md 2>/dev/null || echo "MISSING: graph-index.md — run /setup-init"
 ls .claude/architecture/architecture-deployment.md 2>/dev/null || echo "MISSING: architecture-deployment.md — run /update-arch --deployment"
-ls .claude/file-cache.json 2>/dev/null || echo "MISSING: file-cache.json — run /dream-init"
-ls token-analysis/token-graph.json 2>/dev/null || echo "MISSING: token-graph.json — run /dream-init"
+ls .claude/file-cache.json 2>/dev/null || echo "MISSING: file-cache.json — run /setup-init"
+ls token-analysis/token-graph.json 2>/dev/null || echo "MISSING: token-graph.json — run /setup-init"
 [ -f ".claude/settings.json" ] && git check-ignore -q ".claude/settings.json" 2>/dev/null \
   || echo "WARNING: .claude/settings.json not gitignored — credential leak risk"
 # Enforcement floor presence (ADR 0010 — the local floor is the only floor)
 if ! grep -q "Enforcement floor: DECLINED" .claude/architecture/architecture-deployment.md 2>/dev/null; then
   [ -x .git/hooks/pre-commit ] && grep -q "findings-gate" .git/hooks/pre-commit 2>/dev/null \
-    || echo "FLOOR: findings-gate pre-commit hook not installed — run /dream-init or see hooks/README.md"
+    || echo "FLOOR: findings-gate pre-commit hook not installed — run /setup-init or see _project-deploy/hooks/README.md"
   grep -q "icea-floor.sh" .claude/settings.json 2>/dev/null \
-    || echo "FLOOR: PreToolUse icea-floor hook not wired — run /dream-init or see hooks/README.md"
+    || echo "FLOOR: PreToolUse icea-floor hook not wired — run /setup-init or see _project-deploy/hooks/README.md"
 fi
 ```
 
@@ -126,6 +131,34 @@ ls .claude/graph/.stale 2>/dev/null && echo "GRAPH_STALE" || echo "GRAPH_CURRENT
 If `GRAPH_STALE` is emitted, surface as a WARNING in the Step 4 brief:
 ```
 ⚠ Knowledge graph is stale since last git pull — run /graph-sync to refresh.
+```
+
+Plugin version-drift check — compare the version that provisioned this project against the
+version actually installed. The installed version is read **only** from `installed_plugins.json`
+(the registry, authoritative) or the `plugin.json` at its recorded `installPath` — **never**
+construct a plugin path from the state's version field, since a stale value points at a cache dir
+that no longer exists:
+
+Use the canonical `plugin-state.cjs` tool (semver-aware, no `find`, no relative plugin.json —
+see `skills/shared/plugin-path-resolution.md §3`). Resolve the plugin dir with the §1a one-liner,
+then read the state in one call:
+
+```bash
+PLUGIN_DIR="$(node -e '
+const fs=require("fs"),os=require("os"),path=require("path");
+const base=path.join(os.homedir(),".claude","plugins");const norm=p=>p?p.split(String.fromCharCode(92)).join("/"):"";let dir="";
+try{const reg=JSON.parse(fs.readFileSync(path.join(base,"installed_plugins.json"),"utf8"));const key=Object.keys(reg.plugins||{}).find(k=>k.startsWith("ai-assisted-development@"));if(key){const a=reg.plugins[key]||[];const e=a.find(x=>x.scope==="user")||a[0];if(e&&e.installPath&&fs.existsSync(e.installPath))dir=e.installPath;}}catch(e){}
+if(!dir){try{for(const m of fs.readdirSync(base)){const p=path.join(base,m,"plugins","ai-assisted-development");if(fs.existsSync(p)){dir=p;break;}}}catch(e){}}
+process.stdout.write(norm(dir));')"
+if [ -n "$PLUGIN_DIR" ]; then
+  eval "$(node "$PLUGIN_DIR/scripts/plugin-state.cjs")"
+  [ "$DRIFT" = "UPGRADE_PENDING" ] && echo "PLUGIN_DRIFT: provisioned v$PROVISIONED_VERSION -> installed v$INSTALLED_VERSION"
+fi
+```
+
+If `PLUGIN_DRIFT` is emitted, surface as a WARNING in the Step 4 brief:
+```
+⚠ Plugin upgraded {old} → {new} — run /setup-sync to re-provision this project.
 ```
 
 Also check for sensitive gitignore skips (surface only if sensitive patterns were declined):
@@ -144,34 +177,38 @@ try {
 
 If `SENSITIVE_SKIPS` is emitted, surface as a WARNING alongside the other items.
 
-Also check whether any rule files expected by the plugin are missing from
-`.claude/rules/`. Read the deployed stacks from `dream-init-state.json` and
-compare against the plugin's known rule manifest:
+Also check whether any rule files deployed by setup-init are missing from
+`.claude/rules/`. Read `deployed_rules` from `dream-init-state.json` (written by
+the frontmatter-discovery loop in setup-init Step 4b/4c) and verify each file exists.
 
 ```bash
 node -e "
 const fs   = require('fs');
 const path = require('path');
 
-// Map each stack flag to its rule file
-const STACK_RULES = {
-  dotnet:            'dotnet-rules.md',
-  dotnet_framework:  'dotnet-framework-rules.md',
-  angular:           'angular-rules.md',
-  nodejs:            'nodejs-rules.md',
-  javascript:        'javascript-rules.md',
-  java:              'java-rules.md',
-  python:            'python-rules.md',
-};
-
 try {
   const state = JSON.parse(fs.readFileSync('.claude/dream-init-state.json', 'utf8'));
-  const stacks = state.detected_stacks || [];           // array of stack keys saved by dream-init
+
+  // Modern path: deployed_rules[] written by frontmatter-discovery setup-init
+  if (Array.isArray(state.deployed_rules) && state.deployed_rules.length > 0) {
+    const missing = state.deployed_rules
+      .filter(f => !fs.existsSync(path.join('.claude/rules', f)));
+    if (missing.length > 0) console.log('RULES_OUT_OF_SYNC: ' + missing.join(', '));
+    return;
+  }
+
+  // Legacy fallback: older setup-init wrote detected_stacks[] with canonical keys
+  const STACK_RULES = {
+    dotnet:            'csharp-dotnet-rules.md',
+    dotnet_framework:  'csharp-framework48-rules.md',
+    java:              'java-rules.md',
+    python:            'python-rules.md',
+  };
+  const stacks = state.detected_stacks || [];
   const missing = stacks
     .filter(s => STACK_RULES[s])
     .map(s => STACK_RULES[s])
     .filter(f => !fs.existsSync(path.join('.claude/rules', f)));
-  // Always check project-rules.md regardless of stack
   if (!fs.existsSync('.claude/rules/project-rules.md')) missing.unshift('project-rules.md');
   if (missing.length > 0) console.log('RULES_OUT_OF_SYNC: ' + missing.join(', '));
 } catch(e) {}
@@ -183,14 +220,14 @@ If `RULES_OUT_OF_SYNC` is emitted, surface as:
 ⚠ Rules out of sync — the following rule files are registered for this project
   but missing from .claude/rules/ (likely added in a plugin update):
     {file list, one per line}
-  Run /dream-init to deploy them.
+  Run /setup-init to deploy them.
 ```
 
 ---
 
 ## Step 3b — Verify external directory map
 
-Check whether any manifest files have changed since `dream-init` last ran the
+Check whether any manifest files have changed since `setup-init` last ran the
 external directory scan. Only surface this if staleness is detected — do not
 report anything when everything is current.
 
@@ -210,14 +247,14 @@ try {
 
 If `STALE_MANIFESTS` is emitted, surface as:
 ```
-⚠ Project manifests have changed since last /dream-init:
+⚠ Project manifests have changed since last /setup-init:
     {file list, one per line}
   Run /sync-dirs to re-sync external directories.
 ```
 
 If `.claude/dream-init-state.json` is absent or has no `external_dir_snapshot`
 key, skip silently — the project may not have external directories or may not
-have run `dream-init` yet.
+have run `setup-init` yet.
 
 ---
 
@@ -252,13 +289,13 @@ If any ❌ Red items were found in Step 3, append:
 ```
   ⚠ Setup issues:
     {list each MISSING or WARNING item, one per line}
-  Run /dream-status for the full health report.
+  Run /setup-status for the full health report.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 If CLAUDE.md is missing entirely, output:
 ```
-⚠ No CLAUDE.md found. Run /dream-init to set up this project.
+⚠ No CLAUDE.md found. Run /setup-init to set up this project.
 ```
 And stop.
 
@@ -269,5 +306,5 @@ And stop.
 - NEVER scan source files — read only the four files listed in Step 1
 - NEVER ask the developer for information — infer everything from what is on disk
 - NEVER output more than 20 lines — this is a brief, not a report
-- NEVER run /dream-status in full — only check the five items in Step 3
+- NEVER run /setup-status in full — only check the five items in Step 3
 - If nothing is in memory yet, say "No memory yet — run /dream after a few sessions"

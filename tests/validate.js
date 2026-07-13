@@ -38,7 +38,7 @@ if (!exists('.claude-plugin/plugin.json')) {
 
   const cmds = p.components?.commands || [];
   const EXPECTED_COMMANDS = [
-    'dream','dream-health','dream-init','dream-status','dream-rollback',
+    'dream','dream-health','setup-init','setup-status','setup-sync','setup-teardown','dream-rollback',
     'session-start','bug','checkin','update-arch','explain','fix',
     'code-review','security-review','token-analysis','sprint-metrics','product-docs'
   ];
@@ -60,7 +60,7 @@ if (!exists('.claude-plugin/plugin.json')) {
 // ── 2. Command files ──────────────────────────────────────────────────────────
 console.log('\n▶ Command files (commands/)');
 const COMMANDS = [
-  'dream','dream-health','dream-init','dream-status','dream-rollback',
+  'dream','dream-health','setup-init','setup-status','setup-sync','setup-teardown','dream-rollback',
   'session-start','bug','checkin','update-arch','explain','fix',
   'code-review','security-review','token-analysis','sprint-metrics','product-docs'
 ];
@@ -102,11 +102,11 @@ COMMANDS.forEach(c => {
 });
 
 // ── 3. Command stubs ──────────────────────────────────────────────────────────
-console.log('\n▶ Command stubs (skills/command-stubs/)');
+console.log('\n▶ Command stubs (_project-deploy/commands/)');
 COMMANDS.forEach(c => {
-  exists(`skills/command-stubs/${c}.md`)
+  exists(`_project-deploy/commands/${c}.md`)
     ? ok(`stub: ${c}.md`)
-    : bad(`stub: ${c}.md missing`, `Create skills/command-stubs/${c}.md`);
+    : bad(`stub: ${c}.md missing`, `Create _project-deploy/commands/${c}.md`);
 });
 
 // ── 4. Shared specs ───────────────────────────────────────────────────────────
@@ -114,7 +114,7 @@ console.log('\n▶ Shared specs (skills/shared/)');
 const SHARED = [
   'file-cache-schema.md',
   'scope-flags-spec.md',
-  'domain-map-spec.md',
+  // domain-map-spec.md was retired in v3.0.0 (ADR 0038) — validate.py check 9 errors if it exists
   'single-writer-assumption.md',
   'model-routing-spec.md',
   'business-context-severity.md',
@@ -130,7 +130,10 @@ if (exists('skills/shared/scope-flags-spec.md')) {
   s.includes('--ci')          ? ok('scope-flags-spec: --ci flag defined')    : bad('scope-flags-spec: --ci missing');
   s.includes('--area')         ? ok('scope-flags-spec: --area flag defined')  : bad('scope-flags-spec: --area flag missing');
   s.includes('--continue')     ? ok('scope-flags-spec: --continue flag defined') : bad('scope-flags-spec: --continue flag missing');
-  s.includes('budget') || s.includes('40 file')     ? ok('scope-flags-spec: budget cap documented')  : bad('scope-flags-spec: file budget cap missing');
+  // FILE_BUDGET / 40-file cap was removed in 3.6.0 — spec must not reference it
+  !s.includes('FILE_BUDGET') && !s.includes('40 file')
+    ? ok('scope-flags-spec: no stale FILE_BUDGET / 40-file cap (removed 3.6.0)')
+    : bad('scope-flags-spec: still references removed FILE_BUDGET or 40-file cap — update scope-flags-spec.md');
   s.includes('find .')        ? ok('scope-flags-spec: canonical find command present') : bad('scope-flags-spec: canonical find command missing');
 }
 
@@ -148,7 +151,7 @@ console.log('\n▶ Skills (skills/*/SKILL.md)');
 const SKILLS = [
   'icea-feature','icea-review','architect','code-review','security',
   'pr-create','pr-describe','pr-spec-review','ado-tasks','sprint-metrics',
-  'dream-status','dream-rollback','token-analysis','product-docs',
+  'setup-status','setup-sync','setup-teardown','dream-rollback','token-analysis','product-docs',
   'app-readiness','plugin-readiness',
 ];
 SKILLS.forEach(s => {
@@ -190,15 +193,20 @@ SKILLS.forEach(s => {
 // Security skill specific checks
 if (exists('skills/security/SKILL.md')) {
   const sec = read('skills/security/SKILL.md');
-  sec.includes('## 0.5')
-    ? ok('security: Step 0.5 static asset audit present')
-    : bad('security: Step 0.5 static asset audit missing');
-  sec.includes('SKIP THE CACHE ENTIRELY')
-    ? ok('security: --full cache bypass is explicit (SKIP THE CACHE ENTIRELY)')
+  sec.includes('Static Asset Audit')
+    ? ok('security: static asset audit pre-scan present')
+    : bad('security: static asset audit pre-scan missing');
+  /skip cache entirely|ignore cache/i.test(sec)
+    ? ok('security: --full cache bypass is explicit')
     : bad('security: --full cache bypass instruction not explicit enough');
-  sec.includes('FILE_BUDGET')
-    ? ok('security: file budget cap present')
-    : bad('security: file budget cap (FILE_BUDGET) missing');
+  // FILE_BUDGET was removed in 3.6.0 — its presence is now an error
+  !sec.includes('FILE_BUDGET')
+    ? ok('security: FILE_BUDGET removed (no file cap since 3.6.0)')
+    : bad('security: FILE_BUDGET still present — budget cap was removed in 3.6.0');
+  // Adversarial / free-flow pass (Pass 3 in the three-pass architecture, v2.0)
+  /Free-Flow Adversarial|Pass 3/i.test(sec)
+    ? ok('security: adversarial pass (Pass 3) present')
+    : bad('security: adversarial pass (Pass 3) missing');
   sec.includes('priority')
     ? ok('security: priority ordering present')
     : bad('security: priority file ordering missing');
@@ -230,7 +238,7 @@ if (exists('skills/security/SKILL.md')) {
 // Code-review skill specific checks
 if (exists('skills/code-review/SKILL.md')) {
   const cr = read('skills/code-review/SKILL.md');
-  cr.includes('SKIP THE CACHE ENTIRELY')
+  /skip cache|ignore cache/i.test(cr)
     ? ok('code-review: --full cache bypass is explicit')
     : bad('code-review: --full cache bypass instruction not explicit enough');
   !cr.includes('find ./src')
@@ -247,59 +255,50 @@ if (exists('skills/icea-review/references/review-checks.md')) {
 }
 
 // ── 6. Rules files ────────────────────────────────────────────────────────────
-console.log('\n▶ Rules (rules/)');
-const RULES = ['project-rules.md','dotnet-rules.md','angular-rules.md','nodejs-rules.md'];
+console.log('\n▶ Rules (_project-deploy/rules/)');
+// dotnet-rules.md → csharp-dotnet-rules.md, nodejs-rules.md → nodejs-typescript-rules.md (3.6.0 rename)
+const RULES = ['project-rules.md','csharp-dotnet-rules.md','angular-rules.md','nodejs-typescript-rules.md'];
 RULES.forEach(r => {
-  const rel = `rules/${r}`;
-  if (!exists(rel)) { bad(`rules/${r} exists`); return; }
+  const rel = `_project-deploy/rules/${r}`;
+  if (!exists(rel)) { bad(`_project-deploy/rules/${r} exists`); return; }
   const content = read(rel);
   content.includes('paths:') ? ok(`${r}: has paths frontmatter`) : bad(`${r}: missing paths frontmatter`);
 });
 
 // project-rules must have decision transparency
-if (exists('rules/project-rules.md')) {
-  const pr = read('rules/project-rules.md');
+if (exists('_project-deploy/rules/project-rules.md')) {
+  const pr = read('_project-deploy/rules/project-rules.md');
   pr.includes('Decision transparency') ? ok('project-rules: Decision transparency rule present') : bad('project-rules: Decision transparency missing');
   pr.includes('Do not assume')         ? ok('project-rules: Do not assume rule present')         : bad('project-rules: Do not assume rule missing');
 }
 
-// ── 7. dream-init completeness ────────────────────────────────────────────────
-console.log('\n▶ dream-init completeness (commands/dream-init.md)');
-if (exists('commands/dream-init.md')) {
-  const di = read('commands/dream-init.md');
-  // bash loop must include all 16 stubs
-  const loopMatch = di.match(/for stub in ([^\n]+)/);
-  if (loopMatch) {
-    const stubs = loopMatch[1].split(' ').map(s => s.replace(/;$/, '')).filter(s => s.endsWith('.md'));
-    stubs.length >= 16
-      ? ok(`dream-init: bash loop includes ${stubs.length} stubs`)
-      : bad(`dream-init: bash loop only has ${stubs.length} stubs — missing new commands`, 'Add session-start.md bug.md checkin.md update-arch.md explain.md fix.md to the for loop');
-  } else {
-    bad('dream-init: bash stub deployment loop not found');
-  }
-  // rules must use cp not inline markdown
-  const cpCount = (di.match(/cp.*rules\//g) || []).length;
-  cpCount >= 4
-    ? ok(`dream-init: rules deployment uses cp (${cpCount} cp commands)`)
-    : bad(`dream-init: rules may be deployed as truncated inline markdown (cp count: ${cpCount})`);
-  // must seed both cache files with node -e
-  di.includes('file-cache.json') && di.includes('writeFileSync')
-    ? ok('dream-init: file-cache.json seeded with writeFileSync')
-    : bad('dream-init: file-cache.json not seeded with explicit write command');
-  di.includes('token-graph.json') && di.includes('writeFileSync')
-    ? ok('dream-init: token-graph.json seeded with writeFileSync')
-    : bad('dream-init: token-graph.json not seeded with explicit write command');
-  // must require domain-map.md
-  di.includes('domain-map.md') && di.includes('mandatory')
-    ? ok('dream-init: domain-map.md generation marked mandatory')
-    : bad('dream-init: domain-map.md not explicitly required');
+// ── 7. setup-init completeness ────────────────────────────────────────────────
+console.log('\n▶ setup-init completeness (commands/setup-init.md)');
+if (exists('commands/setup-init.md')) {
+  const di = read('commands/setup-init.md');
+  // 3.6.0: stubs are deployed by setup-init-bootstrap.cjs, not a bash loop in setup-init.md
+  di.includes('setup-init-bootstrap.cjs')
+    ? ok('setup-init: references bootstrap script for stub/hook deployment')
+    : bad('setup-init: bootstrap script reference missing — stubs should be deployed via setup-init-bootstrap.cjs');
+  // ADR 0046: rule deployment + cache seeding moved into setup-init-bootstrap.cjs,
+  // so the command delegates rather than carrying inline cp/writeFileSync logic.
+  const bs = exists('scripts/setup-init-bootstrap.cjs') ? read('scripts/setup-init-bootstrap.cjs') : '';
+  bs
+    ? ok('setup-init: mechanical work delegated to setup-init-bootstrap.cjs (ADR 0046)')
+    : bad('setup-init: scripts/setup-init-bootstrap.cjs missing');
+  bs.includes('file-cache.json') && bs.includes('token-graph.json')
+    ? ok('setup-init-bootstrap: seeds file-cache.json and token-graph.json')
+    : bad('setup-init-bootstrap: cache/token-graph seeding missing');
+  bs.includes('deployed_rules') || bs.includes('detect')
+    ? ok('setup-init-bootstrap: frontmatter-discovery rule deployment present')
+    : bad('setup-init-bootstrap: frontmatter-discovery rule deployment missing');
 }
 
 // ── 8. Test scenario coverage ─────────────────────────────────────────────────
 console.log('\n▶ Test scenario coverage (tests/skill-scenarios/)');
 const EXPECTED_SCENARIOS = [
   'icea-feature','icea-review','code-review','security',
-  'pr-create','dream-status','session-start','bug','checkin',
+  'pr-create','setup-status','session-start','bug','checkin',
   'update-arch','explain','fix'
 ];
 EXPECTED_SCENARIOS.forEach(s => {
@@ -316,8 +315,8 @@ if (exists('CLAUDE.md')) {
   cm.includes('ICEA')                 ? ok('CLAUDE.md: ICEA reference present')           : bad('CLAUDE.md: ICEA reference missing');
   cm.includes('MODEL ROUTING')        ? ok('CLAUDE.md: Model routing section present')    : bad('CLAUDE.md: Model routing section missing');
   cm.includes('INFRA_MODEL')           ? ok('CLAUDE.md: INFRA_MODEL documented')            : bad('CLAUDE.md: INFRA_MODEL missing from model routing table');
-  cm.includes('Windows User Environment Variables') || cm.includes('Option A — Windows')
-    ? ok('CLAUDE.md: PAT Option A is Windows env var') : bad('CLAUDE.md: PAT Option A is not Windows env var — check order');
+  (cm.includes('Windows env var') && cm.includes('AZURE_DEVOPS_PAT')) || cm.includes('Windows User Environment Variables')
+    ? ok('CLAUDE.md: PAT stored in Windows env var') : bad('CLAUDE.md: PAT Windows env var guidance missing');
 }
 
 // ── 10. install.sh syntax ─────────────────────────────────────────────────────
@@ -330,6 +329,96 @@ if (exists('install.sh')) {
   !sh.includes('require("./.claude-plugin/plugin.json")"')
     ? ok('install.sh: no double-quote nesting error')
     : bad('install.sh: double-quote nesting error — will crash on error path');
+}
+
+// ── Architecture templates (skills/architect/templates/) ───────────────────────
+// Verifies the two-tier compose layout (ADR — architect template dedup): a stack-
+// agnostic _shared/ base + per-stack folders that supply stack-specific files and
+// overrides. The bootstrap composes union(_shared, <stack>) with the stack winning
+// collisions, so every stack must resolve to exactly its 8-file set.
+console.log('\n▶ Architecture templates (skills/architect/templates/)');
+{
+  const TPL = 'skills/architect/templates';
+  // The File-2 variant each stack ships (the rest of the 8-file set is fixed).
+  const STACK_FILE2 = {
+    'dotnet-api':       'architecture-callchains.md',
+    'spring-boot':      'architecture-callchains.md',
+    'js-library':       'architecture-api.md',
+    'angular-nx':       'architecture-flows.md',
+    'angular-standard': 'architecture-flows.md',
+    'react':            'architecture-flows.md',
+    'aspnet-framework': 'architecture-flows.md',
+    'aspnet-mvc':       'architecture-flows.md',
+    'python-fastapi':   'architecture-flows.md',
+    'python-django':    'architecture-flows.md',
+    'python-flask':     'architecture-flows.md',
+  };
+  const SHARED_FILES   = ['architecture-decisions.md','architecture-integrations.md','architecture-security.md','architecture-data.md'];
+  // Files every stack must resolve to after compose (File-2 added per stack below).
+  const STACK_FIXED    = ['architecture.md','architecture-reference.md','architecture-deployment.md'];
+  const EXPECTED_TOTAL = 8;
+
+  // _shared/ base
+  const sharedRel = `${TPL}/_shared`;
+  if (!exists(sharedRel)) {
+    bad('_shared/ base folder exists', `Create ${sharedRel}/ with the stack-agnostic templates`);
+  } else {
+    SHARED_FILES.forEach(f => exists(`${sharedRel}/${f}`)
+      ? ok(`_shared/${f}`)
+      : bad(`_shared/${f} exists`, `Move the stack-agnostic ${f} into ${sharedRel}/`));
+  }
+  const sharedOnDisk = exists(sharedRel)
+    ? fs.readdirSync(path.join(ROOT, sharedRel)).filter(f => f.endsWith('.md'))
+    : [];
+
+  // Per-stack folders — cross-check against the bootstrap's ARCH_TEMPLATE_FOLDER map
+  const bootstrap = read('scripts/setup-init-bootstrap.cjs');
+  const stacks = Object.keys(STACK_FILE2);
+  stacks.forEach(stack => {
+    const stackRel = `${TPL}/${stack}`;
+    if (!exists(stackRel)) { bad(`stack folder ${stack}/ exists`, `Create ${stackRel}/`); return; }
+    const onDisk = fs.readdirSync(path.join(ROOT, stackRel)).filter(f => f.endsWith('.md'));
+
+    // Required stack-specific files present
+    [...STACK_FIXED, STACK_FILE2[stack]].forEach(f => onDisk.includes(f)
+      ? ok(`${stack}/${f}`)
+      : bad(`${stack}/${f} exists`, `Add ${f} to ${stackRel}/`));
+
+    // Compose completeness: union(_shared, stack) == the exact 8-file set
+    const composed = new Set([...sharedOnDisk, ...onDisk]);
+    composed.size === EXPECTED_TOTAL
+      ? ok(`${stack}: composes to ${EXPECTED_TOTAL} files`)
+      : bad(`${stack}: composes to ${EXPECTED_TOTAL} files (got ${composed.size}: ${[...composed].sort().join(', ')})`,
+             'A stack must resolve to exactly 8 files via union(_shared, stack)');
+
+    // Bootstrap must map this stack folder
+    bootstrap.includes(`'${stack}'`)
+      ? ok(`${stack}: mapped in ARCH_TEMPLATE_FOLDER`)
+      : bad(`${stack}: mapped in ARCH_TEMPLATE_FOLDER`, `Add ${stack} to ARCH_TEMPLATE_FOLDER in setup-init-bootstrap.cjs`);
+  });
+
+  // Override sanity — dotnet-api overrides all 4 shared files; frontend + js-library override data.md
+  ['architecture-decisions.md','architecture-integrations.md','architecture-security.md','architecture-data.md']
+    .forEach(f => exists(`${TPL}/dotnet-api/${f}`)
+      ? ok(`dotnet-api overrides ${f}`)
+      : bad(`dotnet-api overrides ${f}`, `dotnet-api ships a .NET-specific ${f} — restore its override in ${TPL}/dotnet-api/`));
+  ['angular-nx','angular-standard','react','js-library']
+    .forEach(s => exists(`${TPL}/${s}/architecture-data.md`)
+      ? ok(`${s} overrides architecture-data.md`)
+      : bad(`${s} overrides architecture-data.md`, `${s} needs its own architecture-data.md variant`));
+
+  // Marker check — every template (shared + stack) must start with <!-- TEMPLATE -->
+  let markerBad = 0;
+  const allTplDirs = [sharedRel, ...stacks.map(s => `${TPL}/${s}`)].filter(d => exists(d));
+  allTplDirs.forEach(d => {
+    fs.readdirSync(path.join(ROOT, d)).filter(f => f.endsWith('.md')).forEach(f => {
+      const first = read(`${d}/${f}`).split(/\r?\n/, 1)[0];
+      if (!/^<!--\s*TEMPLATE\s*-->/.test(first)) { markerBad++; if (VERBOSE) console.log(`    ✗ ${d}/${f} missing <!-- TEMPLATE --> marker`); }
+    });
+  });
+  markerBad === 0
+    ? ok('all templates start with <!-- TEMPLATE --> marker')
+    : bad(`all templates start with <!-- TEMPLATE --> marker (${markerBad} missing)`, 'Add <!-- TEMPLATE --> as line 1 of every architecture template');
 }
 
 // ── Summary ───────────────────────────────────────────────────────────────────

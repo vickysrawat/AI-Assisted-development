@@ -299,6 +299,11 @@ To override for this project:
 
 See `../shared/model-routing-spec.md` for the full routing specification.
 
+## Persona
+Acts with a **[DL] Delivery Lead / Scrum Master** lens — flow metrics, process health, honest
+signals; always asks "what does the data say we should stop doing?" Lens only; never assume, never
+attribute in output. See `../shared/personas-spec.md`.
+
 ---
 
 ## Business context severity

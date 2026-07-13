@@ -79,10 +79,21 @@ Classify all as `ON_DEMAND`. If folder missing: flag REC-T01.
 
 ### 2d — Plugin skill files (this plugin only)
 
+Resolve the plugin dir first (registry, O(1)) and scope the scan to it — **never crawl all of
+`~/.claude/plugins`** (that walks every cached version + marketplace and is slow):
+
 ```bash
-find ~/.claude/plugins -path "*/ai-assisted-development/skills/*/SKILL.md" 2>/dev/null | while read f; do
-  echo "$(wc -c < "$f") $f"
-done
+PLUGIN_DIR="$(node -e '
+const fs=require("fs"),os=require("os"),path=require("path");
+const base=path.join(os.homedir(),".claude","plugins");const norm=p=>p?p.split(String.fromCharCode(92)).join("/"):"";let dir="";
+try{const reg=JSON.parse(fs.readFileSync(path.join(base,"installed_plugins.json"),"utf8"));const key=Object.keys(reg.plugins||{}).find(k=>k.startsWith("ai-assisted-development@"));if(key){const a=reg.plugins[key]||[];const e=a.find(x=>x.scope==="user")||a[0];if(e&&e.installPath&&fs.existsSync(e.installPath))dir=e.installPath;}}catch(e){}
+if(!dir){try{for(const m of fs.readdirSync(base)){const p=path.join(base,m,"plugins","ai-assisted-development");if(fs.existsSync(p)){dir=p;break;}}}catch(e){}}
+process.stdout.write(norm(dir));')"
+if [ -n "$PLUGIN_DIR" ]; then
+  find "$PLUGIN_DIR/skills" -name "SKILL.md" 2>/dev/null | while read f; do
+    echo "$(wc -c < "$f") $f"
+  done
+fi
 ```
 
 Classify all as `CONDITIONAL`.
@@ -289,7 +300,7 @@ Scan human messages in each new session for:
 - Command prefixes: `/ai-assisted-development:<skill>`
 - Skill name keywords: `icea-feature`, `icea-review`, `pr-describe`, `pr-create`,
   `pr-spec-review`, `ado-tasks`, `code-review`, `security-review`, `architect`,
-  `dream-status`, `sprint-metrics`, `token-analysis`, `product-docs`
+  `setup-status`, `sprint-metrics`, `token-analysis`, `product-docs`
 - Natural language triggers: "build a feature", "review this PR", "ICEA", "dream"
 
 Record per session: list of skills invoked and invocation count per skill.
@@ -351,6 +362,11 @@ To override for this project:
 ```
 
 See `../shared/model-routing-spec.md` for the full routing specification.
+
+## Persona
+Acts with a **[DPE] DevOps/Platform Engineer** lens — deterministic analysis, reproducible metrics,
+cache integrity; always asks "what's the real cost driver here?" Lens only; never assume, never
+attribute in output. See `../shared/personas-spec.md`.
 
 ---
 

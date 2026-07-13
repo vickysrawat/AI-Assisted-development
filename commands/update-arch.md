@@ -1,6 +1,6 @@
 ---
 description: Targeted architecture doc refresh — re-reads only changed parts of the codebase and updates the prose architecture docs (architecture.md) without a full re-scan. Also re-runs the deployment questionnaire via --deployment. For the codebase module graph, use /graph-sync (incremental, fingerprint-based). Much cheaper than re-running the full architect skill.
-argument-hint: "[--deployment | path]  —  --deployment re-runs the deployment questionnaire; a path (e.g. src/services/matters/) refreshes that subtree; omit to auto-detect changed areas"
+argument-hint: "[--deployment | --data | --integrations | --security | --decisions | path]  —  refresh one architecture doc, append a decision, re-run the deployment questionnaire, refresh a subtree (path), or omit to auto-detect changed areas"
 ---
 
 ## Model routing
@@ -13,6 +13,20 @@ See `skills/shared/model-routing-spec.md` for the full specification.
 
 ---
 
+## Persona
+
+Execute as **[SA] Rafael Mendes — Solution Architect** (16 yrs). Optimizes for keeping the prose
+architecture docs true to the current system with minimal churn; always asks "what actually changed,
+and where are the seams now?" Reasons in this project's actual stack and topology per layer — never a
+fixed technology.
+
+The persona sets *what to scrutinize* — it never licenses assumption. The changed source and existing
+docs are the only sources of truth; document what is actually there, never what a persona would
+"expect" (subordinate to CLAUDE.md §3 / decision transparency). Never name the persona in the docs.
+See `skills/shared/personas-spec.md`.
+
+---
+
 # /update-arch — Targeted architecture doc refresh
 
 Refreshes the relevant sections of the prose `architecture.md` for areas that have
@@ -22,7 +36,7 @@ changes.
 
 > **Orientation graph:** the codebase module graph (`.claude/graph/`) is refreshed
 > **separately** by `/graph-sync` — it is fingerprint-based and incremental
-> ([ADR 0038](../docs/adr/0038-knowledge-graph-orientation.md)). `/update-arch`
+> (ADR 0038). `/update-arch`
 > no longer touches orientation data (the former `domain-map.md` was retired in
 > v3.0.0). Run `/graph-sync` after structural changes; run `/update-arch` to keep
 > the prose docs current.
@@ -31,7 +45,7 @@ Use this after:
 - A change that alters the system overview or layer responsibilities in `architecture.md`
 - With `--deployment` to capture or re-capture the deployment questionnaire
 
-For a complete re-scan of all architecture docs, use `dream-init` instead.
+For a complete re-scan of all architecture docs, use `setup-init` instead.
 For module/orientation refresh, use `/graph-sync`.
 
 ---
@@ -44,32 +58,57 @@ argument string the user provided:
 | User typed | MODE | Action |
 |---|---|---|
 | `--deployment` | `deployment` | Re-run only the deployment questionnaire (this Step 0), then STOP. Do not run Steps 1–7. |
+| `--data` | `docfile` | Re-run the File 4 prompt → rewrite `architecture-data.md`, then STOP. |
+| `--integrations` | `docfile` | Re-run the File 5 prompt → rewrite `architecture-integrations.md`, then STOP. |
+| `--security` | `docfile` | Re-run the File 6 prompt → rewrite `architecture-security.md`, then STOP. |
+| `--decisions` | `decisions` | **Append** a new `AD-NNN` entry to `architecture-decisions.md` — never overwrite existing entries. Then STOP. |
 | a file/folder path (e.g. `src/services/matters/`) | `subtree` | Refresh that subtree — skip to Step 1 with the path. |
 | (nothing) | `auto` | Auto-detect changed areas — skip to Step 1. |
-| anything starting with `--` that is not `--deployment` | `error` | Unknown flag — see below. |
+| anything starting with `--` that is not the flags above | `error` | Unknown flag — see below. |
 
 ```bash
 # ARGS holds the raw invocation arguments
 case "$ARGUMENTS" in
-  --deployment) echo "MODE=deployment" ;;
-  --*)          echo "MODE=error UNKNOWN_FLAG=$ARGUMENTS" ;;
-  "")           echo "MODE=auto" ;;
-  *)            echo "MODE=subtree PATH=$ARGUMENTS" ;;
+  --deployment)   echo "MODE=deployment" ;;
+  --data)         echo "MODE=docfile FILE=architecture-data.md PROMPT=4" ;;
+  --integrations) echo "MODE=docfile FILE=architecture-integrations.md PROMPT=5" ;;
+  --security)     echo "MODE=docfile FILE=architecture-security.md PROMPT=6" ;;
+  --decisions)    echo "MODE=decisions" ;;
+  --*)            echo "MODE=error UNKNOWN_FLAG=$ARGUMENTS" ;;
+  "")             echo "MODE=auto" ;;
+  *)              echo "MODE=subtree PATH=$ARGUMENTS" ;;
 esac
 ```
 
 If `MODE=error`, output and stop:
 ```
 ⚠ Unknown flag: {UNKNOWN_FLAG}
-   /update-arch supports:  --deployment   (re-run the deployment questionnaire)
-                          <path>          (refresh a subtree)
-                          (no args)       (auto-detect changed areas)
+   /update-arch supports:  --deployment    (re-run the deployment questionnaire)
+                          --data           (refresh architecture-data.md)
+                          --integrations   (refresh architecture-integrations.md)
+                          --security       (refresh architecture-security.md)
+                          --decisions      (append a new AD-NNN decision entry)
+                          <path>           (refresh a subtree)
+                          (no args)        (auto-detect changed areas)
 ```
+
+**If `MODE=docfile`** — apply the source-file consent gate (Step 4), then re-run the matching
+`## File {PROMPT} Prompt` section of `skills/architect/prompts/<detected-stack>.md` against the
+current code, write the result to `.claude/architecture/{FILE}` (overwriting), and STOP. Flag any
+undetectable section with `> ⚠ Could not determine — needs manual input`; never invent authz
+rules, SLAs, or timeouts.
+
+**If `MODE=decisions`** — read `.claude/architecture/architecture-decisions.md`, find the highest
+existing `AD-NNN`, and **append** a new entry (`AD-{N+1}`) capturing the decision the developer
+describes (Decision / Rationale / Alternatives rejected / Date / Status). **Never modify or
+remove existing entries.** If the file does not exist, seed it from the stack template first.
+Then STOP.
 
 > Note: the command is `/update-arch` (not `/arch-update`). If a user reports a
 > "command not found" style error, confirm they used `/update-arch`.
 
-**Only if `MODE=deployment`, continue with the rest of this step. Otherwise go to Step 1.**
+**Modes `docfile` and `decisions` are handled above and STOP. If `MODE=deployment`, continue
+with the rest of this step. Otherwise (`subtree` / `auto`) go to Step 1.**
 
 ---
 
@@ -91,7 +130,7 @@ showing the current values as defaults the developer can keep or change.
 1. **Ensure the target file exists before collecting answers.** If
    `.claude/architecture/architecture-deployment.md` is missing, seed it from the
    detected stack's template so there is a real file to write into (this is what
-   makes `--deployment` work standalone, without a prior full `dream-init`):
+   makes `--deployment` work standalone, without a prior full `setup-init`):
 
 ```
 !node -e "
@@ -171,7 +210,7 @@ git log -1 --name-only --format="" 2>/dev/null | sed 's#/[^/]*$##' | sort -u
 If `NO_ARCH`:
 ```
 ⚠ No architecture.md found at .claude/architecture/architecture.md.
-Run /dream-init to generate the architecture docs from scratch.
+Run /setup-init to generate the architecture docs from scratch.
 ```
 And stop.
 
@@ -254,7 +293,7 @@ Write back using the same Node.js pattern as Step 5.
 
   Graph: {"⚠ stale — run /graph-sync" | "current"}
 
-Next: run /dream-status to confirm the architecture checks are ✅ Green.
+Next: run /setup-status to confirm the architecture checks are ✅ Green.
 ```
 
 ---

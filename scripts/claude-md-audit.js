@@ -4,7 +4,7 @@
 // Measures a project CLAUDE.md, classifies each section as GOVERNANCE (always-active —
 // must stay) or MOVABLE (reference/config/project prose that could live in a rule, doc, or
 // skill), and prints an advisory ONLY when the file exceeds the budget AND there is
-// meaningful movable content. Never edits the file. Used by dream-init and dream-health.
+// meaningful movable content. Never edits the file. Used by setup-init and dream-health.
 //
 // Usage: node claude-md-audit.js [--file ./CLAUDE.md] [--budget 200]
 

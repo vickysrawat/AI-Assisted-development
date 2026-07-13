@@ -52,3 +52,15 @@ Rules:
 | 0039 | graph.json sidecar — machine-readable structure of record; markdown is its projection (typed edges, confidence, module-wide fingerprints) | Accepted |
 | 0040 | CLAUDE.md context budget — ≤ ~200 lines, set by instruction adherence not context-window capacity | Accepted |
 | 0041 | EXTRACTED graph edges derived deterministically by a script (import parsing), not by the model | Accepted |
+| 0042 | Frontmatter-based rule deployment — self-describing `detect:` blocks + dream-init discovery loop (replaces the hardcoded table) | Accepted |
+| 0043 | Ecosystem and layered rule organisation — 43-file rule set, Layer 0–4 backend, meta-framework exclusion logic | Accepted |
+| 0044 | directoryCatalog in graph.json — pre-built static-serving/config/test index consumed by security (with fallback) | Accepted |
+| 0045 | Security skill free-form risk analysis — evidence-cited LLM pass, no CVSS, no ledger writes | Accepted |
+| 0046 | dream-init bootstrap pattern — deterministic .cjs script handles all mechanical work; LLM acts only on `needsLLMPopulation`; rules deployed after architect/graph-sync; manifest is the crash-recovery checkpoint | Accepted |
+| 0047 | Expert Personas — a role axis orthogonal to model routing; 13 named identity cards, stack-agnostic, governance-subordinate, reasoning-only, two tiers (judgment/mechanical) | Accepted |
+| 0048 | Node-only runtime (no runtime python3 in commands/skills) + canonical `plugin-state.cjs` for version resolution — never build a plugin path from a version, never read relative plugin.json, never crawl the cache | Accepted |
+| 0049 | Memory capture uses UserPromptSubmit hook with JSON `additionalContext` — Stop hooks do NOT support additionalContext (schema validation fails); guard via `dream-init-state.json` | Accepted |
+| 0050 | Architecture doc set expands from 4 to 8 (data/integrations/security/decisions) + two Mermaid diagrams in architecture.md | Accepted |
+| 0051 | Architect templates deduplicated — shared base (`_shared/`) + per-stack overrides, composed by the bootstrap (supersedes 0050's "no bootstrap change needed") | Accepted |
+| 0052 | Critic wired into icea-feature at two planning-time gates (ICEA draft Step 5, Tech Spec draft Step 8) with bounded auto-revise; new `tech` mode; extends 0012 | Accepted |
+| 0053 | Architecture-doc population uses a two-signal detector (retained `<!-- TEMPLATE -->` marker + scaffold-only body tokens); bootstrap no longer strips the marker; corrects the strip introduced with 0051 | Accepted |

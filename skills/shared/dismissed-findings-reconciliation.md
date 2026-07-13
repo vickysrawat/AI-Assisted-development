@@ -94,7 +94,7 @@ Dismissed findings are **excluded** from open finding counts in all downstream g
 - `findings-gate.md` — dismissed findings are never counted toward `total_open`
 - `checkin` — dismissed findings do not block commits
 - `pr-create` — dismissed findings do not block PR creation
-- `dream-status` — dismissed count is reported separately (informational)
+- `setup-status` — dismissed count is reported separately (informational)
 
 **Exception — accepted-risk:** Dismissed findings with `Reason: accepted-risk` on
 Critical or High severity are surfaced as **informational** (non-blocking) in:

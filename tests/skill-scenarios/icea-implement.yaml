@@ -1,0 +1,25 @@
+skill: icea-implement
+scenarios:
+  - id: implement-approved-icea
+    description: "Should generate implementation code for an approved ICEA read from disk"
+    input: "IMPLEMENT ADO-1847"
+    expect:
+      triggered: true
+      contains:
+        - "ADO-1847"
+
+  - id: epic-story-scope
+    description: "Should implement a single story of an Epic when a Story number is given"
+    input: "IMPLEMENT ADO-1847 Story-2"
+    expect:
+      triggered: true
+      contains:
+        - "Story"
+
+  - id: requires-approval
+    description: "Should not generate code without an approved ICEA on disk"
+    input: "Implement ADO-9999 (no approved ICEA exists)"
+    expect:
+      triggered: true
+      contains:
+        - "approved"

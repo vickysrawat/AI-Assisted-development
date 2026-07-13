@@ -1,5 +1,5 @@
 # external-dir-map — External Directory Mapper
-_Spec version: 1.0 · Last changed: 2026-06-10 · Used by: dream-init (Step 4d), sync-dirs · Consent: C_
+_Spec version: 1.0 · Last changed: 2026-06-10 · Used by: setup-init (Step 4d), sync-dirs · Consent: C_
 
 Scans project manifest files to find references to projects or modules that live
 outside the solution root, then writes their resolved absolute paths into
@@ -10,9 +10,16 @@ developers to pass `--add-dir` flags manually each session.
 
 ---
 
+## Persona
+Acts with a **[DPE] DevOps/Platform Engineer** lens — idempotent, non-destructive path mapping;
+always asks "is this safe to re-run and never removing a developer's paths?" Lens only; never assume,
+never attribute in output. See `../shared/personas-spec.md`.
+
+---
+
 ## When this skill runs
 
-- Called by `dream-init` Step 4d after stack detection (DETECTED_STACKS is already set)
+- Called by `setup-init` Step 4d after stack detection (DETECTED_STACKS is already set)
 - Called by `/sync-dirs` at any time to re-sync after a manifest change
 - Safe to re-run — fully idempotent
 
@@ -33,7 +40,7 @@ added to `additionalDirectories`.
 
 ## Step 2 — Scan manifests per detected stack
 
-Use `DETECTED_STACKS` from `dream-init` Step 4a if available. If running
+Use `DETECTED_STACKS` from `setup-init` Step 4a if available. If running
 standalone via `/sync-dirs`, re-detect stacks now using the same logic:
 
 ```bash
@@ -65,11 +72,16 @@ find . \( -name "*.py" -o -name "requirements.txt" -o -name "pyproject.toml" \) 
 
 ## Step 3 — Extract external paths per stack
 
-Run the Node.js scanner below. It handles all stacks in one pass and emits only
-paths that are outside the solution root.
+Write the Node.js scanner below to `.claude/_ext-dir-scan.cjs`, then run:
+`node .claude/_ext-dir-scan.cjs`
+
+Always use the `.cjs` extension — it forces CommonJS mode (`require`) regardless
+of whether the target project has `"type":"module"` in its `package.json`. Never
+execute this script inline with `node -e "..."`: backslash sequences in the regex
+are mangled by the shell when passed through double-quoted strings.
 
 ```javascript
-// Run as: node -e "<script>" from the solution root
+// Written to .claude/_ext-dir-scan.cjs and executed as: node .claude/_ext-dir-scan.cjs
 const fs   = require('fs');
 const path = require('path');
 const root = process.cwd();
@@ -217,11 +229,15 @@ console.log('SCAN_DONE: ' + external.size + ' external path(s) found');
 
 ## Step 4 — Write to settings.local.json
 
+Write the script below to `.claude/_ext-dir-merge.cjs`, then run:
+`node .claude/_ext-dir-merge.cjs`
+
 Read the scan output from `.claude/_ext-dir-scan.json`, then merge into
 `.claude/settings.local.json` using the read / create / merge logic below.
-Delete the temp scan file when done.
+Delete both temp files (`.json` and both `.cjs` scripts) when done.
 
 ```javascript
+// Written to .claude/_ext-dir-merge.cjs and executed as: node .claude/_ext-dir-merge.cjs
 const fs   = require('fs');
 const path = require('path');
 
@@ -282,8 +298,10 @@ state.external_dir_last_sync = new Date().toISOString().slice(0, 10);
 fs.writeFileSync(statePath, JSON.stringify(state, null, 2));
 console.log('✓ dream-init-state.json updated with manifest snapshot');
 
-// ── Clean up temp file ───────────────────────────────────────────────────────
+// ── Clean up temp files ──────────────────────────────────────────────────────
 fs.unlinkSync('.claude/_ext-dir-scan.json');
+try { fs.unlinkSync('.claude/_ext-dir-scan.cjs'); } catch(e) {}
+try { fs.unlinkSync('.claude/_ext-dir-merge.cjs'); } catch(e) {}
 ```
 
 ---
@@ -323,7 +341,8 @@ fs.unlinkSync('.claude/_ext-dir-scan.json');
 - NEVER overwrite other keys in `settings.local.json` (e.g. `env`, `hooks`)
 - NEVER commit `settings.local.json` — it is machine-specific and auto-gitignored by Claude Code
 - ALWAYS resolve paths to absolute before writing
-- ALWAYS clean up `.claude/_ext-dir-scan.json` after Step 4
+- ALWAYS clean up `.claude/_ext-dir-scan.json`, `_ext-dir-scan.cjs`, and `_ext-dir-merge.cjs` after Step 4
+- ALWAYS write scripts to `.cjs` files — NEVER use `node -e "..."` (shell escaping breaks backslash regexes)
 
 ---
 

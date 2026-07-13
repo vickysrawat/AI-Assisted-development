@@ -1,11 +1,11 @@
 <!DOCTYPE html>
+<!-- documents-plugin-version: 3.9.0 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI-Assisted Development — Developer Guide</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Self-contained / offline: no external fonts or CDNs (system fallbacks only) per the no-external-connectivity constraint. -->
 <style>
   :root {
     --ai-white:         #FFFFFF;
@@ -728,11 +728,22 @@
     <div class="nav-brand">
       <div class="nav-brand-label">Plugin Guide</div>
       <div class="nav-brand-title">AI-Assisted Dev</div>
-      <div class="nav-brand-version">Version 2.4.1</div>
+      <div class="nav-brand-version">Version 3.9.0</div>
     </div>
 
-    <div class="nav-section-label">Workflow</div>
-    <a class="nav-item active" href="#milestone-1" onclick="setActive(this)">
+    <div class="nav-section-label">Getting Started</div>
+    <a class="nav-item active" href="#setup" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Integrate the plugin
+    </a>
+    <a class="nav-item" href="#sync" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Keep in sync
+    </a>
+    <a class="nav-item" href="#session" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Start a session
+    </a>
+
+    <div class="nav-section-label" style="margin-top: var(--space-6);">Workflow</div>
+    <a class="nav-item" href="#milestone-1" onclick="setActive(this)">
       <span class="nav-item-dot"></span> Start a Feature
     </a>
     <a class="nav-item" href="#milestone-2" onclick="setActive(this)">
@@ -757,6 +768,33 @@
       <span class="nav-item-dot"></span> Track &amp; Bug Log
     </a>
 
+    <div class="nav-section-label" style="margin-top: var(--space-6);">Quality Gates</div>
+    <a class="nav-item" href="#code-review" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Code review
+    </a>
+    <a class="nav-item" href="#security" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Security &amp; DAST
+    </a>
+    <a class="nav-item" href="#checkin" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Pre-commit check
+    </a>
+
+    <div class="nav-section-label" style="margin-top: var(--space-6);">Delivery &amp; Docs</div>
+    <a class="nav-item" href="#architecture" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Architecture docs
+    </a>
+    <a class="nav-item" href="#pr" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Pull requests
+    </a>
+
+    <div class="nav-section-label" style="margin-top: var(--space-6);">Memory &amp; Graph</div>
+    <a class="nav-item" href="#memory" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Memory &amp; Dream
+    </a>
+    <a class="nav-item" href="#graph" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Knowledge graph
+    </a>
+
     <div class="nav-section-label" style="margin-top: var(--space-6);">Reference</div>
     <a class="nav-item" href="#keywords" onclick="setActive(this)">
       <span class="nav-item-dot"></span> All Keywords
@@ -773,6 +811,9 @@
     <a class="nav-item" href="#skill-boundaries" onclick="setActive(this)">
       <span class="nav-item-dot"></span> Skill Responsibilities
     </a>
+    <a class="nav-item" href="#model-routing" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Model routing
+    </a>
 
     <div class="nav-progress">
       <div class="nav-progress-label">Your progress</div>
@@ -786,12 +827,199 @@
 
     <!-- HERO -->
     <div class="hero">
-      <div class="hero-kicker">First-time developer guide</div>
+      <div class="hero-kicker">Developer guide · v3.9.0</div>
       <h1 class="hero-title">From feature request<br>to working code.</h1>
       <p class="hero-sub">
-        This guide walks you through every milestone — what to type,
-        what Claude does, and what happens next. Keep it open while you work.
+        Everything the plugin does, in one place — integrate it into your project, drive the
+        ICEA workflow, run the quality gates, and lean on memory and the knowledge graph.
+        Start with <strong>Getting Started</strong>, then keep this open while you work.
       </p>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <div class="milestone" id="setup">
+      <div class="milestone-header">
+        <div class="milestone-number" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: var(--ai-gray-400);">A</div>
+        <div>
+          <div class="milestone-title">Integrate the plugin into your project</div>
+          <div class="milestone-desc">Install once per machine, then provision each project idempotently — one command, resume-safe.</div>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">A</span>
+            <span class="step-title">Install once per machine</span>
+            <span class="step-badge command">install.sh</span>
+            <span class="step-chevron">&#8250;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>Run <code>install.ps1</code> (Windows PowerShell) or <code>install.sh</code> (Git Bash) from the plugin repo. The installer prompts for your organisation / project / company identity and writes them to <code>.claude-plugin/config.json</code> — the single source of truth for ADO URLs and branding.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">Git Bash</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">$</span> <span class="cmd-keyword">./install.sh</span></pre>
+            </div>
+            <div class="callout info"><span class="callout-icon">i</span><span>Edit <code>.claude-plugin/config.json</code> and run <code>scripts/sync-config.sh</code> later if org / project / company ever changes plugin-wide.</span></div>
+          </div></div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">B</span>
+            <span class="step-title">Provision each project</span>
+            <span class="step-badge command">/setup-init</span>
+            <span class="step-chevron">&#8250;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>Run <code>/setup-init</code> from the target project. It is idempotent and resume-safe — a manifest tracks progress, so completed steps are skipped on re-run. It handles all mechanical provisioning first, then the LLM steps in order.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/setup-init</span></pre>
+            </div>
+            <table class="ref-table">
+              <thead><tr><th>Provisioning step</th><th>What it does</th></tr></thead>
+              <tbody>
+                <tr><td>memory/</td><td>Creates <code>MEMORY.md</code> and <code>dream-log.md</code></td></tr>
+                <tr><td>Commands</td><td>Deploys command stubs to <code>.claude/commands/</code></td></tr>
+                <tr><td>Hooks</td><td>Deploys enforcement hooks to <code>.claude/hooks/</code> and wires the PreToolUse/Stop hooks into <code>.claude/settings.json</code></td></tr>
+                <tr><td>State</td><td>Seeds <code>.claude/dream-init-state.json</code>, <code>.claude/file-cache.json</code>, and <code>token-graph.json</code></td></tr>
+                <tr><td>Ignore file</td><td>Writes the VCS-aware ignore file — <code>.gitignore</code> on Git or <code>.tfignore</code> on TFVC — with a managed block</td></tr>
+                <tr><td>Toolchain</td><td>Detects the git/bash paths on Windows</td></tr>
+              </tbody>
+            </table>
+            <p>It then runs the LLM steps in order: <code>/init</code> to populate <code>CLAUDE.md</code>, the architect skill to populate <code>.claude/architecture/</code> and deploy the stack-matched rule files to <code>.claude/rules/</code>, and <code>/graph-sync</code> to build the knowledge graph.</p>
+            <div class="callout info"><span class="callout-icon">i</span><span>Pass <code>--no-hooks</code> to skip the enforcement floor if you do not want the PreToolUse/Stop hooks wired in.</span></div>
+          </div></div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">C</span>
+            <span class="step-title">Verify the layout</span>
+            <span class="step-badge command">/setup-status</span>
+            <span class="step-chevron">&#8250;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>Run <code>/setup-status</code> to confirm every artefact is green. It is read-only and never modifies anything.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/setup-status</span></pre>
+            </div>
+            <p>A fully provisioned project looks like this:</p>
+            <div class="file-tree"><span class="ft-dir">memory/</span>              MEMORY.md, dream-log.md
+    <span class="ft-dir">.claude/commands/</span>     deployed command stubs
+    <span class="ft-dir">.claude/rules/</span>        stack-matched rule files
+    <span class="ft-dir">.claude/hooks/</span>        enforcement hooks
+    <span class="ft-dir">.claude/architecture/</span> architecture docs
+    <span class="ft-dir">.claude/graph/</span>        knowledge graph
+    CLAUDE.md              project intelligence file</div>
+            <div class="callout success"><span class="callout-icon">i</span><span>All green means the enforcement floor, memory, rules, architecture, and knowledge graph are live — you can start working immediately.</span></div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <div class="milestone" id="sync">
+      <div class="milestone-header">
+        <div class="milestone-number" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: var(--ai-gray-400);">R</div>
+        <div>
+          <div class="milestone-title">Keep in sync after upgrades</div>
+          <div class="milestone-desc">Check, re-provision, and (when needed) remove plugin-managed content as the installed version moves forward.</div>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">A</span>
+            <span class="step-title">Check infrastructure health</span>
+            <span class="step-badge command">/setup-status</span>
+            <span class="step-chevron">&#8250;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>Read-only. Reports green / amber / red for <code>CLAUDE.md</code>, memory, rules, hooks, architecture docs, the knowledge graph, <code>file-cache</code>, <code>token-graph</code>, and ignore coverage. It never modifies anything.</p>
+            <p>When the provisioned version drifts from the installed plugin version, it flags <code>UPGRADE PENDING</code> so you know to run <code>/setup-sync</code>.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/setup-status</span></pre>
+            </div>
+            <div class="callout info"><span class="callout-icon">i</span><span><code>/session-start</code> surfaces version drift on the first interaction, so upgrades are announced rather than silently assumed in place.</span></div>
+          </div></div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">B</span>
+            <span class="step-title">Re-provision after an upgrade</span>
+            <span class="step-badge command">/setup-sync</span>
+            <span class="step-chevron">&#8250;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>Compares <code>dream_init_plugin_version</code> in <code>.claude/dream-init-state.json</code> against the installed <code>.claude-plugin/plugin.json</code> version, then applies only the version-sensitive migration steps from <code>docs/migrations/</code> for each version in range.</p>
+            <table class="ref-table">
+              <thead><tr><th>Step</th><th>Effect</th></tr></thead>
+              <tbody>
+                <tr><td>Hooks</td><td>Re-copies hooks and refreshes <code>.claude/hooks/.hashes</code></td></tr>
+                <tr><td>Ignore</td><td>Re-runs the ignore writer</td></tr>
+                <tr><td>State</td><td>Seeds new state files</td></tr>
+                <tr><td>Rules</td><td>Deploys missing rule files</td></tr>
+                <tr><td>Version</td><td>Re-stamps the provisioned version</td></tr>
+              </tbody>
+            </table>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/setup-sync</span></pre>
+            </div>
+            <div class="callout success"><span class="callout-icon">i</span><span>Idempotent and safe to re-run &mdash; it never overwrites developer content, only managed blocks and generated artifacts.</span></div>
+          </div></div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">C</span>
+            <span class="step-title">Remove managed content</span>
+            <span class="step-badge command">/setup-teardown</span>
+            <span class="step-chevron">&#8250;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>Removes plugin-managed content by scope: <code>--full</code>, <code>--skills</code>, <code>--hooks</code>, <code>--rules</code>, <code>--commands</code>, or <code>--state</code>. It always dry-runs first and requires you to type <code>CONFIRM</code> before anything is removed.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/setup-teardown</span> <span class="cmd-value">--hooks</span></pre>
+            </div>
+            <div class="callout warning"><span class="callout-icon">i</span><span><code>memory/</code> is never removed &mdash; your captured knowledge survives every teardown scope.</span></div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <div class="milestone" id="session">
+      <div class="milestone-header">
+        <div class="milestone-number" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: var(--ai-gray-400);">></div>
+        <div>
+          <div class="milestone-title">Start each session</div>
+          <div class="milestone-desc">A zero-cost warm-up that loads the project's context in one pass.</div>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">A</span>
+            <span class="step-title">Warm up context</span>
+            <span class="step-badge command">/session-start</span>
+            <span class="step-chevron">></span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>Loads <code>CLAUDE.md</code>, memory, and architecture context in a single pass, runs a lightweight plugin version-drift check, and surfaces any red <code>/setup-status</code> items.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/session-start</span></pre>
+            </div>
+            <div class="callout info"><span class="callout-icon">i</span><span>Run it at the start of every session so you can work immediately without re-establishing context by hand.</span></div>
+            <div class="callout warning"><span class="callout-icon">i</span><span>If the drift check reports the installed plugin is newer than the version that provisioned the project, run <code>/setup-sync</code> to apply the version-sensitive changes.</span></div>
+          </div></div>
+        </div>
+      </div>
     </div>
 
     <!-- FLOW OVERVIEW -->
@@ -1023,6 +1251,10 @@ Review above. Correct anything wrong or: <span class="r-success">SAVE PLAN ADO-1
             <div class="step-body-inner">
               <p>Claude generates the full ICEA from the confirmed plan and writes it to <code>temp/ADO-{ID}-icea.md</code>. Open it in VS Code for a clean read with properly rendered tables and headings.</p>
               <div class="callout info">
+                <span class="callout-icon">⚖</span>
+                <span><strong>Critic gate (ICEA).</strong> Before the draft is written to <code>temp/</code>, the auto-critic reviews it for completeness, testability, B1–B7 coverage, and scope. On a <code>REVISE</code> verdict it regenerates the draft (up to 2× automatically); residual concerns fold into the ICEA GAPS list below. You always see a draft the critic has already hardened. See the critic layer in the plugin guide.</span>
+              </div>
+              <div class="callout info">
                 <span class="callout-icon">ℹ</span>
                 <span>Open with <strong>Ctrl+Shift+V</strong> to open VS Code markdown preview in a side panel. Keep chat on the left, preview on the right.</span>
               </div>
@@ -1136,6 +1368,10 @@ Drafting Tech Spec now...</div>
               <div class="callout info">
                 <span class="callout-icon">ℹ</span>
                 <span>Data access always uses <strong>Dapper with parameterised SQL</strong>. EF Core is never used.</span>
+              </div>
+              <div class="callout info">
+                <span class="callout-icon">⚖</span>
+                <span><strong>Critic gate (Tech Spec).</strong> Before the draft is written to <code>temp/</code>, the auto-critic checks it against the approved ICEA — every AC maps to a planned file, no planned file exceeds the ACs, each selected D-option is reflected in the design, and the coverage matrix and test cases are complete. On a <code>REVISE</code> verdict it regenerates the Tech Spec (up to 2× automatically); a genuine ICEA fault is surfaced with a <code>REVISE ADO-{ID}</code> recommendation rather than being papered over. This is the cheapest point to catch a spec↔design gap — before any code is generated.</span>
               </div>
             </div>
           </div>
@@ -1592,6 +1828,496 @@ To start implementation:
 
     <div class="section-divider"></div>
 
+    <div class="milestone" id="code-review">
+      <div class="milestone-header">
+        <div class="milestone-number" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: var(--ai-gray-400);">Q</div>
+        <div>
+          <div class="milestone-title">Code review</div>
+          <div class="milestone-desc">A Coverity-style static analysis with persistent tracking, stable fingerprints, and one-command fixes.</div>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">A</span>
+            <span class="step-title">Run a scan</span>
+            <span class="step-badge command">/code-review</span>
+            <span class="step-chevron">&#8250;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>Runs a three-pass analysis: <strong>Pass 1</strong> deterministic rule-based checkers, <strong>Pass 2</strong> persona passes for reliability, concurrency, and API-contract, and <strong>Pass 3</strong> a free-flow adversarial "what breaks next" sweep. It is stack-agnostic — it detects the language and loads only the matching checkers.</p>
+            <p>Scans are cache-aware via <code>.claude/file-cache.json</code>, so unchanged files are skipped on the default scan. Results are written as HTML + Markdown reports plus a running ledger at <code>CodeReviews/code-review-ledger.md</code>, where every finding gets a stable <code>FP-xxxxxxxx</code> fingerprint.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/code-review</span> <span class="cmd-value">--changed</span></pre>
+            </div>
+            <p>Passing no flag opens an interactive scope menu. Otherwise pick a scope flag:</p>
+            <table class="ref-table">
+              <thead><tr><th>Flag</th><th>Scope</th></tr></thead>
+              <tbody>
+                <tr><td><code>--changed</code></td><td>Staged + unstaged files only</td></tr>
+                <tr><td><code>--pr</code></td><td>Branch diff vs base</td></tr>
+                <tr><td><code>--full</code></td><td>All files, ignore cache</td></tr>
+                <tr><td><code>--ci</code></td><td>Full scan + cache warning if a cache file is found</td></tr>
+                <tr><td><code>--area backend|frontend|config|&lt;Module&gt;</code></td><td>One area or knowledge-graph module</td></tr>
+                <tr><td><code>--continue</code></td><td>Resume from checkpoint</td></tr>
+              </tbody>
+            </table>
+            <div class="callout info"><span class="callout-icon">i</span><span>No flag opens an interactive scope menu. <code>--full</code> and <code>--ci</code> never consult the cache.</span></div>
+          </div></div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">B</span>
+            <span class="step-title">Apply a fix</span>
+            <span class="step-badge command">/fix</span>
+            <span class="step-chevron">&#8250;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>Give <code>/fix</code> a fingerprint from the ledger and it locates the entry, applies the fix directly to source, and marks the finding Fixed — no re-scan needed.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/fix</span> <span class="cmd-value">FP-1a2b3c4d</span></pre>
+            </div>
+          </div></div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">C</span>
+            <span class="step-title">Dismiss a false positive</span>
+            <span class="step-badge command">/dismiss</span>
+            <span class="step-chevron">&#8250;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>Suppress a finding with an auditable reason category and a required justification. The finding moves to the ledger's Dismissed section and is skipped on future scans.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/dismiss</span> <span class="cmd-value">FP-1a2b3c4d false-positive reason text</span></pre>
+            </div>
+            <div class="callout warning"><span class="callout-icon">i</span><span>Dismissals re-open automatically if the code at that location later changes, so a stale suppression can never hide a new defect.</span></div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <div class="milestone" id="security">
+      <div class="milestone-header">
+        <div class="milestone-number" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: var(--ai-gray-400);">S</div>
+        <div>
+          <div class="milestone-title">Security review &amp; dynamic scanning</div>
+          <div class="milestone-desc">Static SAST for OWASP/CWE/IaC plus dynamic DAST via OWASP ZAP, both with persistent FP-fingerprinted ledgers.</div>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">A</span>
+            <span class="step-title">Static security review</span>
+            <span class="step-badge command">/security-review --changed</span>
+            <span class="step-chevron">&#8250;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>SAST covering the OWASP Top 10, CWE weaknesses, and IaC / cloud-posture misconfiguration. It uses the same three-pass architecture and the same scope flags as code review, and writes <code>security/security-ledger.md</code> with false-positive fingerprints so dismissed findings stay quiet on later runs.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/security-review</span> <span class="cmd-value">--changed</span></pre>
+            </div>
+            <div class="callout info"><span class="callout-icon">i</span><span><strong>Business Context Severity (B1&ndash;B7):</strong> findings that touch sensitive data &mdash; immigration IDs, privileged legal matter, vulnerable-client data &mdash; are escalated (e.g. to Critical) regardless of raw CVSS score.</span></div>
+            <table class="ref-table">
+              <thead><tr><th>Flag</th><th>Scope</th></tr></thead>
+              <tbody>
+                <tr><td><code>--changed</code></td><td>Staged / uncommitted files only</td></tr>
+                <tr><td><code>--pr</code></td><td>Branch diff vs target</td></tr>
+                <tr><td><code>--full</code></td><td>Entire working tree, ignore cache</td></tr>
+                <tr><td><code>--area</code></td><td>backend | frontend | config | &lt;Module&gt;</td></tr>
+              </tbody>
+            </table>
+          </div></div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">B</span>
+            <span class="step-title">Dynamic scan (passive baseline)</span>
+            <span class="step-badge command">/dynamic-scan</span>
+            <span class="step-chevron">&#8250;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>DAST via OWASP ZAP run in Docker. The default run is a <strong>passive baseline plus a dependency audit</strong> (npm / pip / NuGet) &mdash; safe against any target. Adding <code>--full</code> runs an active scan that sends attack payloads. Results land in <code>dynamic-scan/dynamic-scan-ledger.md</code>.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/dynamic-scan</span> <span class="cmd-value">--url http://localhost:5000</span></pre>
+            </div>
+            <p><strong>Baseline strategy:</strong> the first run records all current findings as a baseline and never gates. Only <em>new</em> findings versus that baseline gate on later runs, so pre-existing noise never blocks a check-in.</p>
+            <div class="callout warning"><span class="callout-icon">i</span><span><strong>Production gate:</strong> a hard environment gate refuses to run against production. Point <code>--url</code> at a local or non-prod environment only.</span></div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <div class="milestone" id="checkin">
+      <div class="milestone-header">
+        <div class="milestone-number" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: var(--ai-gray-400);">C</div>
+        <div>
+          <div class="milestone-title">Pre-commit check</div>
+          <div class="milestone-desc">One unified quality gate that runs four checks and emits a single pass/fail verdict before you commit.</div>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">A</span>
+            <span class="step-title">Run the gate</span>
+            <span class="step-badge command">/checkin</span>
+            <span class="step-chevron">&#8250;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>Runs four checks in a single pass over your staged and modified files, then emits one verdict. When everything is green it hands back a pre-filled <code>git commit</code> command so you can commit immediately.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/checkin</span></pre>
+            </div>
+            <table class="ref-table">
+              <thead><tr><th>Check</th><th>What it verifies</th></tr></thead>
+              <tbody>
+                <tr><td><code>A</code> Static analysis</td><td>Runs <code>code-review</code> over staged/modified files for code-quality defects.</td></tr>
+                <tr><td><code>B</code> ICEA compliance</td><td>Runs <code>icea-review</code> over the diff — tier re-verification and manifest delta included.</td></tr>
+                <tr><td><code>C</code> Secrets scan</td><td>Scans staged files for secrets and sensitive files; confirms <code>.claude/settings.json</code> is ignored.</td></tr>
+                <tr><td><code>D</code> Findings gate</td><td>Blocks on open Critical/High findings across the code-review, security, and dynamic-scan ledgers.</td></tr>
+              </tbody>
+            </table>
+            <div class="callout info"><span class="callout-icon">i</span><span>The same gates are also enforced non-interactively by the <code>icea-floor.sh</code> and <code>findings-gate-precommit.sh</code> pre-commit hooks installed by <code>/setup-init</code>.</span></div>
+          </div></div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">B</span>
+            <span class="step-title">Read the A/B/C/D verdict</span>
+            <span class="step-badge info">info</span>
+            <span class="step-chevron">&#8250;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>The output shows a one-line result for each of the four checks and a single overall verdict. When green, it appends a ready-to-run commit command; when blocked, it lists each blocking issue with a one-line fix and withholds the commit command.</p>
+            <div class="callout success"><span class="callout-icon">i</span><span>A green verdict means the same gates the pre-commit hooks enforce have already passed — the commit will go through cleanly.</span></div>
+            <div class="callout warning"><span class="callout-icon">i</span><span>Check C (secrets) and Check D (findings gate) always run and block on failure — resolve or dismiss open Critical/High findings before committing.</span></div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <div class="milestone" id="architecture">
+      <div class="milestone-header">
+        <div class="milestone-number" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: var(--ai-gray-400);">H</div>
+        <div>
+          <div class="milestone-title">Architecture documentation</div>
+          <div class="milestone-desc">Populate, refresh, and query a living architecture doc set that skills read instead of scanning source.</div>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">A</span>
+            <span class="step-title">Populate the docs</span>
+            <span class="step-badge command">/architect</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>Detects the repo type, deploys architecture templates into <code>.claude/architecture/</code>, and populates the missing ones by analysing the actual codebase. Also auto-run by <code>/setup-init</code>, so most projects already have it.</p>
+            <p>As of v3.8.0 it produces an eight-document set (expanded from four, ADR 0050). The overview <code>architecture.md</code> now carries two Mermaid diagrams — an end-to-end and a layered view — alongside dedicated docs for data, integrations, security, decisions, and deployment. It also runs a deployment questionnaire covering hosting, auth, CI/CD, and environments.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/architect</span></pre>
+            </div>
+            <div class="file-tree">.claude/<span class="ft-dir">architecture/</span>
+      architecture.md        (overview + two Mermaid diagrams)
+      architecture-data.md
+      architecture-integrations.md
+      architecture-security.md
+      architecture-decisions.md
+      architecture-deployment.md</div>
+            <div class="callout info"><span class="callout-icon">i</span><span>For the module dependency graph use <code>/graph-sync</code> — that is maintained separately from these docs.</span></div>
+          </div></div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">B</span>
+            <span class="step-title">Refresh one area</span>
+            <span class="step-badge command">/update-arch</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>A targeted refresh of a single area rather than a full re-run. Pass a flag — <code>--data</code>, <code>--integrations</code>, <code>--security</code>, <code>--decisions</code>, or <code>--deployment</code> — or a path to scope the update to one doc.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/update-arch</span> <span class="cmd-value">--security</span></pre>
+            </div>
+            <table class="ref-table">
+              <thead><tr><th>Flag</th><th>Refreshes</th></tr></thead>
+              <tbody>
+                <tr><td><code>--data</code></td><td>Data model and access doc</td></tr>
+                <tr><td><code>--integrations</code></td><td>External integrations doc</td></tr>
+                <tr><td><code>--security</code></td><td>Security posture doc</td></tr>
+                <tr><td><code>--decisions</code></td><td>Appends an architecture decision</td></tr>
+                <tr><td><code>--deployment</code></td><td>Re-runs the deployment questionnaire</td></tr>
+              </tbody>
+            </table>
+            <div class="callout info"><span class="callout-icon">i</span><span>For the module graph use <code>/graph-sync</code> instead of <code>/update-arch</code>.</span></div>
+          </div></div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">C</span>
+            <span class="step-title">Ask a question</span>
+            <span class="step-badge command">/explain</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>Instant codebase Q&amp;A answered from the architecture docs and the knowledge graph only — no source scan — so it is very cheap. It also tells you which file to open for deeper detail.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/explain</span> <span class="cmd-value">how does authentication work</span></pre>
+            </div>
+            <div class="callout success"><span class="callout-icon">i</span><span>Because it never reads <code>src/</code>, <code>/explain</code> answers in a fraction of the tokens a source scan would cost — then points you at the exact file to open.</span></div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <div class="milestone" id="pr">
+      <div class="milestone-header">
+        <div class="milestone-number" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: var(--ai-gray-400);">P</div>
+        <div>
+          <div class="milestone-title">Pull requests &amp; delivery</div>
+          <div class="milestone-desc">Turn approved work into an ICEA-compliant PR, break it into ADO tasks, and measure delivery quality after the sprint.</div>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">A</span>
+            <span class="step-title">Describe the change</span>
+            <span class="step-badge command">/pr-describe</span>
+            <span class="step-chevron">&#8250;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>Reads the git diff automatically and generates an ICEA-compliant PR description. Every changed file is mapped to an Acceptance Criterion, scope creep is flagged, and a self-review checklist is produced.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/pr-describe</span> <span class="cmd-value">ADO-1847</span></pre>
+            </div>
+            <div class="callout info"><span class="callout-icon">i</span><span>Any change that does not trace back to an Acceptance Criterion is surfaced as scope creep before you raise the PR.</span></div>
+          </div></div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">B</span>
+            <span class="step-title">Create the PR</span>
+            <span class="step-badge command">/pr-create</span>
+            <span class="step-chevron">&#8250;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>Creates the PR in Azure DevOps via the REST API, or saves an offline draft when the API is unavailable. It runs the ICEA compliance check and the findings gate before submitting.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/pr-create</span> <span class="cmd-value">ADO-1847</span></pre>
+            </div>
+            <div class="callout warning"><span class="callout-icon">i</span><span>Open Critical/High findings or an ICEA compliance failure block submission — clear them first, or the command saves a draft instead.</span></div>
+          </div></div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">C</span>
+            <span class="step-title">Delivery commands</span>
+            <span class="step-badge info">reference</span>
+            <span class="step-chevron">&#8250;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>The full delivery-side toolset — from task breakdown through post-sprint metrics and readiness assessments.</p>
+            <table class="ref-table">
+              <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+              <tbody>
+                <tr><td><code>/pr-describe</code></td><td>Generates an ICEA-compliant PR description from the git diff, maps every changed file to an Acceptance Criterion, flags scope creep, and outputs a self-review checklist.</td></tr>
+                <tr><td><code>/pr-create</code></td><td>Creates the PR in Azure DevOps via the REST API (or saves an offline draft); runs the ICEA compliance check and findings gate before submitting.</td></tr>
+                <tr><td><code>/pr-spec-review</code></td><td>Reviews an existing PR against a functional spec or ICEA and returns a pass/fail report.</td></tr>
+                <tr><td><code>/ado-tasks</code></td><td>Generates a full ADO task breakdown from an approved ICEA — one task per Acceptance Criterion per active layer, with titles, tags, and estimates.</td></tr>
+                <tr><td><code>/sprint-metrics</code></td><td>Measures ICEA compliance rate, PR rejection rate, and rework hours from ADO after a sprint.</td></tr>
+                <tr><td><code>/product-docs</code></td><td>Generates a Product Detail Document and/or User Guide as self-contained HTML.</td></tr>
+                <tr><td><code>/app-readiness</code></td><td>Production-readiness assessment for the application across eight domains.</td></tr>
+                <tr><td><code>/plugin-readiness</code></td><td>Production-readiness assessment for the plugin across six domains.</td></tr>
+              </tbody>
+            </table>
+          </div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <div class="milestone" id="memory">
+      <div class="milestone-header">
+        <div class="milestone-number" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: var(--ai-gray-400);">M</div>
+        <div>
+          <div class="milestone-title">Memory &amp; the Dream system</div>
+          <div class="milestone-desc">A two-layer capture pipeline feeds <code>memory/MEMORY.md</code>, then Dream consolidates it into durable, scored project intelligence.</div>
+        </div>
+      </div>
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">A</span>
+            <span class="step-title">Two-layer capture</span>
+            <span class="step-badge auto">auto</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>Capture is deliberately redundant so nothing valuable is lost:</p>
+            <p><strong>Layer 1 — proactive instruction.</strong> A hard rule in <code>CLAUDE.md</code> tells Claude to write to <code>memory/MEMORY.md</code> the moment a trigger fires, in the same response, before replying to the next message.</p>
+            <p><strong>Layer 2 — Stop hook safety net.</strong> <code>.claude/hooks/memory-capture.sh</code> injects a checklist reminder at the end of every turn, catching anything Layer 1 missed.</p>
+            <div class="callout info"><span class="callout-icon">i</span><span><code>memory/</code> is exempt from the Write Gate — memory entries are written directly, no <code>APPROVE</code> needed.</span></div>
+          </div></div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">B</span>
+            <span class="step-title">The five capture triggers</span>
+            <span class="step-badge info">reference</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>When any of these fires, an entry is written immediately:</p>
+            <table class="ref-table">
+              <thead><tr><th>Trigger</th><th>What to capture</th></tr></thead>
+              <tbody>
+                <tr><td>Plan approved</td><td>Approach agreed, tools chosen, constraints set</td></tr>
+                <tr><td>Task completed</td><td>Pattern that worked, convention confirmed</td></tr>
+                <tr><td>Error resolved</td><td>Error + root cause + fix + gotcha to avoid repeating</td></tr>
+                <tr><td>Approach abandoned</td><td>What failed and why — so it is not retried</td></tr>
+                <tr><td>Architecture decision</td><td>Decision + rationale + alternatives rejected</td></tr>
+              </tbody>
+            </table>
+          </div></div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">C</span>
+            <span class="step-title">Consolidate &amp; inspect</span>
+            <span class="step-badge command">/dream</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p><strong><code>/dream</code></strong> — run every 5–8 sessions. It scores entries by confidence, decay, and multiplicity, then proposes ADD / UPDATE / DELETE operations for tiered approval before writing anything. A 20-entry promotion cap keeps <code>MEMORY.md</code> lean; overflow is demoted to <code>memory/topic-*.md</code>.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/dream</span></pre>
+            </div>
+            <p><strong><code>/dream-health</code></strong> — generates <code>memory/health.html</code>, a dashboard of confidence scores, the decay curve, promote candidates, and run history.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/dream-health</span></pre>
+            </div>
+          </div></div>
+        </div>
+
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">D</span>
+            <span class="step-title">Audit &amp; rollback</span>
+            <span class="step-badge command">/dream-audit</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p><strong><code>/dream-audit</code></strong> — a quarterly quality audit that flags uncited facts and contradictions.</p>
+            <p><strong><code>/dream-rollback</code></strong> — reverses a specific consolidation run using the audit trail in <code>memory/dream-log.md</code>.</p>
+            <div class="callout success"><span class="callout-icon">i</span><span>The capture and Stop hooks are wired automatically by <code>/setup-init</code> and refreshed by <code>/setup-sync</code> — no manual hook configuration required.</span></div>
+          </div></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <div class="milestone" id="graph">
+      <div class="milestone-header">
+        <div class="milestone-number" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: var(--ai-gray-400);">G</div>
+        <div>
+          <div class="milestone-title">The knowledge graph</div>
+          <div class="milestone-desc">A typed, confidence-scored dependency graph of the codebase that stays fresh incrementally.</div>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">A</span>
+            <span class="step-title">How the graph is stored</span>
+            <span class="step-badge info">graph.json</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p><code>.claude/graph/graph.json</code> is authoritative. It holds typed nodes (<code>module</code>, <code>service</code>, <code>library</code>, <code>external</code>) and typed edges, each carrying a confidence level.</p>
+            <table class="ref-table">
+              <thead><tr><th>Edge confidence</th><th>Meaning</th></tr></thead>
+              <tbody>
+                <tr><td><code>EXTRACTED</code></td><td>Script-derived from imports — deterministic.</td></tr>
+                <tr><td><code>INFERRED</code></td><td>Derived from DI, config, or dynamic wiring.</td></tr>
+                <tr><td><code>AMBIGUOUS</code></td><td>A candidate relationship that could not be resolved with confidence.</td></tr>
+              </tbody>
+            </table>
+            <p>Each module carries a <strong>fingerprint</strong> — a hash over its source — so any file change marks that module stale. Human-readable markdown projections (<code>graph-index.md</code> breadth table plus per-module detail files) are generated from <code>graph.json</code> and are never hand-edited.</p>
+            <div class="file-tree">.claude/<span class="ft-dir">graph</span>/
+      graph.json          authoritative typed graph
+      graph-index.md      generated breadth table
+      <span class="ft-dir">modules</span>/            generated per-module detail
+      graph.html          /graph-viz output
+      .stale              flag written by the post-merge hook</div>
+          </div></div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">B</span>
+            <span class="step-title">Refresh the graph incrementally</span>
+            <span class="step-badge command">/graph-sync</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>Recomputes fingerprints and regenerates only stale modules, then reconciles removed, renamed, and orphaned modules. Typed edges are re-derived — <code>EXTRACTED</code> edges are produced deterministically by <code>scripts/graph-extract-edges.js</code>. Past 30 modules a flat graph is restructured into domain groups. Finally it regenerates the markdown projections and deletes the <code>.claude/graph/.stale</code> flag on success.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/graph-sync</span></pre>
+            </div>
+            <div class="callout info"><span class="callout-icon">i</span><span>A post-merge hook (<code>graph-stale-detect.sh</code>) writes the <code>.stale</code> flag when tracked entry-point files change, prompting you to run <code>/graph-sync</code>.</span></div>
+          </div></div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">C</span>
+            <span class="step-title">Visualize the graph</span>
+            <span class="step-badge command">/graph-viz</span>
+            <span class="step-chevron">›</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>Renders a self-contained, fully offline HTML visualization at <code>.claude/graph/graph.html</code> — 2D SVG by default; <code>--3d</code> uses a locally vendored WebGL library. Nodes are coloured by type, edges styled by type and confidence, hub ("god") nodes and stale modules are flagged, and hover shows a module's dependencies and dependents. It reads <code>graph.json</code> only.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/graph-viz</span> <span class="cmd-value">--3d</span></pre>
+            </div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
     <!-- ══════════════════════════════════════════
          REFERENCE — KEYWORDS
     ══════════════════════════════════════════ -->
@@ -1860,6 +2586,52 @@ To start implementation:
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <div class="milestone" id="model-routing">
+      <div class="milestone-header">
+        <div class="milestone-number" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: var(--ai-gray-400);">N</div>
+        <div>
+          <div class="milestone-title">Model routing</div>
+          <div class="milestone-desc">Skills pick a model by task type via environment variables, overridable per project.</div>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">A</span>
+            <span class="step-title">How routing works</span>
+            <span class="step-badge info">reference</span>
+            <span class="step-chevron">&rsaquo;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>Each skill routes to a model based on the kind of work it does. The mapping is driven by environment variables, so you can point generation, review, and infrastructure tasks at different models without editing any skill. Override any variable per project in <code>.claude/settings.json</code> under the <code>env</code> key.</p>
+            <div class="callout info"><span class="callout-icon">i</span><span>The authoritative table of variables, defaults, and per-skill assignments lives in <code>skills/shared/model-routing-spec.md</code>.</span></div>
+          </div></div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">B</span>
+            <span class="step-title">Routing variables</span>
+            <span class="step-badge info">reference</span>
+            <span class="step-chevron">&rsaquo;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>Set any of these in <code>.claude/settings.json</code> &rarr; <code>env</code> to route a task class to a specific model.</p>
+            <table class="ref-table">
+              <thead><tr><th>Variable</th><th>Routes</th></tr></thead>
+              <tbody>
+                <tr><td><code>ICEA_MODEL</code></td><td>ICEA, plan, tech-spec, and code generation</td></tr>
+                <tr><td><code>REVIEW_MODEL</code></td><td>Code review, security review, dynamic scan, PR/ICEA review</td></tr>
+                <tr><td><code>CRITIC_MODEL</code></td><td>The critic pass &mdash; falls back to <code>REVIEW_MODEL</code> if unset</td></tr>
+                <tr><td><code>INFRA_MODEL</code></td><td>Infrastructure skills (checkin, dismiss, setup)</td></tr>
+              </tbody>
+            </table>
+          </div></div>
+        </div>
+      </div>
     </div>
 
   </main>

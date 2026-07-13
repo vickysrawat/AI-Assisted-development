@@ -20,10 +20,20 @@ CI/CD tooling, containerization. Present as a table.
 **Solution Structure** — list every project in the solution with its folder
 path and a one-line statement of its responsibility. Include test projects.
 
-**Layer Dependency Diagram** — draw an ASCII diagram showing which projects
-reference which. Read the `<ProjectReference>` entries in each .csproj to
-determine actual edges, not assumed architecture. Note any deviations from
-Clean Architecture convention.
+**End-to-End Architecture** — produce a Mermaid `flowchart LR` showing the whole
+system: caller/actor → API → services → repositories → data store(s) → external
+dependencies. Use edge labels for protocol/auth where known (e.g. `HTTPS/JWT`,
+`SQL`, `REST`). Only include nodes confirmed from source (Program.cs, .csproj,
+controllers, appsettings) — never invent a component. Emit a valid fenced
+` ```mermaid ` block; keep node labels short and free of characters that break
+Mermaid (`()[]{}` inside labels).
+
+**Layered View** — produce a Mermaid `flowchart TB` of the real layers with
+dependency direction, derived from the `<ProjectReference>` edges in each .csproj
+(not assumed Clean Architecture). Note deviations in a line under the diagram.
+If the layer graph cannot be determined, keep the
+`> ⚠ Could not determine — needs manual input` marker instead of emitting an empty
+or invalid diagram.
 
 **Project Responsibilities** — for each project: its responsibility,
 the DI extension method it exposes (look for `Add*Services()` or `Add*()`
@@ -100,3 +110,89 @@ dependencies, with their dependency count and list of types.
 with the count and names of classes that depend on them.
 
 Do not summarise or paraphrase package names or versions — copy exactly.
+
+---
+
+## File 4 Prompt — architecture-data.md
+
+You are a software architect documenting the data model of a .NET solution.
+Read entity/model classes, any `DbContext` (for schema only — this project uses
+Dapper for access), SQL scripts / migrations, and repository classes.
+
+- **Entities / Tables** — list every persisted entity/table with its owning module,
+  key columns (PK + notable columns), and purpose.
+- **Relationships** — from foreign keys / navigation properties: from-table, to-table,
+  cardinality (1:1 / 1:N / N:M), FK column, and on-delete behavior if known.
+- **Data Ownership** — infer which module/service is the system-of-record for each
+  table (the one that writes it); list who else reads it.
+- **Key Aggregates** — the main consistency boundaries (root entity + what loads/saves with it).
+- **Access Patterns** — this project mandates **Dapper + parameterised SQL**. For each
+  repository, list its queries/stored-procs, the tables touched, and read vs write.
+- **Migrations / Schema Source** — where the schema is defined (SQL scripts, DbUp, EF
+  migrations-for-schema, DBA-managed).
+
+Every fact must come from source. Where the answer is not derivable, write
+`> ⚠ Could not determine — needs manual input` rather than guessing.
+
+---
+
+## File 5 Prompt — architecture-integrations.md
+
+You are a software architect cataloguing this .NET API's external dependencies.
+Read HttpClient registrations (named/typed clients), `appsettings*.json` for base
+URLs/endpoints, Polly policy registrations, SDK usages (SDKs for queues, blob,
+email, third-party APIs), and any SOAP/gRPC clients.
+
+- **External Dependencies** — one row per external system: name, kind (REST/SOAP/queue/
+  event bus/SMTP/file share/DB link/SDK), contract (protocol + endpoint/base URL),
+  where it is called from (class), and auth mechanism.
+- **Resilience & Failure Behavior** — from code: per-dependency timeout, retry/backoff
+  (Polly `WaitAndRetry`, `HttpClient.Timeout`), circuit breaker. The **"on failure — what
+  happens"** column and **SLA/ownership** are usually human knowledge — if not in code,
+  write `> ⚠ Could not determine — needs manual input`.
+- **Data Exchanged** — what data crosses each boundary; flag any B1–B7 sensitive data
+  leaving the system (see `business-context-severity.md`).
+
+Never invent timeouts, SLAs, or owners. Extract only what code shows; flag the rest.
+
+---
+
+## File 6 Prompt — architecture-security.md
+
+You are a software architect documenting the authorization model and trust map of a
+.NET API. Read authentication/authorization setup in Program.cs (`AddAuthentication`,
+`AddAuthorization`, policies), `[Authorize]`/`[AllowAnonymous]` attributes on controllers
+and actions, `IAuthorizationHandler`/requirement classes, and any resource-based checks.
+
+- **Trust Boundaries / Zones** — where trust changes (browser→API, API→DB, API→external),
+  and what is authenticated/validated at each crossing.
+- **Authorization Model** — table of Action/Resource → Role/Policy → Enforced-at (name the
+  controller/action/handler that enforces it). Derive from `[Authorize(Roles=…/Policy=…)]`
+  and policy definitions.
+- **Business Rules Gating Actions** — rules beyond role checks (ownership, tenancy). Usually
+  human knowledge — flag with `> ⚠ Could not determine — needs manual input`.
+- **Secrets Handling (summary)** — only what the application code does (KeyVault client,
+  config providers, no secrets in source); cross-link `architecture-deployment.md`.
+- **Sensitive Data Handling** — which endpoints/tables carry B1–B7 data and how it is
+  protected in transit/at rest/in logs.
+
+Do NOT invent authorization rules or claim protections not present in code — flag gaps.
+
+---
+
+## File 7 Prompt — architecture-decisions.md (SEED ONLY)
+
+You are seeding a decision log for a .NET solution. This is a **seed pass only** — create
+the first few `AD-NNN` entries from *detectable, non-obvious* choices; do not attempt to
+populate the whole file, and **never invent the rationale**.
+
+For each detected choice, write an entry with:
+- **Decision** — what was chosen (from code/config/CLAUDE.md — e.g. "Dapper + parameterised
+  SQL, not EF Core"; "single-tenant Entra ID bearer auth"; the layering/project split).
+- **Rationale** — always `> ⚠ Could not determine — needs manual input` (the *why* is human).
+- **Alternatives rejected** — the obvious alternatives (e.g. EF Core, raw ADO.NET).
+- **Date** — `unknown` unless a date is evidenced.
+- **Status** — `Accepted`.
+
+Seed at most 3–5 entries. **If this file already contains real `AD-NNN` entries with filled
+rationale, do not modify it** — it is an append-only human log.

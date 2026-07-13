@@ -2,7 +2,7 @@
 
 ICEA-driven development workflow for distributed teams using **Azure DevOps**. Language-agnostic across **.NET 8 · Java/Spring Boot · Python (FastAPI/Django/Flask) · Node.js** backends and **Angular / React** frontends — the active stack is detected per repo and drives detection, generation, review, and scanning.
 
-**Version 3.5.0** — The codebase knowledge graph (`.claude/graph/`) is the **single codebase-orientation layer**, backed by a machine-readable `graph.json` (typed nodes/edges with confidence) whose **`EXTRACTED` dependency edges are derived deterministically from source imports** by a script rather than the model ([ADR 0041](docs/adr/0041-deterministic-edge-extraction.md)), then projected into the always-loaded index + per-module detail files, with `/graph-viz` for an offline visual map ([ADR 0039](docs/adr/0039-graph-json-sidecar.md)). `CLAUDE.md` is kept lean under a ~200-line context budget ([ADR 0040](docs/adr/0040-claude-md-context-budget.md)), and the plugin version is single-sourced in `.claude-plugin/plugin.json`. See [CHANGELOG.md](CHANGELOG.md) for the full history. **Upgrading from an older version?** Run `/dream-sync`.
+**Version 3.5.0** — The codebase knowledge graph (`.claude/graph/`) is the **single codebase-orientation layer**, backed by a machine-readable `graph.json` (typed nodes/edges with confidence) whose **`EXTRACTED` dependency edges are derived deterministically from source imports** by a script rather than the model ([ADR 0041](docs/adr/0041-deterministic-edge-extraction.md)), then projected into the always-loaded index + per-module detail files, with `/graph-viz` for an offline visual map ([ADR 0039](docs/adr/0039-graph-json-sidecar.md)). `CLAUDE.md` is kept lean under a ~200-line context budget ([ADR 0040](docs/adr/0040-claude-md-context-budget.md)), and the plugin version is single-sourced in `.claude-plugin/plugin.json`. See [CHANGELOG.md](CHANGELOG.md) for the full history. **Upgrading from an older version?** Run `/setup-sync`.
 
 ---
 
@@ -12,9 +12,9 @@ ICEA-driven development workflow for distributed teams using **Azure DevOps**. L
 
 | Command | What it does |
 |---|---|
-| `/ai-assisted-development:dream-init` | One-time project setup. Runs the architect deployment questionnaire, seeds `file-cache.json` and `token-graph.json`, deploys 19 `.claude/commands/` stubs, `.claude/rules/`, populates `.claude/architecture/` and generates the knowledge graph `.claude/graph/` (index + per-module detail files), ensures `CLAUDE.md` has Dream sections. Creates and populates `.gitignore` automatically — plugin entries always added, root-level artifacts auto-detected, full repo walk for `bin/`, `obj/`, `.env` etc. with developer selection prompt. Safe to re-run. |
-| `/ai-assisted-development:dream-status` | Read-only health check. Reports green/amber/red on all **20** infrastructure items including `architecture-deployment.md` status and knowledge graph checks. |
-| `/ai-assisted-development:dream-sync` | Re-provision an existing project after a plugin upgrade. Compares the version that provisioned the project against the installed version and applies only the version-sensitive changes (hooks, shared specs, ignore-file managed block, new state/rule files) per `docs/migrations/`, then re-stamps the version. Idempotent; never overwrites your own content. Run when `dream-status` reports **UPGRADE PENDING**. Alias: `dream-init --upgrade`. |
+| `/ai-assisted-development:setup-init` | One-time project setup. Runs the architect deployment questionnaire, seeds `file-cache.json` and `token-graph.json`, deploys 19 `.claude/commands/` stubs, `.claude/rules/`, populates `.claude/architecture/` and generates the knowledge graph `.claude/graph/` (index + per-module detail files), ensures `CLAUDE.md` has Dream sections. Creates and populates `.gitignore` automatically — plugin entries always added, root-level artifacts auto-detected, full repo walk for `bin/`, `obj/`, `.env` etc. with developer selection prompt. Safe to re-run. |
+| `/ai-assisted-development:setup-status` | Read-only health check. Reports green/amber/red on all **20** infrastructure items including `architecture-deployment.md` status and knowledge graph checks. |
+| `/ai-assisted-development:setup-sync` | Re-provision an existing project after a plugin upgrade. Compares the version that provisioned the project against the installed version and applies only the version-sensitive changes (hooks, shared specs, ignore-file managed block, new state/rule files) per `docs/migrations/`, then re-stamps the version. Idempotent; never overwrites your own content. Run when `setup-status` reports **UPGRADE PENDING**. Alias: `setup-init --upgrade`. |
 | `/ai-assisted-development:dream` | 6-phase memory consolidation — reads sessions, scores entries, proposes ADD/UPDATE/DELETE with full justification, waits for tiered approval before writing. Includes token-budget guard. |
 | `/ai-assisted-development:dream-health` | Generates `memory/health.html` — browser dashboard with confidence scores, decay curve, promote candidates, and clickable justification panels. |
 | `/ai-assisted-development:dream-rollback` | Reverses a specific `/dream` run using the audit trail in `memory/dream-log.md`. Auditable and itself reversible. |
@@ -31,7 +31,7 @@ ICEA-driven development workflow for distributed teams using **Azure DevOps**. L
 | `/ai-assisted-development:icea-revise` or `REVISE ADO-{ID}` | Revise an existing ICEA and Tech Spec — resolve open questions, incorporate feedback, update any section. Re-gates code generation after revision. |
 | `/ai-assisted-development:icea-status` or `STATUS ADO-{ID}` | Show current state of all ICEA files for an ADO ID — status, open questions, tracker progress, bugs, and exact next action. Re-entry point after a session gap. |
 | `/ai-assisted-development:critic` | Standalone critique pass. `icea` mode critiques an ICEA spec (completeness, testability, B1–B7 coverage, scope); `code` mode critiques generated/changed code (ICEA traceability, simplicity, rules compliance, decision transparency, hidden assumptions). Runs automatically inside `icea-feature` at two gates; this command is the on-demand path for a single phase. Args: `icea` or `code`, optional `ADO-<id>`. |
-| `/ai-assisted-development:gitignore-sync` | Ensure `.gitignore` exists and contains the plugin-required entries (in a managed block; never touches your own lines). Creates the file if missing and verifies the result. The single-purpose path for the logic `dream-init` also runs — use it directly if `.gitignore` is missing or out of date. Arg: `--with-artifacts` to also offer detected build/env files. |
+| `/ai-assisted-development:gitignore-sync` | Ensure `.gitignore` exists and contains the plugin-required entries (in a managed block; never touches your own lines). Creates the file if missing and verifies the result. The single-purpose path for the logic `setup-init` also runs — use it directly if `.gitignore` is missing or out of date. Arg: `--with-artifacts` to also offer detected build/env files. |
 | `/ai-assisted-development:sync-dirs` | Re-syncs `.claude/settings.local.json` `additionalDirectories` by re-running the external-dir-map skill. Use after adding a new project reference to a manifest file. Safe to run at any time. |
 | `/ai-assisted-development:bug` | Lightweight ICEA-lite for confirmed bug fixes. One-screen spec → one approval cycle → fix applied. Redirects to `icea-feature` if the bug requires new design. |
 | `/ai-assisted-development:checkin` | Pre-commit quality gate — code quality + ICEA compliance + secrets scan in a single shared-context pass. Produces one pass/fail verdict and a pre-filled commit command. |
@@ -42,7 +42,7 @@ ICEA-driven development workflow for distributed teams using **Azure DevOps**. L
 | `/ai-assisted-development:token-analysis` | Analyses token consumption. Persistent graph cache — subsequent runs process only new sessions and changed files. Writes to `token-analysis/`. |
 | `/ai-assisted-development:sprint-metrics` | Post-sprint KPI report via ADO REST API. Metrics: ICEA compliance rate, PR rejection rate, rework hours. Args: `sprint=<name>` or `from=<date> to=<date>`. |
 | `/ai-assisted-development:product-docs` | Generates Product Detail Document and/or User Guide as self-contained HTML. Always asks which documents to create before generating anything. |
-| `/ai-assisted-development:graph-sync` | Incremental refresh of the codebase knowledge graph in `.claude/graph/`. Recomputes module-wide fingerprints and regenerates only stale modules — unchanged modules skipped entirely. Reconciles removed/renamed/orphaned modules, derives typed dependency edges, updates `graph.json` (authoritative) and its markdown projection, restructures flat→domain at 30+ modules, clears `.stale` flag on success. For first-time graph creation use `/dream-init` instead. |
+| `/ai-assisted-development:graph-sync` | Incremental refresh of the codebase knowledge graph in `.claude/graph/`. Recomputes module-wide fingerprints and regenerates only stale modules — unchanged modules skipped entirely. Reconciles removed/renamed/orphaned modules, derives typed dependency edges, updates `graph.json` (authoritative) and its markdown projection, restructures flat→domain at 30+ modules, clears `.stale` flag on success. For first-time graph creation use `/setup-init` instead. |
 | `/ai-assisted-development:graph-viz` | Renders the knowledge graph as a self-contained **offline** HTML visualization at `.claude/graph/graph.html` — nodes by type, edges by type/confidence, hub (god) nodes and stale modules flagged, hover shows dependencies and dependents. Reads `graph.json` only (never source); `graph.html` is gitignored. `--3d` uses a locally vendored WebGL library. |
 
 ### Skills (auto-invoked by keyword)
@@ -58,17 +58,22 @@ ICEA-driven development workflow for distributed teams using **Azure DevOps**. L
 | `pr-spec-review` | "review PR against spec", "spec compliance", "traceability matrix" | Reviews a PR against a spec/ICEA — four outputs: compliance check, code review, traceability matrix, gaps/risks report. Business context overrides mandatory. |
 | `security` | "security", "vulnerability", "CVE", "OWASP", "threat model", "compliance", "is this secure?" | Full-spectrum security: static asset audit, SAST, cloud IaC, threat modeling, compliance, incident response, weekly HTML reports. B1–B7 business severity applied to all findings. |
 | `dynamic-scan` | "dynamic scan", "DAST", "OWASP ZAP", "active/passive scan", "baseline scan", "scan my running app", "fuzz endpoints" | Runtime DAST counterpart to `security`. Runs OWASP ZAP via Docker (Automation Framework) against a live Angular / ASP.NET MVC / Web API / Blazor / Razor Pages target, plus npm/pip/NuGet dependency audit. Safe passive default; gated active scans. Auth-verification gate, route seeding, baseline tuning, run-to-run diff, source-mapped fixes, B1–B7 severity. Writes HTML report and `dynamic-scan/dynamic-scan-ledger.md` with FP-fingerprinted findings — use `/fix FP-xxxxxxxx` to apply remediations. |
-| `dream-status` | "dream status", "plugin status", "check setup", "is the plugin set up" | Read-only 20-check health report. Never modifies any file. |
+| `setup-status` | "dream status", "plugin status", "check setup", "is the plugin set up" | Read-only 20-check health report. Never modifies any file. |
 | `dream-rollback` | "rollback dream", "undo dream", "reverse dream run", "restore memory" | Reverses a specific dream run from the audit trail. Confirmation required before any change. Rollback is itself logged and reversible. |
 | `product-docs` | "generate product detail", "write user guide", "product documentation" | Generates Product Detail Document and/or User Guide as self-contained HTML. Always asks before generating — never creates a document the developer said no to. |
 | `sprint-metrics` | "sprint metrics", "ICEA compliance rate", "PR rejection rate", "rework hours" | Measures post-sprint KPIs via ADO REST API. Reads ADO org/project from CLAUDE.md — never hardcoded. |
 | `token-analysis` | "analyse token usage", "token cost", "context window usage", "expensive prompts" | Session token analysis with persistent graph cache. Includes skill usage telemetry, prompt rewrite recommendations, and a secrets-safe 200-char truncation rule. |
-| `external-dir-map` | Called internally by `dream-init` and `/sync-dirs` — not keyword-triggered | Scans project manifests for module references outside the solution root and writes resolved absolute paths to `.claude/settings.local.json` as `additionalDirectories`. Gives Claude Code access to external projects without manual `--add-dir` flags. Idempotent. |
+| `external-dir-map` | Called internally by `setup-init` and `/sync-dirs` — not keyword-triggered | Scans project manifests for module references outside the solution root and writes resolved absolute paths to `.claude/settings.local.json` as `additionalDirectories`. Gives Claude Code access to external projects without manual `--add-dir` flags. Idempotent. |
 | `app-readiness` | "is the app production ready", "app readiness", "go-live readiness", "enterprise architecture review" | 8-domain EA/SA production readiness assessment. Reads `architecture-deployment.md` for hosting-model-specific checks. |
 | `plugin-readiness` | "is the plugin production ready", "plugin readiness", "AI governance review" | 6-domain AI Architect readiness assessment. Plugin state files only — never reads application source. |
-| `critic` | "critique", "second opinion on this spec", "review this before saving", "is this over-engineered", "does this match the ICEA" | Second-pass generator-critic. Auto-runs inside `icea-feature` at two gates — after the ICEA draft (folds concerns into the gap list) and after code generation but **before disk write** (gates the write; up to 2 auto-retries then surfaces). ICEA mode checks completeness/testability/B1–B7/scope; code mode checks traceability/simplicity/rules/decision-transparency/hidden-assumptions. Ephemeral — no ledger, no fingerprints. Also available standalone via `/critic`. |
+| `critic` | "critique", "second opinion on this spec", "review this before saving", "is this over-engineered", "does this match the ICEA" | Second-pass generator-critic. Auto-runs at three internal gates, each **before the artefact is written** with up to 2 auto-retries: the ICEA draft (`icea-feature` Step 5) and the Tech Spec draft (`icea-feature` Step 8) — both before the `temp/` write — and generated code (`icea-implement` Step 4a) before the disk write. `icea` mode checks completeness/testability/B1–B7/scope; `tech` mode checks ICEA↔design traceability/D-option fidelity/coverage-matrix; `code` mode checks traceability/simplicity/rules/decision-transparency/hidden-assumptions. Ephemeral — no ledger, no fingerprints. Also available standalone via `/critic`. |
 | `graph-sync` | "refresh knowledge graph", "update graph", "graph is stale", "sync the graph", "knowledge graph stale" | Incremental knowledge graph refresh. Triggered by `/graph-sync` or keyword detection. Recomputes module-wide fingerprints, regenerates only stale modules, reconciles removed/renamed/orphaned modules, derives typed edges, updates `graph.json` + markdown projection, restructures flat→domain at 30+ modules. |
 | `graph-viz` | "visualize the graph", "show the knowledge graph", "graph diagram", "render the dependency graph", "graph visualization" | Renders the knowledge graph as a self-contained offline HTML view (`.claude/graph/graph.html`) — nodes by type, edges by type/confidence, hubs and stale modules flagged, hover shows dependencies/dependents. Reads `graph.json` only; `--3d` uses a locally vendored WebGL library. |
+| `icea-approve` | "APPROVE ADO-<id>", "approve the ICEA", "approve tech spec" | Approves an ICEA and Tech Spec by ADO ID, reading all state from disk. Works in any session. Sets `Status: ✅ Approved`, unblocking `icea-implement`. |
+| `icea-implement` | "IMPLEMENT ADO-<id>", "implement the ICEA", "generate the code" | Generates and writes implementation code for an approved ICEA read from disk. For Epics, implements story by story. Requires an approved ICEA — refuses otherwise. |
+| `icea-revise` | "REVISE ADO-<id>", "revise the ICEA", "update the tech spec" | Revises an existing ICEA/Tech Spec (feedback, resolved open questions, changed requirements) and re-blocks the code-generation gate until re-approved. Never starts from scratch — redirects to `icea-feature` for new features. |
+| `icea-status` | "STATUS ADO-<id>", "ICEA status", "where is this feature" | Read-only re-entry point: shows ICEA/Tech Spec state, open questions, tracker progress, open bugs, and the exact next action for an ADO ID. |
+| `setup-sync` | "dream sync", "re-provision after upgrade", "plugin upgrade" | Re-provisions a project after a plugin upgrade — calls the bootstrap script (sync mode) to re-copy hooks and deploy missing stubs, restores missing rules from `deployed_rules[]`, applies migration notes, re-stamps the version. |
 
 ---
 
@@ -105,7 +110,7 @@ The code review and ICEA skills will flag violations — over-engineered abstrac
 
 ## Rules (scoped — auto-loads per file type)
 
-Deployed to `.claude/rules/` by `/dream-init`. Activate automatically when Claude edits a matching file.
+Deployed to `.claude/rules/` by `/setup-init`. Activate automatically when Claude edits a matching file.
 
 | Rule file | Activates for | What it enforces |
 |---|---|---|
@@ -126,15 +131,16 @@ After the first run, token cost drops **60–95% per invocation** through shared
 
 | Primitive | Written by | Read by | Purpose |
 |---|---|---|---|
-| `.claude/architecture/architecture-deployment.md` | `architect` Step 0.5 | `icea-feature`, `app-readiness`, `plugin-readiness` | Hosting model, auth strategy, environments, CI/CD — captured once, used by multiple skills |
+| `.claude/architecture/architecture-deployment.md` | `architect` Step 0.5 | `icea-feature`, `app-readiness`, `plugin-readiness` | Hosting model, auth strategy, environments, CI/CD, **non-functional requirements** — captured once, used by multiple skills |
+| `.claude/architecture/architecture-security.md` | `architect` File 6 | `security`, `icea-feature`, `icea-review`, `app-readiness` | Trust zones + authorization model (Action → Role/Policy → Enforced-at) — the security review's authz map |
 | `skills/shared/source-file-consent.md` | maintainers | all skills and commands | Category A/B/C consent — when to announce, when to gate, when to never read source |
 | `skills/shared/business-context-severity.md` | maintainers | all review skills, `icea-feature` | B1–B7 override triggers — immigration IDs, privileged matter data, vulnerable clients |
 | `skills/shared/findings-gate.md` | maintainers | `checkin`, `pr-create` | Canonical detection logic for open Critical/High findings across all three ledgers |
 | `skills/shared/dismissed-findings-reconciliation.md` | maintainers | `code-review`, `security`, `dynamic-scan` | Canonical Rule 5 — dismissed finding reconciliation; keeps dismissals stable across re-scans unless code changes |
-| `.claude/file-cache.json` | `code-review`, `security` | `code-review`, `security`, `dream-status` | Character count per file — skills skip files unchanged since last scan |
-| `.claude/architecture/*.md` | `architect` skill | `icea-feature`, `icea-review`, `explain` | System overview, layer responsibilities, call chains |
-| `token-analysis/token-graph.json` | `token-analysis` | `token-analysis`, `dream-status` | Session + file delta cache — only new sessions processed |
-| `.claude/graph/graph-index.md` + per-module detail files | `architect` (Step 7), `graph-sync` | `icea-feature`, `icea-review`, `code-review`, `security`, `explain`, `session-start`, `dream-status` | **The single codebase-orientation layer** — module → entry point (index) + bounded context/key files/dependencies/patterns (per-module, ≤400 tokens); per-module SHA-1 fingerprint, git-hook staleness. Committed & PR-reviewed. Replaced `domain-map.md` in v3.0.0 (ADR 0038). |
+| `.claude/file-cache.json` | `code-review`, `security` | `code-review`, `security`, `setup-status` | Character count per file — skills skip files unchanged since last scan |
+| `.claude/architecture/*.md` | `architect` skill | `icea-feature`, `icea-review`, `explain`, `security`, `app-readiness` | 8-doc set: system overview + two Mermaid diagrams (End-to-End, Layered), call chains/flows, reference, **data model**, **integrations & resilience**, **security (trust zones + authorization model)**, and an append-only **decision log** |
+| `token-analysis/token-graph.json` | `token-analysis` | `token-analysis`, `setup-status` | Session + file delta cache — only new sessions processed |
+| `.claude/graph/graph-index.md` + per-module detail files | `architect` (Step 7), `graph-sync` | `icea-feature`, `icea-review`, `code-review`, `security`, `explain`, `session-start`, `setup-status` | **The single codebase-orientation layer** — module → entry point (index) + bounded context/key files/dependencies/patterns (per-module, ≤400 tokens); per-module SHA-1 fingerprint, git-hook staleness. Committed & PR-reviewed. Replaced `domain-map.md` in v3.0.0 (ADR 0038). |
 
 ### Scope flags (code-review and security)
 
@@ -148,26 +154,35 @@ After the first run, token cost drops **60–95% per invocation** through shared
 | `--area frontend` | Only `.ts` and `.html` files |
 | `--area <Name>` | Entry-point + key files for that knowledge-graph module |
 | `--continue` | Resume from checkpoint after a connection drop |
-| (none) | Default: cache-aware full-project scan with 40-file budget cap |
+| (none) | Default: cache-aware full-project scan (no file cap) |
 
 ### Generated files — do not commit
 
-All generated files are gitignored by `dream-init`:
+Regenerable, secret, and per-developer files are gitignored by `setup-init`:
 
 ```
+.claude/settings.local.json     # secrets + machine-specific permissions
 .claude/file-cache.json
-.claude/architecture/architecture-deployment.md
-CodeReviews/
+CodeReviews/*                    # dated reports (the ledger is shared — see below)
+security/*
+dynamic-scan/*                   # incl. *.session/*.context — may hold plaintext creds
 token-analysis/
 memory/health.html
 prod-readiness/
-security/
-dynamic-scan/
 ```
 
-> **Exception — the knowledge graph is committed.** `.claude/graph/` is **not**
-> gitignored (v3.0.0): as the single orientation layer it is version-controlled and
-> PR-reviewed like source. See [ADR 0038](docs/adr/0038-knowledge-graph-orientation.md).
+> **Shared, not gitignored (team knowledge & tracking state):**
+> - **`.claude/settings.json`** — team config (hooks, `customInstructions`, non-secret
+>   `env`). Secret-free by policy; a write-time + pre-commit guard
+>   (`.claude/hooks/check-settings-secrets.cjs`) blocks any secret from landing here.
+> - **`.claude/architecture/`** — the architecture doc set (durable, prose, no secrets).
+> - **The three review ledgers** — `CodeReviews/code-review-ledger.md`,
+>   `security/security-ledger.md`, `dynamic-scan/dynamic-scan-ledger.md` — shared via
+>   `!<dir>/<ledger>.md` negations so fingerprints/dismissals travel with the repo while
+>   the bulky dated reports stay ignored.
+> - **`.claude/graph/`** — the knowledge graph, the single orientation layer,
+>   version-controlled and PR-reviewed like source (v3.0.0). See
+>   [ADR 0038](docs/adr/0038-knowledge-graph-orientation.md).
 
 ---
 
@@ -179,7 +194,7 @@ dynamic-scan/
 |---|---|---|
 | **Generation** — ICEA planning, code generation, ADO task breakdown | `icea-feature`, `ado-tasks`, `pr-describe`, `product-docs` | `claude-opus-4-6` |
 | **Review** — compliance checks, static analysis, security scanning, spec review, dynamic scanning | `icea-review`, `code-review`, `security`, `dynamic-scan`, `pr-spec-review`, `pr-create` gate | `claude-sonnet-4-6` |
-| **Infrastructure** — Dream, architect, session tools, operational, readiness | `dream`, `architect`, `dream-status`, `dream-rollback`, `session-start`, `update-arch`, `sprint-metrics`, `token-analysis`, `checkin`, `explain`, `fix`, `bug`, `app-readiness`, `plugin-readiness` | `claude-sonnet-4-6` |
+| **Infrastructure** — Dream, architect, session tools, operational, readiness | `dream`, `architect`, `setup-status`, `dream-rollback`, `session-start`, `update-arch`, `sprint-metrics`, `token-analysis`, `checkin`, `explain`, `fix`, `bug`, `app-readiness`, `plugin-readiness` | `claude-sonnet-4-6` |
 
 ### Why this split
 
@@ -189,11 +204,12 @@ dynamic-scan/
 
 ### Overriding the defaults
 
+Non-secret model routing goes in the **shared, committed** `.claude/settings.json`:
+
 ```json
-// .claude/settings.json — never commit this file
+// .claude/settings.json — committed & team-shared (NO secrets)
 {
   "env": {
-    "AZURE_DEVOPS_PAT": "your-pat-here",
     "ICEA_MODEL":   "claude-opus-4-6",
     "REVIEW_MODEL": "claude-sonnet-4-6",
     "INFRA_MODEL":  "claude-sonnet-4-6"
@@ -201,7 +217,17 @@ dynamic-scan/
 }
 ```
 
-Model defaults are recorded in `.claude-plugin/plugin.json` under `recommended_models` with a `last_reviewed` date. `dream-status` warns when this date is older than 90 days.
+The secret PAT goes in the **gitignored** `.claude/settings.local.json` (or an OS env var).
+Claude Code merges `settings.local.json` over `settings.json` at runtime:
+
+```json
+// .claude/settings.local.json — gitignored; never committed
+{
+  "env": { "AZURE_DEVOPS_PAT": "your-pat-here" }
+}
+```
+
+Model defaults are recorded in `.claude-plugin/plugin.json` under `recommended_models` with a `last_reviewed` date. `setup-status` warns when this date is older than 90 days.
 
 ---
 
@@ -235,10 +261,10 @@ The `pr-create` and `sprint-metrics` skills use the ADO REST API and require a P
 
 Win + S → `environment variables` → User variables → New → `AZURE_DEVOPS_PAT` = token → restart VS Code
 
-**Option B — Claude Code project settings**
+**Option B — Claude Code project settings (local, gitignored)**
 
 ```json
-// .claude/settings.json — confirm this file is in .gitignore before using
+// .claude/settings.local.json — gitignored; secrets live here, never in settings.json
 {
   "env": {
     "AZURE_DEVOPS_PAT": "paste-your-token-here"
@@ -246,7 +272,11 @@ Win + S → `environment variables` → User variables → New → `AZURE_DEVOPS
 }
 ```
 
-> ⚠️ If `.claude/settings.json` is not in `.gitignore`, `dream-status` flags a **credential leak risk** as ❌ Red.
+> ⚠️ Put the PAT in `.claude/settings.local.json` (gitignored), **never** in the shared
+> `.claude/settings.json`. `setup-status` (check 1i) flags a ❌ Red **credential leak risk**
+> if the secret store `settings.local.json` is not ignored, and a ❌ Red **secret in shared
+> config** if a secret is found inside `settings.json`. A write-time + pre-commit guard
+> (`check-settings-secrets.cjs`) blocks a secret from reaching `settings.json`.
 
 ---
 
@@ -264,6 +294,13 @@ Win + S → `environment variables` → User variables → New → `AZURE_DEVOPS
 bash install.sh
 ```
 
+> **Windows Git Bash note:** mintty (Git Bash's terminal) doesn't give a child process a
+> usable console, which makes interactive prompts hang after the first one. `install.sh`
+> now detects this and **transparently re-execs itself under `winpty`** (bundled with Git
+> for Windows), so plain `bash install.sh` just works — no `winpty` prefix needed. If your
+> Git install somehow lacks `winpty`, run `winpty bash install.sh`, or use `.\install.ps1`
+> in PowerShell (recommended on Windows).
+
 ---
 
 ## First-time project setup
@@ -271,7 +308,7 @@ bash install.sh
 Open the project in Claude Code and run:
 
 ```
-/ai-assisted-development:dream-init
+/ai-assisted-development:setup-init
 ```
 
 This seeds all infrastructure in order:
@@ -290,7 +327,7 @@ This seeds all infrastructure in order:
 After setup, confirm everything is green:
 
 ```
-/ai-assisted-development:dream-status
+/ai-assisted-development:setup-status
 ```
 
 This checks all **20** infrastructure items including `architecture-deployment.md` and the knowledge graph.
@@ -310,7 +347,7 @@ Loads stack, last decision, last fix, and sessions-since-dream in one pass. Surf
 ### Check plugin health
 
 ```
-/ai-assisted-development:dream-status
+/ai-assisted-development:setup-status
 ```
 
 Reports green/amber/red on all 20 infrastructure items:
@@ -343,7 +380,7 @@ Reports green/amber/red on all 20 infrastructure items:
 /ai-assisted-development:plugin-readiness   # AI plugin readiness (6 domains)
 ```
 
-Run before any production deployment. Both produce self-contained HTML reports in `prod-readiness/`. `dream-status` tracks report age and warns when reports are stale.
+Run before any production deployment. Both produce self-contained HTML reports in `prod-readiness/`. `setup-status` tracks report age and warns when reports are stale.
 
 ### Code review
 
@@ -403,7 +440,7 @@ Every skill operates under one of three consent categories (defined in `skills/s
 |---|---|---|
 | **A — Implicit** | `/code-review`, `/security-review`, `/checkin` | Developer consented by invoking the command. Skill announces scope before touching any file. |
 | **B — Explicit gate** | `icea-review`, `pr-spec-review`, `/bug`, `/update-arch`, `/explain`, `app-readiness` (Phase 3), `pr-create` (via icea-review) | Before reading any source file, the skill asks: which file, why, what it's looking for, token cost. |
-| **C — Hard rule never** | `session-start`, `dream-status`, `dream`, `dream-rollback`, `ado-tasks`, `sprint-metrics`, `token-analysis`, `dream-health`, `icea-feature`, `pr-describe`, `plugin-readiness` | Must never read source files regardless of instruction. |
+| **C — Hard rule never** | `session-start`, `setup-status`, `dream`, `dream-rollback`, `ado-tasks`, `sprint-metrics`, `token-analysis`, `dream-health`, `icea-feature`, `pr-describe`, `plugin-readiness` | Must never read source files regardless of instruction. |
 
 ## CI integration
 
@@ -449,8 +486,8 @@ ai-assisted-development/
 ├── .claude-plugin/
 │   └── plugin.json
 ├── commands/                                ← command files
-│   ├── dream.md / dream-health.md / dream-init.md
-│   ├── dream-status.md / dream-rollback.md
+│   ├── dream.md / dream-health.md / setup-init.md
+│   ├── setup-status.md / dream-rollback.md
 │   ├── session-start.md / update-arch.md
 │   ├── code-review.md / security-review.md / dynamic-scan.md
 │   ├── bug.md / checkin.md / explain.md / fix.md
@@ -470,15 +507,16 @@ ai-assisted-development/
 │   │   ├── graph-index-schema.md            ← .claude/graph/graph-index.md schema
 │   │   └── graph-module-schema.md           ← .claude/graph/<module>.md schema
 │   ├── architect/                           ← deployment questionnaire + knowledge graph generation
+│   │   └── templates/_shared/ + <stack>/    ← architecture-doc templates: shared base + per-stack overrides (ADR 0051)
 │   ├── icea-feature/                        ← ICEA gate with B1–B7 AC flags
 │   ├── icea-review/ / pr-describe/ / pr-create/ / pr-spec-review/
 │   ├── code-review/ / security/ / dynamic-scan/ / ado-tasks/
 │   ├── app-readiness/ / plugin-readiness/
-│   ├── dream-status/ / dream-rollback/
+│   ├── setup-status/ / dream-rollback/
 │   ├── sprint-metrics/ / token-analysis/ / product-docs/
 │   ├── graph-sync/                          ← knowledge graph incremental refresh
-│   └── command-stubs/                       ← 37 stubs deployed by dream-init
-├── rules/                                   ← scoped rule files (dotnet/angular/nodejs/java/python/project)
+│   └── (command stubs moved to _project-deploy/commands/)
+├── _project-deploy/                         ← hooks/, rules/, commands/, skills/ — deployed to target projects
 ├── memory/
 ├── tests/
 │   ├── runner.js                            ← Node.js test runner

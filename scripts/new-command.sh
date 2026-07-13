@@ -65,14 +65,14 @@ CMDEOF
 echo "  ✓ Created commands/$CMD.md"
 
 # 2. Create command stub
-cat > "skills/command-stubs/$CMD.md" << STUBEOF
+cat > "_project-deploy/commands/$CMD.md" << STUBEOF
 ---
 description: TODO: One-line description shown in VS Code command picker.
 ---
 <command>$CMD</command>
 STUBEOF
 
-echo "  ✓ Created skills/command-stubs/$CMD.md"
+echo "  ✓ Created _project-deploy/commands/$CMD.md"
 
 # 3. Create test scenario placeholder
 cat > "tests/skill-scenarios/$CMD.yaml" << YAMLEOF
@@ -109,12 +109,12 @@ with open('.claude-plugin/plugin.json', 'w') as f:
 print("  ✓ Registered in plugin.json components.commands")
 PYEOF
 
-# 5. Remind about dream-init stub deployment
+# 5. Remind about setup-init stub deployment
 echo ""
 echo "📋  Manual steps still required:"
 echo "    1. Fill in all TODO fields in commands/$CMD.md"
-echo "    2. Add '$CMD.md' to the stub deployment loop in commands/dream-init.md"
-echo "    3. Add '$CMD.md' to the check 1d loop in skills/dream-status/SKILL.md"
+echo "    2. Add '$CMD.md' to the stub deployment loop in commands/setup-init.md"
+echo "    3. Add '$CMD.md' to the check 1d loop in skills/setup-status/SKILL.md"
 echo "    4. Add a row to the commands table in README.md"
 echo "    5. Run: python3 tests/validate.py"
 echo ""

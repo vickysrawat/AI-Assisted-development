@@ -48,7 +48,7 @@ check_version() {
 check_version "CLAUDE.md"              "[0-9]*\.[0-9]*\.[0-9]*" "CLAUDE.md Plugin version"
 check_version "README.md"              "[0-9]*\.[0-9]*\.[0-9]*" "README.md version"
 check_version "user-guide.html"        "[0-9]*\.[0-9]*\.[0-9]*" "user-guide.html version"
-check_version "plugin-guide-v9.html"   "[0-9]*\.[0-9]*\.[0-9]*" "plugin-guide-v9.html version"
+check_version "plugin-guide.html"      "[0-9]*\.[0-9]*\.[0-9]*" "plugin-guide.html version"
 check_version "CHANGELOG.md"           "[0-9]*\.[0-9]*\.[0-9]*" "CHANGELOG.md latest entry"
 
 # Check marketplace.json version
@@ -118,7 +118,7 @@ done
 # ── 6. Command stub counts ─────────────────────────────────────────────────────
 header "Command stub counts"
 
-ACTUAL_STUBS=$(ls "$PLUGIN_DIR/skills/command-stubs/"*.md 2>/dev/null | wc -l | tr -d ' ')
+ACTUAL_STUBS=$(ls "$PLUGIN_DIR/_project-deploy/commands/"*.md 2>/dev/null | wc -l | tr -d ' ')
 echo "  Actual stubs in plugin: $ACTUAL_STUBS"
 
 # Count in dream-init loop
@@ -159,9 +159,9 @@ header "New ICEA command stubs"
 for stub in icea-approve icea-implement icea-revise icea-status icea-review \
             pr-create pr-describe pr-spec-review; do
   # Check actual file
-  [ -f "$PLUGIN_DIR/skills/command-stubs/$stub.md" ] && \
-    pass "$stub.md exists in command-stubs" || \
-    fail "$stub.md MISSING from command-stubs"
+  [ -f "$PLUGIN_DIR/_project-deploy/commands/$stub.md" ] && \
+    pass "$stub.md exists in _project-deploy/commands" || \
+    fail "$stub.md MISSING from _project-deploy/commands"
 
   # Check command file
   [ -f "$PLUGIN_DIR/commands/$stub.md" ] && \
@@ -232,20 +232,20 @@ for section in "WRITE GATE" "Keyword Handlers" "SAVE ICEA" "SAVE TECH" \
     fail "CLAUDE.md: '$section' MISSING"
 done
 
-# ── 13. dotnet-rules uses Dapper not EF Core ──────────────────────────────────
-header "Dapper convention in dotnet-rules"
+# ── 13. csharp-dotnet-rules uses Dapper not EF Core ──────────────────────────
+header "Dapper convention in csharp-dotnet-rules"
 
-grep -q "Dapper" "$PLUGIN_DIR/rules/dotnet-rules.md" && \
-  pass "dotnet-rules.md: Dapper present" || \
-  fail "dotnet-rules.md: Dapper MISSING"
+grep -q "Dapper" "$PLUGIN_DIR/_project-deploy/rules/csharp-dotnet-rules.md" && \
+  pass "csharp-dotnet-rules.md: Dapper present" || \
+  fail "csharp-dotnet-rules.md: Dapper MISSING"
 
 # EF Core should only appear as a prohibition ("Never use EF Core"), not as a recommendation
-EF_POSITIVE=$(grep "EF Core" "$PLUGIN_DIR/rules/dotnet-rules.md" 2>/dev/null | \
+EF_POSITIVE=$(grep "EF Core" "$PLUGIN_DIR/_project-deploy/rules/csharp-dotnet-rules.md" 2>/dev/null | \
   grep -v "Never use\|not.*EF Core\|avoid.*EF Core\|EF Core.*not\|no.*EF Core" | head -3)
 if [ -z "$EF_POSITIVE" ]; then
-  pass "dotnet-rules.md: EF Core only appears as prohibition"
+  pass "csharp-dotnet-rules.md: EF Core only appears as prohibition"
 else
-  fail "dotnet-rules.md: EF Core referenced as recommendation:"
+  fail "csharp-dotnet-rules.md: EF Core referenced as recommendation:"
   echo "$EF_POSITIVE" | while read -r line; do echo "    $line"; done
 fi
 
@@ -318,9 +318,9 @@ grep -q "Dapper" "$PLUGIN_DIR/skills/icea-implement/SKILL.md" && \
   pass "icea-implement: Dapper convention present" || \
   fail "icea-implement: Dapper MISSING"
 
-grep -q "Dapper" "$PLUGIN_DIR/rules/dotnet-rules.md" && \
-  pass "dotnet-rules: Dapper present" || \
-  fail "dotnet-rules: Dapper MISSING"
+grep -q "Dapper" "$PLUGIN_DIR/_project-deploy/rules/csharp-dotnet-rules.md" && \
+  pass "csharp-dotnet-rules: Dapper present" || \
+  fail "csharp-dotnet-rules: Dapper MISSING"
 
 grep -q "Story Breakdown" "$PLUGIN_DIR/skills/icea-feature/references/icea-template.md" && \
   pass "icea-template: Story Breakdown section present" || \

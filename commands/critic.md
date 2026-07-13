@@ -114,8 +114,9 @@ Read skills/critic/SKILL.md and execute it for the resolved PHASE and SOURCE.
 
 - The standalone `code` path reports concerns only — it never rewrites source
   files. To apply a remediation, use `/fix FP-xxxxxxxx` (for ledger findings) or
-  edit manually. The automatic regenerate loop applies only to the auto-critic
-  inside `icea-feature`, where code is still in context and unwritten.
+  edit manually. The automatic regenerate loop applies only to the internal
+  auto-critic gates (`icea`/`tech` in `icea-feature`, `code` in `icea-implement`),
+  where the artefact is still in context and unwritten.
 - The `icea` path never reads source files — architecture docs and the ICEA file
   only (Category C).
 - The critic is ephemeral here too — no ledger, no fingerprints.

@@ -34,6 +34,13 @@ regenerate it on demand with `/graph-viz` (a cheap, deterministic template fill 
 
 ---
 
+## Persona
+Acts with a **[DPE] DevOps/Platform Engineer** lens — deterministic, self-contained, offline-safe
+output; always asks "is this reproducible and dependency-free?" Lens only; never assume, never
+attribute in output. See `../shared/personas-spec.md`.
+
+---
+
 ## Step 1 — Guard
 
 ```bash
@@ -41,7 +48,7 @@ test -f .claude/graph/graph.json && echo OK || echo "NO_GRAPH"
 ```
 If `NO_GRAPH`:
 ```
-⚠ No graph.json found. Run /dream-init to create the graph, or /graph-sync to refresh it.
+⚠ No graph.json found. Run /setup-init to create the graph, or /graph-sync to refresh it.
 ```
 Stop.
 

@@ -4,6 +4,24 @@
 # Update:   bash install.sh --update
 # Uninstall: bash install.sh --uninstall   (add --yes to skip the confirmation prompt)
 
+# ── Windows Git Bash (mintty) console fix ────────────────────────────────────────
+# mintty does not give a child process a usable Windows console, so interactive prompts
+# after the first one hang (this is why `winpty bash install.sh` works but plain
+# `bash install.sh` does not). If we are at an interactive MSYS/MINGW terminal and winpty
+# is available, transparently re-exec the whole script under winpty so a plain
+# `bash install.sh` just works. The _WINPTY_REEXEC guard prevents an infinite re-exec loop;
+# `[ -t 1 ]` skips this in CI/piped runs where no console is wanted.
+if [ -z "${_WINPTY_REEXEC:-}" ] && [ -t 1 ]; then
+  case "$(uname -s 2>/dev/null)" in
+    MINGW*|MSYS*)
+      if command -v winpty >/dev/null 2>&1; then
+        export _WINPTY_REEXEC=1
+        exec winpty bash "$0" "$@"
+      fi
+      ;;
+  esac
+fi
+
 PLUGIN_NAME="ai-assisted-development"
 
 # ── Identity: single source of truth is .claude-plugin/config.json (co-located
@@ -58,9 +76,57 @@ to_win_path() {
   echo "$1" | sed 's|^/\([a-zA-Z]\)/|\1:/|' | sed 's|/|\\\\|g'
 }
 
+# Copy plugin files from SRC to DEST, excluding .git/ and other dev-only artifacts.
+# Using rsync when available (ships with Git for Windows) — it skips .git automatically
+# and is tolerant of permission-protected objects. Falls back to cp + cleanup.
+safe_copy() {
+  local SRC="$1" DEST="$2"
+  if command -v rsync &>/dev/null; then
+    # Trailing slash on SRC = copy contents, not the dir itself. --delete removes stale files.
+    # Exclude dev-only and IDE artifacts that have no place in an installed plugin:
+    #   .git       — version-control history; read-only objects flood cp with "Permission denied"
+    #   docs/      — ADRs, proposals, migrations; not needed at runtime
+    #   .vs/       — Visual Studio IDE folder; machine-specific, not plugin files
+    #   node_modules/ — dev deps; not present in the plugin but excluded defensively
+    rsync -a \
+      --exclude='.git' \
+      --exclude='docs/' \
+      --exclude='.vs/' \
+      --exclude='node_modules' \
+      --delete "$SRC/" "$DEST/"
+  else
+    # cp -r fallback: remove excluded dirs first so read-only .git/objects don't cause errors.
+    rm -rf "$DEST/.git" "$DEST/docs" "$DEST/.vs" 2>/dev/null || true
+    cp -r "$SRC/." "$DEST"
+    # Clean up any excluded dirs that were just copied in.
+    rm -rf "$DEST/.git" "$DEST/docs" "$DEST/.vs" 2>/dev/null || true
+  fi
+}
+
 # Normalise user-entered path (Windows backslashes → forward slashes)
 normalise_path() {
   echo "$1" | sed 's|\\|/|g' | sed 's|^\([A-Za-z]\):|/\L\1|'
+}
+
+# Prompt + read a full line from the CONTROLLING TERMINAL directly. `read -p` only
+# prints its prompt when stdin is a terminal and reads from stdin — if stdin loses its
+# tty association (a known Git Bash/mintty state), the prompt silently vanishes and the
+# read blocks forever. Reading from /dev/tty is immune to that. Usage: tty_read "prompt" VAR
+tty_read() {
+  local __prompt="$1" __var="$2" __val=""
+  # Make it unmistakable that the installer is PAUSED WAITING FOR INPUT: a bright cyan
+  # caret prefix. Strip any leading indent from the caller so all prompts align under it.
+  local __clean="${__prompt#"${__prompt%%[![:space:]]*}"}"
+  local __cue="${CYAN}❯${NC} ${__clean}"
+  # Prefer the controlling terminal, but only if it can actually be OPENED (a device
+  # node can exist yet be unusable in CI/piped contexts). Fall back to stdin otherwise.
+  if { true >/dev/tty; } 2>/dev/null; then
+    printf "%b" "$__cue" > /dev/tty
+    IFS= read -r __val < /dev/tty || __val=""
+  else
+    IFS= read -r -p "$(printf '%b' "$__cue")" __val || __val=""
+  fi
+  printf -v "$__var" "%s" "$__val"
 }
 
 # Read version from plugin.json — pass path as argument to avoid escaping issues
@@ -113,10 +179,10 @@ prompt_identity() {
   fi
   echo -e "${CYAN}Azure DevOps identity${NC} — press Enter to keep the shown default (placeholder is fine):"
   local _in
-  read -p "  Organization [$ADO_ORG]: " _in;   [ -n "$_in" ] && ADO_ORG="$_in"
-  read -p "  Project [$ADO_PROJECT]: " _in;     [ -n "$_in" ] && ADO_PROJECT="$_in"
-  read -p "  Company / team [$COMPANY]: " _in;  [ -n "$_in" ] && COMPANY="$_in"
-  read -p "  ADO base URL [$ADO_BASE]: " _in;   [ -n "$_in" ] && ADO_BASE="$_in"
+  tty_read "  Organization [$ADO_ORG]: " _in;   [ -n "$_in" ] && ADO_ORG="$_in"
+  tty_read "  Project [$ADO_PROJECT]: " _in;     [ -n "$_in" ] && ADO_PROJECT="$_in"
+  tty_read "  Company / team [$COMPANY]: " _in;  [ -n "$_in" ] && COMPANY="$_in"
+  tty_read "  ADO base URL [$ADO_BASE]: " _in;   [ -n "$_in" ] && ADO_BASE="$_in"
   ADO_REPO_URL="$ADO_BASE/$ADO_ORG/$ADO_PROJECT/_git/$ADO_PLUGIN_REPO"
   # Re-derive the marketplace name/paths from the entered org — fresh install only
   # (when overwriting/updating an existing install we keep its discovered location).
@@ -156,7 +222,7 @@ select_source() {
   echo "  2) Copy from a local folder"
   echo "     (use this if you have the plugin files on your machine)"
   echo ""
-  read -p "Enter choice [1/2]: " -n 1 -r SOURCE_CHOICE; echo ""
+  tty_read "Enter choice [1/2]: " SOURCE_CHOICE; SOURCE_CHOICE="${SOURCE_CHOICE:0:1}"
   echo ""
 }
 
@@ -174,10 +240,10 @@ resolve_local_path() {
   if [ -f "$SCRIPT_DIR/.claude-plugin/plugin.json" ] && \
      [ "$SCRIPT_DIR" != "$PLUGIN_DIR" ]; then
     echo -e "${YELLOW}  Press Enter to use the current folder: $SCRIPT_DIR${NC}"
-    read -p "Path: " LOCAL_PATH
+    tty_read "Path: " LOCAL_PATH
     LOCAL_PATH="${LOCAL_PATH:-$SCRIPT_DIR}"
   else
-    read -p "Path: " LOCAL_PATH
+    tty_read "Path: " LOCAL_PATH
     if [ -z "$LOCAL_PATH" ]; then
       echo -e "${RED}✗ No path provided. Please enter the full path to the extracted plugin folder.${NC}"
       exit 1
@@ -288,7 +354,7 @@ if [[ "$1" == "--update" ]]; then
         echo -e "${YELLOW}  Use option 2 (local folder) to update instead.${NC}"
         exit 1
       fi
-      echo -e "  → Pulling from Azure DevOps..."
+      echo -e "  ${CYAN}⏳ Pulling latest files from Azure DevOps — please wait…${NC}"
       cd "$PLUGIN_DIR" && git pull origin main && cd - > /dev/null
       NEW_VERSION=$(get_plugin_version "$PLUGIN_DIR")
       ;;
@@ -298,7 +364,8 @@ if [[ "$1" == "--update" ]]; then
       echo -e "  → Source version:   ${CYAN}v$SOURCE_VERSION${NC}"
       echo -e "  → Updating:         v$INSTALLED_VERSION → ${GREEN}v$SOURCE_VERSION${NC}"
       echo ""
-      cp -r "$LOCAL_PATH/." "$PLUGIN_DIR"
+      echo -e "  ${CYAN}⏳ Copying updated files — please wait…${NC}"
+      safe_copy "$LOCAL_PATH" "$PLUGIN_DIR"
       NEW_VERSION=$(get_plugin_version "$PLUGIN_DIR")
       ;;
     *)
@@ -317,13 +384,26 @@ if [[ "$1" == "--update" ]]; then
 
   write_marketplace_json "$NEW_VERSION"
 
+  # Copying the source files alone does NOT change the version Claude loads — it serves
+  # from a version-keyed cache dir recorded in installed_plugins.json. Re-read the source
+  # marketplace, then update the plugin so the new version is copied into the cache.
+  if command -v claude &>/dev/null; then
+    echo -e "  ${CYAN}⏳ Refreshing plugin metadata in Claude Code…${NC}"
+    claude plugin marketplace update "$MARKETPLACE_NAME" 2>/dev/null || true
+    echo -e "  ${CYAN}⏳ Applying v$NEW_VERSION into Claude's cache — this can take a few seconds, please wait…${NC}"
+    claude plugin update "$PLUGIN_NAME@$MARKETPLACE_NAME" 2>/dev/null || true
+    echo -e "  ${GREEN}✓ Cache updated${NC}"
+  else
+    echo -e "${YELLOW}  claude CLI not found — run 'claude plugin update $PLUGIN_NAME@$MARKETPLACE_NAME' manually.${NC}"
+  fi
+
   echo ""
   echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
   echo -e "${GREEN}  Plugin updated: v$INSTALLED_VERSION → v$NEW_VERSION${NC}"
   echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
   echo ""
   echo "Start a new Claude Code session to load the updated plugin."
-  echo "Then run /dream-sync in each project to update the plugin version."
+  echo "Then run /setup-sync in each project to update the plugin version."
   echo ""
   exit 0
 fi
@@ -340,8 +420,8 @@ prompt_identity
 if [ -d "$PLUGIN_DIR" ]; then
   echo -e "${YELLOW}⚠ Existing install found at $PLUGIN_DIR (v$INSTALLED_VERSION)${NC}"
   echo -e "${YELLOW}  To update an existing install use: bash install.sh --update${NC}"
-  read -p "  Overwrite with a fresh install anyway? (y/N) " -n 1 -r; echo ""
-  [[ $REPLY =~ ^[Yy]$ ]] && rm -rf "$PLUGIN_DIR" || { echo "Cancelled."; exit 0; }
+  tty_read "  Overwrite with a fresh install anyway? (y/N) " REPLY
+  [[ $REPLY =~ ^[Yy] ]] && rm -rf "$PLUGIN_DIR" || { echo "Cancelled."; exit 0; }
 fi
 
 mkdir -p "$MARKETPLACE_DIR/plugins"
@@ -365,7 +445,8 @@ case "$SOURCE_CHOICE" in
     echo -e "  → Source version:   ${CYAN}v$SOURCE_VERSION${NC}"
     echo -e "  → Installing:       ${GREEN}v$SOURCE_VERSION${NC}"
     echo ""
-    cp -r "$LOCAL_PATH/." "$PLUGIN_DIR"
+    echo -e "  ${CYAN}⏳ Copying plugin files — please wait…${NC}"
+    safe_copy "$LOCAL_PATH" "$PLUGIN_DIR"
     NEW_VERSION=$(get_plugin_version "$PLUGIN_DIR")
     ;;
   *)
@@ -440,6 +521,13 @@ echo "Registering marketplace and installing plugin..."
 echo ""
 
 claude plugin marketplace add "$WIN_MARKETPLACE_DIR"
+# 'add' is a no-op when the marketplace is already registered, leaving Claude with stale
+# metadata pointing at the previously-installed version. Force a re-read of the source we
+# just refreshed so 'install' below sees the current plugin.json version.
+claude plugin marketplace update "$MARKETPLACE_NAME" 2>/dev/null || true
+# This step captures output, so nothing prints while it runs — tell the user it's working
+# (rather than looking frozen) before the several-second install.
+echo -e "  ${CYAN}⏳ Installing plugin — this can take a few seconds, please wait…${NC}"
 INSTALL_OUT=$(claude plugin install "$PLUGIN_NAME@$MARKETPLACE_NAME" --scope user 2>&1)
 INSTALL_EXIT=$?
 echo "$INSTALL_OUT"
@@ -460,6 +548,14 @@ if [ $INSTALL_EXIT -ne 0 ] || (echo "$INSTALL_OUT" | grep -q "Failed to install"
   exit 1
 fi
 
+# ── Force the current version into Claude's cache ──────────────────────────────
+# Claude serves the plugin from a version-keyed cache dir recorded in
+# installed_plugins.json — NOT from the marketplace source. When a prior version is
+# already installed, the 'install' above is a no-op, so 'update' is what actually copies
+# the refreshed version into the cache and rewrites installed_plugins.json. Harmless
+# (no-op) on a genuinely fresh install.
+claude plugin update "$PLUGIN_NAME@$MARKETPLACE_NAME" 2>/dev/null || true
+
 # ── Count commands dynamically ─────────────────────────────────────────────────
 COMMAND_COUNT=$(find "$PLUGIN_DIR/commands" -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
 
@@ -473,20 +569,20 @@ echo "┌─ Next steps ──────────────────�
 echo "│                                                                        │"
 echo "│  1. Open your project in VS Code                                       │"
 echo "│  2. Open a terminal and run: claude                                    │"
-echo "│  3. Inside the session, run: /dream-init (new project)                 │"
-echo "│                          or: /dream-sync (existing project)            │"
-echo "│     dream-sync updates the plugin version in your project files.       │"
+echo "│  3. Inside the session, run: /setup-init (new project)                 │"
+echo "│                          or: /setup-sync (existing project)            │"
+echo "│     setup-sync updates the plugin version in your project files.       │"
 echo "│  4. Set AZURE_DEVOPS_PAT as an environment variable                    │"
 echo "│     Required by: /pr-create  /sprint-metrics  /app-readiness           │"
 echo "│     Add to ~/.bashrc or ~/.zshrc:                                      │"
 echo "│       export AZURE_DEVOPS_PAT='your-token-here'                       │"
 echo "│  4a. If you store PAT in .claude/settings.json instead, add that       │"
-echo "│     file to .gitignore immediately — /dream-status will flag it Red.   │"
-echo "│  5. Run /dream-status to verify all infrastructure checks are green    │"
+echo "│     file to .gitignore immediately — /setup-status will flag it Red.   │"
+echo "│  5. Run /setup-status to verify all infrastructure checks are green    │"
 echo "│                                                                        │"
 echo "│  Available commands (type / in Claude Code to see all $COMMAND_COUNT):              │"
 echo "│  SAVE ICEA  SAVE TECH  APPROVE  IMPLEMENT  REVISE  STATUS             │"
-echo "│  dream  dream-status  session-start  icea-feature  code-review         │"
+echo "│  dream  setup-status  session-start  icea-feature  code-review         │"
 echo "│  checkin  bug  fix  explain  app-readiness  security-review            │"
 echo "│                                                                        │"
 echo "│  To update later:    bash install.sh --update                         │"

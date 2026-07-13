@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- documents-plugin-version: 3.5.0 -->
+<!-- documents-plugin-version: 3.12.0 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -370,7 +370,7 @@
   <div class="hero-grid"></div>
   <div class="hero-glow"></div>
   <div class="hero-content">
-    <div class="hero-tag" style="margin-bottom:12px;">Claude Code Plugin · v3.5.0</div>
+    <div class="hero-tag" style="margin-bottom:12px;">Claude Code Plugin · v3.12.0</div>
     <h1>ai-assisted-<em>development</em></h1>
     <p class="sub">
       ICEA-driven development workflow for distributed .NET · Angular · Node.js teams.
@@ -378,7 +378,7 @@
       and guards code quality with scoped rules — all inside Claude Code.
     </p>
     <div class="hero-badges">
-        <span class="badge badge-gold">v3.5.0</span>
+        <span class="badge badge-gold">v3.12.0</span>
       <span class="badge badge-blue">.NET 8 / 10</span>
       <span class="badge badge-cyan">Angular 17+</span>
       <span class="badge badge-cyan">Java / Spring Boot</span>
@@ -393,11 +393,14 @@
 <section style="max-width:1100px;margin:24px auto 0;padding:16px 20px;background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #f59e0b;border-radius:8px;font-size:14px;line-height:1.6;">
   <strong style="color:#0f172a;">What's new since 3.0.0</strong>
   <ul style="margin:8px 0 0;padding-left:20px;color:#334155;">
+    <li><strong>3.9.0</strong> — The critic now runs at <strong>two planning-time gates</strong> inside <code>icea-feature</code> — the ICEA draft (Step 5) and the Tech Spec draft (Step 8), each before the <code>temp/</code> write with up to 2 auto-revise retries — in addition to the existing code gate in <code>icea-implement</code> (<a href="docs/adr/0052-critic-planning-gates.md">ADR 0052</a>). A new <code>tech</code> critic mode checks ICEA↔design traceability, D-option fidelity, and coverage-matrix completeness at the earliest point a design diverges from the spec, before any code exists. Previously the critic was documented as firing in <code>icea-feature</code> but was never actually invoked there.</li>
+    <li><strong>3.8.0</strong> — Architecture doc set expands from 4 to 8 per stack (<a href="docs/adr/0050-architecture-doc-set-expansion.md">ADR 0050</a>): adds <code>architecture-data.md</code>, <code>architecture-integrations.md</code>, <code>architecture-security.md</code>, and an append-only <code>architecture-decisions.md</code> log, plus Mermaid diagrams in <code>architecture.md</code> and an NFR section in <code>architecture-deployment.md</code>. Templates deduplicated into a shared base + per-stack overrides (<a href="docs/adr/0051-architect-template-dedup.md">ADR 0051</a>). The lifecycle commands were renamed <code>dream-init/-sync/-status/-teardown</code> → <code>setup-init/-sync/-status/-teardown</code> (see <code>docs/migrations/018-3.8.0.md</code>); the internal <code>.claude/dream-init-state.json</code> state file and its <code>dream_init_*</code> keys are intentionally kept for backward compatibility.</li>
+    <li><strong>3.6.0</strong> — Frontmatter-based rule deployment with a 43-file layered rule set (<a href="docs/adr/0042-frontmatter-based-rule-deployment.md">ADR 0042</a>, <a href="docs/adr/0043-ecosystem-and-layered-rule-organisation.md">ADR 0043</a>); Expert Personas across all skills; a deterministic <code>dream-init-bootstrap.cjs</code>; <code>directoryCatalog</code> in graph.json (<a href="docs/adr/0044-directory-catalog-in-graph-json.md">ADR 0044</a>) and a security free-form risk pass (<a href="docs/adr/0045-security-skill-free-form-risk-analysis.md">ADR 0045</a>).</li>
     <li><strong>3.5.0</strong> — <code>EXTRACTED</code> knowledge-graph edges are now derived <em>deterministically</em> by <code>scripts/graph-extract-edges.js</code> (import/using/require/ProjectReference parsing, offline) rather than by the model — parser-true, byte-stable, and source never enters context (<a href="docs/adr/0041-deterministic-edge-extraction.md">ADR 0041</a>). The model authors only <code>INFERRED</code>/<code>AMBIGUOUS</code> edges.</li>
     <li><strong>3.4.0</strong> — Plugin version is now single-source in <code>.claude-plugin/plugin.json</code> (<code>marketplace.json</code> no longer carries one); <code>scripts/bump-version.js</code> propagates it and <code>scripts/check-version-consistency.js</code> guards against drift. Guides + release docs brought current.</li>
     <li><strong>3.3.0</strong> — Knowledge graph gains a machine-readable structure of record (<code>.claude/graph/graph.json</code>: typed nodes/edges + confidence, module-wide staleness fingerprints) with the markdown as its projection (<a href="docs/adr/0039-graph-json-sidecar.md">ADR 0039</a>); new <code>/graph-viz</code> renders an offline HTML graph view. CLAUDE.md context footprint slimmed — target ≤ ~200 lines as an <em>instruction-adherence</em> budget, not a context-window limit (<a href="docs/adr/0040-claude-md-context-budget.md">ADR 0040</a>, <code>skills/shared/claude-md-budget-spec.md</code>).</li>
     <li><strong>3.0.2</strong> — <code>--uninstall</code> now removes all global config (cache dir, caches orphaned by a marketplace rename, stale <code>extraKnownMarketplaces</code> entries) via <code>scripts/uninstall-cleanup.js</code>: dry-run plan → confirm → apply (<code>--yes</code> to skip).</li>
-    <li><strong>3.0.1</strong> — Provisioning skills resolve the plugin dir/version from the registry (<code>installed_plugins.json</code>, fork-safe) with a glob fallback; <code>dream-status</code> stack detection is cache-first (<code>skills/shared/plugin-path-resolution.md</code>).</li>
+    <li><strong>3.0.1</strong> — Provisioning skills resolve the plugin dir/version from the registry (<code>installed_plugins.json</code>, fork-safe) with a glob fallback; <code>setup-status</code> stack detection is cache-first (<code>skills/shared/plugin-path-resolution.md</code>).</li>
   </ul>
 </section>
 
@@ -459,7 +462,7 @@
     <div class="sidebar-section">
       <div class="sidebar-label">Maintenance</div>
       <a href="#dream-status" class="recommended">
-        <span class="nav-icon">🟢</span>Dream Status
+        <span class="nav-icon">🟢</span>Setup Status
       </a>
       <a href="#dream-rollback" class="recommended">
         <span class="nav-icon">↩</span>Dream Rollback
@@ -535,8 +538,8 @@
             </tr>
             <tr>
               <td><strong>The .gitignore from day one</strong></td>
-              <td>A PAT in <code>.claude/settings.json</code> that is not gitignored is a real credential leak. Easy to forget under delivery pressure.</td>
-              <td>Plugin handles this at setup, audits it in check 9 of <code>dream-status</code>, and defaults to Windows User Environment Variables.</td>
+              <td>Secrets in a committed file are a real credential leak. Easy to forget under delivery pressure.</td>
+              <td>Plugin commits only secret-free config (<code>settings.json</code>); secrets live in the gitignored <code>settings.local.json</code> or a Windows User Environment Variable. A write-time and pre-commit guard blocks any secret from reaching the shared file. <code>setup-status</code> audits this.</td>
             </tr>
           </tbody>
         </table>
@@ -674,7 +677,7 @@
         <p class="step-desc">Open any project in VS Code, open the Claude Code panel, and type <code>/ai-assisted</code>. You should see the commands appear.</p>
         <div class="info">
           <span class="wi">ℹ</span>
-          <span>Commands only appear in VS Code after <strong>/dream-init has been run in that project</strong> (Step 4). They are visible in the CLI immediately after install.</span>
+          <span>Commands only appear in VS Code after <strong>/setup-init has been run in that project</strong> (Step 4). They are visible in the CLI immediately after install.</span>
         </div>
       </div>
     </section>
@@ -692,7 +695,7 @@
       <div class="step-card mandatory">
         <div class="step-number">!</div>
         <div class="step-header">
-          <div class="step-title">Run /dream-init</div>
+          <div class="step-title">Run /setup-init</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <span class="tag tag-mandatory">Mandatory</span>
             <span class="tag tag-once">Once per project</span>
@@ -701,7 +704,7 @@
         <p class="step-desc">Open the project in Claude Code and run:</p>
         <div class="code-block">
           <div class="code-header"><span class="code-lang">claude code</span></div>
-          <div class="code-body"><pre><span class="cmd">/ai-assisted-development:dream-init</span></pre></div>
+          <div class="code-body"><pre><span class="cmd">/ai-assisted-development:setup-init</span></pre></div>
         </div>
         <p class="step-desc">This creates the following in your project:</p>
         <div class="code-block">
@@ -710,8 +713,8 @@
 ├── <span class="var">.claude/commands/</span>      ← 36 command stubs (makes all commands visible in VS Code)
 │   ├── dream.md              ← /dream
 │   ├── dream-health.md       ← /dream-health
-│   ├── dream-init.md         ← /dream-init
-│   ├── dream-status.md       ← /dream-status  <span class="tag tag-mandatory" style="font-size:10px;padding:1px 5px;">New</span>
+│   ├── setup-init.md         ← /setup-init
+│   ├── setup-status.md       ← /setup-status  <span class="tag tag-mandatory" style="font-size:10px;padding:1px 5px;">New</span>
 │   ├── dream-rollback.md     ← /dream-rollback <span class="tag tag-mandatory" style="font-size:10px;padding:1px 5px;">New</span>
 │   ├── security-review.md    ← /security-review
 │   ├── code-review.md        ← /code-review
@@ -739,7 +742,7 @@
 │   ├── MEMORY.md          ← manual override inbox
 │   └── dream-log.md       ← audit trail
 ├── <span class="var">.claude/</span>
-│   └── file-cache.json    ← empty cache seeded by dream-init (code-review &amp; security use this)
+│   └── file-cache.json    ← empty cache seeded by setup-init (code-review &amp; security use this)
 │   └── dream-init-state.json  ← tracks developer-declined gitignore entries (gitignored)
 ├── <span class="var">token-analysis/</span>
 │   └── token-graph.json   ← empty cache (populated on first token-analysis run)
@@ -819,7 +822,7 @@ Scope      : <span class="str">Code → Read & Write  (custom defined, nothing e
         </div>
         <div class="warning">
           <span class="wi">⚠</span>
-          <span><strong>Never commit <code>.claude/settings.json</code>.</strong> Run <code>/dream-status</code> after setup — it will flag a ❌ Red credential risk if <code>settings.json</code> is present but not gitignored. Fix that before using this option.</span>
+          <span><strong>Never commit <code>.claude/settings.json</code>.</strong> Run <code>/setup-status</code> after setup — it will flag a ❌ Red credential risk if <code>settings.json</code> is present but not gitignored. Fix that before using this option.</span>
         </div>
         <div class="info">
           <span class="wi">ℹ</span>
@@ -831,23 +834,23 @@ Scope      : <span class="str">Code → Read & Write  (custom defined, nothing e
 
     <!-- ───────── DREAM STATUS ───────── -->
     <section id="dream-status">
-      <div class="section-eyebrow">Run after dream-init · 20 checks</div>
+      <div class="section-eyebrow">Run after setup-init · 20 checks</div>
       <h2>Plugin Health <em class="accent">Check</em></h2>
       <p class="section-intro">
-        <code>/dream-status</code> is a read-only health check that reports on all <strong>20 infrastructure items</strong> in one pass.
-        Run it after <code>/dream-init</code> and any time you want to verify the plugin is properly configured.
+        <code>/setup-status</code> is a read-only health check that reports on all <strong>20 infrastructure items</strong> in one pass.
+        Run it after <code>/setup-init</code> and any time you want to verify the plugin is properly configured.
         It never modifies anything.
       </p>
 
       <div class="step-card recommended">
         <div class="step-number">✓</div>
         <div class="step-header">
-          <div class="step-title">Run dream-status</div>
-          <span class="tag tag-recommended">Recommended after every dream-init</span>
+          <div class="step-title">Run setup-status</div>
+          <span class="tag tag-recommended">Recommended after every setup-init</span>
         </div>
         <div class="code-block">
           <div class="code-header"><span class="code-lang">claude code</span></div>
-          <div class="code-body"><pre><span class="cmd">/ai-assisted-development:dream-status</span></pre></div>
+          <div class="code-body"><pre><span class="cmd">/ai-assisted-development:setup-status</span></pre></div>
         </div>
         <p class="step-desc">You'll get a report like this:</p>
         <div class="code-block">
@@ -884,7 +887,7 @@ Recommended actions:
           <span class="wi">⚠</span>
           <span>
             <strong>PAT credential risk:</strong> If <code>.claude/settings.json</code> exists but is not in your
-            <code>.gitignore</code>, dream-status will flag it as ❌ Red — the highest-severity finding.
+            <code>.gitignore</code>, setup-status will flag it as ❌ Red — the highest-severity finding.
             Fix this before doing anything else.
           </span>
         </div>
@@ -1024,27 +1027,27 @@ Recommended actions:
       <div class="step-card recommended">
         <div class="step-number">6</div>
         <div class="step-header">
-          <div class="step-title">Architect skill runs automatically via dream-init</div>
+          <div class="step-title">Architect skill runs automatically via setup-init</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <span class="tag tag-recommended">Recommended</span>
             <span class="tag tag-once">Once per project</span>
           </div>
         </div>
         <p class="step-desc">
-          <code>/dream-init</code> triggers the architect skill automatically after deploying rules.
-          It detects your repo type and generates the matching set of three files.
+          <code>/setup-init</code> triggers the architect skill automatically after deploying rules.
+          It detects your repo type and generates the matching set of eight architecture docs (ADR 0050).
         </p>
         <div class="code-block">
           <div class="code-header"><span class="code-lang">generated files</span></div>
-          <div class="code-body"><pre><span class="cmt"># .NET Web API</span>
-.claude/architecture/<span class="str">architecture.md</span>          ← stack, layers, endpoints
+          <div class="code-body"><pre><span class="cmt"># .NET Web API (8-doc set — ADR 0050)</span>
+.claude/architecture/<span class="str">architecture.md</span>          ← stack, layers, endpoints + Mermaid diagrams
 .claude/architecture/<span class="str">architecture-callchains.md</span>  ← request flow traces
 .claude/architecture/<span class="str">architecture-reference.md</span>   ← NuGet versions, pipelines
-
-<span class="cmt"># Angular (Nx or standard)</span>
-.claude/architecture/<span class="str">architecture.md</span>
-.claude/architecture/<span class="str">architecture-flows.md</span>        ← component/data flows
-.claude/architecture/<span class="str">architecture-reference.md</span></pre></div>
+.claude/architecture/<span class="str">architecture-deployment.md</span>  ← hosting + NFRs / constraints
+.claude/architecture/<span class="str">architecture-data.md</span>        ← data model / schema / ownership
+.claude/architecture/<span class="str">architecture-integrations.md</span> ← external deps: contract, timeout, retry
+.claude/architecture/<span class="str">architecture-security.md</span>    ← trust boundaries + authorization model
+.claude/architecture/<span class="str">architecture-decisions.md</span>   ← append-only AD-NNN decision log</pre></div>
         </div>
         <p class="step-desc">Supported repo types: <code>dotnet-api</code> · <code>angular-nx</code> · <code>angular-standard</code> · <code>react</code> · <code>js-library</code> · <code>aspnet-framework</code> · <code>aspnet-mvc</code></p>
         <div class="info">
@@ -1065,7 +1068,7 @@ Recommended actions:
       <p class="section-intro">
         Everything inside the plugin repository. Files marked
         <span class="tag tag-mandatory" style="font-size:10px;">Global</span> are available the moment the plugin is installed.
-        Files marked <span class="tag tag-recommended" style="font-size:10px;">Project</span> are deployed into each repo by <code>/dream-init</code>.
+        Files marked <span class="tag tag-recommended" style="font-size:10px;">Project</span> are deployed into each repo by <code>/setup-init</code>.
         Files marked <span class="tag tag-optional" style="font-size:10px;">Hybrid</span> live globally but produce output inside the project.
       </p>
 
@@ -1073,7 +1076,7 @@ Recommended actions:
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;align-items:center;">
         <span style="font-size:12px;color:var(--muted);">Legend:</span>
         <span class="tag tag-mandatory">Global — always available, installed once per machine</span>
-        <span class="tag tag-recommended">Project — deployed per repo by /dream-init</span>
+        <span class="tag tag-recommended">Project — deployed per repo by /setup-init</span>
         <span class="tag tag-optional">Hybrid — global logic, project output</span>
       </div>
 
@@ -1087,8 +1090,8 @@ Recommended actions:
 ├── <span class="var">commands/</span>                              <span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;">Global</span>
 │   ├── dream.md                           <span class="cmt">← /ai-assisted-development:dream</span>
 │   ├── dream-health.md                    <span class="cmt">← /ai-assisted-development:dream-health</span>
-│   ├── dream-init.md                      <span class="cmt">← /ai-assisted-development:dream-init</span>
-│   ├── dream-status.md                    <span class="cmt">← /ai-assisted-development:dream-status</span>
+│   ├── setup-init.md                      <span class="cmt">← /ai-assisted-development:setup-init</span>
+│   ├── setup-status.md                    <span class="cmt">← /ai-assisted-development:setup-status</span>
 │   ├── dream-rollback.md                  <span class="cmt">← /ai-assisted-development:dream-rollback</span>
 │   ├── security-review.md                 <span class="cmt">← /ai-assisted-development:security-review</span>
 │   ├── code-review.md                     <span class="cmt">← /ai-assisted-development:code-review</span>
@@ -1108,7 +1111,7 @@ Recommended actions:
 │
 ├── <span class="var">skills/</span>
 │   │
-│   ├── <span class="var">command-stubs/</span>                     <span class="tag tag-recommended" style="font-size:10px;padding:1px 6px;">Project</span> deployed to .claude/commands/ by dream-init
+│   ├── (command stubs moved to _project-deploy/commands/)
 │   │   ├── dream.md                       <span class="cmt">thin stub → makes /dream visible in VS Code</span>
 │   │   ├── dream-health.md
 │   │   ├── security-review.md
@@ -1211,7 +1214,7 @@ Recommended actions:
 │   │   ├── graph-index-schema.md       <span class="cmt">schema + authoring rules for .claude/graph/graph-index.md  <span class="tag tag-optional" style="font-size:10px;padding:1px 5px;">New v2.6.0</span></span>
 │   │   └── graph-module-schema.md      <span class="cmt">schema + hard rules for .claude/graph/&lt;module&gt;.md detail files  <span class="tag tag-optional" style="font-size:10px;padding:1px 5px;">New v2.6.0</span></span>
 │   │
-│   ├── <span class="var">dream-status/</span>                      <span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;">Global</span> health check skill  <span class="tag tag-mandatory" style="font-size:10px;padding:1px 5px;">New v1.5</span>
+│   ├── <span class="var">setup-status/</span>                      <span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;">Global</span> health check skill  <span class="tag tag-mandatory" style="font-size:10px;padding:1px 5px;">New v1.5</span>
 │   │   └── SKILL.md
 │   │
 │   ├── <span class="var">dream-rollback/</span>                    <span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;">Global</span> rollback skill  <span class="tag tag-mandatory" style="font-size:10px;padding:1px 5px;">New v1.5</span>
@@ -1253,7 +1256,7 @@ Recommended actions:
 │           ├── aspnet-framework/
 │           └── aspnet-mvc/
 │
-├── <span class="var">rules/</span>                                 <span class="tag tag-recommended" style="font-size:10px;padding:1px 6px;">Project</span> deployed to .claude/rules/ by dream-init
+├── <span class="var">_project-deploy/</span>                       <span class="tag tag-recommended" style="font-size:10px;padding:1px 6px;">Project</span> hooks/, rules/, commands/, skills/ — deployed to target projects
 │   ├── project-rules.md                   <span class="cmt">all files (**/*) — guardrails + code quality</span>
 │   ├── dotnet-rules.md                    <span class="cmt">**/*.cs — Clean Architecture, DI, auth, SQL</span>
 │   ├── angular-rules.md                   <span class="cmt">**/*.ts, **/*.html — OnPush, async pipe, a11y</span>
@@ -1261,7 +1264,7 @@ Recommended actions:
 │   ├── java-rules.md                      <span class="cmt">**/*.java — Spring Boot, Bean Validation, JUnit 5</span>
 │   └── python-rules.md                    <span class="cmt">**/*.py — type hints, Pydantic/DRF, pytest</span>
 │
-├── <span class="var">memory/</span>                                <span class="tag tag-recommended" style="font-size:10px;padding:1px 6px;">Project</span> created in project root by dream-init
+├── <span class="var">memory/</span>                                <span class="tag tag-recommended" style="font-size:10px;padding:1px 6px;">Project</span> created in project root by setup-init
 │   ├── MEMORY.md                          <span class="cmt">manual override inbox + auto-capture entries</span>
 │   └── dream-log.md                       <span class="cmt">append-only audit trail of all dream runs</span>
 │
@@ -1282,7 +1285,7 @@ Recommended actions:
         <span class="wi">ℹ</span>
         <span>
           <strong>Global</strong> files live in the plugin installation at <code>~/.claude/plugins/&lt;marketplace&gt;/plugins/ai-assisted-development/</code> (the marketplace name is derived from your organization at install time — <code>&lt;org&gt;-marketplace</code>, or <code>local-marketplace</code>) and are available the moment the plugin is installed — no per-project setup needed.<br><br>
-          <strong>Project</strong> files are copied into each repo by <code>/dream-init</code> and live under <code>.claude/</code>, <code>memory/</code>, and <code>token-analysis/</code> in the project root. Generated files (<code>CodeReviews/</code>, <code>.claude/file-cache.json</code>, <code>token-analysis/</code>, <code>memory/health.html</code>, <code>.claude/settings.json</code>) are gitignored automatically by <code>/dream-init</code> — the codebase knowledge graph <code>.claude/graph/</code> is a deliberate exception: it is <strong>committed and PR-reviewed</strong> as the single orientation layer (v3.0.0, ADR 0038) — which creates or updates <code>.gitignore</code> in three phases: plugin entries (always), root-level well-known artifacts (auto-detected), and a full repo walk for build artifacts (<code>bin/</code>, <code>obj/</code>, <code>.env</code>, etc.) with a developer selection prompt before writing.<br><br>
+          <strong>Project</strong> files are copied into each repo by <code>/setup-init</code> and live under <code>.claude/</code>, <code>memory/</code>, and <code>token-analysis/</code> in the project root. Generated files (<code>CodeReviews/</code>, <code>.claude/file-cache.json</code>, <code>token-analysis/</code>, <code>memory/health.html</code>, <code>.claude/settings.json</code>) are gitignored automatically by <code>/setup-init</code> — the codebase knowledge graph <code>.claude/graph/</code> is a deliberate exception: it is <strong>committed and PR-reviewed</strong> as the single orientation layer (v3.0.0, ADR 0038) — which creates or updates <code>.gitignore</code> in three phases: plugin entries (always), root-level well-known artifacts (auto-detected), and a full repo walk for build artifacts (<code>bin/</code>, <code>obj/</code>, <code>.env</code>, etc.) with a developer selection prompt before writing.<br><br>
           <strong>Hybrid</strong> means the skill logic is global but its output (the populated architecture docs) lives in the project's <code>.claude/architecture/</code> folder.
         </span>
       </div>
@@ -1292,7 +1295,7 @@ Recommended actions:
     <section id="commands">
       <div class="section-eyebrow">Reference</div>
       <h2>All <em class="accent">Commands</em></h2>
-      <p class="section-intro">Slash commands are invoked directly. Global commands work across all projects; project commands require <code>/dream-init</code> to have run first.</p>
+      <p class="section-intro">Slash commands are invoked directly. Global commands work across all projects; project commands require <code>/setup-init</code> to have run first.</p>
 
       <h3>Global commands — always available</h3>
       <table class="cmd-table">
@@ -1319,6 +1322,11 @@ Recommended actions:
             <td><code>dynamic-scan/dynamic-scan-&lt;date&gt;.html</code> + <code>dynamic-scan/dynamic-scan-ledger.md</code> (FP-fingerprinted findings — use /fix)</td>
           </tr>
           <tr>
+            <td>/ai-assisted-development:dismiss FP-&lt;fingerprint&gt;</td>
+            <td>Dismiss a finding from any ledger as a false positive, won't-fix, accepted risk, or by-design — with a required justification. Dismissed findings are suppressed on future scans but re-flagged if the code at their location changes. Use <code>--undo</code> to reverse.</td>
+            <td>Updates the matching ledger (code-review / security / dynamic-scan)</td>
+          </tr>
+          <tr>
             <td>/ai-assisted-development:code-review [path]</td>
             <td>Coverity-style static analysis with persistent cross-run tracking. Detects new defects, marks previously-found defects as fixed with git attribution.</td>
             <td><code>CodeReviews/</code> folder + <code>CodeReviews/code-review-ledger.md</code></td>
@@ -1329,7 +1337,7 @@ Recommended actions:
             <td><code>token-analysis/token-analysis-&lt;date&gt;.html</code></td>
           </tr>
           <tr>
-            <td>/ai-assisted-development:dream-status</td>
+            <td>/ai-assisted-development:setup-status</td>
             <td><span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;margin-right:6px;">New v1.5</span>Read-only health check. Reports ✅/⚠️/❌ on <strong>20 infrastructure items</strong>: CLAUDE.md, memory, rules, stubs, architecture docs, knowledge-graph index + freshness + stale flag, deployment doc, file-cache, token-graph, ignore-file coverage, sensitive-skip audit, open findings across all ledgers, dream-rollback log, skill usage, model versions, plugin version drift, and production-readiness reports. Shows prioritised action list for any issues.</td>
             <td>Conversation output only</td>
           </tr>
@@ -1378,13 +1386,13 @@ Recommended actions:
         </tbody>
       </table>
 
-      <h3>Project commands — require /dream-init</h3>
+      <h3>Project commands — require /setup-init</h3>
       <table class="cmd-table">
         <thead><tr><th>Command</th><th>What it does</th></tr></thead>
         <tbody>
           <tr>
-            <td>/ai-assisted-development:dream-init</td>
-            <td>Per-project setup. Seeds <code>file-cache.json</code>, runs the architect skill to generate the architecture docs and the codebase knowledge graph in <code>.claude/graph/</code> (Step 7), deploys 36 command stubs and rules, ensures CLAUDE.md has Dream sections. Step 7b installs the git hooks for graph staleness detection. Creates/updates <code>.gitignore</code> automatically (the graph itself is committed, not ignored). Safe to re-run.</td>
+            <td>/ai-assisted-development:setup-init</td>
+            <td>Per-project setup. Seeds <code>file-cache.json</code>, runs the architect skill to generate the eight architecture docs (ADR 0050) and the codebase knowledge graph in <code>.claude/graph/</code> (Step 7), deploys 36 command stubs and rules, ensures CLAUDE.md has Dream sections. Step 7b installs the git hooks for graph staleness detection. Creates/updates <code>.gitignore</code> automatically (the graph itself is committed, not ignored). Safe to re-run.</td>
           </tr>
           <tr>
             <td>/ai-assisted-development:sprint-metrics [sprint=&lt;name&gt;]</td>
@@ -1444,7 +1452,7 @@ Recommended actions:
           </tr>
           <tr>
             <td>/ai-assisted-development:graph-sync</td>
-            <td><span class="tag tag-optional" style="font-size:10px;padding:1px 6px;margin-right:6px;">New v2.6.0</span>Incremental refresh of the codebase knowledge graph in <code>.claude/graph/</code>. Checks entry-point fingerprints for all modules and regenerates only stale detail files — unchanged modules are skipped entirely. Detects new source modules and restructures flat→domain layout when the project crosses 30 modules. Deletes the <code>.stale</code> flag on success. For first-time graph creation use <code>/dream-init</code> instead.</td>
+            <td><span class="tag tag-optional" style="font-size:10px;padding:1px 6px;margin-right:6px;">New v2.6.0</span>Incremental refresh of the codebase knowledge graph in <code>.claude/graph/</code>. Checks entry-point fingerprints for all modules and regenerates only stale detail files — unchanged modules are skipped entirely. Detects new source modules and restructures flat→domain layout when the project crosses 30 modules. Deletes the <code>.stale</code> flag on success. For first-time graph creation use <code>/setup-init</code> instead.</td>
           </tr>
         </tbody>
       </table>
@@ -1491,7 +1499,7 @@ Recommended actions:
           <div class="fc-icon">⚖️</div>
           <div class="fc-name">critic</div>
           <div class="fc-trigger">Triggers: auto inside icea-feature; "critique", "second opinion on this spec", "is this over-engineered"</div>
-          <div class="fc-desc">Second-pass generator-critic that evaluates artefacts <strong>before they are written to disk</strong>. Runs at two gates inside <code>icea-feature</code>: after the ICEA draft (concerns fold into the gap list) and after code generation (the verdict gates the write — up to 2 automatic regenerate-and-re-critique retries, then surfaces to you with ACCEPT / GUIDE / HALT). Ephemeral — no ledger, no fingerprints. Standalone via <code>/critic icea|code</code>.</div>
+          <div class="fc-desc">Second-pass generator-critic that evaluates artefacts <strong>before they are written</strong>. Runs at three internal gates, each with up to 2 automatic regenerate-and-re-critique retries then surfaces to you (ACCEPT / GUIDE / HALT): the <strong>ICEA draft</strong> (<code>icea-feature</code> Step 5) and the <strong>Tech Spec draft</strong> (<code>icea-feature</code> Step 8), both before the <code>temp/</code> write, and <strong>generated code</strong> (<code>icea-implement</code> Step 4a) before the disk write. Modes: <code>icea</code> (spec completeness/testability/scope), <code>tech</code> (ICEA↔design traceability, D-option fidelity, coverage matrix), <code>code</code> (traceability/simplicity/rules). Ephemeral — no ledger, no fingerprints. Standalone via <code>/critic icea|code</code>.</div>
         </div>
         <div class="feature-card">
           <div class="fc-icon">📋</div>
@@ -1537,9 +1545,9 @@ Recommended actions:
         </div>
         <div class="feature-card" style="border-color:rgba(16,185,129,0.3);background:rgba(16,185,129,0.03);">
           <div class="fc-icon">🟢</div>
-          <div class="fc-name">dream-status <span class="tag tag-mandatory" style="font-size:10px;padding:1px 5px;vertical-align:middle;">New</span></div>
+          <div class="fc-name">setup-status <span class="tag tag-mandatory" style="font-size:10px;padding:1px 5px;vertical-align:middle;">New</span></div>
           <div class="fc-trigger">Triggers: "dream status", "plugin status", "check setup", "is the plugin set up"</div>
-          <div class="fc-desc">Read-only health check. Reports ✅/⚠️/❌ on all plugin infrastructure. Flags PAT credential risk if <code>.claude/settings.json</code> is not gitignored. Run after <code>/dream-init</code> to confirm setup.</div>
+          <div class="fc-desc">Read-only health check. Reports ✅/⚠️/❌ on all plugin infrastructure. Flags PAT credential risk if <code>.claude/settings.json</code> is not gitignored. Run after <code>/setup-init</code> to confirm setup.</div>
         </div>
         <div class="feature-card" style="border-color:rgba(16,185,129,0.3);background:rgba(16,185,129,0.03);">
           <div class="fc-icon">↩</div>
@@ -1602,7 +1610,7 @@ Recommended actions:
     <section id="rules">
       <div class="section-eyebrow">Reference</div>
       <h2>Scoped <em class="accent">Rules</em></h2>
-      <p class="section-intro">Rules are deployed by <code>/dream-init</code> to <code>.claude/rules/</code> and activate automatically when Claude edits matching files. No invocation needed.</p>
+      <p class="section-intro">Rules are deployed by <code>/setup-init</code> to <code>.claude/rules/</code> and activate automatically when Claude edits matching files. No invocation needed.</p>
 
       <table class="cmd-table">
         <thead><tr><th>Rule file</th><th>Activates for</th><th>Enforces</th></tr></thead>
@@ -1848,8 +1856,8 @@ Recommended actions:
         <table class="cmd-table" style="margin-top:8px;">
           <thead><tr><th>#</th><th>Command</th><th>What to verify</th></tr></thead>
           <tbody>
-            <tr><td>1</td><td><code>/dream-init</code></td><td>All steps complete. 36 stubs in <code>.claude/commands/</code>. Knowledge graph at <code>.claude/graph/</code> (index + module files). Both JSON cache files created.</td></tr>
-            <tr><td>2</td><td><code>/dream-status</code></td><td>20 green checks on a fresh init (including 3 knowledge graph checks).</td></tr>
+            <tr><td>1</td><td><code>/setup-init</code></td><td>All steps complete. 36 stubs in <code>.claude/commands/</code>. Knowledge graph at <code>.claude/graph/</code> (index + module files). Both JSON cache files created.</td></tr>
+            <tr><td>2</td><td><code>/setup-status</code></td><td>20 green checks on a fresh init (including 3 knowledge graph checks).</td></tr>
             <tr><td>3</td><td><code>/session-start</code></td><td>≤20 line brief. No source files scanned.</td></tr>
             <tr><td>4</td><td>Type: <code>Build a search filter</code></td><td>ICEA gate fires — session-start pre-loaded the feature gate rule. <code>APPROVAL REQUIRED</code> shown. No code generated.</td></tr>
             <tr><td>5</td><td>Reply: <code>looks good</code></td><td><code>APPROVAL REQUIRED</code> still shown — exact word required.</td></tr>
@@ -2001,7 +2009,7 @@ Recommended actions:
               </tr>
               <tr>
                 <td><strong>C — Never</strong></td>
-                <td><code>session-start</code> <code>dream-status</code> <code>dream</code> <code>icea-feature</code></td>
+                <td><code>session-start</code> <code>setup-status</code> <code>dream</code> <code>icea-feature</code></td>
                 <td>Hard rule — these skills never read source files regardless of what the developer asks. Architecture docs and memory only.</td>
               </tr>
             </tbody>
@@ -2079,11 +2087,11 @@ Recommended actions:
         <div class="step-number">📅</div>
         <div class="step-header">
           <div class="step-title">Model version hygiene — quarterly review</div>
-          <span class="tag tag-optional">Automatic reminder via dream-status</span>
+          <span class="tag tag-optional">Automatic reminder via setup-status</span>
         </div>
         <p class="step-desc">
           Default model names are tracked in <code>.claude-plugin/plugin.json</code> under <code>recommended_models</code>
-          with a <code>last_reviewed</code> date and a 90-day cadence. <code>/dream-status</code> check 12 (model versions)
+          with a <code>last_reviewed</code> date and a 90-day cadence. <code>/setup-status</code> check 12 (model versions)
           will show ⚠️ Amber when the review date lapses, prompting you to check Anthropic's release notes
           and update the defaults if a newer model is appropriate.
         </p>
@@ -2110,7 +2118,7 @@ Recommended actions:
       <div class="section-eyebrow">Performance — automatic from v1.2.0+</div>
       <h2>Token <em class="accent">Efficiency</em></h2>
       <p class="section-intro">
-        After <code>/dream-init</code>, the plugin operates in incremental mode —
+        After <code>/setup-init</code>, the plugin operates in incremental mode —
         skills skip work they've already done. First run is the full baseline; every subsequent run processes only what changed.
       </p>
 
@@ -2143,8 +2151,8 @@ Recommended actions:
             </tr>
             <tr>
               <td><code>.claude/graph/graph-index.md</code> + detail files</td>
-              <td>dream-init (Step 7b), graph-sync</td>
-              <td>session-start (stale check), dream-status (3 checks)</td>
+              <td>setup-init (Step 7b), graph-sync</td>
+              <td>session-start (stale check), setup-status (3 checks)</td>
               <td>Skills orient by module without reading source; staleness detection via git hooks</td>
             </tr>
           </tbody>
@@ -2201,18 +2209,18 @@ Recommended actions:
 ├── commands/                    <span class="cmt">← slash command implementations (Markdown)</span>
 ├── skills/
 │   ├── shared/                  <span class="cmt">← cross-skill specs and schemas (single source of truth)</span>
-│   ├── command-stubs/           <span class="cmt">← thin stubs deployed to .claude/commands/ by dream-init</span>
+│   ├── (command stubs moved to _project-deploy/commands/)
 │   └── &lt;skill-name&gt;/
 │       ├── SKILL.md             <span class="cmt">← skill implementation</span>
 │       └── references/          <span class="cmt">← reference data loaded lazily by the skill</span>
-├── rules/                       <span class="cmt">← scoped rules deployed to .claude/rules/ by dream-init</span>
+├── _project-deploy/             <span class="cmt">← hooks/, rules/, commands/, skills/ — deployed to target projects</span>
 ├── tests/
 │   ├── runner.js                <span class="cmt">← behaviour harness (Anthropic API)</span>
 │   ├── validate.js / validate.py <span class="cmt">← structural validators (no API key)</span>
 │   └── skill-scenarios/         <span class="cmt">← YAML scenario files per skill</span>
 ├── memory/                      <span class="cmt">← Dream memory files (per-project, gitignored)</span>
 ├── install.ps1 / install.sh     <span class="cmt">← installers</span>
-├── CLAUDE.md                    <span class="cmt">← per-project AI context (seeded by dream-init)</span>
+├── CLAUDE.md                    <span class="cmt">← per-project AI context (seeded by setup-init)</span>
 ├── README.md                    <span class="cmt">← end-user documentation</span>
 └── CHANGELOG.md                 <span class="cmt">← append-only version history</span></pre></div>
       </div>
@@ -2259,7 +2267,7 @@ description: &gt;
       <h3>4 — Register and wire up</h3>
       <ul class="bullet-list">
         <li>Add the name to <code>components.skills</code> in <code>plugin.json</code>.</li>
-        <li>If slash-invokable: create <code>skills/command-stubs/&lt;name&gt;.md</code> and a <code>commands/&lt;name&gt;.md</code>, then add the stub to the <code>dream-init</code> deploy loop and the <code>dream-status</code> stub check.</li>
+        <li>If slash-invokable: create <code>_project-deploy/commands/&lt;name&gt;.md</code> and a <code>commands/&lt;name&gt;.md</code>, then add the stub to the <code>setup-init</code> deploy loop and the <code>setup-status</code> stub check.</li>
         <li>Add the skill to the Category A/B/C table in <code>shared/source-file-consent.md</code>.</li>
         <li>Create <code>tests/skill-scenarios/&lt;name&gt;.yaml</code> — at least one trigger-detection scenario and one hard-rule scenario.</li>
       </ul>
@@ -2288,8 +2296,8 @@ argument-hint: [--flag-one | --flag-two]
 What this command does and when to run it. Resolve flags, then read
 skills/&lt;skill&gt;/SKILL.md and execute it from Step 0 to the end.</pre></div></div>
       <p>Then: add the name (without <code>/</code>) to <code>components.commands</code> in <code>plugin.json</code>, create a matching
-      stub in <code>skills/command-stubs/</code>, and update <code>dream-init</code> (deploy loop + table + Step 10 summary) and the
-      <code>dream-status</code> stub count so the new stub is tracked.</p>
+      stub in <code>_project-deploy/commands/</code>, and update <code>setup-init</code> (deploy loop + table + Step 10 summary) and the
+      <code>setup-status</code> stub count so the new stub is tracked.</p>
     </section>
 
     <!-- ───────── SHARED PRIMITIVES ───────── -->
@@ -2397,7 +2405,7 @@ skills/&lt;skill&gt;/SKILL.md and execute it from Step 0 to the end.</pre></div>
 </div>
 
 <footer>
-  <span>ai-assisted-development · Claude Code Plugin · v3.5.0</span>
+  <span>ai-assisted-development · Claude Code Plugin · v3.12.0</span>
   <span>Product Engineering</span>
 </footer>
 

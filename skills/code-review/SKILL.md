@@ -4,16 +4,18 @@ description: >
   analysis, control flow analysis, null pointer analysis, resource leak detection, concurrency
   review, or any request mentioning "Coverity", "SAST", "static analysis", "defect density",
   "CID", "tainted data", or "review my code". Performs deep inter-procedural analysis across
-  function boundaries for .NET/C#, ASP.NET, WCF, Entity Framework, Angular/TypeScript, and Node.js.
-  Every finding includes a concrete fix with a corrected code snippet.
+  function boundaries. Stack-agnostic — detects the project's language stack and loads only
+  matching checker files. Every finding includes a concrete fix with a corrected code snippet.
 ---
 
 # Claude Code Review Skill
 
-_Skill version: 1.0 · Last changed: 2026-06-03 · Plugin compatibility: ≥1.14.0 · Consent: A_
-A Coverity-equivalent static analysis assistant. Performs inter-procedural data flow,
-control flow, memory safety, concurrency, and code quality analysis. Scoped to
-.NET/C#, ASP.NET, WCF, Entity Framework, Angular/TypeScript, and Node.js.
+_Skill version: 2.0 · Last changed: 2026-07-06 · Plugin compatibility: >=1.14.0 · Consent: A_
+
+A Coverity-equivalent static analysis assistant using the **three-pass scan
+architecture**. Performs inter-procedural data flow, control flow, null safety,
+resource leak, concurrency, and code quality analysis. Stack-agnostic — detects
+the project's languages and loads only matching checker files.
 
 Every finding is assigned a **CID** (Code Issue Defect), a **checker name**,
 an **event path**, an **impact rating**, and a **concrete fix with a corrected
@@ -21,12 +23,7 @@ code snippet** — matching Coverity's output format.
 
 ---
 
-
----
-
-
 > **Single-writer assumption**: This skill writes to a persistent cache file. See `../shared/single-writer-assumption.md` for concurrency constraints and CI guidance.
-
 
 ## Model routing
 
@@ -39,306 +36,355 @@ To override for this project, set in `.claude/settings.json`:
 
 See `../shared/model-routing-spec.md` for full routing documentation.
 
-## 0. Cache-Aware File Selection (run before analysis)
+## Persona
 
-The code-review skill uses `.claude/file-cache.json` to skip files unchanged
-since the last review. This reduces token cost by 80–95% on subsequent runs.
+Execute as **[SAST] Wen Li — Static Analysis Engineer** (Coverity-style SAST across the project's
+languages). Optimizes for true positives with concrete fixes; always asks "trace the tainted value —
+where does it actually reach?" Analyses whatever languages the codebase uses (per architecture.md /
+detected_stacks), never assuming one.
 
-### Step 0a — Determine scope
+The persona sets *what to scrutinize* — it never licenses assumption. Every finding must trace to
+real code (file/function/event path); a persona's "experience" is never evidence, and no defect is
+reported without the path that proves it (subordinate to CLAUDE.md section 3 / decision
+transparency). Never name the persona in any finding. See `../shared/personas-spec.md`.
 
-Check for explicit scope flags in the user's request:
+---
+
+## Scan Architecture — Three Passes
+
+This skill implements the three-pass scan architecture defined in
+`../shared/three-pass-spec.md`. Read that spec for the full architecture.
+
+```
+Pass 1 — STRUCTURED RULE-BASED SCAN
+   Known checker categories, deterministic checks. Fast, reproducible.
+   Coverity-style CID numbering, event paths, concrete fixes.
+        |
+        v
+Pass 2 — SPECIALIZED PERSONA PASSES
+   Three focused reviews: reliability, concurrency, API contracts.
+   Catches interaction effects that flat checklists miss.
+        |
+        v
+Pass 3 — FREE-FLOW ADVERSARIAL PASS
+   Open-ended. De-scoped from everything above. Catches
+   architectural smell, hidden coupling, and "what breaks next?"
+```
+
+---
+
+## Step 0 — Scope and Infrastructure
+
+### Step 0a — Interactive scope menu
+
+If no scope flag was provided, present the interactive menu and WAIT for the
+developer to choose. Do not proceed without a selection.
+
+See `../shared/interactive-menu-spec.md` for the full menu specification.
+
+The skill icon is a clipboard. The skill name is "Code Review".
+
+### Step 0b — Stack detection
+
+Detect the project's language stack BEFORE loading any reference files.
+
+```bash
+# Check for language signals
+find . -name "*.cs" -maxdepth 4 | head -1 && echo "DOTNET"
+find . -name "*.ts" -maxdepth 4 | head -1 && echo "TYPESCRIPT"
+find . -name "*.py" -maxdepth 4 | head -1 && echo "PYTHON"
+find . -name "*.java" -maxdepth 4 | head -1 && echo "JAVA"
+find . -name "*.go" -maxdepth 4 | head -1 && echo "GO"
+```
+
+Announce what will be loaded:
+```
+Code Review — Stack detection
+  Detected: {detected stacks}
+  Loading: {language-specific checkers to load}
+  Skipping: {languages not present}
+```
+
+Only load checker files for detected languages. Do NOT load checkers-dotnet.md
+for a pure Python project. Polyglot repos load all matching files.
+
+### Step 0c — Determine scope
+
+Apply scope flags per `../shared/scope-flags-spec.md`. Supported flags:
 
 | Flag | Behaviour |
 |---|---|
-| `--changed` | Review only git-staged and unstaged modified files |
-| `--pr` | Review only files changed in this branch vs the base branch |
-| `--full` | Force a full scan — ignore the cache |
-| `--ci` | CI mode: same as `--full`, warns if cache file found on disk |
-| `--area backend` | Backend source files (`*.cs`, `*.java`, `*.py`) |
-| `--area frontend` | Only `*.ts` and `*.html` files |
-| `--area config` | Only `*.json`, `*.yml`, `*.yaml`, `*.env`, `Dockerfile` |
-| `--area <ModuleName>` | Entry-point file + key files for that knowledge-graph module |
+| `--changed` | Staged + unstaged modified files only |
+| `--pr` | Branch diff vs base |
+| `--full` | All files, ignore cache |
+| `--ci` | Same as `--full`, warns if cache found |
+| `--area backend` | Server-side source files (extensions per detected stack) |
+| `--area frontend` | Client-side files (*.ts, *.html, *.jsx, *.tsx) |
+| `--area config` | Config files (*.json, *.yml, Dockerfile) |
+| `--area <ModuleName>` | Knowledge-graph module files |
 | `--continue` | Resume from checkpoint |
-| (none) | Default: cache-aware full-project scan with budget cap |
+| (none) | Interactive menu (Step 0a) |
 
-For `--changed`:
-```bash
-git diff --name-only          # unstaged
-git diff --name-only --cached # staged
+### Step 0d — Build candidate file list
+
+Enumerate from the project root. NEVER restrict to `src/` or any subdirectory.
+Use the canonical find command from `../shared/scope-flags-spec.md`.
+
+### Step 0e — Sort by priority
+
+1. **Auth / authorization** — `*auth*`, `*login*`, `*policy*`, `*middleware*`
+2. **Controllers / routers** — `*controller*`, `*router*`, `routes/*`
+3. **Data access** — `*repository*`, `*context*`, `*service*`
+4. **Configuration** — `appsettings*`, `.env*`, `*config*`, `Dockerfile`
+5. **Frontend components** — `*.component.ts`, `*.component.html`, `*.jsx`, `*.tsx`
+6. **Tests / utilities** — `*.spec.ts`, `*test*`, `*helper*` (lowest priority)
+
+### Step 0f — Cache-aware file selection
+
+For default scans: read `.claude/file-cache.json`, compare charCount, skip unchanged.
+For `--full` / `--ci`: skip cache, scan all.
+For `--changed` / `--pr`: git-derived list, no cache.
+
+See `../shared/file-cache-schema.md` for schema and merge rules.
+
+### Step 0g — Load references and report scope
+
+Load core references — read `.claude/plugin-path.txt` to get PLUGIN_DIR
+(if absent, use `skills/shared/plugin-path-resolution.md §1a`), then:
+```
+Read $PLUGIN_DIR/skills/code-review/references/checkers.md
+Read $PLUGIN_DIR/skills/code-review/references/output-format.md
+Read $PLUGIN_DIR/skills/code-review/references/analysis-rules.md
+Read $PLUGIN_DIR/skills/shared/business-context-severity.md
 ```
 
-For `--pr`:
-```bash
-git diff --name-only origin/HEAD...HEAD
-```
-
-### Step 0b — Build the candidate file list (ALL files from project root)
-
-**Always enumerate from the project root — never assume source files live only
-under `src/`. Configuration files, build scripts, and environment files outside
-`src/` are equally valid code-review targets.**
-
-For a default or `--full` or `--ci` scan, build the candidate list:
-
-```bash
-find . \
-  -not -path "./.git/*" \
-  -not -path "./node_modules/*" \
-  -not -path "./.angular/*" \
-  -not -path "./dist/*" \
-  -not -path "./out/*" \
-  -not -path "./build/*" \
-  -not -path "./.cache/*" \
-  -not -path "./coverage/*" \
-  -not -path "./bin/*" \
-  -not -path "./obj/*" \
-  -not -path "./tmp/*" \
-  -type f \( \
-    -name "*.ts" -o -name "*.js" -o -name "*.cs" -o -name "*.py" \
-    -o -name "*.java" -o -name "*.go" -o -name "*.rb" -o -name "*.php" \
-    -o -name "*.html" -o -name "*.json" -o -name "*.yaml" -o -name "*.yml" \
-    -o -name "*.tf" -o -name "*.sh" -o -name "*.ps1" \
-    -o -name "*.config" -o -name "web.config" -o -name "Dockerfile" \
-    -o -name "appsettings*.json" \
-  \) | sort
-```
-
-For `--changed` and `--pr`, the git commands produce a root-relative list — use those
-directly. Do not filter by subdirectory.
-
-For `--area backend`: `find . \( -name "*.cs" -o -name "*.java" -o -name "*.py" \) -not -path "./bin/*" -not -path "./obj/*" -not -path "./target/*" -not -path "*/__pycache__/*" -not -path "*/.venv/*"`
-For `--area frontend`: `find . \( -name "*.ts" -o -name "*.html" \) -not -path "./node_modules/*" -not -path "./dist/*"`
-For `--area config`: `find . \( -name "*.json" -o -name "*.yml" -o -name "*.yaml" -o -name "Dockerfile" \) -not -path "./node_modules/*" -not -path "./dist/*"`
-For `--area <ModuleName>`: read `.claude/graph/graph-index.md`, find the module row, then read its `.claude/graph/<module>.md` detail file and extract the entry-point + key files.
-For `--continue`: read pending files from `.claude/code-review-checkpoint.json`.
-
-### Step 0a2 — Apply file budget cap
-
-**FILE_BUDGET = 40 files per session.**
-
-Count candidate files after resolving scope. If count > 40 and no `--area` or `--continue` flag:
-
-```
-⚠ Large project: {N} files — exceeds 40-file session budget.
-
-  Scanning this session: 40 files (priority-ordered)
-  Remaining: {N-40} files
-
-  After this scan, run sub-scans for full coverage:
-    /code-review --area backend     → .NET / C# files
-    /code-review --area frontend    → Angular / TypeScript files
-    /code-review --area config      → Config / build files
-  Or: /code-review --continue
-```
-
-Write the checkpoint with all files, then scan the first 40 in priority order.
-
-### Step 0a3 — Sort candidate files by priority
-
-1. Auth / authorisation files: `*auth*`, `*login*`, `*policy*`, `*middleware*`
-2. Controllers / routers: `*controller*`, `*router*`, `routes/*`
-3. Data access: `*repository*`, `*context*`, `*service*`
-4. Configuration / environment: `appsettings*`, `.env*`, `*config*`, `Dockerfile`
-5. Angular components: `*.component.ts`, `*.component.html`
-6. Tests / utilities: `*.spec.ts`, `*test*`, `*helper*` (lowest priority)
-
-### Step 0c — Load cache (only for default scan)
-
-First, determine which mode applies:
-
----
-
-**IF `--full` or `--ci` flag was given:**
-
-```
-SKIP THE CACHE ENTIRELY.
-Every file in the candidate list is CHANGED → scan all of them.
-Do not read file-cache.json.
-Do not compare character counts.
-Do not skip any file.
-Jump directly to Step 0e.
-```
-
----
-
-**IF `--changed` or `--pr` flag was given:**
-
-The candidate list came from git — those files are CHANGED by definition.
-Do not consult the cache. Scan all files in the list.
-Jump directly to Step 0e.
-
----
-
-**IF no flag was given (default cache-aware scan):**
-
-```bash
-cat .claude/file-cache.json 2>/dev/null || echo "NO_CACHE"
-```
-
-If `NO_CACHE` → treat every file in the candidate list as CHANGED, scan all.
-
-### Step 0d — Identify changed files (default scan only)
-
-For each file in the candidate list:
-1. Get current char count: `wc -c <file>`
-2. Compare to `files[path].charCount` in the cache
-3. If missing from cache OR counts differ → **CHANGED** → include in scan
-4. If counts match → **UNCHANGED** → skip
-
----
-
-**Hard rule: `--full` means scan everything. No file is ever skipped when `--full` is set.**
-
-### Step 0e — Load analysis references, then report scope
-
-Load before scanning:
-```
-Read skills/code-review/references/checkers.md
-Read skills/code-review/references/output-format.md
-Read skills/code-review/references/analysis-rules.md
-Read skills/shared/business-context-severity.md
-Read skills/shared/source-file-consent.md
-```
-
-**Then load the language-specific checker(s) for the files in scope.** `checkers.md`
-holds the universal categories; each language file specializes them. Inspect the
-file extensions in the scoped set and load every matching reference (a polyglot
-repo loads more than one). If `architecture.md` declares the active layers, use it
-to confirm which languages are in play.
+Load language-specific checkers for detected stack:
 
 | Extensions in scope | Also load |
 |---|---|
 | `*.cs` | `references/checkers-dotnet.md` |
-| `*.ts` `*.js` `*.html` | `references/checkers-typescript.md` |
+| `*.ts`, `*.js`, `*.html` | `references/checkers-typescript.md` |
 | `*.java` | `references/checkers-java.md` |
 | `*.py` | `references/checkers-python.md` |
 
-If a scoped file's language has no specific checker file, fall back to the
-universal categories in `checkers.md` alone.
+If a file's language has no specific checker file, use universal categories from
+`checkers.md` alone.
 
+Report scope:
 ```
-📂 Code Review Scope
-  Mode    : cache-aware | --changed | --pr | --full | --ci | --area {name} | --continue
-  Area    : {all | backend | frontend | config | <AreaName>}
+Code Review Scope
+  Mode     : {resolved scope}
+  Stack    : {detected languages}
   Scan root: project root (all directories)
-  Files to scan: N  (session budget: 40 max)
-  Unchanged files skipped: M (cache hit)
-  Queued for next session: {K or "none"}
-  First run (no cache): true | false
+  Files    : N to scan (all matching files — no cap)
+  Skipped  : M (cache hit)
+  First run: true | false
 ```
 
-If 0 files changed, respond:
+If 0 files to scan:
 ```
-✅ No changed files detected since last review.
+No changed files detected since last review.
 Run with --full to force a complete rescan.
 ```
 And stop.
 
-### Step 0f — Update the cache after scanning
+### Step 0h — Write checkpoint
 
-After completing analysis, update `.claude/file-cache.json`:
-- For every file scanned: update `charCount`, `lastScanned` (today), add `"code-review"` to `scannedBy`
-- Merge with existing entries — do not overwrite other skills' data
-- Update `_lastUpdated` to today's date
-
-See `../shared/file-cache-schema.md` for full schema and merge rules.
+Write the checkpoint file per `../shared/checkpoint-schema.md` before scanning.
+Update after each file. Delete on completion.
 
 ---
 
+## Pass 1 — Structured Rule-Based Scan
+
+Apply the deterministic checker patterns from `references/checkers.md` and
+the language-specific checkers to every in-scope file. This is the
+Coverity-equivalent pass.
+
+### What Pass 1 checks
+
+Categories from `references/checkers.md`:
+
+| Category | Checkers |
+|---|---|
+| Data Flow | TAINTED_SQL, TAINTED_CMD, TAINTED_HTML, TAINTED_PATH, TAINTED_SSRF, TAINTED_DESERIALIZE |
+| Null Safety | NULL_RETURNS, FORWARD_NULL, REVERSE_NULL |
+| Resource Leaks | RESOURCE_LEAK (disposal, streams, connections, subscriptions) |
+| Memory / Buffer | BUFFER_SIZE, OVERRUN, UNDERRUN |
+| Control Flow | DEADCODE, UNREACHABLE, MISSING_BREAK, INFINITE_LOOP |
+| Uninitialized | UNINIT, UNINIT_CTOR |
+| Error Handling | CHECKED_RETURN, SWALLOWED_EXC, MISSING_THROW |
+| Concurrency | DEADLOCK, RACE_CONDITION, THREAD_LEAKED, LOCK_EVASION |
+| API Misuse | BAD_COMPARE, SIZEOF_MISMATCH, INCOMPATIBLE_CAST, SLEEP |
+| Code Quality | COPY_PASTE_ERROR, SELF_ASSIGN, LOGIC_ERROR |
+| Decision Transparency | MISSING_DECISION_COMMENT |
+
+### Analysis rules
+
+Per `references/analysis-rules.md`:
+- Inter-procedural: follow data across function boundaries
+- Path-sensitive: only report reachable defects
+- No false positives without caveat (mark uncertain as [Needs Verification])
+- Minimum event depth: 2-3+ events per finding
+- Business context override: per `../shared/business-context-severity.md`
+
+### Pass 1 output format
+
+Per `references/output-format.md`:
+
+```
+### CID {N} | {CHECKER_NAME} | Impact: {severity}
+
+**Event path:**
+  Event 1 [{role}]: {file}:{function} — {description}
+  Event 2 [{role}]: {file}:{function} — {description}
+
+**Vulnerable code:**
+  {snippet}
+
+**Fix:**
+  {corrected snippet}
+
+**References:** CWE-{id} | OWASP {category} | {link}
+```
+
+Every finding gets a fingerprint per `../shared/fingerprint-spec.md`. Set Pass: 1.
+Update checkpoint after each file.
 
 ---
 
-## Step 0f — Checkpoint file (resume on connection drop)
+## Pass 2 — Specialized Persona Passes
 
-Before scanning any files, write a checkpoint so the skill can resume if the
-connection drops mid-scan.
+Load `references/pass2-personas.md` for persona definitions.
 
+Run three focused reviews sequentially. Each persona:
+- Receives the file set + ALL prior findings (Pass 1 + prior personas)
+- Has a de-duplication gate (MUST NOT re-report same file + defect_class)
+- Must cite file/function/evidence
+- Max 5 findings each
+
+| Order | Persona | Lens | Activation |
+|---|---|---|---|
+| P1 | Reliability Engineer | Error propagation, failure modes, recovery | Always |
+| P2 | Concurrency Specialist | Cross-component races, shared state, async pitfalls | Only if concurrency signals detected |
+| P3 | API Contract Reviewer | Interface misuse, boundary validation, contract mismatch | Always |
+
+### De-duplication instruction (inject before each persona)
+
+```
+You have already found these findings in prior passes:
+{summary: CID/fingerprint, file, checker/defect_class for each}
+
+DO NOT re-report any finding covering the same file + defect class.
+Only report NEW findings that add information not captured above.
+```
+
+### Pass 2 output
+
+Findings follow the format in `references/pass2-personas.md`. Fingerprint
+fixable findings per `../shared/fingerprint-spec.md`. Set Pass: 2.
+
+---
+
+## Pass 3 — Free-Flow Adversarial Pass
+
+De-scoped from everything above. Receives ALL prior findings and MUST NOT
+re-report any of them.
+
+### Instruction
+
+```
+Analyze the code and all prior findings. Focus on what deterministic checkers
+and persona reviews typically miss:
+
+- Architectural smell and hidden coupling between components
+- Interaction effects that emerge from how components compose
+- Design patterns that will break when requirements change
+- Subtle correctness issues in business logic
+- Performance traps that only manifest under load
+- "What will break when this code is modified next?"
+
+Report the most impactful risks (up to 7). Only include risks you can tie to
+specific evidence — cite the file, function, or pattern observed.
+
+For each risk:
+- Name (plain language)
+- Impact (one line with justification)
+- Why it matters in THIS codebase (reference specific code)
+- A specific mitigation (code change, not generic advice)
+
+Label the section: "LLM-inferred code quality hypotheses — validate before
+treating as confirmed defects."
+```
+
+### Pass 3 output
+
+Advisory findings. Not fingerprinted. Not entered in the ledger unless promoted.
+Set Pass: 3.
+
+---
+
+## Post-Scan — Report Assembly
+
+### HTML report
+
+Generate a self-contained HTML report with:
+1. **Summary** — CID count by severity, scan metadata
+2. **Pass 1 Findings** — Coverity-style findings table with event paths
+3. **Pass 2 Findings** — "Expert Analysis" section, by persona
+4. **Pass 3 Findings** — "Code Quality Hypotheses" section (labeled advisory)
+5. **Summary Table** — CID, Checker, Impact, File, Function, Status
+
+Write to `CodeReviews/code-review-{YYYY-MM-DD}.html` and Markdown report.
+
+### Ledger update
+
+Write or update `CodeReviews/code-review-ledger.md` per `../shared/ledger-schema.md`.
+
+Read existing ledger first:
 ```bash
-mkdir -p .claude
-CHECKPOINT=".claude/code-review-checkpoint.json"
+cat CodeReviews/code-review-ledger.md 2>/dev/null || echo "NO_LEDGER_YET"
 ```
 
-**On start:** write the checkpoint with the full file list:
-```json
-{
-  "started": "YYYY-MM-DDTHH:MM:SSZ",
-  "scope": "--changed | --pr | --full | default",
-  "files": [
-    { "path": "src/Controllers/UserController.cs", "status": "pending" },
-    { "path": "src/Services/AuthService.cs",       "status": "pending" }
-  ],
-  "findings": []
-}
-```
-
-**After each file is scanned:** update its status to `"done"` and append findings.
-Write the checkpoint after every file.
-
-**On next run — detect and offer resume:**
-
+Apply reconciliation rules. Create folder and add to .gitignore:
 ```bash
-cat .claude/code-review-checkpoint.json 2>/dev/null || echo "NO_CHECKPOINT"
+mkdir -p CodeReviews
+grep -q "^CodeReviews/" .gitignore 2>/dev/null || echo "CodeReviews/" >> .gitignore
 ```
 
-If checkpoint exists with `"pending"` files:
-```
-⚠ Found an incomplete code review from {started}.
-  Scanned  : {done_count} files
-  Remaining: {pending_count} files
-  Findings so far: {finding_count}
+### Cache update
 
-Resume from where it stopped? (yes / no — 'no' starts a fresh scan)
-```
+Update `.claude/file-cache.json` per `../shared/file-cache-schema.md`:
+- Update charCount, lastScanned, add "code-review" to scannedBy
+- Merge with existing entries
 
-- `yes`: skip `"done"` files, continue from first `"pending"`, merge findings, generate report.
-- `no`: delete checkpoint and start fresh.
+### Checkpoint cleanup
 
-**On successful completion:** delete `.claude/code-review-checkpoint.json`.
-
-> Add `.claude/code-review-checkpoint.json` to `.gitignore`.
+Delete `.claude/code-review-checkpoint.json` on successful completion.
 
 ---
 
-## 1. Analysis Approach
-
-Before scanning, internally answer:
-
-1. **Language** — C# / ASP.NET? TypeScript / Angular? Node.js?
-2. **Analysis depth** — full codebase, single file, or diff?
-3. **Priority** — defect density report, data flow only, or full spectrum?
-
-Then apply all applicable checker categories from §2.
-
----
-
-## 2. Checker Categories
-
-Load `references/checkers.md` now — required for analysis.
-
----
-
-## 3. Output Format
-
-Load `references/output-format.md` now — required for report generation.
-
----
-
-## 4. Analysis Rules
-
-Load `references/analysis-rules.md` now.
-
----
-
-
-## 5. Reference Files
+## Reference Files
 
 | File | When to load |
 |------|-------------|
-| `references/checkers-dotnet.md` | C# / ASP.NET / WCF / EF / Dapper analysis |
-| `references/checkers-typescript.md` | Angular / TypeScript / Node.js analysis |
-| `references/checkers-java.md` | Java / Spring Boot / JPA analysis |
-| `references/checkers-python.md` | Python / FastAPI / Django / Flask analysis |
-| `../shared/file-cache-schema.md` (spec v1.0) | file-cache.json schema and merge rules (shared across skills) |
-| `../shared/scope-flags-spec.md` (spec v1.4) | Canonical scope flag definitions and file enumeration command (`--changed`, `--pr`, `--full`, `--ci`) |
-| `../shared/graph-index-schema.md` · `../shared/graph-module-schema.md` | Knowledge-graph schema (index + per-module detail) used for `--area` orientation |
-| `../shared/dismissed-findings-reconciliation.md` (spec v1.0) | Canonical Rule 5 — dismissed finding reconciliation on re-scan (keep dismissed if file unchanged; re-open with verify flag if file changed since dismissal date) |
+| `references/checkers.md` | Always — universal checker categories |
+| `references/checkers-dotnet.md` | C# / ASP.NET / WCF / EF / Dapper |
+| `references/checkers-typescript.md` | Angular / TypeScript / Node.js |
+| `references/checkers-java.md` | Java / Spring Boot / JPA |
+| `references/checkers-python.md` | Python / FastAPI / Django / Flask |
+| `references/pass2-personas.md` | Always — Pass 2 persona definitions |
+| `references/analysis-rules.md` | Always — analysis meta-rules |
+| `references/output-format.md` | Always — finding format |
+| `references/webconfig-checks.md` | ASP.NET Framework web.config analysis |
+| `../shared/three-pass-spec.md` | Architecture reference |
+| `../shared/interactive-menu-spec.md` | Menu specification |
+| `../shared/scope-flags-spec.md` | Scope flag definitions |
+| `../shared/file-cache-schema.md` | Cache schema and merge rules |
+| `../shared/checkpoint-schema.md` | Checkpoint schema |
+| `../shared/fingerprint-spec.md` | Fingerprint generation |
+| `../shared/ledger-schema.md` | Ledger format and reconciliation |
+| `../shared/business-context-severity.md` | B1-B7 override triggers |
+| `../shared/source-file-consent.md` | Consent category enforcement |
+| `../shared/dismissed-findings-reconciliation.md` | Rule 5 dismissed finding handling |
+| `../shared/graph-index-schema.md` / `graph-module-schema.md` | Knowledge graph for --area |

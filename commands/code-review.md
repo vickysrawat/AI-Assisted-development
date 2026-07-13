@@ -25,7 +25,7 @@ Parse the invocation arguments:
 | `--area <Name>` | SCOPE_FLAG = `--area <Name>` — knowledge-graph module files only |
 | `--continue` | SCOPE_FLAG = `--continue` — resume from checkpoint |
 | a file/folder path | SCOPE_FLAG = (default), restrict candidate list to that path |
-| (nothing) | SCOPE_FLAG = (default) — cache-aware full scan with budget cap |
+| (nothing) | SCOPE_FLAG = (default) — cache-aware full scan (no cap) |
 
 > ⚠ If SCOPE_FLAG is `--full` or `--ci`:
 > The cache must NOT be consulted. Every file from the `find` command is scanned.

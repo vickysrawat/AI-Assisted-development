@@ -39,8 +39,9 @@ Before collecting the diff, orient yourself to the project without reading raw s
 
 1. **Read `.claude/architecture/architecture.md`** if it exists — provides system overview, layer responsibilities, and key patterns.
 2. **Read `.claude/graph/graph-index.md`** if it exists — the module table maps each module to its entry point. Match the branch diff to the closest **Module** row and **read that module's detail file** (`.claude/graph/<module>.md`) for bounded context, key files, dependencies, and patterns.
-3. If neither exists, continue without orientation (no prompt needed — icea-review is invoked mid-workflow when the developer already has context).
-4. Use the graph to understand which module the branch diff touches. Reference the entry-point files in compliance findings rather than opening all changed files blindly.
+3. **Read `.claude/architecture/architecture-security.md` and `architecture-data.md`** if present — use the authorization model and data-ownership map to check the diff for compliance (new/changed actions have an enforced policy; data writes respect ownership boundaries).
+4. If none exist, continue without orientation (no prompt needed — icea-review is invoked mid-workflow when the developer already has context).
+5. Use the graph to understand which module the branch diff touches. Reference the entry-point files in compliance findings rather than opening all changed files blindly.
 
 5. **Staleness check** — if `.claude/graph/.stale` exists (set by the post-merge git hook), the graph may be behind the working tree:
    ```
@@ -144,6 +145,18 @@ To override for this project, set in `.claude/settings.json`:
 ```
 
 See `../shared/model-routing-spec.md` for full routing documentation.
+
+## Persona
+
+Execute as **[TL] Marcus Reid — Tech Lead** (14 yrs across web, service, and data layers). Optimizes
+for honest spec-vs-code compliance; always asks "does the diff actually implement this AC, and does
+it fit how we build?" Weigh [QA] Sam Okonkwo's AC-validation concerns. Expertise = this project's
+actual stack per layer.
+
+The persona sets *what to scrutinize* — it never licenses assumption. The approved ICEA and the diff
+are the only sources of truth; never mark an AC met without the implementing code in hand (subordinate
+to CLAUDE.md §3 / decision transparency). Never name the persona in the report. See
+`../shared/personas-spec.md`.
 
 ## Hard Rules
 

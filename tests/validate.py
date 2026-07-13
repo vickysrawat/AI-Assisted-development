@@ -27,22 +27,25 @@ def warn(msg):
 # ── 1. Canonical stub list (derived from disk — self-maintaining) ─────────────
 # The command-stubs directory is the source of truth for the deployable set.
 # Deriving the list (rather than hardcoding it) means it can never fall behind
-# disk again — the deploy loops in dream-init.md / dream-sync SKILL.md and the
-# dream-status report line must all agree with this count (checks below + check 35).
-CANONICAL_STUBS = sorted(os.path.basename(p) for p in glob.glob("skills/command-stubs/*.md"))
+# disk again — the bootstrap STUB_FILES array (scripts/setup-init-bootstrap.cjs) and the
+# setup-status report line must all agree with this count (checks below + check 35).
+CANONICAL_STUBS = sorted(os.path.basename(p) for p in glob.glob("_project-deploy/commands/*.md"))
 N = len(CANONICAL_STUBS)
 
-ds = open("skills/dream-status/SKILL.md").read()
+ds = open("skills/setup-status/SKILL.md").read()
 for stub in CANONICAL_STUBS:
     if stub not in ds:
-        err(f"dream-status/SKILL.md: missing stub '{stub}' in check 1d loop")
+        err(f"setup-status/SKILL.md: missing stub '{stub}' in check 1d loop")
 if f"N/{N} stubs deployed" not in ds:
-    err(f"dream-status/SKILL.md: report line should say 'N/{N} stubs deployed' (currently has wrong count)")
+    err(f"setup-status/SKILL.md: report line should say 'N/{N} stubs deployed' (currently has wrong count)")
 
-di = open("commands/dream-init.md").read()
+# Stub deployment moved from an inline setup-init.md list into the bootstrap script
+# (scripts/setup-init-bootstrap.cjs, STUB_FILES array) — the deterministic refactor that
+# replaced the mechanical setup-init/setup-sync steps. Validate the array covers every stub.
+boot = open("scripts/setup-init-bootstrap.cjs").read()
 for stub in CANONICAL_STUBS:
-    if stub not in di:
-        err(f"dream-init.md: missing stub '{stub}'")
+    if stub not in boot:
+        err(f"setup-init-bootstrap.cjs: STUB_FILES missing stub '{stub}'")
 
 # ── 2. No duplicate step numbers in icea-feature Codebase Orientation ─────────
 icea = open("skills/icea-feature/SKILL.md").read()
@@ -54,17 +57,17 @@ if dupes:
 
 # ── 3. plugin-readiness check count ────────────────────────────────────────────
 pr = open("skills/plugin-readiness/SKILL.md").read()
-for stale in ["12 dream-status", "All 12 ", "the 12 "]:
+for stale in ["12 setup-status", "All 12 ", "the 12 "]:
     if stale in pr:
         err(f"plugin-readiness/SKILL.md: stale count '{stale}' — update to match table row count")
 
 # ── 4. architecture-deployment.md referenced everywhere it must be ─────────────
 MUST_REFERENCE_DEPLOY = [
-    "skills/dream-status/SKILL.md",
+    "skills/setup-status/SKILL.md",
     "commands/session-start.md",
     "skills/icea-feature/SKILL.md",
     "skills/plugin-readiness/SKILL.md",
-    "commands/dream-init.md",
+    "commands/setup-init.md",
 ]
 for fpath in MUST_REFERENCE_DEPLOY:
     if "architecture-deployment" not in open(fpath).read():
@@ -219,7 +222,7 @@ consent = open("skills/shared/source-file-consent.md").read()
 MUST_BE_IN_CONSENT = [
     "pr-create","pr-describe","ado-tasks","sprint-metrics",
     "token-analysis","dream-rollback","architect","product-docs",
-    "icea-feature","icea-review","session-start","dream-status",
+    "icea-feature","icea-review","session-start","setup-status",
 ]
 for skill in MUST_BE_IN_CONSENT:
     if f"`{skill}`" not in consent and f"`/{skill}`" not in consent:
@@ -366,22 +369,52 @@ for name in spec_rows:
 # then enforces that every referenced file actually exists.
 LANGUAGE_MATRIX = {
     # language: (rule_file, checker_file, [architect_stack_dirs])
-    "dotnet": ("rules/dotnet-rules.md",
+    # dotnet-rules.md renamed to csharp-dotnet-rules.md in 3.6.0 (ADR 0043)
+    "dotnet": ("_project-deploy/rules/csharp-dotnet-rules.md",
                "skills/code-review/references/checkers-dotnet.md",
                ["dotnet-api", "aspnet-mvc", "aspnet-framework"]),
-    "typescript": ("rules/nodejs-rules.md",
+    # nodejs-rules.md renamed to nodejs-typescript-rules.md in 3.6.0 (ADR 0043)
+    "typescript": ("_project-deploy/rules/nodejs-typescript-rules.md",
                    "skills/code-review/references/checkers-typescript.md",
                    ["js-library"]),
-    "java": ("rules/java-rules.md",
+    "java": ("_project-deploy/rules/java-rules.md",
              "skills/code-review/references/checkers-java.md",
              ["spring-boot"]),
-    "python": ("rules/python-rules.md",
+    "python": ("_project-deploy/rules/python-rules.md",
                "skills/code-review/references/checkers-python.md",
                ["python-fastapi", "python-django", "python-flask"]),
 }
-# Frontend rule files that don't need their own backend checker/architect stack
-FRONTEND_RULES = {"rules/angular-rules.md", "rules/project-rules.md",
-                  "rules/dotnet-framework-rules.md", "rules/javascript-rules.md"}
+# Rule files that don't map to a backend language triple (checker + architect stack):
+# frontend frameworks, cross-cutting languages, styling, testing, API/RPC, database,
+# backend-concern layers, and legacy maintenance rules (ADR 0043 layered organisation).
+# Adding a new rule file still requires a conscious decision — LANGUAGE_MATRIX or here.
+# (dotnet-framework-rules.md renamed to csharp-framework48-rules.md in 3.6.0 — ADR 0043.)
+EXEMPT_RULES = {
+    # universal + frontend frameworks
+    "_project-deploy/rules/project-rules.md", "_project-deploy/rules/angular-rules.md", "_project-deploy/rules/react-ecosystem-rules.md",
+    "_project-deploy/rules/vue-ecosystem-rules.md", "_project-deploy/rules/svelte-ecosystem-rules.md",
+    "_project-deploy/rules/solid-ecosystem-rules.md", "_project-deploy/rules/nextjs-ecosystem-rules.md",
+    "_project-deploy/rules/nuxt-ecosystem-rules.md", "_project-deploy/rules/remix-ecosystem-rules.md",
+    "_project-deploy/rules/astro-ecosystem-rules.md",
+    # cross-cutting languages + styling
+    "_project-deploy/rules/typescript-rules.md", "_project-deploy/rules/javascript-rules.md", "_project-deploy/rules/tailwind-rules.md",
+    "_project-deploy/rules/css-rules.md", "_project-deploy/rules/sass-rules.md", "_project-deploy/rules/css-modules-rules.md",
+    # API / RPC / data-access clients + ORM
+    "_project-deploy/rules/graphql-client-rules.md", "_project-deploy/rules/graphql-server-rules.md",
+    "_project-deploy/rules/trpc-rules.md", "_project-deploy/rules/rest-client-rules.md", "_project-deploy/rules/rest-api-rules.md",
+    "_project-deploy/rules/prisma-drizzle-rules.md",
+    # backend concern layers (language-agnostic)
+    "_project-deploy/rules/backend-base-rules.md", "_project-deploy/rules/data-access-rules.md",
+    "_project-deploy/rules/sql-relational-rules.md", "_project-deploy/rules/auth-rules.md", "_project-deploy/rules/api-security-rules.md",
+    "_project-deploy/rules/testing-backend-rules.md", "_project-deploy/rules/observability-rules.md", "_project-deploy/rules/caching-rules.md",
+    # databases
+    "_project-deploy/rules/postgresql-rules.md", "_project-deploy/rules/sql-server-rules.md", "_project-deploy/rules/nosql-document-rules.md",
+    # e2e testing
+    "_project-deploy/rules/playwright-rules.md", "_project-deploy/rules/cypress-rules.md",
+    # legacy / maintenance-only (.NET Framework era)
+    "_project-deploy/rules/csharp-framework48-rules.md", "_project-deploy/rules/wcf-rules.md", "_project-deploy/rules/ef6-rules.md",
+    "_project-deploy/rules/ado-net-legacy-rules.md",
+}
 
 for lang, (rule_f, checker_f, stacks) in LANGUAGE_MATRIX.items():
     if not os.path.exists(rule_f):
@@ -397,15 +430,29 @@ for lang, (rule_f, checker_f, stacks) in LANGUAGE_MATRIX.items():
         if not os.path.isdir(tmpl):
             err(f"language '{lang}': architect template folder {tmpl}/ is missing")
         else:
-            # every template folder must carry the 4 canonical files (deployment + 3)
+            # Templates are composed at deploy time from two tiers (ADR — architect
+            # template dedup): a stack-agnostic skills/architect/templates/_shared/
+            # base (decisions/integrations/security/data) plus per-stack files that
+            # add stack-specifics and override shared files. Only architecture.md and
+            # architecture-deployment.md are guaranteed to live in the stack folder;
+            # the rest may be inherited from _shared/. See validate.js for the full
+            # compose-completeness (union == 8 files) assertion.
             if not os.path.exists(f"{tmpl}/architecture.md"):
                 err(f"language '{lang}': {tmpl}/architecture.md is missing")
             if not os.path.exists(f"{tmpl}/architecture-deployment.md"):
                 err(f"language '{lang}': {tmpl}/architecture-deployment.md is missing")
+            # Compose completeness: union(_shared, stack) must resolve to 8 files.
+            shared_dir = "skills/architect/templates/_shared"
+            shared_md = set(f for f in os.listdir(shared_dir) if f.endswith(".md")) if os.path.isdir(shared_dir) else set()
+            stack_md = set(f for f in os.listdir(tmpl) if f.endswith(".md"))
+            composed = shared_md | stack_md
+            if len(composed) != 8:
+                err(f"language '{lang}': {tmpl} composes to {len(composed)} files, expected 8 "
+                    f"(union with _shared/): {sorted(composed)}")
 
 # Reverse: any backend rule file present but not in the matrix is a half-added language
-all_rule_files = set(glob.glob("rules/*.md"))
-matrix_rule_files = {v[0] for v in LANGUAGE_MATRIX.values()} | FRONTEND_RULES
+all_rule_files = set(glob.glob("_project-deploy/rules/*.md"))
+matrix_rule_files = {v[0] for v in LANGUAGE_MATRIX.values()} | EXEMPT_RULES
 for rf in sorted(all_rule_files - matrix_rule_files):
     warn(f"rule file {rf} is not covered by the language matrix or FRONTEND_RULES "
          f"(add it so coverage is enforced)")
@@ -497,7 +544,7 @@ for sf in sorted(glob.glob("skills/shared/*.md")):
 
 # ── 27. Hooks present and executable bits documented ──────────────────────────
 # graph-stale-detect.sh is deployed as the git post-merge/post-checkout hook by
-# dream-init (Step 7b-4); it must exist here or /dream-init fails when it tries to copy it.
+# setup-init (Step 7b-4); it must exist here or /setup-init fails when it tries to copy it.
 for hook in ["hooks/icea-floor.sh", "hooks/findings-gate-precommit.sh",
              "hooks/validate-ledgers.py", "hooks/validate-pr-compliance.py",
              "hooks/graph-stale-detect.sh", "hooks/README.md"]:
@@ -574,21 +621,23 @@ for c in sorted(cmd_registered - cmd_disk):
 for c in sorted(cmd_disk - cmd_registered):
     err(f"plugin.json: commands/{c}.md exists but is not in components.commands")
 
-stub_disk = {os.path.splitext(os.path.basename(p))[0] for p in glob.glob("skills/command-stubs/*.md")}
+stub_disk = {os.path.splitext(os.path.basename(p))[0] for p in glob.glob("_project-deploy/commands/*.md")}
 for c in sorted(cmd_disk - stub_disk):
-    err(f"skills/command-stubs/{c}.md missing — /{c} will not deploy via dream-init/dream-sync")
+    err(f"_project-deploy/commands/{c}.md missing — /{c} will not deploy via setup-init/setup-sync")
 for s in sorted(stub_disk - cmd_disk):
-    warn(f"skills/command-stubs/{s}.md has no matching commands/{s}.md (orphan stub)")
+    warn(f"_project-deploy/commands/{s}.md has no matching commands/{s}.md (orphan stub)")
 
-# Every stub filename named inside a deploy loop must have a real stub file.
-for src in ["commands/dream-init.md", "skills/dream-sync/SKILL.md"]:
-    loop = re.search(r"for stub in\s+(.*?)\bdo\b", open(src).read(), re.DOTALL)
-    if not loop:
-        err(f"{src}: could not locate the 'for stub in ... do' deploy loop")
-        continue
-    for tok in re.findall(r"[a-z0-9][a-z0-9-]*\.md", loop.group(1)):
-        if not os.path.exists(f"skills/command-stubs/{tok}"):
-            err(f"{src}: deploy loop names '{tok}' but skills/command-stubs/{tok} does not exist")
+# Every stub filename named in the bootstrap's STUB_FILES array must have a real stub file.
+# (Deploy logic moved from shell loops in setup-init.md / setup-sync into the bootstrap
+# script; setup-sync now calls that same script in --mode sync.)
+_boot = open("scripts/setup-init-bootstrap.cjs").read()
+_arr = re.search(r"const STUB_FILES\s*=\s*\[(.*?)\]", _boot, re.DOTALL)
+if not _arr:
+    err("scripts/setup-init-bootstrap.cjs: could not locate the STUB_FILES array")
+else:
+    for tok in re.findall(r"[a-z0-9][a-z0-9-]*\.md", _arr.group(1)):
+        if not os.path.exists(f"_project-deploy/commands/{tok}"):
+            err(f"setup-init-bootstrap.cjs: STUB_FILES names '{tok}' but _project-deploy/commands/{tok} does not exist")
 
 # ── Report ────────────────────────────────────────────────────────────────────
 print(f"\n{'='*64}")

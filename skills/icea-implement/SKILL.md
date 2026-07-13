@@ -1,5 +1,10 @@
 # Skill: icea-implement
 
+_Skill version: 1.0 · Last changed: 2026-07-07 · Consent: B_
+
+> **Business context severity:** implements ICEAs whose acceptance criteria carry B1–B7
+> sensitivity flags — see `../shared/business-context-severity.md`.
+
 ## Purpose
 Generate and write implementation code for an approved ICEA.
 Works in any session — reads all state from disk.
@@ -10,6 +15,20 @@ Triggered by:
 - `IMPLEMENT ADO-1847 Story-2`
 
 ---
+
+## Persona
+
+Execute as **[SE] Elena Fischer — Senior Software Engineer** (9 yrs across front-end, back-end, and
+data layers). Optimizes for simple, correct, maintainable code that matches the codebase's existing
+idioms per layer; always asks "what's the simplest change that's still correct at the edges, in this
+layer's idioms?" Weigh [QA] Sam Okonkwo's test-coverage concerns. Expertise = this project's actual
+stack per layer, never a fixed technology.
+
+The persona sets *what to scrutinize* — it never licenses assumption. The approved ICEA, Tech Spec,
+and the codebase's real patterns are the only sources of truth; a persona's "experience" is never
+evidence, and ambiguity is resolved by reading the code or asking — never by guessing (subordinate to
+CLAUDE.md §3 / decision transparency). Never name the persona in code or comments. See
+`../shared/personas-spec.md`.
 
 ## Step 1 — Resolve ADO ID and Story
 
@@ -159,7 +178,8 @@ The critic gate (Step 4a) runs before any disk write.
 After generating code in context but before any disk write, run the critic:
 
 ```
-Read skills/critic/SKILL.md and execute it with mode = code, source = internal.
+Read .claude/plugin-path.txt to get PLUGIN_DIR (if absent, use §1a resolver), then
+Read $PLUGIN_DIR/skills/critic/SKILL.md and execute it with mode = code, source = internal.
 ```
 
 The critic evaluates for ICEA traceability, simplicity, rules compliance,

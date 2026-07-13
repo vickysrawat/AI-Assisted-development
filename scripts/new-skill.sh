@@ -73,14 +73,14 @@ SKILLEOF
 echo "  ✓ Created skills/$SKILL/SKILL.md"
 
 # 2. Create command stub
-cat > "skills/command-stubs/$SKILL.md" << STUBEOF
+cat > "_project-deploy/commands/$SKILL.md" << STUBEOF
 ---
 description: TODO: One-line description shown in VS Code command picker.
 ---
 <command>$SKILL</command>
 STUBEOF
 
-echo "  ✓ Created skills/command-stubs/$SKILL.md"
+echo "  ✓ Created _project-deploy/commands/$SKILL.md"
 
 # 3. Create test scenario placeholder
 cat > "tests/skill-scenarios/$SKILL.yaml" << YAMLEOF

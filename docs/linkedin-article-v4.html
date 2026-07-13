@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A Governance Framework for AI-Assisted Development — Spec Compliance, Persistent Finding Tracking, and Production-Readiness Gates Across the Entire SDLC</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ink: #0d0f14;
+    --paper: #faf8f4;
+    --paper2: #f3f0e8;
+    --rule: #ddd8cc;
+    --muted: #7a7465;
+    --accent: #e84c1e;
+    --accent2: #1a56db;
+    --gold: #c9860a;
+    --mono: 'JetBrains Mono', monospace;
+    --serif: 'Calibri', 'Candara', 'Segoe UI', sans-serif;
+    --display: 'Calibri', 'Candara', 'Segoe UI', sans-serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--ink);
+    font-family: var(--serif);
+    color: var(--ink);
+    line-height: 1;
+  }
+
+  /* ── MASTHEAD ── */
+  .masthead {
+    background: var(--ink);
+    padding: 0;
+    border-bottom: 1px solid #222;
+    position: relative;
+    overflow: hidden;
+  }
+  .masthead-inner {
+    padding: 48px 56px 0;
+    position: relative;
+  }
+  .masthead-kicker {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+  }
+  .masthead h1 {
+    font-family: var(--display);
+    font-size: clamp(2.4rem, 5vw, 4rem);
+    font-weight: 900;
+    color: #fff;
+    line-height: 1.08;
+    letter-spacing: -1px;
+    margin-bottom: 20px;
+    max-width: 860px;
+  }
+  .masthead h1 em { font-style: italic; color: var(--accent); }
+  .masthead-deck {
+    font-family: var(--serif);
+    font-size: 1.15rem;
+    color: #9a9590;
+    line-height: 1.65;
+    max-width: 680px;
+    margin-bottom: 32px;
+    font-weight: 300;
+  }
+  .byline {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 0 20px;
+    border-top: 1px solid #222;
+  }
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: linear-gradient(135deg, #e84c1e, #c9860a);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--display); font-size: 16px; font-weight: 700; color: #fff;
+    flex-shrink: 0;
+  }
+  .byline-info .name { font-size: 13px; font-weight: 600; color: #ddd; }
+  .byline-info .meta { font-size: 11px; color: #666; margin-top: 2px; font-family: var(--mono); letter-spacing: 0.05em; }
+
+  /* ── HERO ILLUSTRATION ── */
+  .hero-illus {
+    background: var(--ink);
+    border-bottom: 3px solid var(--accent);
+  }
+  .hero-illus svg { display: block; width: 100%; }
+
+  /* ── ARTICLE BODY ── */
+  .article {
+    background: var(--paper);
+    width: 100%;
+  }
+
+  /* Two-column layout */
+  .col-wrap {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 0;
+  }
+  .col-main { padding: 52px 48px 52px 52px; border-right: 1px solid var(--rule); }
+  .col-side { padding: 52px 32px 52px 32px; background: var(--paper2); }
+
+  p {
+    font-size: 1.05rem;
+    line-height: 1.78;
+    color: #2a2722;
+    margin-bottom: 20px;
+    font-weight: 300;
+  }
+  p strong { font-weight: 600; color: var(--ink); }
+
+  h2 {
+    font-family: var(--display);
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.2;
+    margin: 48px 0 16px;
+    padding-top: 32px;
+    border-top: 2px solid var(--ink);
+  }
+  h2:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
+
+  h3 {
+    font-family: var(--display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    font-style: italic;
+    color: var(--ink);
+    margin: 28px 0 10px;
+  }
+
+  /* Dropcap */
+  .dropcap::first-letter {
+    font-family: var(--display);
+    font-size: 4.4rem;
+    font-weight: 900;
+    float: left;
+    line-height: 0.8;
+    margin: 6px 10px -4px 0;
+    color: var(--accent);
+  }
+
+  /* Pull quote */
+  .pullquote {
+    border-left: 4px solid var(--accent);
+    margin: 32px 0;
+    padding: 14px 0 14px 22px;
+  }
+  .pullquote blockquote {
+    font-family: var(--display);
+    font-size: 1.3rem;
+    font-style: italic;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.4;
+  }
+  .pullquote cite {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    margin-top: 8px;
+    font-style: normal;
+    text-transform: uppercase;
+  }
+
+  /* Code block */
+  .code-blk {
+    background: #1a1c22;
+    border-radius: 6px;
+    padding: 16px 18px;
+    margin: 20px 0;
+    border-left: 3px solid var(--accent);
+  }
+  .code-blk pre {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: #c8c0b8;
+    line-height: 1.7;
+    white-space: pre-wrap;
+  }
+  .code-blk pre .kw { color: #e84c1e; }
+  .code-blk pre .str { color: #c9860a; }
+  .code-blk pre .cmt { color: #555; }
+
+  /* Illustration panels */
+  .illus-panel {
+    margin: 32px -48px 32px -52px;
+    background: #111520;
+    padding: 32px 52px;
+  }
+  .illus-panel svg { display: block; width: 100%; }
+  .illus-caption {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: #555;
+    text-align: center;
+    margin-top: 10px;
+    text-transform: uppercase;
+  }
+
+  /* Sidebar widgets */
+  .side-widget {
+    margin-bottom: 36px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .side-widget:last-child { border-bottom: none; }
+  .side-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+  .side-widget h4 {
+    font-family: var(--display);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+  .side-widget p {
+    font-size: 0.88rem;
+    line-height: 1.6;
+    margin-bottom: 0;
+  }
+  .stat-big {
+    font-family: var(--display);
+    font-size: 2.8rem;
+    font-weight: 900;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .stat-label { font-size: 0.8rem; color: var(--muted); font-family: var(--mono); letter-spacing: 0.06em; }
+
+  .tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .tag {
+    font-family: var(--mono); font-size: 10px; font-weight: 600;
+    padding: 3px 9px; border-radius: 3px; letter-spacing: 0.04em;
+    background: var(--ink); color: #ccc;
+  }
+  .tag.red { background: rgba(232,76,30,0.12); color: var(--accent); border: 1px solid rgba(232,76,30,0.3); }
+  .tag.blue { background: rgba(26,86,219,0.1); color: var(--accent2); border: 1px solid rgba(26,86,219,0.25); }
+  .tag.gold { background: rgba(201,134,10,0.1); color: var(--gold); border: 1px solid rgba(201,134,10,0.25); }
+
+  /* Rule divider */
+  .rule { border: none; border-top: 1px solid var(--rule); margin: 32px 0; }
+
+  /* Highlight box */
+  .highlight-box {
+    background: var(--ink);
+    color: #fff;
+    padding: 24px 28px;
+    border-radius: 2px;
+    margin: 28px 0;
+  }
+  .highlight-box h4 {
+    font-family: var(--display);
+    font-size: 1rem;
+    font-weight: 700;
+    font-style: italic;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .highlight-box p { color: #aaa; font-size: 0.92rem; margin-bottom: 0; }
+
+  /* Numbered step */
+  .steps { margin: 20px 0; }
+  .step { display: flex; gap: 14px; margin-bottom: 14px; }
+  .step-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    font-family: var(--mono); font-size: 12px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 2px;
+  }
+  .step-text { font-size: 0.95rem; line-height: 1.6; color: #2a2722; font-weight: 300; }
+  .step-text strong { font-weight: 600; }
+
+  /* Footer */
+  .article-footer {
+    background: var(--ink);
+    color: #555;
+    padding: 40px 52px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  @media (max-width: 700px) {
+    .col-wrap { grid-template-columns: 1fr; }
+    .col-side { border-top: 2px solid var(--rule); }
+    .col-main { padding: 32px 24px; }
+    .illus-panel { margin: 28px -24px; padding: 24px; }
+    .masthead-inner { padding: 36px 24px 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ MASTHEAD ══ -->
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="masthead-kicker">AI-Assisted Development · June 2026</div>
+    <h1>A governance framework for <em>AI-assisted development</em> — spec compliance, persistent finding tracking, and production-readiness gates across the entire SDLC.</h1>
+    <p class="masthead-deck">The ICEA gate, Dream memory consolidation, a critic that reviews generated code before it reaches disk, three persistent finding ledgers, cache-aware scanning, a PR compliance gate that blocks bad code before it reaches review, and a workflow that runs language-agnostic across .NET, Java, Python, and Node.js. This is the full story.</p>
+    <div class="byline">
+      <div class="avatar">AI</div>
+      <div class="byline-info">
+        <div class="name">AI Architect</div>
+        <div class="meta">Language-agnostic · Azure DevOps · 15 min read</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ══ HERO ILLUSTRATION — THE FULL WORKFLOW ══ -->
+<div class="hero-illus">
+  <svg viewBox="0 0 900 320" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+        <path d="M2 2L8 5L2 8" fill="none" stroke="context-stroke" stroke-width="1.8" stroke-linecap="round"/>
+      </marker>
+      <filter id="glow">
+        <feGaussianBlur stdDeviation="3" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <rect width="900" height="320" fill="#0d0f14"/>
+    <!-- grid lines -->
+    <g stroke="rgba(255,255,255,0.03)" stroke-width="1">
+      <line x1="0" y1="80" x2="900" y2="80"/><line x1="0" y1="160" x2="900" y2="160"/>
+      <line x1="0" y1="240" x2="900" y2="240"/><line x1="180" y1="0" x2="180" y2="320"/>
+      <line x1="360" y1="0" x2="360" y2="320"/><line x1="540" y1="0" x2="540" y2="320"/>
+      <line x1="720" y1="0" x2="720" y2="320"/>
+    </g>
+
+    <!-- Step 1: Feature Request -->
+    <g filter="url(#glow)">
+      <rect x="30" y="110" width="120" height="60" rx="8" fill="none" stroke="#e84c1e" stroke-width="1.5"/>
+    </g>
+    <rect x="30" y="110" width="120" height="60" rx="8" fill="rgba(232,76,30,0.08)"/>
+    <text x="90" y="136" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="10" fill="#e84c1e" font-weight="600">FEATURE</text>
+    <text x="90" y="152" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="10" fill="#e84c1e" font-weight="600">REQUEST</text>
+    <text x="90" y="102" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="#555">developer types</text>
+
+    <!-- Arrow 1→2 -->
+    <line x1="150" y1="140" x2="192" y2="140" stroke="#e84c1e" stroke-width="1.5" marker-end="url(#arr)" opacity="0.7"/>
+
+    <!-- Step 2: ICEA Gate -->
+    <g filter="url(#glow)">
+      <rect x="192" y="90" width="136" height="100" rx="8" fill="none" stroke="#c9860a" stroke-width="1.5"/>
+    </g>
+    <rect x="192" y="90" width="136" height="100" rx="8" fill="rgba(201,134,10,0.08)"/>
+    <text x="260" y="116" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="#c9860a" font-weight="600" letter-spacing="1">⏸ ICEA GATE</text>
+    <text x="260" y="134" text-anchor="middle" font-family="'Source Serif 4',serif" font-size="11" fill="#aaa">Intent · Context</text>
+    <text x="260" y="150" text-anchor="middle" font-family="'Source Serif 4',serif" font-size="11" fill="#aaa">Examples · Accept.</text>
+    <rect x="216" y="165" width="88" height="16" rx="3" fill="rgba(201,134,10,0.15)" stroke="rgba(201,134,10,0.4)" stroke-width="0.8"/>
+    <text x="260" y="177" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="#c9860a">APPROVED</text>
+
+    <!-- Arrow 2→3 -->
+    <line x1="328" y1="140" x2="368" y2="140" stroke="#c9860a" stroke-width="1.5" marker-end="url(#arr)" opacity="0.7"/>
+
+    <!-- Step 3: Code Generation -->
+    <rect x="368" y="100" width="120" height="80" rx="8" fill="rgba(26,86,219,0.06)" stroke="#1a56db" stroke-width="1.5"/>
+    <text x="428" y="130" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="#6694f0" font-weight="600">CODE GEN</text>
+    <text x="428" y="148" text-anchor="middle" font-family="'Source Serif 4',serif" font-size="11" fill="#888">.NET · Angular</text>
+    <text x="428" y="163" text-anchor="middle" font-family="'Source Serif 4',serif" font-size="11" fill="#888">Node.js · Tests</text>
+
+    <!-- Arrow 3→4 -->
+    <line x1="488" y1="140" x2="528" y2="140" stroke="#1a56db" stroke-width="1.5" marker-end="url(#arr)" opacity="0.7"/>
+
+    <!-- Step 4: PR Create with gate -->
+    <g filter="url(#glow)">
+      <rect x="528" y="90" width="140" height="100" rx="8" fill="none" stroke="#10b981" stroke-width="1.5"/>
+    </g>
+    <rect x="528" y="90" width="140" height="100" rx="8" fill="rgba(16,185,129,0.06)"/>
+    <text x="598" y="116" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="#10b981" font-weight="600">PR CREATE</text>
+    <text x="598" y="133" text-anchor="middle" font-family="'Source Serif 4',serif" font-size="10.5" fill="#888">auto-runs icea-review</text>
+    <rect x="550" y="143" width="96" height="14" rx="3" fill="rgba(16,185,129,0.12)" stroke="rgba(16,185,129,0.4)" stroke-width="0.8"/>
+    <text x="598" y="154" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="8.5" fill="#10b981">✅ READY TO MERGE</text>
+    <text x="598" y="175" text-anchor="middle" font-family="'Source Serif 4',serif" font-size="10.5" fill="#555">or ❌ BLOCKED</text>
+
+    <!-- Arrow 4→5 -->
+    <line x1="668" y1="140" x2="708" y2="140" stroke="#10b981" stroke-width="1.5" marker-end="url(#arr)" opacity="0.7"/>
+
+    <!-- Step 5: ADO -->
+    <rect x="708" y="110" width="120" height="60" rx="8" fill="rgba(255,255,255,0.04)" stroke="#444" stroke-width="1.5"/>
+    <text x="768" y="136" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="10" fill="#888" font-weight="600">AZURE</text>
+    <text x="768" y="152" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="10" fill="#888" font-weight="600">DEVOPS</text>
+
+    <!-- Dream memory arc -->
+    <path d="M 260 190 Q 260 260 428 260 Q 598 260 598 190" fill="none" stroke="rgba(167,139,250,0.4)" stroke-width="1" stroke-dasharray="5 4"/>
+    <text x="428" y="276" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="rgba(167,139,250,0.6)" letter-spacing="1">DREAM — memory consolidates between sessions</text>
+    <circle cx="260" cy="190" r="3" fill="rgba(167,139,250,0.5)"/>
+    <circle cx="598" cy="190" r="3" fill="rgba(167,139,250,0.5)"/>
+
+    <!-- Cache arc -->
+    <path d="M 428 100 Q 428 50 260 50" fill="none" stroke="rgba(232,76,30,0.3)" stroke-width="1" stroke-dasharray="3 3"/>
+    <text x="340" y="38" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="rgba(232,76,30,0.5)">domain-map.md — no source scan</text>
+
+    <!-- Labels at bottom -->
+    <text x="90" y="300" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="8" fill="#333">1. INTENT</text>
+    <text x="260" y="300" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="8" fill="#333">2. DESIGN</text>
+    <text x="428" y="300" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="8" fill="#333">3. BUILD</text>
+    <text x="598" y="300" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="8" fill="#333">4. GATE</text>
+    <text x="768" y="300" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="8" fill="#333">5. SHIP</text>
+  </svg>
+</div>
+
+<!-- ══ ARTICLE ══ -->
+<div class="article">
+<div class="col-wrap">
+
+<!-- MAIN COLUMN -->
+<main class="col-main">
+
+  <h2>The problem no one talks about</h2>
+
+  <p class="dropcap">Every team I've worked with has the same silent problem. An AI assistant that's brilliant in a vacuum but inconsistent under pressure. One developer uses it to scaffold clean, layered code. Another uses it to dump raw implementation directly into a controller. A third asks it the same architectural question it answered three sessions ago — and gets a different answer.</p>
+
+  <p>We adopted Claude Code enthusiastically. Within two months, we had velocity improvements that impressed leadership. We also had PRs that bypassed spec, controllers with business logic, and an AI that would cheerfully start writing code before anyone had agreed on what it was supposed to do.</p>
+
+  <p>The tool wasn't the problem. <strong>The absence of structure around the tool was.</strong></p>
+
+  <div class="pullquote">
+    <blockquote>"The AI assistant was brilliant in a vacuum but inconsistent under pressure. We needed guardrails, not limitations."</blockquote>
+    <cite>The core insight that started this project</cite>
+  </div>
+
+  <p>So I built a plugin. Not a simple prompt library — a proper Claude Code plugin with commands, skills, scoped rules, and a memory system. Something that would enforce the way we want to work, not just assist with how we happen to be working.</p>
+
+  <p>Six months and seventeen versions later, here's what I learned.</p>
+
+  <hr class="rule">
+  <h2>What ICEA actually means in practice</h2>
+
+  <p>The centrepiece of the plugin is a workflow called <strong>ICEA</strong> — Intent, Context, Examples, Acceptance. It's not a document format. It's a gate.</p>
+
+  <p>When a developer types "build a search filter for the deals list," the plugin intercepts the request before any code is written. It drafts a complete ICEA document — extracting the feature from the message, identifying the affected stack layer from a pre-built domain map, filling in constraints from the architecture docs, proposing test scenarios from the intent.</p>
+
+  <p>Then it stops. Completely. And asks for approval.</p>
+
+  <div class="code-blk"><pre><span class="kw">⏸ ICEA GATE — Feature detected</span>
+
+<span class="str">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+📋 ICEA DRAFT — ADO #1847 — Search Filter
+Status: DRAFT — Awaiting Approval
+<span class="str">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+
+<span class="cmt">Intent</span>: Add full-text search to the deals grid filtering by
+name, status, and date range. Triggered by user interaction,
+not on load.
+
+<span class="cmt">Context</span>: .NET 8 API endpoint · Angular 17+ component ·
+EF Core query · Azure AD auth required
+
+<span class="cmt">Examples</span>: [5 test scenarios defined]
+<span class="cmt">Acceptance</span>: [4 criteria defined]
+
+<span class="str">🔒 APPROVAL REQUIRED</span>
+Reply: ✅ APPROVED | ✏ EDIT [section] | ❌ REJECT</pre></div>
+
+  <p>No code gets written until the developer replies <strong>APPROVED</strong>. Not "looks good." Not "sure." The literal word APPROVED. Everything in the hard rules is explicit about this because I learned the hard way that "fine, proceed" is not the same as having actually read the spec.</p>
+
+  <!-- ILLUSTRATION: ICEA FLOW -->
+  <div class="illus-panel">
+    <svg viewBox="0 0 804 200" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="a2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+          <path d="M2 2L8 5L2 8" fill="none" stroke="context-stroke" stroke-width="1.8" stroke-linecap="round"/>
+        </marker>
+      </defs>
+      <rect width="804" height="200" fill="#111520"/>
+      <!-- ICEA four quadrants -->
+      <g>
+        <rect x="20" y="30" width="160" height="140" rx="6" fill="rgba(232,76,30,0.07)" stroke="rgba(232,76,30,0.3)" stroke-width="1"/>
+        <text x="100" y="55" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="#e84c1e" font-weight="600" letter-spacing="1">INTENT</text>
+        <text x="100" y="80" text-anchor="middle" font-family="'Source Serif 4',serif" font-size="11.5" fill="#8a8075" font-style="italic">What are we building?</text>
+        <text x="100" y="100" text-anchor="middle" font-family="'Source Serif 4',serif" font-size="11.5" fill="#8a8075" font-style="italic">Why does it matter?</text>
+        <text x="100" y="125" text-anchor="middle" font-family="'Source Serif 4',serif" font-size="11.5" fill="#8a8075" font-style="italic">Who is the user?</text>
+        <text x="100" y="155" text-anchor="middle" font-family="'Source Serif 4',serif" font-size="11.5" fill="#666">From: ADO work item</text>
+
+        <rect x="206" y="30" width="160" height="140" rx="6" fill="rgba(201,134,10,0.07)" stroke="rgba(201,134,10,0.3)" stroke-width="1"/>
+        <text x="286" y="55" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="#c9860a" font-weight="600" letter-spacing="1">CONTEXT</text>
+        <text x="286" y="80" text-anchor="middle" font-family="'Source Serif 4',serif" font-size="11.5" fill="#8a8075" font-style="italic">Stack layers affected</text>
+        <text x="286" y="100" text-anchor="middle" font-family="'Source Serif 4',serif" font-size="11.5" fill="#8a8075" font-style="italic">Auth requirements</text>
+        <text x="286" y="120" text-anchor="middle" font-family="'Source Serif 4',serif" font-size="11.5" fill="#8a8075" font-style="italic">Constraints &amp; risks</text>
+        <text x="286" y="155" text-anchor="middle" font-family="'Source Serif 4',serif" font-size="11.5" fill="#666">From: domain-map</text>
+
+        <rect x="392" y="30" width="160" height="140" rx="6" fill="rgba(26,86,219,0.07)" stroke="rgba(26,86,219,0.3)" stroke-width="1"/>
+        <text x="472" y="55" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="#6694f0" font-weight="600" letter-spacing="1">EXAMPLES</text>
+        <text x="472" y="80" text-anchor="middle" font-family="'Source Serif 4',serif" font-size="11.5" fill="#8a8075" font-style="italic">Happy path scenarios</text>
+        <text x="472" y="100" text-anchor="middle" font-family="'Source Serif 4',serif" font-size="11.5" fill="#8a8075" font-style="italic">Edge cases &amp; errors</text>
+        <text x="472" y="120" text-anchor="middle" font-family="'Source Serif 4',serif" font-size="11.5" fill="#8a8075" font-style="italic">Permission boundaries</text>
+        <text x="472" y="155" text-anchor="middle" font-family="'Source Serif 4',serif" font-size="11.5" fill="#666">Drives: test coverage</text>
+
+        <rect x="578" y="30" width="206" height="140" rx="6" fill="rgba(16,185,129,0.07)" stroke="rgba(16,185,129,0.3)" stroke-width="1"/>
+        <text x="681" y="55" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="#10b981" font-weight="600" letter-spacing="1">ACCEPTANCE</text>
+        <text x="681" y="80" text-anchor="middle" font-family="'Source Serif 4',serif" font-size="11.5" fill="#8a8075" font-style="italic">Measurable criteria</text>
+        <text x="681" y="100" text-anchor="middle" font-family="'Source Serif 4',serif" font-size="11.5" fill="#8a8075" font-style="italic">Pass/fail definition</text>
+        <text x="681" y="120" text-anchor="middle" font-family="'Source Serif 4',serif" font-size="11.5" fill="#8a8075" font-style="italic">What moves ADO ticket</text>
+        <text x="681" y="155" text-anchor="middle" font-family="'Source Serif 4',serif" font-size="11.5" fill="#666">Gates: PR creation</text>
+      </g>
+    </svg>
+    <div class="illus-caption">The four ICEA sections — each serves a specific downstream consumer in the workflow</div>
+  </div>
+
+  <p>The key insight I had early: <strong>the ICEA is not documentation, it's a contract.</strong> The Acceptance Criteria section drives the test scenarios. The Context section seeds the PR description. The Intent maps to the ADO work item. Every downstream output in the workflow traces back to something in the ICEA.</p>
+
+  <hr class="rule">
+  <h2>Dream: the memory system I wish every AI had</h2>
+
+  <p>The second major piece is the Dream memory system. Claude Code sessions are ephemeral. Every session starts cold. If you spent three hours figuring out that the authentication middleware needs to be ordered a specific way, the next session has no idea that happened.</p>
+
+  <p>Dream reads recent sessions, extracts knowledge entries — patterns that worked, approaches that failed, architectural decisions and their rationale — and consolidates them into <code>memory/topic-*.md</code> files and a promoted facts section in <code>CLAUDE.md</code>. Every proposed change comes with a confidence score and a justification. You review and approve before anything is written.</p>
+
+  <!-- ILLUSTRATION: DREAM SLEEP CYCLE -->
+  <div class="illus-panel">
+    <svg viewBox="0 0 804 210" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="rgba(167,139,250,0.2)"/>
+          <stop offset="100%" stop-color="rgba(167,139,250,0)"/>
+        </radialGradient>
+      </defs>
+      <rect width="804" height="210" fill="#0a0c12"/>
+      <!-- Stars -->
+      <g fill="white" opacity="0.4">
+        <circle cx="50" cy="25" r="1"/><circle cx="130" cy="15" r="0.8"/><circle cx="220" cy="30" r="1.2"/>
+        <circle cx="310" cy="18" r="0.9"/><circle cx="420" cy="12" r="1"/><circle cx="530" cy="28" r="0.8"/>
+        <circle cx="640" cy="16" r="1.1"/><circle cx="750" cy="22" r="0.9"/>
+        <circle cx="80" cy="50" r="0.7"/><circle cx="480" cy="45" r="0.8"/><circle cx="700" cy="55" r="0.7"/>
+      </g>
+      <!-- Moon -->
+      <path d="M 62 45 A 20 20 0 1 0 62 85 A 13 13 0 1 1 62 45 Z" fill="rgba(167,139,250,0.7)"/>
+      <ellipse cx="402" cy="120" rx="180" ry="130" fill="url(#moonGlow)"/>
+      <!-- Brain outline -->
+      <g opacity="0.18" fill="#a78bfa">
+        <path d="M 340 80 C 320 60 295 58 282 72 C 264 90 262 114 271 134 C 278 150 289 162 303 170 C 319 179 338 181 354 175 C 369 170 378 160 383 147 C 391 128 387 100 378 86 Z"/>
+        <path d="M 464 80 C 484 60 509 58 522 72 C 540 90 542 114 533 134 C 526 150 515 162 501 170 C 485 179 466 181 450 175 C 435 170 426 160 421 147 C 413 128 417 100 426 86 Z"/>
+        <ellipse cx="402" cy="150" rx="60" ry="22"/>
+        <path d="M 386 176 Q 402 190 418 176 L 420 205 Q 402 215 384 205 Z"/>
+      </g>
+      <!-- Neural nodes glowing -->
+      <g filter="url(#glow)">
+        <circle cx="340" cy="108" r="5" fill="#a78bfa" opacity="0.9"/>
+        <circle cx="402" cy="92" r="6" fill="#c4b5fd" opacity="0.95"/>
+        <circle cx="464" cy="110" r="5" fill="#a78bfa" opacity="0.9"/>
+        <circle cx="370" cy="150" r="4.5" fill="#ddd6fe" opacity="0.8"/>
+        <circle cx="432" cy="148" r="4.5" fill="#ddd6fe" opacity="0.8"/>
+        <circle cx="402" cy="185" r="4" fill="#a78bfa" opacity="0.75"/>
+      </g>
+      <!-- Neural connections -->
+      <g stroke="#818cf8" stroke-width="0.8" fill="none" opacity="0.4">
+        <line x1="402" y1="92" x2="340" y2="108"/>
+        <line x1="402" y1="92" x2="464" y2="110"/>
+        <line x1="340" y1="108" x2="370" y2="150"/>
+        <line x1="464" y1="110" x2="432" y2="148"/>
+        <line x1="370" y1="150" x2="432" y2="148"/>
+        <line x1="370" y1="150" x2="402" y2="185"/>
+        <line x1="432" y1="148" x2="402" y2="185"/>
+      </g>
+      <!-- Bright active pulses -->
+      <g stroke="#c4b5fd" stroke-width="2" fill="none" opacity="0.8" filter="url(#glow)">
+        <line x1="402" y1="92" x2="340" y2="108"/>
+        <line x1="370" y1="150" x2="432" y2="148"/>
+      </g>
+      <!-- ZZZ -->
+      <text x="520" y="80" font-size="14" fill="#a78bfa" opacity="0.8" font-style="italic" font-weight="bold" font-family="Georgia">z</text>
+      <text x="540" y="62" font-size="18" fill="#a78bfa" opacity="0.6" font-style="italic" font-weight="bold" font-family="Georgia">z</text>
+      <text x="564" y="44" font-size="22" fill="#a78bfa" opacity="0.4" font-style="italic" font-weight="bold" font-family="Georgia">z</text>
+      <!-- Session bubbles flowing in -->
+      <g>
+        <rect x="28" y="120" width="110" height="38" rx="5" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.1)" stroke-width="0.8"/>
+        <text x="83" y="136" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="8" fill="#888">Session 1</text>
+        <text x="83" y="150" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="8" fill="#666">12 insights</text>
+        <line x1="138" y1="139" x2="160" y2="139" stroke="rgba(167,139,250,0.3)" stroke-width="1" marker-end="url(#a2)"/>
+      </g>
+      <g>
+        <rect x="28" y="165" width="110" height="38" rx="5" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.1)" stroke-width="0.8"/>
+        <text x="83" y="181" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="8" fill="#888">Session 2</text>
+        <text x="83" y="195" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="8" fill="#666">8 insights</text>
+        <line x1="138" y1="184" x2="160" y2="160" stroke="rgba(167,139,250,0.3)" stroke-width="1" marker-end="url(#a2)"/>
+      </g>
+      <!-- Output files -->
+      <g>
+        <line x1="644" y1="139" x2="664" y2="125" stroke="rgba(167,139,250,0.3)" stroke-width="1"/>
+        <rect x="664" y="108" width="116" height="34" rx="5" fill="rgba(167,139,250,0.06)" stroke="rgba(167,139,250,0.25)" stroke-width="0.8"/>
+        <text x="722" y="122" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="8" fill="#a78bfa">CLAUDE.md</text>
+        <text x="722" y="135" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="8" fill="#6b5fa8">promoted facts</text>
+      </g>
+      <g>
+        <line x1="644" y1="155" x2="664" y2="165" stroke="rgba(167,139,250,0.3)" stroke-width="1"/>
+        <rect x="664" y="155" width="116" height="34" rx="5" fill="rgba(167,139,250,0.06)" stroke="rgba(167,139,250,0.25)" stroke-width="0.8"/>
+        <text x="722" y="169" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="8" fill="#a78bfa">topic-*.md</text>
+        <text x="722" y="182" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="8" fill="#6b5fa8">long-term memory</text>
+      </g>
+      <text x="402" y="200" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="rgba(167,139,250,0.4)" letter-spacing="1">DREAM · MEMORY CONSOLIDATION · LIKE REM SLEEP FOR YOUR CODEBASE</text>
+    </svg>
+    <div class="illus-caption">Dream runs every 5–8 sessions, consolidating knowledge the way the brain consolidates memories during sleep</div>
+  </div>
+
+  <p>The analogy is deliberate. Dream is named after REM sleep precisely because it does for AI sessions what REM does for human memory — prunes what's irrelevant, strengthens what's important, and surfaces patterns that weren't obvious in the moment.</p>
+
+  <p>The rollback command I added recently matters more than I expected. When Dream promotes something incorrect — it happens, maybe once a sprint — being able to reverse that specific run without manually hunting through <code>CLAUDE.md</code> is the difference between a trustworthy system and a fragile one.</p>
+
+  <hr class="rule">
+  <h2>The token efficiency problem no one warned me about</h2>
+
+  <p>Three months in, I ran a token analysis and got an uncomfortable number. Every skill was treating every run as a cold start. The code review skill was re-scanning all 50 files daily even though 48 of them hadn't changed in a week. The security skill was loading Python, JavaScript, and Java reference material for a pure C# codebase. The ICEA skill was reading raw source files to orient itself — thousands of lines it would never use.</p>
+
+  <!-- ILLUSTRATION: BEFORE/AFTER TOKEN COST -->
+  <div class="illus-panel">
+    <svg viewBox="0 0 804 160" xmlns="http://www.w3.org/2000/svg">
+      <rect width="804" height="160" fill="#0d0f14"/>
+      <text x="200" y="22" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="#e84c1e" font-weight="600" letter-spacing="1">BEFORE — COLD START EVERY RUN</text>
+      <text x="604" y="22" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="#10b981" font-weight="600" letter-spacing="1">AFTER — INCREMENTAL DIFF ONLY</text>
+      <line x1="402" y1="10" x2="402" y2="150" stroke="#222" stroke-width="1"/>
+      <!-- Before bars — all full height red -->
+      <g fill="#e84c1e" opacity="0.8">
+        <rect x="30" y="38" width="60" height="85" rx="4"/>
+        <rect x="106" y="38" width="60" height="85" rx="4"/>
+        <rect x="182" y="38" width="60" height="85" rx="4"/>
+        <rect x="258" y="38" width="60" height="85" rx="4"/>
+        <rect x="334" y="38" width="48" height="85" rx="4"/>
+      </g>
+      <g font-family="'JetBrains Mono',monospace" font-size="8" fill="rgba(255,255,255,0.5)" text-anchor="middle">
+        <text x="60" y="80">50 files</text><text x="136" y="80">50 files</text>
+        <text x="212" y="80">50 files</text><text x="288" y="80">50 files</text><text x="358" y="80">50 files</text>
+      </g>
+      <g font-family="'JetBrains Mono',monospace" font-size="8" fill="#555" text-anchor="middle">
+        <text x="60" y="138">Mon</text><text x="136" y="138">Tue</text>
+        <text x="212" y="138">Wed</text><text x="288" y="138">Thu</text><text x="358" y="138">Fri</text>
+      </g>
+      <!-- After bars — first full then tiny -->
+      <rect x="422" y="38" width="60" height="85" rx="4" fill="#10b981" opacity="0.85"/>
+      <text x="452" y="72" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="7.5" fill="rgba(255,255,255,0.6)">50 files</text>
+      <text x="452" y="83" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="7" fill="rgba(255,255,255,0.4)">baseline</text>
+      <g fill="#10b981" opacity="0.7">
+        <rect x="498" y="106" width="48" height="17" rx="4"/>
+        <rect x="560" y="100" width="48" height="23" rx="4"/>
+        <rect x="624" y="111" width="48" height="12" rx="4"/>
+        <rect x="688" y="103" width="48" height="20" rx="4"/>
+      </g>
+      <g font-family="'JetBrains Mono',monospace" font-size="8" fill="rgba(255,255,255,0.6)" text-anchor="middle">
+        <text x="522" y="120">2 files</text><text x="584" y="116">3 files</text>
+        <text x="648" y="122">1 file</text><text x="712" y="118">2 files</text>
+      </g>
+      <g font-family="'JetBrains Mono',monospace" font-size="8" fill="#555" text-anchor="middle">
+        <text x="452" y="138">Mon</text><text x="522" y="138">Tue</text>
+        <text x="584" y="138">Wed</text><text x="648" y="138">Thu</text><text x="712" y="138">Fri</text>
+      </g>
+      <!-- Savings label -->
+      <rect x="498" y="38" width="266" height="52" rx="4" fill="rgba(16,185,129,0.05)" stroke="rgba(16,185,129,0.2)" stroke-width="0.8"/>
+      <text x="631" y="58" text-anchor="middle" font-family="'Playfair Display',serif" font-size="22" fill="#10b981" font-weight="700">80–95%</text>
+      <text x="631" y="78" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="#555">token savings after first run</text>
+    </svg>
+    <div class="illus-caption">The file-cache.json primitive tracks character counts — unchanged files are skipped entirely on subsequent runs</div>
+  </div>
+
+  <p>The fix was architectural: a shared primitives layer. A <code>domain-map.md</code> that maps the codebase to entry-point files — so skills can orient in one read instead of scanning hundreds. A <code>file-cache.json</code> that tracks character counts per file — so code review and security skip everything unchanged since last run. Scope flags (<code>--changed</code>, <code>--pr</code>, <code>--full</code>) so developers can target a pre-PR check at just the files they touched.</p>
+
+  <p>The savings were real. Daily code review on a medium project dropped from scanning 50 files to scanning 2 or 3. The ICEA skill, which used to open half the codebase to orient itself, now reads a single markdown file.</p>
+
+  <hr class="rule">
+  <h2>The PR compliance gate: the change that actually changed behaviour</h2>
+
+  <p>Of everything I've built, the PR creation gate has changed developer behaviour more than anything else. It works like this: when a developer asks to create a PR, the <code>pr-create</code> skill automatically runs <code>icea-review</code> — a compliance check against the approved ICEA — before showing the confirmation prompt.</p>
+
+  <p>If the review returns <strong>BLOCKED</strong>, the PR cannot be created. The developer sees exactly which Acceptance Criteria are missing and what needs to change. There is an override flag (<code>--skip-icea-check</code>) for genuine emergencies, but it gets noted in the PR description — creating an audit trail.</p>
+
+  <div class="highlight-box">
+    <h4>The thing that surprised me most</h4>
+    <p>Developers started writing better ICEA documents — not because I told them to, but because a bad ICEA meant their PR would get blocked. The gate created the incentive to get the spec right at the start. Which is the whole point.</p>
+  </div>
+
+  <p>The compliance report maps every changed file to a specific Acceptance Criterion. If a file touches behaviour that isn't in any AC, that's scope creep — flagged explicitly. If an AC has no corresponding code change, that's a missing implementation — flagged as BLOCKED.</p>
+
+  <p>The same gate also checks all three finding ledgers — code-review, security, and dynamic-scan — for open Critical findings. The check is deliberately soft: the developer can acknowledge and proceed, but the acknowledgement is recorded in the PR description. A reviewer can see at a glance whether a PR was opened with known Critical defects outstanding, and ask why.</p>
+
+  <hr class="rule">
+  <h2>The critic: catching problems before they reach disk</h2>
+
+  <p>For a long time the plugin had two quality gates: the spec (you approve the ICEA before code is generated) and the diff (code-review and the PR gate check what you committed). There was a blind spot between them. In the moment the AI generates code, nothing reviewed it — and by the time code-review runs, the approved spec has dropped out of context. Code-review can tell you the code is <em>correct</em>. It cannot easily tell you the code does <em>exactly what the AC asked, and nothing more</em>, because it no longer has the AC in front of it.</p>
+
+  <p>The <code>critic</code> fills that gap. It is a second-pass reviewer that runs while both the ICEA and the freshly generated code are in context at the same time — the one moment where intent and implementation can be compared directly. It fires automatically at two points inside the ICEA flow:</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text"><strong>On the ICEA draft</strong> — before you approve. It checks the spec for completeness, testability, B1–B7 coverage, and scope creep against the stated Intent. Its concerns don't appear as a separate wall of text; they fold into the same gap list you already review before approving.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text"><strong>On the generated code</strong> — before a single file is written to disk. It checks ICEA traceability (does every artefact map to an approved AC, and did anything get generated that no AC asked for?), simplicity (is this over-engineered?), rules compliance, decision transparency, and hidden assumptions the generator made where the spec was silent.</div>
+    </div>
+  </div>
+
+  <p>The second gate is the one that changes behaviour. The verdict controls the write. A clean verdict saves the files and moves on. A <strong>REVISE</strong> verdict regenerates the affected code — addressing the specific concerns — and re-critiques, up to two automatic attempts. If it still isn't satisfied after two tries, it stops guessing and surfaces to the developer: accept the code as-is, give specific guidance and retry, or halt and write nothing. There's a diminishing-returns guard too — if a retry produces the same concerns with no movement, it surfaces early rather than burning the second attempt.</p>
+
+  <div class="highlight-box">
+    <h4>Why a skill, and why ephemeral</h4>
+    <p>It had to be a skill rather than just a command, because its whole value is running automatically inside the generation flow — a command only fires when a developer remembers to type it. But we added a standalone <code>/critic icea|code</code> as well, so the same critique is available on demand for a single phase. And it deliberately keeps no ledger and assigns no fingerprints: persistent finding-tracking already belongs to code-review, security, and dynamic-scan. Duplicating that machinery would blur the critic's job. It is a gate, not a tracker — it decides whether an artefact is good enough to save, then gets out of the way.</p>
+  </div>
+
+  <hr class="rule">
+  <h2>The lesson about source file transparency</h2>
+
+  <p>Six months in, I realised something uncomfortable: Claude was reading source files without telling me it was doing so. The ICEA skill would silently open a controller to orient itself. The PR spec review would read every changed file in full before I knew it had started.</p>
+
+  <p>The plugin now has a formal consent model with three categories:</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-text"><strong>Category A — scan tools</strong> (code-review, security-review): implicit consent when you invoke the command, but the skill announces what it will read and why before the first file opens.</div>
+    </div>
+    <div class="step">
+      <div class="step-text"><strong>Category B — review skills</strong> (icea-review, pr-spec-review): the skill asks before reading each source file — which file, why it cannot answer without it, what it is looking for, and how many tokens it will cost.</div>
+    </div>
+    <div class="step">
+      <div class="step-text"><strong>Category C — never reads source</strong> (session-start, dream-status, dream, icea-feature): hard rule, never reads source files regardless of what you ask.</div>
+    </div>
+  </div>
+
+  <p>The gate format for Category B looks like this:</p>
+
+  <div class="code-blk"><pre><span class="kw">📂 Source file access request</span>
+
+  File       : src/services/MatterService.cs
+  <span class="cmt">Why</span>        : Diff shows the method signature changed but not
+               whether the null guard was added
+  Looking for: filterMatters() null check on roleId parameter
+  Token cost : ~800 tokens</pre></div>
+
+  <p>The developer says yes, no, or suggests a different file. If they say no, the skill continues with noted uncertainty. This sounds like friction. In practice it is the opposite — you know exactly what Claude is doing and why at every step.</p>
+
+  <hr class="rule">
+  <h2>What I'd do differently</h2>
+
+  <p>The three things I underestimated:</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text"><strong>The cost of stateless skills.</strong> I built each skill as an independent unit. None of them shared state. The token costs that resulted were painful and avoidable. I'd establish the shared primitives layer on day one, not month three.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text"><strong>The importance of the .gitignore from the start.</strong> Having a PAT in <code>.claude/settings.json</code> that isn't gitignored is a real credential leak risk. Simple to solve, easy to forget. The plugin now handles this at setup — but I had a close call.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-text"><strong>Orientation documents beat raw source reads.</strong> Every skill that reads source files for context should instead read architecture documents. The domain-map is five minutes of work. The source scan it replaces is five seconds of latency on every single invocation.</div>
+    </div>
+  </div>
+
+  <hr class="rule">
+  <h2>Why we made these design and architecture decisions</h2>
+
+  <p>None of this was designed up front. Each major decision came from a specific failure or cost we hit in production — and each one solved a concrete problem. If you're building something similar, the <em>why</em> matters more than the <em>what</em>:</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text"><strong>Shared primitives layer — because three skills meant three copies of every bug.</strong> Code review, security, and ICEA each had their own scan logic, their own assumptions, their own state. A fix in one never propagated to the others. We pulled the common pieces into <code>skills/shared/</code> as a single source of truth, so a change to a scope flag or cache rule is made once and inherited everywhere. It also made adding the v1.10 <code>dynamic-scan</code> skill cheap — it reuses the existing flags, model routing, consent model, and severity overrides instead of reinventing them.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text"><strong>Cache-aware scanning — because we were paying full price every single day.</strong> The original skills rescanned all 50 files on every run, even when only two had changed. <code>file-cache.json</code> tracks a character count per file; the first run is a full baseline, and every run after that processes only what changed. Token cost now scales with the size of the change, not the size of the project — a 60–95% reduction per invocation after the baseline.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-text"><strong>The domain-map — because the AI was re-reading the whole codebase to orient itself.</strong> ICEA used to open raw source files on every feature request just to figure out where things live. <code>domain-map.md</code> maps feature areas to entry-point files with a fingerprint for staleness detection, so a skill orients in one read instead of hundreds. Your senior engineers don't re-read the codebase every morning; the tooling shouldn't either.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-text"><strong>The architect skill — because someone had to build and maintain that map, and doing it by hand didn't scale.</strong> The domain-map only pays off if it exists and stays current, and hand-authoring one for every repo was exactly the kind of tedious, error-prone work that gets skipped under deadline. The <code>architect</code> skill detects the repo type, populates the architecture docs, and generates the <code>domain-map.md</code> with its staleness fingerprint automatically — and refreshes it as the codebase moves. Adding it removed a whole class of pain: stale or missing maps, inconsistent architecture docs across projects, and the manual upkeep that no one wanted to own. It turned the domain-map from a nice idea into something that's actually there when every other skill reaches for it.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-text"><strong>The ICEA approval gate — because rework was the real cost, not typing.</strong> A blocked PR is expensive; a thin spec is the cause. Forcing an approved Intent-Context-Examples-Acceptance document before any code is generated felt like overhead until we measured it: one well-written spec prevents roughly three PRs that would have bounced. The gate changed behaviour through incentive alignment, not enforcement — developers write better specs because the cost of a bad one is now visible up front.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-text"><strong>The source-file consent model — because "trust me, I read some files" isn't good enough.</strong> Every skill now declares a category: A (announce what it will read, then scan), B (ask before each file, with the reason and token cost), or C (never reads source). It sounds like overhead; it turned out to be the most useful change in two versions, because you always know exactly what Claude is reading and why — and reviewers stopped second-guessing the tool.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">7</div>
+      <div class="step-text"><strong>Business-context severity (B1–B7) — because a CVSS score doesn't know your domain.</strong> A "medium" technical finding that exposes immigration IDs or privileged client data is not medium in a law firm. The B1–B7 overrides escalate findings to Critical based on what data is actually at risk, applied consistently across every review skill — static and, now, dynamic. The tool's risk rating reflects the business, not just the textbook.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">8</div>
+      <div class="step-text"><strong>Dream, and then dream-rollback — because memory without an undo is a liability.</strong> Dream consolidates lessons between sessions so Claude stops relearning the same conventions. But once it started writing to <code>CLAUDE.md</code> and memory files, a wrong promotion or an over-eager delete had no undo. Because the dream-log is append-only and records the before-state of every change, we could add <code>/dream-rollback</code> to reverse any run — and the rollback is itself logged, so it's auditable and reversible too.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">9</div>
+      <div class="step-text"><strong>dynamic-scan (DAST) — because static analysis can't see what only happens at runtime.</strong> The <code>security</code> skill reads source and catches a lot, but it structurally cannot confirm an authentication bypass, an IDOR, a missing security header, or a misconfigured endpoint on a <em>running</em> app. <code>dynamic-scan</code> drives OWASP ZAP through Docker to test the live application, defaulting to a safe passive baseline plus a dependency audit, and gating attack-payload scans behind an explicit "not production, and I'm authorised" confirmation. SAST tells you what the code says; DAST tells you what the deployed system actually does. We needed both.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">10</div>
+      <div class="step-text"><strong>The critic layer — because the gap between "generated" and "committed" had no reviewer.</strong> We already gated the spec (ICEA approval) and the committed diff (code-review, the PR gate). But nothing checked the code in the moment it was produced — and by the time code-review runs, the spec has fallen out of context, so it can verify that the code is <em>correct</em> but not that it does <em>exactly what the approved AC asked, no more and no less</em>. The <code>critic</code> closes that gap with a generator-critic pass that runs while the ICEA and the freshly generated code are both in context. It fires at two gates inside <code>icea-feature</code>: once on the ICEA draft (its concerns fold into the gap list you review before approving), and once on the generated code <em>before any file is written to disk</em>. On the code gate the verdict controls the write — a clean verdict saves the files, a REVISE verdict regenerates up to twice and then surfaces to the developer with accept / guide / halt. We made it a skill, not just a command, precisely because it has to run automatically inside the existing flow — but we added a standalone <code>/critic icea|code</code> too, so the same critique is available on demand for a single phase. Deliberately, it keeps no ledger and assigns no fingerprints: persistent tracking already belongs to code-review, security, and dynamic-scan. The critic is a gate, not a tracker — it decides whether an artefact is good enough to save, then gets out of the way.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">11</div>
+      <div class="step-text"><strong>Going language-agnostic — because the workflow was the value, not the stack.</strong> The plugin began life assuming one stack: .NET, Angular, Node.js. But the ICEA gate, the memory system, the consent model, the critic — none of those are language ideas. They're <em>workflow</em> ideas. The stack assumption was woven through five layers (rules, architecture detection, review checkers, dynamic-scan configs, and the code-generation order), and only one of those — the generation order — was truly hard to unpick, because it's the part the critic gates. The fix wasn't to add stacks; it was to stop hardcoding any. Detection routes by repo-type signal; generation and task-breakdown read the active layers from <code>architecture.md</code>; review and scanning dispatch to per-language references by file extension. Now the same loop runs on .NET, Java/Spring Boot, Python (FastAPI/Django/Flask), and Node.js without the workflow knowing or caring which. The guard against regression is a <em>language-coverage matrix</em> in the validator: a language isn't "supported" until it has a rule file, a review checker, and an architecture template — so a half-added language fails the build instead of silently misbehaving. Adding the next language is one matrix row plus the files it names.</div>
+    </div>
+  </div>
+
+  <p>The thread connecting all eleven: every one started as a cost or a risk we could measure, and the architecture was the answer to a specific question — <em>what is this tool doing that it shouldn't have to, and what can't it see that it needs to?</em></p>
+
+  <hr class="rule">
+  <hr class="rule">
+  <h2>Persistent finding ledgers: closing the review-to-fix loop</h2>
+
+  <p>For most of the plugin's life, only code-review had a persistent ledger. Run code-review, get an HTML report with FP-fingerprint IDs, run <code>/fix FP-xxxxxxxx</code>, watch the remediation apply, ledger marks it Fixed. The loop worked.</p>
+
+  <p>Security and dynamic-scan, however, only produced HTML reports. A developer who found a Critical SQL injection in the security report had to fix it manually — no audit trail, no cross-run tracking, no way to know on the next scan whether they had actually closed it.</p>
+
+  <p>The architectural fix was to formalise a <strong>finding-producing skill contract</strong>: every skill that surfaces actionable defects must write a persistent ledger with FP-fingerprint IDs. Security now writes <code>security/security-ledger.md</code>. Dynamic-scan writes <code>dynamic-scan/dynamic-scan-ledger.md</code>. Both follow the same schema as code-review, with one addition: findings that have no source-level fix (server config, TLS settings, infrastructure-level issues) get a <code>manual-fix-required</code> status instead of an FP ID — they're tracked but excluded from the automated fix workflow.</p>
+
+  <p><code>/fix FP-xxxxxxxx</code> now searches all three ledgers, locates the entry in whichever one contains it, applies the remediation, and moves the entry from <code>## Open Findings</code> to <code>## Fixed Findings</code> in that specific ledger. The Summary counts update automatically. The review-fix-verify loop that used to work only for code-review now works for security findings and DAST findings too.</p>
+
+  <p>This unlocked the downstream gates. <code>checkin</code> Step 5c (Check D) reads all three ledgers for open Critical/High findings and blocks commits when any are present. <code>pr-create</code> Step 3c shows open Critical counts in the PR confirmation. <code>dream-status</code> check 1o aggregates the counts as a health-dashboard metric. None of these were possible while two of the three skills were write-once HTML.</p>
+
+  <div class="highlight-box">
+    <h4>Why this matters more than it looks</h4>
+    <p>An AI assistant that finds defects has limited value. An AI assistant that finds defects, tracks them across runs, attributes their resolution to specific commits, and refuses to let you ship until they're closed — that's a different category of tool. The ledger contract is what makes the difference.</p>
+  </div>
+
+  <hr class="rule">
+  <h2>What's in the plugin today</h2>
+
+  <p>After seventeen versions the plugin includes 18 skills, 22 commands, 6 scoped rule files, and 8 shared governance specs. The highlights:</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">→</div>
+      <div class="step-text"><strong>icea-feature:</strong> The ICEA gate — blocks code generation until the spec is approved. Reads <code>architecture-deployment.md</code> for hosting/auth context; shows a visible advisory banner if deployment context is missing so reviewers know which ACs are placeholders. Generates in whatever stack the repo actually is — it reads the active layers from <code>architecture.md</code> rather than assuming one.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">→</div>
+      <div class="step-text"><strong>architect:</strong> Detects the repo type and scaffolds the architecture docs and domain-map. Supports .NET, Java/Spring Boot, Python (FastAPI/Django/Flask), Node.js, Angular, and React — the detection result is what makes every downstream skill language-agnostic. A validator coverage matrix prevents a language from being half-added.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">→</div>
+      <div class="step-text"><strong>critic:</strong> A second-pass reviewer that runs inside the ICEA flow — once on the draft spec, once on generated code before it is written to disk. The code-gate verdict controls the write, regenerating up to twice before surfacing to the developer. Ephemeral by design: no ledger, no fingerprints. Also available standalone via <code>/critic icea|code</code>.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">→</div>
+      <div class="step-text"><strong>dream / dream-rollback:</strong> Memory consolidation with full audit trail and per-run rollback. Ledger files are explicitly excluded from rollback — they track real defects, not memory.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">→</div>
+      <div class="step-text"><strong>code-review:</strong> Static analysis with persistent ledger (<code>CodeReviews/code-review-ledger.md</code>) — every finding gets an FP-fingerprint ID and a git-attributed Fixed status across runs.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">→</div>
+      <div class="step-text"><strong>security:</strong> OWASP/CVSS/CWE review with its own persistent ledger (<code>security/security-ledger.md</code>). FP-fingerprinted findings for source-fixable issues; <em>manual-fix-required</em> status for advisory/infrastructure findings.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">→</div>
+      <div class="step-text"><strong>dynamic-scan:</strong> Runtime DAST with OWASP ZAP via Docker — the live counterpart to static security review, covering Angular / ASP.NET MVC / Web API / Blazor targets plus dependency auditing. Writes a third persistent ledger (<code>dynamic-scan/dynamic-scan-ledger.md</code>) with source-mapped fixes.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">→</div>
+      <div class="step-text"><strong>/fix:</strong> Multi-ledger remediation. Takes any FP-xxxxxxxx fingerprint, searches all three ledgers, shows the vulnerable code and fix side by side, waits for explicit confirmation, then applies with <code>str_replace</code> and moves the entry from Open Findings to Fixed Findings in its ledger. The review-fix-verify loop now works for code, security, and DAST findings.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">→</div>
+      <div class="step-text"><strong>checkin:</strong> Pre-commit gate — code quality (Check A) + ICEA compliance (Check B) + secrets scan (Check C) + open security/DAST findings (Check D) in one pass. A known Critical finding in any ledger blocks the commit unless explicitly overridden with <code>--skip-security-gate</code> and a written justification logged in the commit message.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">→</div>
+      <div class="step-text"><strong>pr-create:</strong> Auto-runs the icea-review gate before any PR is submitted. Step 3c also checks all three ledgers for open Critical findings and surfaces them in the confirmation prompt — the developer can acknowledge and proceed, but acknowledgement is noted in the PR description.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">→</div>
+      <div class="step-text"><strong>architect:</strong> Detects repo type, populates architecture docs, generates <code>domain-map.md</code>, and runs the deployment questionnaire — hosting model, auth strategy, environments, CI/CD — captured once in <code>architecture-deployment.md</code> and reused by icea-feature, app-readiness, and pr-create.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">→</div>
+      <div class="step-text"><strong>dream-init:</strong> One-time project setup. Deploys 22 command stubs, seeds caches, runs the architect questionnaire. Now also creates or updates <code>.gitignore</code> automatically — plugin entries always added, root-level artifacts auto-detected, full repo walk for <code>bin/</code>, <code>obj/</code>, <code>.env</code> etc. with a developer selection prompt. Declined entries are tracked so they aren't re-prompted.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">→</div>
+      <div class="step-text"><strong>dream-status:</strong> Read-only health check — green/amber/red on 15 infrastructure items including the new <code>open findings (all ledgers)</code> check that aggregates Critical / High / Medium counts across all three ledgers.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">→</div>
+      <div class="step-text"><strong>app-readiness / plugin-readiness:</strong> Production go-live assessments — 8-domain Enterprise Architect review of the application, 6-domain AI Architect review of the plugin itself. Both read deployment context and finding ledgers to give a maturity score per domain.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">→</div>
+      <div class="step-text"><strong>sprint-metrics:</strong> Post-sprint KPI report via ADO REST API — ICEA compliance rate, PR rejection rate, rework hours.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">→</div>
+      <div class="step-text"><strong>token-analysis:</strong> Session consumption analysis with skill usage telemetry — surfaces which skills are never used.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">→</div>
+      <div class="step-text"><strong>ado-tasks / icea-feature (as explicit commands):</strong> Both auto-trigger on natural-language keywords, but also have explicit <code>/ado-tasks</code> and <code>/icea-feature</code> slash commands for deliberate invocation — useful when the trigger doesn't fire or when re-generating an existing artifact.</div>
+    </div>
+  </div>
+
+  <hr class="rule">
+
+  <p>If you're using Claude Code on a distributed team and you haven't built structure around it, you're getting half the value. The model is the easy part. The workflow is the hard part — and it's where most of the leverage is.</p>
+
+  <p>Happy to answer questions in the comments. If you're building something similar, I'd love to hear how you're approaching the memory and governance problems.</p>
+
+</main>
+
+<!-- SIDEBAR -->
+<aside class="col-side">
+
+  <div class="side-widget">
+    <div class="side-label">At a glance</div>
+    <div class="stat-big">95%</div>
+    <div class="stat-label">max token savings (cache-aware scanning)</div>
+  </div>
+
+  <div class="side-widget">
+    <div class="side-label">Stack</div>
+    <div class="tag-row">
+      <span class="tag red">.NET 8</span>
+      <span class="tag gold">Java / Spring Boot</span>
+      <span class="tag gold">Python</span>
+      <span class="tag blue">Angular / React</span>
+      <span class="tag gold">Node.js</span>
+      <span class="tag red">Azure DevOps</span>
+      <span class="tag blue">Claude Code</span>
+    </div>
+  </div>
+
+  <div class="side-widget">
+    <div class="side-label">Plugin stats</div>
+    <div class="stat-big" style="font-size:2rem;">v1.14</div>
+    <div class="stat-label">current version</div>
+    <div style="margin-top:14px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div><div class="stat-big" style="font-size:1.8rem;">17</div><div class="stat-label">skills</div></div>
+      <div><div class="stat-big" style="font-size:1.8rem;">21</div><div class="stat-label">commands</div></div>
+      <div><div class="stat-big" style="font-size:1.8rem;">4</div><div class="stat-label">rule files</div></div>
+      <div><div class="stat-big" style="font-size:1.8rem;">7</div><div class="stat-label">shared specs</div></div>
+    </div>
+  </div>
+
+  <div class="side-widget">
+    <div class="side-label">The ICEA workflow</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:24px;height:24px;border-radius:50%;background:#e84c1e;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;font-family:var(--mono);">I</div>
+        <div style="font-size:0.85rem;color:var(--muted);">Intent — what &amp; why</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:24px;height:24px;border-radius:50%;background:#c9860a;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;font-family:var(--mono);">C</div>
+        <div style="font-size:0.85rem;color:var(--muted);">Context — stack &amp; constraints</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:24px;height:24px;border-radius:50%;background:#1a56db;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;font-family:var(--mono);">E</div>
+        <div style="font-size:0.85rem;color:var(--muted);">Examples — test scenarios</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:24px;height:24px;border-radius:50%;background:#10b981;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;font-family:var(--mono);">A</div>
+        <div style="font-size:0.85rem;color:var(--muted);">Acceptance — measurable done</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="side-widget">
+    <div class="side-label">Key lesson</div>
+    <h4>Structure creates velocity</h4>
+    <p>The ICEA gate feels like overhead until you realise it's eliminating rework. One well-written spec prevents three PRs that would have bounced.</p>
+  </div>
+
+  <div class="side-widget">
+    <div class="side-label">Dream memory</div>
+    <h4>Run every 5–8 sessions</h4>
+    <p>Dream reads your recent sessions and consolidates knowledge into persistent memory files. Every change comes with a confidence score and requires your approval.</p>
+    <div class="code-blk" style="margin-top:10px;padding:10px 12px;">
+      <pre style="font-size:11px;"><span class="kw">/dream</span>
+<span class="cmt"># 6-phase consolidation
+# Tiered approval required</span></pre>
+    </div>
+  </div>
+
+  <div class="side-widget">
+    <div class="side-label">Persistent ledgers</div>
+    <h4>One fingerprint, three sources</h4>
+    <p>Every finding from code-review, security, and dynamic-scan gets an FP-xxxxxxxx fingerprint and persists across runs in its own ledger. <code>/fix FP-xxxxxxxx</code> searches all three, applies the remediation, and moves the entry from Open to Fixed.</p>
+    <div class="code-blk" style="margin-top:10px;padding:10px 12px;">
+      <pre style="font-size:11px;"><span class="kw">/fix</span> FP-a1b2c3d4
+<span class="cmt"># Searches all three ledgers
+# Confirms before applying
+# Updates Open → Fixed</span></pre>
+    </div>
+  </div>
+
+  <div class="side-widget">
+    <div class="side-label">Scope flags</div>
+    <h4>Target what changed</h4>
+    <div class="code-blk" style="margin-top:8px;padding:10px 12px;">
+      <pre style="font-size:11px;"><span class="str">--changed</span>  <span class="cmt">staged files</span>
+<span class="str">--pr</span>       <span class="cmt">branch diff</span>
+<span class="str">--full</span>     <span class="cmt">force rescan</span>
+<span class="str">--ci</span>       <span class="cmt">CI mode + warns on cache</span>
+<span class="str">--area</span> X   <span class="cmt">named domain only</span></pre>
+    </div>
+    <p style="margin-top:8px;font-size:0.82rem;">A pre-PR security check doesn't need to scan the whole codebase. Target only what you touched. The full spec including skill-local extensions lives in <code>scope-flags-spec.md</code> v1.4.</p>
+  </div>
+
+</aside>
+</div><!-- /col-wrap -->
+</div><!-- /article -->
+
+<footer class="article-footer">
+  <span>ai-assisted-development · Claude Code Plugin · v1.15.0</span>
+  <span>.NET · Java/Spring Boot · Python · Node.js · Angular/React · Azure DevOps</span>
+  <span>June 2026</span>
+</footer>
+
+</body>
+</html>

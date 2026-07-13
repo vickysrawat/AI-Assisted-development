@@ -1,0 +1,28 @@
+skill: graph-sync
+scenarios:
+  - id: incremental-refresh
+    description: "Should refresh only stale modules via fingerprint comparison"
+    input: "The knowledge graph is stale — refresh it"
+    expect:
+      triggered: true
+      contains:
+        - "fingerprint"
+        - "graph.json"
+
+  - id: deterministic-extracted-edges
+    description: "Should run the deterministic edge extractor after writing graph.json"
+    input: "Sync the knowledge graph"
+    expect:
+      triggered: true
+      contains:
+        - "graph-extract-edges"
+        - "EXTRACTED"
+
+  - id: graph-json-authoritative
+    description: "Should treat graph.json as authoritative and project markdown from it"
+    input: "Update the graph"
+    expect:
+      triggered: true
+      contains:
+        - "graph.json"
+        - "projection"

@@ -1,0 +1,102 @@
+skill: setup-init
+scenarios:
+  - id: trigger-init
+    description: "Should trigger on setup-init invocation and create the memory structure"
+    input: "Run /setup-init to set up this project"
+    expect:
+      triggered: true
+      contains:
+        - "memory/"
+        - "CLAUDE.md"
+        - ".gitignore"
+
+  - id: gitignore-phase1-plugin-entries
+    description: "Phase 1 must always add plugin-required entries to .gitignore"
+    input: "Run /setup-init"
+    expect:
+      triggered: true
+      contains:
+        - ".claude/settings.json"
+        - ".claude/file-cache.json"
+        - "token-analysis/"
+
+  - id: gitignore-phase3-prompts-before-writing
+    description: "Phase 3 must present a selection prompt before adding any repo-walk entries"
+    input: "Run /setup-init on a project that has bin/, obj/, and node_modules/ directories"
+    expect:
+      triggered: true
+      contains:
+        - "Found"
+        - "Select"
+        - "none"
+
+  - id: gitignore-never-overwrites-existing
+    description: "Must not remove or reorder existing .gitignore entries"
+    input: "Run /setup-init again — .gitignore already exists with custom entries"
+    expect:
+      triggered: true
+      contains:
+        - "already present"
+      not_contains:
+        - "overwrite"
+        - "delete"
+
+  - id: idempotent-rerun
+    description: "Re-running setup-init must skip already-present files"
+    input: "Run /setup-init again on an already-initialised project"
+    expect:
+      triggered: true
+      contains:
+        - "already present"
+        - "skip"
+      not_contains:
+        - "overwrite"
+
+  - id: gitignore-skipped-entries-tracked
+    description: "Declined Phase 3 entries must be saved to dream-init-state.json"
+    input: "Run /setup-init and decline all Phase 3 entries"
+    expect:
+      triggered: true
+      contains:
+        - "dream-init-state.json"
+        - "skipped"
+
+  - id: deployment-questionnaire-runs
+    description: "Step 7 must invoke the architect skill including Step 0.5 questionnaire"
+    input: "Run /setup-init"
+    expect:
+      triggered: true
+      contains:
+        - "architect"
+        - "deployment"
+        - "APPROVED"
+
+  - id: deploys-missing-rules-on-rerun
+    description: "Must deploy rule files that are absent even when .claude/rules/ already exists (plugin update scenario)"
+    input: "Run /setup-init again — .claude/rules/ exists with csharp-dotnet-rules.md but csharp-framework48-rules.md and javascript-rules.md are absent and both stacks are detected"
+    expect:
+      triggered: true
+      contains:
+        - "deployed csharp-framework48-rules.md"
+        - "deployed javascript-rules.md"
+      not_contains:
+        - "skipping"
+
+  - id: saves-detected-stacks-to-state
+    description: "Must persist detected_stacks array to dream-init-state.json after stack detection"
+    input: "Run /setup-init on a .NET + Angular project"
+    expect:
+      triggered: true
+      contains:
+        - "dream-init-state.json"
+        - "detected_stacks"
+        - "dotnet"
+        - "angular"
+
+  - id: saves-plugin-version-to-state
+    description: "Must persist dream_init_plugin_version to dream-init-state.json"
+    input: "Run /setup-init"
+    expect:
+      triggered: true
+      contains:
+        - "dream_init_plugin_version"

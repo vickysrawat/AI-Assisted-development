@@ -4,7 +4,7 @@ description: >
   Detects the repo type, deploys matching architecture template files into
   .claude/architecture/, checks which files are already populated, and populates
   only the missing ones by analysing the actual codebase. Triggered by
-  dream-init automatically. Can also be triggered manually with:
+  setup-init automatically. Can also be triggered manually with:
   "populate architecture docs", "document the architecture",
   "run the architect skill", or "fill in the architecture files".
 ---
@@ -33,7 +33,7 @@ The deployment context is already captured.
 > (an explicit re-capture request), do NOT apply the skip above. Re-run the
 > questionnaire even on a fully-populated file, pre-filling the current answers as
 > defaults the developer can keep or change. The skip applies only to the normal
-> `dream-init` / architect path, not to an explicit `--deployment` re-capture.
+> `setup-init` / architect path, not to an explicit `--deployment` re-capture.
 
 If the file is missing or has unanswered markers — run the CI/CD detection pass first,
 then ask only the questions the filesystem cannot answer.
@@ -175,6 +175,13 @@ Q6. Database
     b) EF Core migrations run manually before deployment
     c) DBA-managed SQL scripts deployed separately
     d) No database
+
+Q9. Non-functional requirements (only the parts code cannot reveal — extract the rest)
+    - Performance target (e.g. p95 latency, requests/sec)?    (value / "none defined")
+    - Expected peak load / concurrent users?                   (value / "unknown")
+    - Availability / uptime target (e.g. 99.9%)?               (value / "none defined")
+    - Compliance frameworks in scope (SOC 2 / GDPR / HIPAA / none)?
+    - Data residency constraints?                              (value / "none")
 ```
 
 **Only show Q7 if `AUTH_ENTRA` is true:**
@@ -373,6 +380,18 @@ Once all answers are received, build the complete draft content for
 ## Known Infrastructure Constraints
 > ⚠ Not yet documented — add any IIS version, .NET runtime, firewall, or network constraints here
 
+## Non-Functional Requirements & Constraints
+| Item | Value |
+|---|---|
+| Performance target (p95 / throughput) | {Q9 answer or extracted} |
+| Expected peak load | {Q9 answer} |
+| Availability / uptime target | {Q9 answer} |
+| Scaling model | {extract from k8s/App Service config or "⚠ needs manual input"} |
+| Rate limiting | {extract from code or "⚠ needs manual input"} |
+| Caching strategy | {extract from code or "⚠ needs manual input"} |
+| Compliance frameworks | {Q9 answer} |
+| Data residency constraints | {Q9 answer} |
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🔒 APPROVAL REQUIRED
 
@@ -501,6 +520,37 @@ Please specify: dotnet-api | angular-nx | angular-standard | react | js-library
 ```
 And wait for input.
 
+### Step 1 post-detection — Run Bootstrap Phase 2
+
+Immediately after `REPO_TYPE` is known (whether auto-detected or provided by the developer),
+run Bootstrap Phase 2. This pre-copies the architecture templates and deploys rules — both
+mechanical operations that do not require LLM analysis.
+
+**1a. Record the detected type in `dream-init-state.json`:**
+```bash
+node -e "
+const fs=require('fs'),p='.claude/dream-init-state.json';
+let s={};try{s=JSON.parse(fs.readFileSync(p,'utf8'));}catch(e){}
+s.repo_type='REPLACE_WITH_REPO_TYPE';
+fs.writeFileSync(p,JSON.stringify(s,null,2));
+"
+```
+
+**1b. Run Bootstrap Phase 2:**
+```bash
+PLUGIN_DIR="$(cat .claude/plugin-path.txt 2>/dev/null | tr -d '\n')"
+node "$PLUGIN_DIR/scripts/setup-init-bootstrap.cjs" --mode post-detect --repo-type REPLACE_WITH_REPO_TYPE
+```
+
+Wait for the script to print `✓ Bootstrap Phase 2 complete` before continuing.
+Phase 2 **composes** the 8 architecture template files for this stack — merging the
+stack-agnostic base in `templates/_shared/` with the stack-specific files in
+`templates/<stack>/` (stack files override same-named shared files) — as *scaffolding*
+with the `<!-- TEMPLATE -->` marker **retained** (the Step 3 guard detects them as
+unpopulated and this skill populates them below; the marker is the authoritative
+"needs population" signal, removed only after a real population pass — see ADR 0053),
+and deploys matching rules to `.claude/rules/`.
+
 ---
 
 ## Step 2 — Resolve template path and file names
@@ -523,40 +573,84 @@ developer:
 ```
 
 
-| REPO_TYPE | Template folder | File 1 | File 2 | File 3 | File 4 |
-|---|---|---|---|---|
-| `DOTNET_API` | `templates/dotnet-api/` | `architecture.md` | `architecture-callchains.md` | `architecture-reference.md` | `architecture-deployment.md` |
-| `ANGULAR_NX` | `templates/angular-nx/` | `architecture.md` | `architecture-flows.md` | `architecture-reference.md` | `architecture-deployment.md` |
-| `ANGULAR_STANDARD` | `templates/angular-standard/` | `architecture.md` | `architecture-flows.md` | `architecture-reference.md` | `architecture-deployment.md` |
-| `REACT` | `templates/react/` | `architecture.md` | `architecture-flows.md` | `architecture-reference.md` | `architecture-deployment.md` |
-| `JS_LIBRARY` | `templates/js-library/` | `architecture.md` | `architecture-api.md` | `architecture-reference.md` | `architecture-deployment.md` |
-| `ASPNET_FRAMEWORK` | `templates/aspnet-framework/` | `architecture.md` | `architecture-flows.md` | `architecture-reference.md` | `architecture-deployment.md` |
-| `ASPNET_MVC` | `templates/aspnet-mvc/` | `architecture.md` | `architecture-flows.md` | `architecture-reference.md` | `architecture-deployment.md` |
-| `SPRING_BOOT` | `templates/spring-boot/` | `architecture.md` | `architecture-callchains.md` | `architecture-reference.md` | `architecture-deployment.md` |
-| `PYTHON_FASTAPI` | `templates/python-fastapi/` | `architecture.md` | `architecture-flows.md` | `architecture-reference.md` | `architecture-deployment.md` |
-| `PYTHON_DJANGO` | `templates/python-django/` | `architecture.md` | `architecture-flows.md` | `architecture-reference.md` | `architecture-deployment.md` |
-| `PYTHON_FLASK` | `templates/python-flask/` | `architecture.md` | `architecture-flows.md` | `architecture-reference.md` | `architecture-deployment.md` |
+**Common files (every stack)** — templates are **composed** from two tiers: the stack-agnostic
+base in `templates/_shared/` (`architecture-data.md`, `-integrations.md`, `-security.md`,
+`-decisions.md`) plus the stack-specific files in `templates/<stack>/`, with any same-named
+stack file overriding the shared one. Every repo type still resolves to the same 8-file set:
+
+| File | Populated by | Notes |
+|---|---|---|
+| `architecture.md` | File 1 prompt | includes two Mermaid diagrams (End-to-End + Layered) |
+| `architecture-{callchains\|flows\|api}.md` | File 2 prompt | stack-specific (see below) |
+| `architecture-reference.md` | File 3 prompt | package versions, CI/CD, fan-in/out |
+| `architecture-data.md` | File 4 prompt | data model / schema / ownership |
+| `architecture-integrations.md` | File 5 prompt | external deps + resilience + failure |
+| `architecture-security.md` | File 6 prompt | trust zones + authorization model |
+| `architecture-decisions.md` | File 7 prompt | **seed-only** AD-NNN log (never invent rationale) |
+| `architecture-deployment.md` | Step 0.5 questionnaire | hosting/auth/secrets + NFR section |
+
+**Stack-specific File 2 name:**
+
+| REPO_TYPE | Template folder | File 2 |
+|---|---|---|
+| `DOTNET_API` | `templates/dotnet-api/` | `architecture-callchains.md` |
+| `ANGULAR_NX` | `templates/angular-nx/` | `architecture-flows.md` |
+| `ANGULAR_STANDARD` | `templates/angular-standard/` | `architecture-flows.md` |
+| `REACT` | `templates/react/` | `architecture-flows.md` |
+| `JS_LIBRARY` | `templates/js-library/` | `architecture-api.md` |
+| `ASPNET_FRAMEWORK` | `templates/aspnet-framework/` | `architecture-flows.md` |
+| `ASPNET_MVC` | `templates/aspnet-mvc/` | `architecture-flows.md` |
+| `SPRING_BOOT` | `templates/spring-boot/` | `architecture-callchains.md` |
+| `PYTHON_FASTAPI` | `templates/python-fastapi/` | `architecture-flows.md` |
+| `PYTHON_DJANGO` | `templates/python-django/` | `architecture-flows.md` |
+| `PYTHON_FLASK` | `templates/python-flask/` | `architecture-flows.md` |
+
+> `architecture-data.md` is stack-adaptive: backend stacks document DB schema/entities;
+> frontend stacks (angular-*, react) document client state model + API DTO shapes;
+> `js-library` documents exported data structures/types.
 
 ---
 
 ## Step 3 — Deploy templates to .claude/architecture/
 
+**Populated-files guard (run first):** Check whether all files for this repo type are
+already populated. Use the **two-signal detector** from `../shared/arch-populated-detect.md`
+(`arch_unfilled` = TEMPLATE marker on line 1 **or** a scaffold-only body token) — do NOT
+use a bare `grep TEMPLATE`, which mis-reads a marker-free-but-empty file as populated:
+
+```bash
+# arch_unfilled() is defined in ../shared/arch-populated-detect.md — source or inline it.
+for f in .claude/architecture/architecture.md .claude/architecture/architecture-*.md; do
+  [ -f "$f" ] && { arch_unfilled "$f" && echo "$f: NEEDS_POPULATION" || echo "$f: POPULATED"; } || echo "$f: MISSING"
+done
+```
+
+If ALL expected files for this `REPO_TYPE` exist **and** none is `NEEDS_POPULATION`
+→ **skip Steps 3–6 entirely and proceed directly to Step 7.**
+
 ```bash
 mkdir -p .claude/architecture
 ```
 
-For each of the three files:
+This is the fallback path for when Bootstrap Phase 2 did **not** run (e.g. the architect
+skill was invoked standalone). Deploy by **composing** the two template tiers — read
+`templates/_shared/*.md` first, then overlay `templates/<stack>/*.md` so any same-named
+stack file wins — then, for each of the eight resulting files:
 1. Check if `.claude/architecture/{filename}` already exists
-2. If it does **and contains application-specific content** (not just template headings) → **skip it**, mark as `POPULATED`
-3. If it does not exist or contains only template scaffolding → copy from the plugin template, mark as `NEEDS_POPULATION`
+2. If it does **and is not `arch_unfilled`** (real application content) → **skip it**, mark as `POPULATED`
+3. If it does not exist or is `arch_unfilled` → copy the composed template **with the
+   `<!-- TEMPLATE -->` marker retained**, mark as `NEEDS_POPULATION`
 
-To detect whether a file contains real content vs scaffolding, check if it contains
-the marker `<!-- TEMPLATE -->` at the top. All deployed templates include this marker;
-once a file is populated the skill removes it.
+To detect whether a file contains real content vs scaffolding, use the two-signal
+`arch_unfilled` detector from `../shared/arch-populated-detect.md` (marker on line 1,
+or a scaffold-only body token). Every deployed template carries the `<!-- TEMPLATE -->`
+marker through every copy path; it is removed only after a real population pass (Step 5).
+Never strip the marker on copy — an interrupted run would then leave an undetectable
+empty file.
 
 ```bash
-# Check marker
-head -1 .claude/architecture/architecture.md 2>/dev/null | grep -q "TEMPLATE" && echo "TEMPLATE" || echo "POPULATED"
+# Two-signal check (see ../shared/arch-populated-detect.md)
+arch_unfilled .claude/architecture/architecture.md && echo "NEEDS_POPULATION" || echo "POPULATED"
 ```
 
 Report after this step:
@@ -567,7 +661,7 @@ Report after this step:
   ⬜ architecture-reference.md — template deployed, needs population
 ```
 
-If all three are already populated → output:
+If all files are already populated → output:
 ```
 ✅ All architecture files already populated — nothing to do.
 ```
@@ -593,24 +687,34 @@ Read the prompt file for this repo type:
 | `PYTHON_DJANGO` | `prompts/python-django.md` |
 | `PYTHON_FLASK` | `prompts/python-flask.md` |
 
-The prompt file contains three sections: `## File 1 Prompt`, `## File 2 Prompt`,
-`## File 3 Prompt`. Run only the prompts for files marked `NEEDS_POPULATION`.
+The prompt file contains seven sections: `## File 1 Prompt` (architecture.md, incl. the two
+Mermaid diagrams) through `## File 7 Prompt` (architecture-decisions.md, seed-only). Run only
+the prompts for files marked `NEEDS_POPULATION`. `architecture-deployment.md` is not prompt-
+driven — it is produced by the Step 0.5 questionnaire.
 
 ---
 
 ## Step 5 — Populate files (parallel where possible)
 
-Run File 1 and File 2 prompts in parallel.
-Run File 3 (reference/callchains) after File 1 and File 2 complete — it is the
-most thorough pass and benefits from the orientation already established.
+Run File 1 (architecture.md, incl. both Mermaid diagrams) and File 2 in parallel.
+Run the remaining code-populated prompts once orientation is established:
+- **File 3** (reference), **File 4** (data), **File 5** (integrations), **File 6** (security)
+  — after File 1/2; these benefit from the structure already mapped and may run in parallel.
+- **File 7** (decisions, **seed-only**) — run last, after File 1, so it can reference the
+  detected stack and layering. **Skip entirely if `architecture-decisions.md` already
+  contains real `AD-NNN` entries** — it is an append-only human log, not regenerated.
 
 For each file:
 1. Execute the prompt against the actual codebase
 2. Write the output to `.claude/architecture/{filename}`
-3. Remove the `<!-- TEMPLATE -->` marker from the first line
+3. Remove the `<!-- TEMPLATE -->` marker from the first line — **this is the only
+   place the marker is ever removed** (no copy/deploy path strips it; see ADR 0053)
 4. Every section that could not be determined from code must contain:
    `> ⚠ Could not determine — needs manual input`
    rather than being left empty or guessed.
+5. For `architecture.md`, ensure both ` ```mermaid ` blocks are syntactically valid
+   (balanced brackets, no stray `()[]{}` inside node labels). If the layer graph is not
+   derivable, keep the `⚠` marker instead of emitting an empty/invalid diagram.
 
 ---
 
@@ -622,9 +726,13 @@ For each file:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Repo type : {REPO_TYPE}
 
-  ✓ architecture.md            {N sections, M flagged}
-  ✓ architecture-flows.md      {N sections, M flagged}
+  ✓ architecture.md            {N sections, M flagged} (+ 2 Mermaid diagrams)
+  ✓ architecture-{flows|callchains|api}.md  {N sections, M flagged}
   ✓ architecture-reference.md  {N sections, M flagged}
+  ✓ architecture-data.md       {N sections, M flagged}
+  ✓ architecture-integrations.md {N sections, M flagged}
+  ✓ architecture-security.md   {N sections, M flagged}
+  ✓ architecture-decisions.md  {N AD entries seeded — rationale flagged for human}
 
   Skipped (already populated):
     [list any skipped files]
@@ -658,6 +766,18 @@ To override for this project:
 
 See `../shared/model-routing-spec.md` for the full routing specification.
 
+## Persona
+
+Execute as **[SA] Rafael Mendes — Solution Architect** (16 yrs). Optimizes for a coherent, operable
+picture of the system; always asks "where are the seams and who owns each?" Classify module types,
+infer non-parseable relationships, and name domains in terms of **this project's actual stack and
+topology** (per detected_stacks) — never a fixed technology.
+
+The persona sets *what to scrutinize* — it never licenses assumption. The codebase and its manifests
+are the only sources of truth; document what is actually there, never what a persona would "expect"
+(subordinate to CLAUDE.md §3 / decision transparency). Never name the persona in any artifact. See
+`../shared/personas-spec.md`.
+
 ---
 
 ## Business context severity
@@ -675,7 +795,12 @@ identifiers, or other B1–B7 categories without acknowledgement.
 - NEVER overwrite a file that already has real content — skip and report
 - NEVER invent facts — every value must come from actual source files
 - NEVER leave a section empty — use the `⚠ Could not determine` marker instead
-- NEVER run File 3 in parallel with File 1/2 — it must run after
+- NEVER run File 3–6 in parallel with File 1/2 — they run after
+- NEVER overwrite `architecture-decisions.md` once it has real `AD-NNN` entries — it is an
+  append-only, human-maintained log; the seed pass runs only on a fresh/empty file
+- NEVER invent a decision's *rationale*, an authorization rule, an SLA, a timeout, or an NFR
+  target — seed only what code/config proves and flag the rest with `⚠`
+- NEVER emit an empty or invalid Mermaid block — keep the `⚠` marker if a diagram is not derivable
 - If a source file cannot be read, note the path and continue with available files
 
 ---
@@ -684,10 +809,10 @@ identifiers, or other B1–B7 categories without acknowledgement.
 
 After populating architecture docs, generate the **codebase knowledge graph** in
 `.claude/graph/`. The graph is the single orientation layer for the plugin
-([ADR 0038](../../docs/adr/0038-knowledge-graph-orientation.md)): every skill that
+(ADR 0038): every skill that
 needs codebase orientation — `icea-feature`, `icea-review`, `code-review`,
 `security`, and others — reads it instead of scanning raw source. It replaces the
-former `domain-map.md` (retired in v3.0.0, [ADR 0017](../../docs/adr/0017-domain-map.md) superseded).
+former `domain-map.md` (retired in v3.0.0, ADR 0017 superseded).
 
 The graph has three parts:
 - **`graph.json`** — the **authoritative structure**: typed nodes, typed edges with
@@ -725,12 +850,68 @@ array; multi-root modules list each), and the **module-wide** `fingerprint` comp
 over all files under `paths` (use the `graph_module_fingerprint` helper in
 `graph-json-schema.md` — *not* a single-file sha1). Add any `edges` you can see that a
 parser cannot (`INFERRED`/`AMBIGUOUS`: DI, dynamic/config wiring, prose-only), and set
-`hub: true` on the most-connected nodes. Write `.claude/graph/graph.json` deterministically
-(sorted, stable key order). Then populate the source-visible `EXTRACTED` edges
-**deterministically** — resolve `$PLUGIN_DIR` (`../shared/plugin-path-resolution.md` §1a)
-and run `node "$PLUGIN_DIR/scripts/graph-extract-edges.js"` (parses imports locally, offline;
-rewrites only `EXTRACTED` edges; never touches `nodes`/`fingerprint`s; ADR 0041).
-**Never hand-write an `EXTRACTED` edge.** Confirm: `✓ Written: .claude/graph/graph.json (~N tokens)`.
+`hub: true` on the most-connected nodes.
+
+**Before writing, build `directoryCatalog` in memory** (same as graph-sync Step 8d):
+
+```bash
+# Requires GNU grep for -oP.
+# Build output directories (Angular outputPath, Next.js distDir) are intentionally excluded —
+# build output is out of scope by nature; the risk is source files committed and served directly.
+
+# Static-serving — name-based
+find . -not -path "./.git/*" -not -path "./node_modules/*" \
+  -not -path "./dist/*" -not -path "./bin/*" -not -path "./obj/*" \
+  -type d \( -name "public" -o -name "wwwroot" -o -name "assets" \
+    -o -name "static" -o -name "StaticFiles" -o -name "Content" \) \
+  | sed 's|^\./||' | sort
+
+# Static-serving — config-based (custom source paths from app code)
+# .NET: UseStaticFiles with PhysicalFileProvider
+grep -rn --include="*.cs" "UseStaticFiles" . 2>/dev/null \
+  | grep -v "node_modules\|\.git\|bin\|obj" \
+  | grep -oP '(?<=PhysicalFileProvider\()[^)]+' \
+  | grep -oP '"[^"]*"' | tr -d '"' | sort -u
+# Express: express.static('path')
+grep -rn --include="*.js" --include="*.ts" --include="*.mjs" \
+  'express\.static(' . 2>/dev/null \
+  | grep -v "node_modules\|\.git\|dist" \
+  | grep -oP "express\.static\(\s*['\"]([^'\"]+)['\"]" \
+  | grep -oP "['\"][^'\"]+['\"]" | tr -d "'\"" | sort -u
+# Nginx: root directive — relative paths only (absolute paths are deployment-time)
+find . \( -name "*.conf" -o -name "*.nginx" \) 2>/dev/null \
+  | grep -v "\.git\|node_modules" \
+  | xargs grep -h "^\s*root " 2>/dev/null \
+  | grep -oP "root\s+\K[^;]+" | grep -v '^/' | sort -u
+
+# Config directories
+find . -not -path "./.git/*" -not -path "./node_modules/*" \
+  -maxdepth 3 -type d \( -name "environments" -o -name "env" \
+    -o -name ".github" -o -name "infra" -o -name "terraform" \
+    -o -name "k8s" -o -name "helm" \) \
+  | sed 's|^\./||' | sort
+
+# Test directories
+find . -not -path "./.git/*" -not -path "./node_modules/*" \
+  -not -path "./dist/*" -maxdepth 4 \
+  -type d \( -name "test" -o -name "tests" -o -name "__tests__" \
+    -o -name "spec" -o -name "e2e" -o -name "cypress" \) \
+  | sed 's|^\./||' | sort
+```
+
+Add to the in-memory graph object before the write:
+```javascript
+// reviewed defaults false on initial generation — developer validates via security skill §0.5
+g.directoryCatalog = { generatedAt: TODAY, reviewed: false, staticServing: [...], config: [...], test: [...] };
+```
+
+Now write `.claude/graph/graph.json` deterministically (sorted, stable key order, includes
+`directoryCatalog`). Then populate the source-visible `EXTRACTED` edges **deterministically**
+— resolve `$PLUGIN_DIR` (`../shared/plugin-path-resolution.md` §1a) and run
+`node "$PLUGIN_DIR/scripts/graph-extract-edges.js"` (parses imports locally, offline;
+rewrites only `EXTRACTED` edges; never touches `nodes`/`fingerprint`s/`directoryCatalog`;
+ADR 0041). **Never hand-write an `EXTRACTED` edge.**
+Confirm: `✓ Written: .claude/graph/graph.json (~N tokens)`.
 
 ### Step 7-3 — Project one detail file per module
 

@@ -1,0 +1,36 @@
+skill: setup-status
+scenarios:
+  - id: reports-all-items
+    description: "Should report on all 9 infrastructure items"
+    input: "Run setup status check"
+    expect:
+      triggered: true
+      contains:
+        - "CLAUDE.md"
+        - "memory"
+        - "rules"
+        - "commands"
+        - "architecture"
+        - "domain-map"
+        - "file-cache"
+        - "gitignore"
+
+  - id: read-only-guarantee
+    description: "Should never offer to modify files"
+    input: "Check plugin health"
+    expect:
+      triggered: true
+      not_contains:
+        - "I'll create"
+        - "I'll write"
+        - "Writing"
+
+  - id: settings-json-pat-warning
+    description: "Should warn about PAT risk if settings.json not gitignored"
+    input: |
+      Run setup status. .claude/settings.json exists but is NOT in .gitignore.
+    expect:
+      triggered: true
+      contains:
+        - "settings.json"
+        - "credential"

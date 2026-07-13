@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ai-assisted-development · Leadership Briefing</title>
+<style>
+:root{
+  --navy:#1a3a5c; --navy-2:#2c5f8a; --gold:#c8a951;
+  --green:#00b894; --amber:#fdcb6e; --red:#e17055; --info:#74b9ff;
+  --bg:#f8f9fa; --card:#ffffff; --ink:#2d3436; --muted:#636e72; --line:#dfe6e9;
+  --mono:'Cascadia Code','SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+  --sans:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--sans);color:var(--ink);background:#0b1622;overflow:hidden}
+.deck{position:fixed;inset:0}
+.slide{position:absolute;inset:0;display:none;flex-direction:column;padding:5.5vh 6.5vw 6vh;background:var(--bg);animation:fade .45s ease;overflow:hidden}
+.slide.active{display:flex}
+@keyframes fade{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.progress{position:fixed;top:0;left:0;height:5px;background:linear-gradient(90deg,var(--gold),#e6cd86);z-index:50;transition:width .35s ease}
+.counter{position:fixed;bottom:18px;right:24px;z-index:50;font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums;background:rgba(255,255,255,.7);padding:4px 10px;border-radius:20px}
+.hint{position:fixed;bottom:18px;left:24px;z-index:50;font-size:.72rem;color:var(--muted);opacity:.7}
+.hint kbd{background:#fff;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:1px 6px;font-family:var(--mono);font-size:.68rem}
+h1{font-size:3.1rem;line-height:1.08;color:var(--navy);font-weight:800;letter-spacing:-.5px}
+h2{font-size:2rem;color:var(--navy);font-weight:800;letter-spacing:-.3px}
+h3{font-size:1.2rem;color:var(--navy);font-weight:700}
+p{font-size:1.05rem;line-height:1.55;color:var(--ink)}
+.lead{font-size:1.3rem;color:var(--muted);line-height:1.5}
+.eyebrow{text-transform:uppercase;letter-spacing:2.5px;font-size:.8rem;font-weight:700;color:var(--gold)}
+.muted{color:var(--muted)} strong{color:var(--navy)}
+code{font-family:var(--mono);background:#eef2f5;color:var(--navy);padding:2px 7px;border-radius:5px;font-size:.85em}
+.slide-head{display:flex;align-items:center;gap:14px;margin-bottom:2.6vh;flex:0 0 auto}
+.slide-head .dot{width:12px;height:12px;border-radius:3px;background:var(--gold)}
+.slide-head h2{font-size:1.7rem}
+.body{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;justify-content:center}
+.title-slide{background:linear-gradient(135deg,var(--navy),var(--navy-2) 70%,#20486e);justify-content:center;color:#fff}
+.title-slide h1{color:#fff;font-size:3.7rem;max-width:19ch}
+.title-slide .lead{color:#cdd9e6;max-width:54ch;margin-top:18px}
+.presenter{margin-top:26px;color:#cdd9e6;font-size:1rem;letter-spacing:.3px}
+.badges{display:flex;gap:12px;flex-wrap:wrap;margin-top:34px}
+.badge{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);color:#eaf1f8;padding:8px 16px;border-radius:30px;font-size:.9rem;font-weight:600}
+.badge b{color:var(--gold)}
+.title-foot{position:absolute;bottom:6vh;left:6.5vw;right:6.5vw;display:flex;justify-content:space-between;align-items:flex-end;color:#9db2c7;font-size:.9rem}
+.title-foot .v{color:var(--gold);font-weight:700;font-family:var(--mono)}
+.divider{background:linear-gradient(135deg,var(--navy),#12283d);justify-content:center;color:#fff}
+.divider .num{font-family:var(--mono);font-size:6rem;color:rgba(200,169,81,.28);font-weight:800;line-height:1}
+.divider h2{color:#fff;font-size:2.8rem;max-width:22ch;margin-top:6px}
+.divider p{color:#b7c6d6;font-size:1.15rem;margin-top:14px;max-width:50ch}
+.grid{display:grid;gap:16px}
+.grid.c2{grid-template-columns:1fr 1fr}.grid.c3{grid-template-columns:repeat(3,1fr)}.grid.c4{grid-template-columns:repeat(4,1fr)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.card .ico{font-size:1.7rem;margin-bottom:8px}
+.card h3{margin-bottom:6px}
+.card p{font-size:.94rem;color:var(--muted);line-height:1.5}
+.card.accent{border-top:4px solid var(--gold)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:28px 22px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.stat .big{font-size:3.4rem;font-weight:800;color:var(--navy);line-height:1;letter-spacing:-1px}
+.stat .big .u{font-size:1.5rem;color:var(--gold)}
+.stat .lbl{margin-top:10px;color:var(--muted);font-size:.95rem;line-height:1.4}
+.checklist{list-style:none;display:flex;flex-direction:column;gap:13px;margin-top:6px}
+.checklist li{display:flex;gap:12px;align-items:flex-start;font-size:1.05rem;line-height:1.45}
+.checklist li::before{content:"";flex:0 0 auto;width:22px;height:22px;border-radius:6px;background:rgba(0,184,148,.14);margin-top:1px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2300b894' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center}
+.painlist li::before{background:rgba(225,112,85,.14);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%23e17055' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'/%3E%3Cline x1='6' y1='6' x2='18' y2='18'/%3E%3C/svg%3E")}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center;height:100%}
+.quote{max-width:60ch}
+.quote .mark{font-size:5rem;color:var(--gold);line-height:.6;font-family:Georgia,serif}
+.quote blockquote{font-size:2rem;line-height:1.3;color:var(--navy);font-weight:700;margin:6px 0 16px}
+.quote cite{color:var(--muted);font-style:normal;font-size:.95rem}
+table.cmp{width:100%;border-collapse:collapse;background:var(--card);border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);font-size:.98rem}
+table.cmp th{background:var(--navy);color:#fff;text-align:left;padding:13px 16px;font-size:.82rem;text-transform:uppercase;letter-spacing:.5px}
+table.cmp td{padding:13px 16px;border-bottom:1px solid var(--line);vertical-align:middle}
+table.cmp tr:last-child td{border-bottom:none} table.cmp tr:hover td{background:#f4f7f9}
+.pill{display:inline-block;padding:3px 11px;border-radius:20px;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.pill.crit{background:rgba(214,48,49,.12);color:#d63031;border:1px solid #d63031}
+.pill.b2{background:rgba(200,169,81,.16);color:#9a7d1e;border:1px solid var(--gold)}
+.pill.ok{background:rgba(0,184,148,.12);color:var(--green);border:1px solid var(--green)}
+.barrow{display:flex;align-items:center;gap:14px;margin:14px 0}
+.barrow .name{flex:0 0 240px;font-size:1rem;color:var(--ink)}
+.barwrap{flex:1;background:#e9ecef;border-radius:6px;height:30px;overflow:hidden}
+.bar{height:100%;border-radius:6px;display:flex;align-items:center;justify-content:flex-end;padding-right:12px;color:#fff;font-weight:700;font-size:.9rem}
+.bar.full{background:linear-gradient(90deg,#e17055,#eb8a72)}.bar.lean{background:linear-gradient(90deg,var(--green),#2fd3ac)}
+.dh{display:flex;gap:22px;align-items:center}
+.dh .ring{flex:0 0 auto;width:150px;display:grid;place-items:center;position:relative}
+.dh .ring .val{position:absolute;text-align:center}
+.dh .ring .val b{display:block;font-size:2rem;color:var(--navy);font-weight:800}
+.dh .ring .val span{font-size:.72rem;color:var(--muted)}
+.chip{display:inline-block;padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:700;background:rgba(0,184,148,.12);color:var(--green);border:1px solid var(--green)}
+.chip.amber{background:rgba(253,203,110,.18);color:#b3861f;border-color:var(--amber)}
+.close-slide{background:linear-gradient(135deg,var(--navy),#12283d);color:#fff;justify-content:center}
+.close-slide h1{color:#fff}.close-slide .lead{color:#cdd9e6}
+.close-slide .takeaways{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:32px;max-width:1100px}
+.close-slide .tk{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:16px}
+.close-slide .tk .n{color:var(--gold);font-weight:800;font-family:var(--mono);font-size:.8rem}
+.close-slide .tk h3{color:#fff;font-size:1rem;margin:4px 0}
+.close-slide .tk p{color:#dce6f0;font-size:.85rem}
+.scorecard{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.scorecard th{background:var(--navy);color:#fff;text-align:left;padding:14px 18px;font-size:.82rem;text-transform:uppercase;letter-spacing:.5px}
+.scorecard td{padding:14px 18px;border-bottom:1px solid var(--line)}
+.scorecard tr:last-child td{border-bottom:none}
+.scorecard .metric{font-weight:700;color:var(--navy)}
+.roadmap{display:flex;gap:0;margin-top:10px;counter-reset:step}
+.rstep{flex:1;position:relative;padding:0 14px}
+.rstep .bub{width:40px;height:40px;border-radius:50%;background:var(--gold);color:#1a2b17;font-weight:800;display:grid;place-items:center;font-family:var(--mono);margin-bottom:12px;z-index:2;position:relative}
+.rstep::after{content:"";position:absolute;top:20px;left:34px;right:-6px;height:3px;background:var(--line)}
+.rstep:last-child::after{display:none}
+.rstep h3{font-size:1rem}
+.rstep p{font-size:.86rem;color:var(--muted);margin-top:4px}
+.notes-panel{position:fixed;left:0;right:0;bottom:0;max-height:38vh;overflow:auto;background:#12283d;color:#dbe6f0;border-top:3px solid var(--gold);padding:18px 26px;z-index:60;display:none;box-shadow:0 -8px 24px rgba(0,0,0,.3)}
+.notes-panel.show{display:block}
+.notes-panel h4{color:var(--gold);font-size:.8rem;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}
+.notes-panel p{color:#c6d4e2;font-size:.95rem;line-height:1.5}
+.overview{position:fixed;inset:0;background:rgba(8,16,26,.97);z-index:70;display:none;padding:4vh 4vw;overflow:auto}
+.overview.show{display:block}
+.overview h3{color:#fff;margin-bottom:18px}
+.ov-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.ov-item{background:#16283b;border:1px solid #2a3f56;border-radius:8px;padding:14px;cursor:pointer;transition:.15s}
+.ov-item:hover{border-color:var(--gold);transform:translateY(-2px)}
+.ov-item .oi-n{font-family:var(--mono);color:var(--gold);font-size:.78rem}
+.ov-item .oi-t{font-weight:700;color:#fff;font-size:.92rem;margin-top:4px}
+@media print{.slide{display:flex!important;position:relative;page-break-after:always;height:100vh}.progress,.counter,.hint,.notes-panel,.overview{display:none!important}}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+
+<!-- 1 TITLE -->
+<section class="slide title-slide active" data-title="Title"
+ data-notes="Leadership briefing. Audience is leads and management — keep it outcomes-first: risk reduction, cost, quality, consistency. Minimal command syntax. No live demos; the visuals carry it. 30 minutes with room for discussion at the end. Press S for these notes, O for the map.">
+  <div class="eyebrow">Leadership Briefing · 30 min</div>
+  <h1>Governed AI development, at team scale.</h1>
+  <p class="lead">What the <strong style="color:#fff">ai-assisted-development</strong> plugin is, the risk it removes, and the measurable value it returns.</p>
+  <div class="badges">
+    <div class="badge"><b>v3.6.0</b></div>
+    <div class="badge">Azure DevOps native</div>
+    <div class="badge">5 backend stacks · Angular / React</div>
+    <div class="badge">Auditable by design</div>
+  </div>
+  <div class="presenter">Presented by <strong style="color:#fff">Vivek Rawat</strong> &nbsp;·&nbsp; July 7, 2026</div>
+  <div class="title-foot"><div>Audience: <strong style="color:#eaf1f8">Leads &amp; Management</strong></div><div>Plugin version <span class="v">3.6.0</span></div></div>
+</section>
+
+<!-- 2 WHAT YOU'LL LEAVE WITH -->
+<section class="slide" data-title="What you'll leave with"
+ data-notes="Frame the payoff up front so leaders know why to stay engaged. Four questions we'll answer: what problem it solves, how it lowers delivery risk, what it costs / saves, and how we know it's working. Everything else is detail in service of these four.">
+  <div class="slide-head"><span class="dot"></span><h2>What you'll leave knowing</h2></div>
+  <div class="body">
+    <div class="grid c2">
+      <div class="card accent"><div class="ico">🎯</div><h3>The problem it solves</h3><p>Why inconsistent AI use was quietly costing us rework and quality.</p></div>
+      <div class="card accent"><div class="ico">🛡️</div><h3>How it lowers risk</h3><p>Governance, auditability, and business-aware security built in.</p></div>
+      <div class="card accent"><div class="ico">💰</div><h3>What it costs &amp; saves</h3><p>An 80–95% drop in per-run token cost after the first baseline.</p></div>
+      <div class="card accent"><div class="ico">📊</div><h3>How we know it works</h3><p>Sprint KPIs pulled from Azure DevOps every cycle.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 THE PROBLEM (business framing) -->
+<section class="slide" data-title="The business problem"
+ data-notes="Frame in business terms. AI raised individual output but variance exploded across the team — some clean layered code, some unmaintainable dumps. The dominant cost was rework: blocked PRs that traced back to thin or missing specs. Add silent knowledge loss when people move on, and inconsistent security rigor. The headline: one well-written spec prevents roughly three PRs that would have bounced. That's the ROI thesis in a sentence.">
+  <div class="slide-head"><span class="dot"></span><h2>The quiet cost of ungoverned AI</h2></div>
+  <div class="body">
+    <div class="split">
+      <ul class="checklist painlist">
+        <li><strong>Rework was the dominant cost.</strong> Blocked PRs traced back to thin or missing specs.</li>
+        <li><strong>Quality varied by person.</strong> Same tool, very different output across the team.</li>
+        <li><strong>Knowledge walked out the door.</strong> Context lost between sessions and departures.</li>
+        <li><strong>Security rigor was uneven.</strong> No shared tracking of findings or accepted risk.</li>
+      </ul>
+      <div class="quote">
+        <div class="mark">&ldquo;</div>
+        <blockquote>One well-written spec prevents roughly three PRs that would have bounced.</blockquote>
+        <cite>— ADR 0001, the ROI thesis behind the plugin</cite>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 WHAT IT IS -->
+<section class="slide" data-title="What it is"
+ data-notes="One clean definition. It's a workflow layer over Claude Code that makes an approved spec the precondition for any code, backed by shared orientation, security scanning, and persistent memory. The strategic point: one workflow governs every stack and every team — .NET, Java, Python, Node, Angular, React. Consistency is the product.">
+  <div class="slide-head"><span class="dot"></span><h2>What the plugin is</h2></div>
+  <div class="body">
+    <p class="lead" style="max-width:74ch;margin-bottom:26px">A <strong>governance layer over AI-assisted coding</strong>: no code ships without an approved spec, every change is traceable to a person, and quality, security, and cost are managed centrally — across every team and stack.</p>
+    <div class="grid c4">
+      <div class="card"><div class="ico">📋</div><h3>Accountable</h3><p>Named human approval before any code is written.</p></div>
+      <div class="card"><div class="ico">🔍</div><h3>Auditable</h3><p>Specs, findings, and decisions recorded on disk.</p></div>
+      <div class="card"><div class="ico">⚡</div><h3>Efficient</h3><p>Shared orientation cuts per-run cost 80–95%.</p></div>
+      <div class="card"><div class="ico">🧭</div><h3>Consistent</h3><p>One workflow across 5 stacks and every team.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 THE CORE IDEA -->
+<section class="slide" data-title="The core idea"
+ data-notes="The single most important concept for leaders: accountability through named approval. Code generation is gated — the AI physically cannot write source until a named person approves the spec (ICEA). That one constraint converts vague AI output into a reviewable contract, and it's what drives the rework reduction. Note it's output-gated: exploration and questions are always free, so it doesn't slow people down on thinking — only on shipping unreviewed code.">
+  <div class="slide-head"><span class="dot"></span><h2>The core idea: approval gates code</h2></div>
+  <div class="body">
+    <div style="text-align:center;max-width:80ch;margin:0 auto">
+      <p class="lead" style="margin-bottom:26px">The AI <strong>cannot write source code</strong> until a named person approves a spec — Intent, Context, Examples, Acceptance.</p>
+      <div style="display:flex;align-items:center;gap:12px;justify-content:center;flex-wrap:wrap;font-size:1rem">
+        <span style="background:#fff;border:1px solid var(--line);padding:12px 18px;border-radius:10px;font-weight:600">Spec drafted</span>
+        <span style="color:var(--gold);font-weight:800;font-size:1.4rem">→</span>
+        <span style="background:var(--gold);color:#1a2b17;padding:12px 18px;border-radius:10px;font-weight:800">Human approves</span>
+        <span style="color:var(--gold);font-weight:800;font-size:1.4rem">→</span>
+        <span style="background:#fff;border:1px solid var(--line);padding:12px 18px;border-radius:10px;font-weight:600">Code written &amp; traced</span>
+      </div>
+      <p class="muted" style="margin-top:26px">Output-gated, not friction: exploration, questions, and design are always free — only <strong>shipping unreviewed code</strong> is blocked.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 6 GOVERNANCE & AUDITABILITY -->
+<section class="slide" data-title="Governance & audit"
+ data-notes="Speak to the risk and compliance instinct. Every material change traces to an approved spec and a named approver. Security findings live in persistent ledgers with dismissal justifications. Decisions are recorded as ADRs (45 of them). And a structural validator plus git hooks enforce the floor mechanically — governance that holds even under deadline pressure, not just when people remember. This is the slide for anyone who owns audit or compliance exposure.">
+  <div class="slide-head"><span class="dot"></span><h2>Governance that holds under pressure</h2></div>
+  <div class="body">
+    <div class="grid c2">
+      <div class="card"><div class="ico">✍️</div><h3>Traceable approvals</h3><p>Every change maps to an approved spec and a named approver — on disk, reviewable.</p></div>
+      <div class="card"><div class="ico">📒</div><h3>Persistent ledgers</h3><p>Security &amp; quality findings tracked over time, with justified dismissals.</p></div>
+      <div class="card"><div class="ico">📚</div><h3>Recorded decisions</h3><p>45 Architecture Decision Records — the "why" survives staff changes.</p></div>
+      <div class="card"><div class="ico">🪝</div><h3>Mechanical enforcement</h3><p>Git hooks + a validator hold the line even under deadline pressure.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 7 COST -->
+<section class="slide" data-title="Cost efficiency"
+ data-notes="The cost story, at value level. The driver is that the plugin understands the codebase ONCE — a shared knowledge layer it builds and reuses — instead of re-learning it on every run. Caching unchanged files is a bonus on top. Result: per-run token cost falls 80–95% after the first baseline. Leadership translation: faster feedback, lower AI spend, and — importantly — the savings grow as the codebase grows, because more of it is already understood. It scales the right way.">
+  <div class="slide-head"><span class="dot"></span><h2>Cost that scales the right way</h2></div>
+  <div class="body">
+    <div class="split">
+      <div>
+        <div class="barrow"><span class="name">Re-learn the codebase every run</span><div class="barwrap"><div class="bar full" style="width:100%">100%</div></div></div>
+        <div class="barrow"><span class="name">Understood once, then reused</span><div class="barwrap"><div class="bar lean" style="width:15%">~15%</div></div></div>
+        <p class="muted" style="margin-top:18px">Per-run token cost after the first baseline — an <strong>80–95% reduction</strong>.</p>
+      </div>
+      <ul class="checklist">
+        <li><strong>Understood once</strong> — the plugin builds a shared map of the codebase and reuses it. <em>(the driver)</em></li>
+        <li><strong>Lower spend &amp; faster feedback</strong> — no re-learning on every run; caching is a bonus on top.</li>
+        <li><strong>Scales up</strong> — savings grow as the codebase grows.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 8 SECURITY POSTURE / RISK -->
+<section class="slide" data-title="Security & risk"
+ data-notes="Reframe security as risk management. The plugin scans both source (SAST) and running apps (DAST), and — critically — applies business-context severity. A technically minor issue that touches sensitive client data (attorney-client privilege, immigration identifiers, vulnerable clients) is automatically escalated to Critical and blocks the commit. Business context can raise severity but never lower it. This is exactly the kind of contextual judgment that generic scanners miss and that matters most in a legal setting.">
+  <div class="slide-head"><span class="dot"></span><h2>Security that understands our business</h2></div>
+  <div class="body">
+    <div class="split">
+      <div>
+        <ul class="checklist">
+          <li>Scans <strong>source</strong> (SAST) and <strong>running apps</strong> (DAST) with tracked findings.</li>
+          <li><strong>Business-context severity</strong> escalates issues touching sensitive matters.</li>
+          <li>Escalated findings <strong>block the commit</strong> — risk can't slip through unnoticed.</li>
+          <li>Context can raise severity, <strong>never lower</strong> it.</li>
+        </ul>
+      </div>
+      <table class="cmp">
+        <thead><tr><th>Issue</th><th>Technical</th><th>Reported</th></tr></thead>
+        <tbody>
+          <tr><td>Logs a client immigration ID</td><td><span class="pill ok" style="background:#eef2f5;color:var(--muted);border-color:var(--line)">Low</span></td><td><span class="pill crit">Critical</span> <span class="pill b2">B2</span></td></tr>
+          <tr><td>SQL from request input</td><td><span class="pill" style="background:rgba(225,112,85,.12);color:var(--red);border:1px solid var(--red)">High</span></td><td><span class="pill crit">Critical</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- 9 QUALITY METRICS -->
+<section class="slide" data-title="Measured quality"
+ data-notes="This is the accountability slide leaders want. After every sprint, the plugin pulls three KPIs straight from Azure DevOps: ICEA compliance rate (are we following the process?), PR rejection rate (are we bouncing less?), and rework hours (are we wasting less?). The point: the workflow's value is measured, not asserted — and the trend tells you if it's working. Note the numbers shown are illustrative; the real board populates them.">
+  <div class="slide-head"><span class="dot"></span><h2>Value we can measure every sprint</h2></div>
+  <div class="body">
+    <div class="stats" style="margin-bottom:22px">
+      <div class="stat"><div class="big">92<span class="u">%</span></div><div class="lbl">ICEA compliance rate<br><span style="color:var(--green)">▲ process adoption</span></div></div>
+      <div class="stat"><div class="big">8<span class="u">%</span></div><div class="lbl">PR rejection rate<br><span style="color:var(--green)">▼ fewer bounces</span></div></div>
+      <div class="stat"><div class="big">6.5<span class="u">h</span></div><div class="lbl">Rework hours / sprint<br><span style="color:var(--green)">▼ less waste</span></div></div>
+    </div>
+    <p class="muted" style="text-align:center"><code>/sprint-metrics</code> reads these directly from Azure DevOps each cycle. <span class="muted">Figures illustrative — the real board populates them.</span></p>
+  </div>
+</section>
+
+<!-- 10 INSTITUTIONAL MEMORY -->
+<section class="slide" data-title="Institutional memory"
+ data-notes="Knowledge retention as a leadership concern. The Dream memory system captures decisions, conventions, and lessons as work happens, consolidates them with confidence scores, and lets stale facts fade. The business value: institutional knowledge is retained across sessions and staff changes — reducing key-person risk and onboarding time. It's auditable and reversible, so it never becomes a black box.">
+  <div class="slide-head"><span class="dot"></span><h2>Knowledge that outlasts the team</h2></div>
+  <div class="body">
+    <div class="split">
+      <ul class="checklist">
+        <li><strong>Captures</strong> decisions and conventions as work happens.</li>
+        <li><strong>Retains context</strong> across sessions and staff changes — less key-person risk.</li>
+        <li><strong>Speeds onboarding</strong> — new joiners inherit the team's accumulated context.</li>
+        <li><strong>Auditable &amp; reversible</strong> — never a black box.</li>
+      </ul>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3>Memory health</h3><span class="chip">healthy</span></div>
+        <div class="dh">
+          <div class="ring">
+            <svg width="150" height="150" viewBox="0 0 150 150"><circle cx="75" cy="75" r="60" fill="none" stroke="#e9ecef" stroke-width="14"/><circle cx="75" cy="75" r="60" fill="none" stroke="#00b894" stroke-width="14" stroke-linecap="round" stroke-dasharray="377" stroke-dashoffset="64" transform="rotate(-90 75 75)"/></svg>
+            <div class="val"><b>0.83</b><span>avg confidence</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <span class="chip">14 facts retained</span>
+            <span class="chip amber">3 fading</span>
+            <span class="muted" style="font-size:.85rem">Reinforced facts persist; unused ones decay.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 11 PRODUCTION READINESS -->
+<section class="slide" data-title="Go-live assurance"
+ data-notes="De-risking releases. Before go-live, app-readiness scores the application across 8 domains — pipeline, resilience, observability, security, scalability, data integrity, operational runbook, test coverage — and produces a report with blockers and top recommendations. Leadership value: a consistent, repeatable go/no-go signal instead of gut feel, and a plugin-readiness check for the AI tooling itself.">
+  <div class="slide-head"><span class="dot"></span><h2>A repeatable go-live signal</h2></div>
+  <div class="body">
+    <div class="grid c4">
+      <div class="card"><h3>Pipeline</h3><p>Deployment automation &amp; rollback.</p></div>
+      <div class="card"><h3>Resilience</h3><p>Failure handling &amp; recovery.</p></div>
+      <div class="card"><h3>Observability</h3><p>Logging, metrics, tracing.</p></div>
+      <div class="card"><h3>Security</h3><p>Posture &amp; open findings.</p></div>
+      <div class="card"><h3>Scalability</h3><p>Load &amp; growth headroom.</p></div>
+      <div class="card"><h3>Data integrity</h3><p>Consistency &amp; backups.</p></div>
+      <div class="card"><h3>Runbook</h3><p>Operational readiness.</p></div>
+      <div class="card"><h3>Test coverage</h3><p>Confidence to ship.</p></div>
+    </div>
+    <p class="muted" style="text-align:center;margin-top:18px"><code>/app-readiness</code> — a consistent go/no-go across <strong>8 domains</strong>, not gut feel.</p>
+  </div>
+</section>
+
+<!-- 12 CONSISTENCY ACROSS STACKS -->
+<section class="slide" data-title="One workflow, every team"
+ data-notes="The scale argument. Whether a team is on .NET, Java, Python, Node, Angular or React, they use the same workflow, the same approval gate, the same memory and metrics — only the language rules differ, and those deploy automatically. For leadership this means portability: standards travel with people between teams, reviews are comparable across projects, and there's one thing to train on. Consistency is the multiplier.">
+  <div class="slide-head"><span class="dot"></span><h2>One standard, every team</h2></div>
+  <div class="body">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <span class="badge" style="background:#eef2f5;border-color:var(--line);color:var(--navy)">.NET 8</span>
+        <span class="badge" style="background:#eef2f5;border-color:var(--line);color:var(--navy)">ASP.NET 4.x</span>
+        <span class="badge" style="background:#eef2f5;border-color:var(--line);color:var(--navy)">Java / Spring</span>
+        <span class="badge" style="background:#eef2f5;border-color:var(--line);color:var(--navy)">Python</span>
+        <span class="badge" style="background:#eef2f5;border-color:var(--line);color:var(--navy)">Node.js</span>
+        <span class="badge" style="background:#eef2f5;border-color:var(--line);color:var(--navy)">Angular</span>
+        <span class="badge" style="background:#eef2f5;border-color:var(--line);color:var(--navy)">React</span>
+      </div>
+    </div>
+    <div class="grid c3">
+      <div class="card accent"><div class="ico">🎓</div><h3>One thing to train on</h3><p>Same workflow everywhere — lower ramp-up cost.</p></div>
+      <div class="card accent"><div class="ico">🔀</div><h3>Standards travel</h3><p>People move between teams without relearning process.</p></div>
+      <div class="card accent"><div class="ico">📏</div><h3>Comparable reviews</h3><p>Quality &amp; metrics mean the same across projects.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 13 ADOPTION ROADMAP -->
+<section class="slide" data-title="Adoption path"
+ data-notes="Make it feel low-risk to adopt. A simple staged rollout: pilot on one team, measure the sprint KPIs, expand to more teams, then standardize. Setup per project is a single guided command. Emphasize we can prove value on a pilot before any broad commitment — the metrics slide is exactly how we'll judge the pilot.">
+  <div class="slide-head"><span class="dot"></span><h2>A low-risk adoption path</h2></div>
+  <div class="body">
+    <div class="roadmap">
+      <div class="rstep"><div class="bub">1</div><h3>Pilot</h3><p>One team, one sprint. Guided setup per project.</p></div>
+      <div class="rstep"><div class="bub">2</div><h3>Measure</h3><p>Compliance, rejection rate, rework hours.</p></div>
+      <div class="rstep"><div class="bub">3</div><h3>Expand</h3><p>Roll to more teams on the evidence.</p></div>
+      <div class="rstep"><div class="bub">4</div><h3>Standardize</h3><p>The org default for AI-assisted work.</p></div>
+    </div>
+    <p class="muted" style="text-align:center;margin-top:28px">We can <strong>prove the value on a pilot</strong> before any broad commitment — judged by the same sprint KPIs.</p>
+  </div>
+</section>
+
+<!-- 14 VALUE SCORECARD -->
+<section class="slide" data-title="Value scorecard"
+ data-notes="Summarize as a scorecard mapping each concern to what the plugin delivers. Use this as the recap: rework, cost, security risk, knowledge loss, consistency, release risk — each with the plugin's answer. This is the one slide to photograph.">
+  <div class="slide-head"><span class="dot"></span><h2>The value, at a glance</h2></div>
+  <div class="body">
+    <table class="scorecard">
+      <thead><tr><th style="width:34%">Concern</th><th>What the plugin delivers</th></tr></thead>
+      <tbody>
+        <tr><td class="metric">Rework cost</td><td>Approved specs before code → fewer bounced PRs</td></tr>
+        <tr><td class="metric">AI spend</td><td>80–95% lower per-run token cost after baseline</td></tr>
+        <tr><td class="metric">Security risk</td><td>SAST + DAST with business-context severity, commit-gated</td></tr>
+        <tr><td class="metric">Knowledge loss</td><td>Persistent, auditable team memory across staff changes</td></tr>
+        <tr><td class="metric">Inconsistency</td><td>One governed workflow across every stack and team</td></tr>
+        <tr><td class="metric">Release risk</td><td>Repeatable 8-domain readiness signal before go-live</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 15 CLOSE -->
+<section class="slide close-slide" data-title="Close"
+ data-notes="Close on the four leadership headlines and invite discussion. Ask for a decision on a pilot: one team, one sprint, measured. Offer to walk any interested lead through it hands-on afterward. Then open for discussion.">
+  <div class="eyebrow">In summary</div>
+  <h1>Governed AI, measurable value.</h1>
+  <div class="takeaways">
+    <div class="tk"><div class="n">RISK</div><h3>Accountable</h3><p>Approved specs; traceable, auditable change.</p></div>
+    <div class="tk"><div class="n">COST</div><h3>Efficient</h3><p>80–95% lower per-run token cost.</p></div>
+    <div class="tk"><div class="n">QUALITY</div><h3>Measured</h3><p>Sprint KPIs from Azure DevOps.</p></div>
+    <div class="tk"><div class="n">SCALE</div><h3>Consistent</h3><p>One workflow, every team &amp; stack.</p></div>
+  </div>
+  <p class="lead" style="margin-top:34px">Proposed next step: a <strong style="color:#fff">one-team, one-sprint pilot</strong> — judged on the metrics above.</p>
+  <p style="margin-top:22px;color:#9db2c7">Discussion.</p>
+</section>
+
+</div>
+
+<div class="counter" id="counter">1 / 15</div>
+<div class="hint"><kbd>←</kbd> <kbd>→</kbd> navigate · <kbd>S</kbd> notes · <kbd>O</kbd> overview · <kbd>F</kbd> fullscreen</div>
+<div class="notes-panel" id="notes"><h4>Speaker notes</h4><div id="notes-body"></div></div>
+<div class="overview" id="overview"><h3>Slide overview — click to jump</h3><div class="ov-grid" id="ov-grid"></div></div>
+
+<script>
+(function(){
+  const slides=[...document.querySelectorAll('.slide')];
+  const total=slides.length; let i=0;
+  const progress=document.getElementById('progress'),counter=document.getElementById('counter'),notes=document.getElementById('notes'),notesBody=document.getElementById('notes-body'),overview=document.getElementById('overview');
+  function render(){slides.forEach((s,n)=>s.classList.toggle('active',n===i));progress.style.width=((i+1)/total*100)+'%';counter.textContent=(i+1)+' / '+total;notesBody.textContent=slides[i].dataset.notes||'—';location.hash='slide-'+(i+1);}
+  function go(n){i=Math.max(0,Math.min(total-1,n));render();}
+  function next(){go(i+1);} function prev(){go(i-1);}
+  document.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();next();}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev();}
+    else if(e.key==='Home'){go(0);} else if(e.key==='End'){go(total-1);}
+    else if(e.key.toLowerCase()==='s'){notes.classList.toggle('show');}
+    else if(e.key.toLowerCase()==='o'){overview.classList.toggle('show');}
+    else if(e.key.toLowerCase()==='f'){if(!document.fullscreenElement)document.documentElement.requestFullscreen();else document.exitFullscreen();}
+    else if(e.key==='Escape'){overview.classList.remove('show');}
+  });
+  document.getElementById('deck').addEventListener('click',e=>{if(e.target.closest('a,button'))return;const x=e.clientX/window.innerWidth;x>0.3?next():prev();});
+  const ov=document.getElementById('ov-grid');
+  slides.forEach((s,n)=>{const d=document.createElement('div');d.className='ov-item';d.innerHTML='<div class="oi-n">'+(n+1).toString().padStart(2,'0')+'</div><div class="oi-t">'+(s.dataset.title||'')+'</div>';d.onclick=()=>{go(n);overview.classList.remove('show');};ov.appendChild(d);});
+  const m=location.hash.match(/slide-(\d+)/); if(m)i=Math.min(total-1,+m[1]-1);
+  render();
+})();
+</script>
+</body>
+</html>

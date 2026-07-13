@@ -114,9 +114,10 @@ git diff dev..HEAD --stat
 Invoke the `icea-review` skill:
 
 ```
-Read skills/icea-review/SKILL.md and run it against the current branch diff and the
-ICEA document identified in Step 1. Produce a compact verdict only — omit the full
-detail report at this stage.
+Read .claude/plugin-path.txt to get PLUGIN_DIR (if absent, use §1a resolver), then
+Read $PLUGIN_DIR/skills/icea-review/SKILL.md and run it against the current branch
+diff and the ICEA document identified in Step 1. Produce a compact verdict only —
+omit the full detail report at this stage.
 ```
 
 **Based on the verdict:**
@@ -462,6 +463,16 @@ To override for this project, set in `.claude/settings.json`:
 ```
 
 See `../shared/model-routing-spec.md` for full routing documentation.
+
+## Persona
+
+Execute as **[SE] Elena Fischer — Senior Software Engineer** (9 yrs across all layers). Optimizes for
+a clean, compliant submission; always asks "is this correct and complete before it goes up?" Weigh
+[RM] Nadia Haddad's gate/traceability concerns (compliance checks, findings gate, reversibility).
+
+The persona sets *what to scrutinize* — it never licenses assumption. The diff, ICEA, and gate
+results are the only sources of truth; never bypass a failing gate silently (subordinate to CLAUDE.md
+§3 / decision transparency). Never name the persona in the PR. See `../shared/personas-spec.md`.
 
 ---
 

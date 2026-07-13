@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- documents-plugin-version: 3.5.0 -->
+<!-- documents-plugin-version: 3.9.0 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>User Guide — ai-assisted-development v3.5.0</title>
+<title>User Guide — ai-assisted-development v3.9.0</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
 
@@ -425,7 +425,7 @@
   <div class="logo">ai-assisted-<em>development</em></div>
   <div class="vsep"></div>
   <div class="hdr-sub">User Guide</div>
-  <div class="hdr-badge">v3.5.0</div>
+  <div class="hdr-badge">v3.9.0</div>
 </header>
 
 <nav id="sidebar">
@@ -468,7 +468,7 @@
     <h1>ai-assisted-development</h1>
     <p>ICEA-driven development workflow for distributed teams using Azure DevOps — language-agnostic across <strong>.NET · Java/Spring Boot · Python · Node.js</strong> backends and Angular / React frontends. Every feature starts with a spec. Every PR is compliance-checked before it opens.</p>
     <div class="hero-chips">
-      <span class="chip">v3.5.0</span>
+      <span class="chip">v3.9.0</span>
       <span class="chip">.NET 8</span>
       <span class="chip">Angular 17+</span>
       <span class="chip">Node.js</span>
@@ -482,11 +482,12 @@
   <section style="margin:20px 0 0;padding:16px 20px;background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #f59e0b;border-radius:8px;font-size:14px;line-height:1.6;">
     <strong>What's new since 3.0.0</strong>
     <ul style="margin:8px 0 0;padding-left:20px;">
+      <li><strong>3.6.0</strong> — Rules now match your stack automatically from a much larger, layered rule set (frontend frameworks, backend concerns, databases, testing), and each skill reasons through a fitting expert lens. Project setup is faster and more consistent. No change to day-to-day usage.</li>
       <li><strong>3.5.0</strong> — The codebase knowledge graph's dependency links are now computed deterministically from your source's imports (more accurate "what depends on what"); parsing happens locally and never leaves your machine. No change to day-to-day usage.</li>
       <li><strong>3.4.0</strong> — Internal release-tooling: the plugin version is now single-sourced across its files (no more mismatched version numbers between docs). No change to day-to-day usage.</li>
       <li><strong>3.3.0</strong> — New <code>/graph-viz</code> renders an offline HTML map of your codebase (modules, dependencies, hot-spots); the project's <code>CLAUDE.md</code> is leaner, so each session starts with less overhead.</li>
       <li><strong>3.0.2</strong> — Uninstalling the plugin now fully cleans up its machine config (old caches, stale registrations); it shows what it will remove and asks first (pass <code>--yes</code> to skip the prompt).</li>
-      <li><strong>3.0.1</strong> — Project setup and <code>/dream-sync</code> are faster and no longer trigger permission prompts.</li>
+      <li><strong>3.0.1</strong> — Project setup and <code>/setup-sync</code> are faster and no longer trigger permission prompts.</li>
     </ul>
   </section>
 
@@ -537,7 +538,7 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
   <section id="setup">
     <h2>First-time project setup</h2>
     <p>Open your project in Claude Code and run:</p>
-    <pre><code>/ai-assisted-development:dream-init</code></pre>
+    <pre><code>/ai-assisted-development:setup-init</code></pre>
     <p>This command is safe to re-run — all steps are idempotent. It seeds infrastructure in this order:</p>
     <div class="steps">
       <div class="step"><div class="step-n">1</div><div class="step-body"><strong>Creates memory files</strong><p><code>memory/MEMORY.md</code> and <code>memory/dream-log.md</code></p></div></div>
@@ -549,7 +550,7 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
       <div class="step"><div class="step-n">7</div><div class="step-body"><strong>Creates and populates .gitignore</strong><p>Phase 1: plugin-required entries added automatically. Phase 2: root-level artifacts (node_modules, .vs, etc.) auto-detected. Phase 3: full repo walk finds bin/, obj/, dist/, .env and similar — presents numbered selection prompt before writing.</p></div></div>
     </div>
     <p>After setup, confirm everything is green:</p>
-    <pre><code>/ai-assisted-development:dream-status</code></pre>
+    <pre><code>/ai-assisted-development:setup-status</code></pre>
   </section>
 
   <!-- PAT -->
@@ -587,7 +588,7 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
         <div class="pat-rank rank-2">B</div>
         <div class="pat-text">
           <strong><code>.claude/settings.json</code></strong>
-          <p>Add <code>"AZURE_DEVOPS_PAT": "your-token"</code> to the <code>env</code> block. Only use this if the file is in <code>.gitignore</code> — <code>dream-status</code> will flag a ❌ Red credential leak risk if it is not protected.</p>
+          <p>Add <code>"AZURE_DEVOPS_PAT": "your-token"</code> to the <code>env</code> block. Only use this if the file is in <code>.gitignore</code> — <code>setup-status</code> will flag a ❌ Red credential leak risk if it is not protected.</p>
         </div>
       </div>
       <div class="pat-opt">
@@ -604,7 +605,7 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
   <!-- HEALTH -->
   <section id="health">
     <h2>Checking plugin health</h2>
-    <pre><code>/ai-assisted-development:dream-status</code></pre>
+    <pre><code>/ai-assisted-development:setup-status</code></pre>
     <p>Reports ✅ green / ⚠️ amber / ❌ red on 12 infrastructure items. Run any time to check state or diagnose a setup issue.</p>
     <div class="health-grid">
       <div class="health-item"><div class="hi-num">01</div><div class="hi-label">CLAUDE.md — exists with Dream section</div></div>
@@ -645,9 +646,9 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
       <div class="workflow-body">
         <div class="steps">
           <div class="step"><div class="step-n">1</div><div class="step-body"><strong>Gate fires</strong><p>Claude responds with <code>⏸ ICEA GATE — Feature detected.</code> before doing anything else.</p></div></div>
-          <div class="step"><div class="step-n">2</div><div class="step-body"><strong>Draft created → critic (gate 1)</strong><p>Claude generates the full ICEA from the knowledge graph and your description. The critic then reviews the draft for completeness, testability, B1–B7 coverage, and scope — its concerns are folded into the [?] gap list so you see everything in one place.</p></div></div>
+          <div class="step"><div class="step-n">2</div><div class="step-body"><strong>Draft created → critic (ICEA gate)</strong><p>Claude generates the full ICEA from the knowledge graph and your description. The critic reviews the draft for completeness, testability, B1–B7 coverage, and scope <em>before it is written for your review</em> — auto-revising up to twice on a REVISE verdict, then folding any residual concerns into the [?] gap list so you see everything in one place. (A second <strong>Tech Spec gate</strong> runs the same way when the Tech Spec is drafted from your approved ICEA.)</p></div></div>
           <div class="step"><div class="step-n">3</div><div class="step-body"><strong>You review and approve</strong><p>Reply <code>APPROVED</code> to proceed. Use <code>EDIT [section]</code> to change a specific part. Use <code>REJECT [reason]</code> to start over.</p></div></div>
-          <div class="step"><div class="step-n">4</div><div class="step-body"><strong>Implementation generated → critic (gate 2)</strong><p>In dependency order for the layers your repo actually has — persistence → service → API → UI → tests → PR description — in the project's detected stack (.NET, Java/Spring Boot, Python, or Node.js). The critic reviews the generated code <em>before any file is written to disk</em>. A clean verdict writes the files; a REVISE verdict regenerates (up to twice) before surfacing to you.</p></div></div>
+          <div class="step"><div class="step-n">4</div><div class="step-body"><strong>Implementation generated → critic (code gate)</strong><p>In dependency order for the layers your repo actually has — persistence → service → API → UI → tests → PR description — in the project's detected stack (.NET, Java/Spring Boot, Python, or Node.js). The critic reviews the generated code <em>before any file is written to disk</em>. A clean verdict writes the files; a REVISE verdict regenerates (up to twice) before surfacing to you.</p></div></div>
         </div>
       </div>
     </div>
@@ -666,7 +667,7 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
     <p>If a T1 change grows beyond its bounds, <code>/checkin</code> blocks the commit and routes you to a full ICEA — tiers only move up, never down.</p>
 
     <h3>Mechanical enforcement (v1.26.0)</h3>
-    <p>As of v1.26.0 hooks install <strong>by default</strong> during <code>dream-init</code> (opt-out via <code>--no-hooks</code> is recorded and attributed), and the authoritative floor moves server-side: <code>validate-pr-compliance.py</code> runs as a required branch-policy check, verifying an approved ICEA exists per PR and re-checking T1 bounds as pure diff math — unbypassable from any client. Hook integrity is monitored (dream-status check 1p) and re-synced on every version bump. Four deterministic hooks back the prompt-level gates: a write-blocker when no approved ICEA exists, a git pre-commit hook that blocks commits with open Critical/High findings even if you bypass <code>/checkin</code>, and a CI script that fails the pipeline on ledger integrity violations (e.g. a dismissal with an empty justification). <code>dream-init</code> offers all three during setup; see <code>hooks/README.md</code>.</p>
+    <p>As of v1.26.0 hooks install <strong>by default</strong> during <code>setup-init</code> (opt-out via <code>--no-hooks</code> is recorded and attributed), and the authoritative floor moves server-side: <code>validate-pr-compliance.py</code> runs as a required branch-policy check, verifying an approved ICEA exists per PR and re-checking T1 bounds as pure diff math — unbypassable from any client. Hook integrity is monitored (setup-status check 1p) and re-synced on every version bump. Four deterministic hooks back the prompt-level gates: a write-blocker when no approved ICEA exists, a git pre-commit hook that blocks commits with open Critical/High findings even if you bypass <code>/checkin</code>, and a CI script that fails the pipeline on ledger integrity violations (e.g. a dismissal with an empty justification). <code>setup-init</code> offers all three during setup; see <code>hooks/README.md</code>.</p>
 
     <h3>Emergency bypass</h3>
     <p>Prefix your message with <code>/skip-icea</code> to bypass the gate. Claude will warn once and then proceed. This is logged and not recommended for regular use.</p>
@@ -675,38 +676,39 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
   <!-- CRITIC -->
   <section id="critic">
     <h2>The critic layer</h2>
-    <p>The <code>critic</code> is a second-pass reviewer that checks an artefact <em>at the moment it is produced and before it is saved</em>. It runs automatically inside the ICEA flow at two points, and you can also run it on demand with <code>/critic</code>.</p>
+    <p>The <code>critic</code> is a second-pass reviewer that checks an artefact <em>at the moment it is produced and before it is saved</em>. It runs automatically at three points across the ICEA flow — the ICEA draft, the Tech Spec draft, and the generated code — and you can also run it on demand with <code>/critic</code>.</p>
 
     <div class="callout ok"><span class="icon">✓</span><strong>Why a critic, when there is already code review?</strong> Code review runs on files that already exist — by then the spec is out of context. The critic runs while the ICEA and the freshly generated code are both in front of Claude, so it can ask the one question a later scan cannot: <em>does this do exactly what the approved AC asked — no more, no less?</em></div>
 
-    <h3>The two automatic gates</h3>
+    <h3>The three automatic gates</h3>
     <div class="table-wrap"><table>
       <thead><tr><th>Gate</th><th>When</th><th>What it checks</th><th>What a problem does</th></tr></thead>
       <tbody>
-        <tr><td><strong>Gate 1 — ICEA</strong></td><td>After the ICEA draft, before you approve</td><td>Completeness, testability, B1–B7 coverage, scope vs Intent</td><td>Concerns fold into the gap list you review before approving — no separate step</td></tr>
-        <tr><td><strong>Gate 2 — code</strong></td><td>After code is generated, before any file is written</td><td>ICEA traceability, simplicity, rules compliance, decision transparency, hidden assumptions</td><td>A <code>REVISE</code> verdict regenerates the code (up to 2 automatic attempts) before anything reaches disk</td></tr>
+        <tr><td><strong>Gate 1 — ICEA</strong></td><td>After the ICEA draft, before it is written for review</td><td>Completeness, testability, B1–B7 coverage, scope vs Intent</td><td>Auto-revises up to 2× on <code>REVISE</code>; residual concerns fold into the gap list you review before approving</td></tr>
+        <tr><td><strong>Gate 2 — Tech Spec</strong></td><td>After the Tech Spec is drafted from your approved ICEA, before it is written for review</td><td>ICEA↔design traceability (every AC has a planned file; no planned file exceeds the ACs), D-option fidelity, coverage-matrix completeness</td><td>Auto-revises the Tech Spec up to 2× on <code>REVISE</code>; a genuine ICEA fault is surfaced with a <code>REVISE ADO-{ID}</code> recommendation</td></tr>
+        <tr><td><strong>Gate 3 — code</strong></td><td>After code is generated, before any file is written</td><td>ICEA traceability, simplicity, rules compliance, decision transparency, hidden assumptions</td><td>A <code>REVISE</code> verdict regenerates the code (up to 2 automatic attempts) before anything reaches disk</td></tr>
       </tbody>
     </table></div>
 
-    <h3>What the code gate does on a REVISE verdict</h3>
+    <h3>What a gate does on a REVISE verdict</h3>
     <div class="workflow">
       <div class="workflow-head">🔎 generate → critique → (revise ×2) → write or surface</div>
       <div class="workflow-body">
         <div class="steps">
           <div class="step"><div class="step-n">1</div><div class="step-body"><strong>Critique</strong><p>The critic reports a verdict: <code>PASS</code>, <code>PASS WITH NOTES</code>, or <code>REVISE</code>. PASS verdicts write the files immediately.</p></div></div>
-          <div class="step"><div class="step-n">2</div><div class="step-body"><strong>Auto-revise (up to 2×)</strong><p>On REVISE, Claude announces <code>🔁 Critic revision 1 of 2</code>, regenerates the affected code addressing the concerns, and re-critiques. If a retry produces the same concerns with no movement, it surfaces early rather than spending the second attempt.</p></div></div>
+          <div class="step"><div class="step-n">2</div><div class="step-body"><strong>Auto-revise (up to 2×)</strong><p>On REVISE, Claude announces <code>🔁 Critic revision 1 of 2</code>, regenerates the affected artefact (the ICEA draft, the Tech Spec draft, or the code) addressing the concerns, and re-critiques. If a retry produces the same concerns with no movement, it surfaces early rather than spending the second attempt.</p></div></div>
           <div class="step"><div class="step-n">3</div><div class="step-body"><strong>Surface to you</strong><p>If it still fails after two retries, you choose: <code>✅ ACCEPT AS-IS</code> (write despite the notes), <code>✏ GUIDE</code> (tell it what to change), or <code>❌ HALT</code> (write nothing).</p></div></div>
         </div>
       </div>
     </div>
-    <div class="callout warn"><span class="icon">⚠</span>While the verdict is <code>REVISE</code>, <strong>nothing is written to disk</strong>. The ICEA file itself is still saved on approval — only the implementation code is gated by the critic.</div>
+    <div class="callout warn"><span class="icon">⚠</span>While the verdict is <code>REVISE</code>, <strong>nothing is written</strong> — no <code>temp/</code> draft for the ICEA or Tech Spec gate, no source file for the code gate. The draft or code is written only on a <code>PASS</code> / <code>PASS WITH NOTES</code> verdict (or your explicit <code>ACCEPT AS-IS</code>). Your interactive review and <code>APPROVED</code> step are unchanged — the critic just hardens each artefact before you see it.</div>
 
     <h3>Running it yourself</h3>
     <p>Use the command directly when you already have an approved ICEA or already-written code and want a focused second opinion:</p>
     <pre><span class="pre-label">bash</span><code>/critic icea ADO-1847    # critique an existing ICEA spec
 /critic code             # critique your staged / changed code
 /critic                  # infer the phase from context</code></pre>
-    <div class="callout"><span class="icon">ℹ</span>The standalone <code>/critic code</code> path <strong>reports concerns only</strong> — it never rewrites files, because the code is already on disk. To apply a remediation, use <code>/fix FP-xxxxxxxx</code> or edit manually. The automatic regenerate loop only applies to the in-flow gate, where the code is still unsaved.</div>
+    <div class="callout"><span class="icon">ℹ</span>The standalone <code>/critic code</code> path <strong>reports concerns only</strong> — it never rewrites files, because the code is already on disk. To apply a remediation, use <code>/fix FP-xxxxxxxx</code> or edit manually. The automatic regenerate loop only applies to the in-flow gates (ICEA draft, Tech Spec draft, and code), where the artefact is still unsaved.</div>
 
     <h3>What the critic does not do</h3>
     <p>The critic is <strong>ephemeral</strong>: it keeps no ledger and assigns no fingerprints. Persistent finding tracking stays with <code>/code-review</code>, <code>/security-review</code>, and <code>/fix</code>. The critic is a gate, not a tracker — it decides whether an artefact is good enough to save, then gets out of the way.</p>
@@ -890,7 +892,7 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
 
     <h3>Rollback</h3>
     <pre><code>/ai-assisted-development:dream-rollback</code></pre>
-    <p>Reverts the last consolidation using the <code>dream-log.md</code> audit trail. After a rollback, <code>dream-status</code> will show ⚠ Amber for the rollback check until <code>/dream</code> is run again to re-consolidate.</p>
+    <p>Reverts the last consolidation using the <code>dream-log.md</code> audit trail. After a rollback, <code>setup-status</code> will show ⚠ Amber for the rollback check until <code>/dream</code> is run again to re-consolidate.</p>
   </section>
 
   <!-- KNOWLEDGE GRAPH -->
@@ -898,18 +900,18 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
     <h2>Codebase knowledge graph <span class="tag tag-optional">New v2.6.0</span></h2>
     <p>The plugin maintains a lightweight map of your codebase under <code>.claude/graph/</code>: a <code>graph-index.md</code> listing every module, plus one small detail file per module (each capped at ~400 tokens). Skills read this map for fast orientation instead of scanning source, which keeps token cost down on large repositories.</p>
     <h3>Keeping it fresh</h3>
-    <p>Each module records a fingerprint of its entry-point files. A git post-merge hook sets a stale flag when those files change, and <code>dream-status</code> surfaces it. Run the refresh to bring only the changed modules current — untouched modules are skipped:</p>
+    <p>Each module records a fingerprint of its entry-point files. A git post-merge hook sets a stale flag when those files change, and <code>setup-status</code> surfaces it. Run the refresh to bring only the changed modules current — untouched modules are skipped:</p>
     <pre><code>/ai-assisted-development:graph-sync</code></pre>
-    <p><code>graph-sync</code> regenerates only stale detail files, detects newly-added modules, and — once a project crosses 30 modules — restructures the flat layout into a domain-grouped one. It clears the stale flag on success. After a plugin upgrade, <code>dream-sync</code> reminds you to run it.</p>
+    <p><code>graph-sync</code> regenerates only stale detail files, detects newly-added modules, and — once a project crosses 30 modules — restructures the flat layout into a domain-grouped one. It clears the stale flag on success. After a plugin upgrade, <code>setup-sync</code> reminds you to run it.</p>
   </section>
 
   <!-- COMMANDS REFERENCE -->
   <section id="commands-ref">
     <h2>All commands</h2>
     <div class="cmd-grid">
-      <div class="cmd-card"><div class="cmd-name">dream-init</div><div class="cmd-title">Project setup</div><div class="cmd-desc">One-time setup — seeds all infrastructure including deployment questionnaire. Safe to re-run.</div></div>
-      <div class="cmd-card"><div class="cmd-name">dream-status</div><div class="cmd-title">Health check</div><div class="cmd-desc">Infrastructure health check with prioritised action list.</div></div>
-      <div class="cmd-card"><div class="cmd-name">dream-sync</div><div class="cmd-title">Re-provision after upgrade</div><div class="cmd-desc">Brings an existing project current after a plugin upgrade — re-applies version-sensitive artifacts and re-stamps the version. Run when dream-status reports UPGRADE PENDING. Idempotent; never overwrites your content.</div></div>
+      <div class="cmd-card"><div class="cmd-name">setup-init</div><div class="cmd-title">Project setup</div><div class="cmd-desc">One-time setup — seeds all infrastructure including deployment questionnaire. Safe to re-run.</div></div>
+      <div class="cmd-card"><div class="cmd-name">setup-status</div><div class="cmd-title">Health check</div><div class="cmd-desc">Infrastructure health check with prioritised action list.</div></div>
+      <div class="cmd-card"><div class="cmd-name">setup-sync</div><div class="cmd-title">Re-provision after upgrade</div><div class="cmd-desc">Brings an existing project current after a plugin upgrade — re-applies version-sensitive artifacts and re-stamps the version. Run when setup-status reports UPGRADE PENDING. Idempotent; never overwrites your content.</div></div>
       <div class="cmd-card"><div class="cmd-name">dream</div><div class="cmd-title">Memory consolidation</div><div class="cmd-desc">6-phase session-to-memory consolidation with tiered approval.</div></div>
       <div class="cmd-card"><div class="cmd-name">dream-health</div><div class="cmd-title">Memory dashboard</div><div class="cmd-desc">Generates memory/health.html with confidence and decay visualisations.</div></div>
       <div class="cmd-card"><div class="cmd-name">dream-rollback</div><div class="cmd-title">Revert consolidation</div><div class="cmd-desc">Reverts a specific /dream run using the audit trail. Auditable and reversible.</div></div>
@@ -960,12 +962,12 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
         <tr><td><code>dynamic-scan</code></td><td>"dynamic scan", "DAST", "OWASP ZAP", "active/passive scan", "scan my running app"</td><td>Runtime DAST via ZAP/Docker against a live app/API; Angular/MVC/Web API/Blazor + dependency audit; B1–B7 severity, source-mapped fixes</td></tr>
         <tr><td><code>app-readiness</code></td><td>"is the app production ready", "app readiness", "go-live readiness"</td><td>8-domain Enterprise Architect assessment — reads architecture-deployment.md for hosting-specific checks</td></tr>
         <tr><td><code>plugin-readiness</code></td><td>"is the plugin production ready", "plugin readiness", "AI governance review"</td><td>6-domain AI Architect assessment — plugin state files only, never source</td></tr>
-        <tr><td><code>dream-status</code></td><td>"dream status", "plugin status", "check setup"</td><td>Read-only 13-check health report including architecture-deployment.md status</td></tr>
+        <tr><td><code>setup-status</code></td><td>"setup status", "plugin status", "check setup"</td><td>Read-only 13-check health report including architecture-deployment.md status</td></tr>
         <tr><td><code>dream-rollback</code></td><td>"rollback dream", "undo dream", "restore memory"</td><td>Reverses a specific /dream run using audit trail — auditable and itself reversible</td></tr>
         <tr><td><code>product-docs</code></td><td>"generate product detail", "write user guide", "product documentation"</td><td>Generates Product Detail Document and/or User Guide as self-contained HTML</td></tr>
         <tr><td><code>sprint-metrics</code></td><td>"sprint metrics", "ICEA compliance rate", "how did the sprint go"</td><td>Post-sprint KPIs: ICEA compliance rate, PR rejection rate, rework hours</td></tr>
         <tr><td><code>token-analysis</code></td><td>"analyse token usage", "token cost", "expensive prompts"</td><td>Session token analysis with persistent graph cache and prompt rewrite recommendations</td></tr>
-        <tr><td><code>critic</code></td><td>"critique", "second opinion on this spec", "review this before saving", "is this over-engineered"</td><td>Second-pass critic. Auto-runs inside <code>icea-feature</code> — after the ICEA draft (folds concerns into the gap list) and after code generation but before any disk write (gates the write; up to 2 auto-retries then surfaces). Also standalone via <code>/critic icea|code</code>. Ephemeral — no ledger.</td></tr>
+        <tr><td><code>critic</code></td><td>"critique", "second opinion on this spec", "review this before saving", "is this over-engineered"</td><td>Second-pass critic. Auto-runs at three gates before each artefact is written — the ICEA draft (<code>icea-feature</code> Step 5) and Tech Spec draft (Step 8), plus generated code (<code>icea-implement</code> Step 4a); up to 2 auto-retries then surfaces. Also standalone via <code>/critic icea|code</code>. Ephemeral — no ledger.</td></tr>
       </tbody>
     </table></div>
   </section>
@@ -985,7 +987,7 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
     </div>
     <div class="tier-card">
       <div class="tier-head"><span class="tier-pill t-inf">Infrastructure</span><span class="tier-model">Sonnet · no override variable</span></div>
-      <div class="tier-skills">Used by: <code>dream</code> · <code>architect</code> · <code>dream-status</code> · <code>sprint-metrics</code> · <code>token-analysis</code></div>
+      <div class="tier-skills">Used by: <code>dream</code> · <code>architect</code> · <code>setup-status</code> · <code>sprint-metrics</code> · <code>token-analysis</code></div>
     </div>
 
     <h3>Override in <code>.claude/settings.json</code></h3>

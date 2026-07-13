@@ -1,0 +1,26 @@
+skill: icea-approve
+scenarios:
+  - id: approve-by-ado-id
+    description: "Should approve an ICEA and Tech Spec by ADO ID, reading state from disk"
+    input: "APPROVE ADO-1847"
+    expect:
+      triggered: true
+      contains:
+        - "ADO-1847"
+        - "Approved"
+
+  - id: resolve-from-disk
+    description: "Should work in a fresh session by reading state from disk"
+    input: "/icea-approve ADO-1847"
+    expect:
+      triggered: true
+      contains:
+        - "ICEA"
+
+  - id: missing-id-prompts
+    description: "Should ask for the ADO ID when none is provided"
+    input: "Approve the ICEA"
+    expect:
+      triggered: true
+      contains:
+        - "ADO #"

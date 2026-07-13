@@ -108,3 +108,22 @@
 ## Known Infrastructure Constraints
 
 > ⚠ Not yet documented
+
+## Non-Functional Requirements & Constraints
+
+<!-- Hybrid: extract detectable signals from code/config (rate limiting, response caching,
+     resource limits, health/readiness probes, HSTS/CORS); the targets/SLAs are usually
+     human knowledge — captured via the Step 0.5 NFR questions or flagged. -->
+
+| Item | Value |
+|---|---|
+| Performance target (p95 / throughput) | |
+| Expected peak load | |
+| Availability / uptime target | |
+| Scaling model (vertical / horizontal / autoscale) | |
+| Rate limiting | |
+| Caching strategy | |
+| Compliance frameworks (e.g. SOC 2, GDPR, HIPAA) | |
+| Data residency constraints | |
+
+> ⚠ Not yet answered — run the architect skill / `/update-arch --deployment` to populate

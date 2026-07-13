@@ -120,7 +120,7 @@ The skill outputs only recommendations whose trigger condition is met by actual 
 - **Trigger**: `.claude/architecture/` does not exist or is empty
 - **Saving**: Medium (architecture context has to be re-established each session
   through prompts or file reads instead of being loaded from a structured doc)
-- **Action**: Run `/ai-assisted-development:dream-init` to generate architecture
+- **Action**: Run `/ai-assisted-development:setup-init` to generate architecture
   docs automatically.
 - **Priority**: High
 

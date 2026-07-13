@@ -58,3 +58,7 @@ Summary: {one line — what a sync brings current}
 | 2.4.1 | ICEA and Tech Spec drafts written to `temp/` for VS Code preview |
 | 2.6.0 | Codebase knowledge graph (`.claude/graph/`) — index+detail files with git-hook staleness detection; `/graph-sync` refresh |
 | 3.0.0 | Knowledge graph is the single orientation layer; `domain-map.md` retired; graph now committed (not gitignored) |
+| 3.10.0 | Two-signal architecture-doc population detector; bootstrap no longer strips the `<!-- TEMPLATE -->` marker (ADR 0053) |
+| 3.11.0 | Disable Claude Code built-in auto-memory (`autoMemoryEnabled: false`) so Dream captures land in the repo `memory/`, not the machine profile |
+| 3.11.1 | Fix CLAUDE.md managed-section duplication — CRLF-tolerant `extractSection` separator; `setup-sync` no longer drags the template tail into each append |
+| 3.12.0 | Share non-secret `settings.json` + `.claude/architecture/` + review ledgers; new `check-settings-secrets.cjs` guard (PreToolUse + pre-commit) blocks secrets in the shared file; secrets/permissions move to gitignored `settings.local.json`; setup-status 1i inverted |

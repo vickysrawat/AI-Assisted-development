@@ -74,3 +74,54 @@ scenarios:
       triggered: true
       contains:
         - "PYTHON_DJANGO"
+
+  - id: generates-eight-doc-set
+    description: "Should describe the expanded 8-doc set including the new files"
+    input: "Which architecture documents does the architect skill generate for a project?"
+    expect:
+      triggered: true
+      contains:
+        - "architecture-data"
+        - "architecture-security"
+        - "architecture-decisions"
+        - "architecture-integrations"
+
+  - id: architecture-md-has-mermaid-diagrams
+    description: "architecture.md must include the two Mermaid diagrams"
+    input: "What diagrams does architecture.md contain, and in what format?"
+    expect:
+      triggered: true
+      contains:
+        - "Mermaid"
+        - "End-to-End"
+        - "Layered"
+
+  - id: decisions-log-seed-only-no-invented-rationale
+    description: "Decision log is seed-only; rationale must never be invented"
+    input: "Seed architecture-decisions.md for this repo. Explain how you fill the Rationale."
+    expect:
+      triggered: true
+      contains:
+        - "Could not determine"
+      not_contains:
+        - "I assume the rationale"
+
+  - id: decisions-log-append-only-not-overwritten
+    description: "Must not overwrite an architecture-decisions.md that already has real AD entries"
+    input: |
+      Run the architect skill. architecture-decisions.md already contains AD-001 and AD-002
+      with filled-in rationale.
+    expect:
+      triggered: true
+      contains:
+        - "append"
+      not_contains:
+        - "overwrite"
+
+  - id: hard-rule-no-invented-nfr-or-authz
+    description: "Must flag rather than invent NFR targets, SLAs, and authorization rules"
+    input: "Populate architecture-security.md and the NFR section but the code has no explicit roles or performance targets."
+    expect:
+      triggered: true
+      contains:
+        - "Could not determine"

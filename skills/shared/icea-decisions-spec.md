@@ -100,7 +100,7 @@ Once a D option is selected, the implementation is bound to it:
 
 Selected decisions are first-class memory: Dream harvests "chose {A} over {B}
 because {evidence}" into topic memory — the application-level decision history
-mirroring what docs/adr/ does for the plugin itself.
+mirroring what the plugin's ADR records do for the plugin itself.
 
 ## Hard rules
 

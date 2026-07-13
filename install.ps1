@@ -274,13 +274,25 @@ if ($Update) {
 }
 "@
 
+  # Copying the source files alone does NOT change the version Claude loads — it serves
+  # from a version-keyed cache dir recorded in installed_plugins.json. Re-read the source
+  # marketplace, then update the plugin so the new version is copied into the cache.
+  if (Get-Command claude -ErrorAction SilentlyContinue) {
+    Write-Host "  -> Refreshing marketplace metadata in Claude Code..."
+    claude plugin marketplace update $MARKETPLACE_NAME 2>$null
+    Write-Host "  -> Applying v$newVersion..."
+    claude plugin update "$PLUGIN_NAME@$MARKETPLACE_NAME" 2>$null
+  } else {
+    Write-Yellow "  claude CLI not found — run 'claude plugin update $PLUGIN_NAME@$MARKETPLACE_NAME' manually."
+  }
+
   Write-Host ""
   Write-Green "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   Write-Green "  Plugin updated: v$installedVersion → v$newVersion"
   Write-Green "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   Write-Host ""
   Write-Host "Start a new Claude Code session to load the updated plugin."
-  Write-Host "Then run /dream-sync in each project to update the plugin version."
+  Write-Host "Then run /setup-sync in each project to update the plugin version."
   Write-Host ""
   exit 0
 }
@@ -435,6 +447,10 @@ Write-Host ""
 Write-Host "Registering marketplace and installing plugin..."
 Write-Host ""
 claude plugin marketplace add $MARKETPLACE_DIR
+# 'add' is a no-op when the marketplace is already registered, leaving Claude with stale
+# metadata pointing at the previously-installed version. Force a re-read of the source we
+# just refreshed so 'install' below sees the current plugin.json version.
+claude plugin marketplace update $MARKETPLACE_NAME 2>$null
 
 $installOutput = claude plugin install "$PLUGIN_NAME@$MARKETPLACE_NAME" --scope user 2>&1
 $installOutput | ForEach-Object { Write-Host $_ }
@@ -458,6 +474,14 @@ if ($LASTEXITCODE -ne 0 -or ($installOutput -match "Failed to install")) {
   exit 1
 }
 
+# ── Force the current version into Claude's cache ──────────────────────────────
+# Claude serves the plugin from a version-keyed cache dir recorded in
+# installed_plugins.json — NOT from the marketplace source. When a prior version is
+# already installed, the 'install' above is a no-op, so 'update' is what actually copies
+# the refreshed version into the cache and rewrites installed_plugins.json. Harmless
+# (no-op) on a genuinely fresh install.
+claude plugin update "$PLUGIN_NAME@$MARKETPLACE_NAME" 2>$null
+
 # ── Count commands dynamically ────────────────────────────────────────────────
 $commandCount = (Get-ChildItem "$PLUGIN_DIR\commands" -Filter "*.md" -ErrorAction SilentlyContinue | Measure-Object).Count
 
@@ -471,19 +495,19 @@ Write-Host "┌─ Next steps ────────────────�
 Write-Host "│                                                                        │"
 Write-Host "│  1. Open your project in VS Code                                       │"
 Write-Host "│  2. Open a terminal and run: claude                                    │"
-Write-Host "│  3. Inside the session, run: /dream-init (new project)                 │"
-Write-Host "│                          or: /dream-sync (existing project)            │"
-Write-Host "│     dream-sync updates the plugin version in your project files.       │"
+Write-Host "│  3. Inside the session, run: /setup-init (new project)                 │"
+Write-Host "│                          or: /setup-sync (existing project)            │"
+Write-Host "│     setup-sync updates the plugin version in your project files.       │"
 Write-Host "│  4. Set AZURE_DEVOPS_PAT as a Windows User Environment Variable        │"
 Write-Host "│     Required by: /pr-create  /sprint-metrics  /app-readiness           │"
 Write-Host "│     Win+S -> 'environment variables' -> User variables -> New          │"
 Write-Host "│  4a. If you store PAT in .claude/settings.json instead, add that       │"
-Write-Host "│     file to .gitignore immediately — /dream-status will flag it Red.   │"
-Write-Host "│  5. Run /dream-status to verify all infrastructure checks are green    │"
+Write-Host "│     file to .gitignore immediately — /setup-status will flag it Red.   │"
+Write-Host "│  5. Run /setup-status to verify all infrastructure checks are green    │"
 Write-Host "│                                                                        │"
 Write-Host ("│  Available commands (type / in Claude Code to see all $commandCount):              │")
 Write-Host "│  SAVE ICEA  SAVE TECH  APPROVE  IMPLEMENT  REVISE  STATUS             │"
-Write-Host "│  dream  dream-status  session-start  icea-feature  code-review         │"
+Write-Host "│  dream  setup-status  session-start  icea-feature  code-review         │"
 Write-Host "│  checkin  bug  fix  explain  app-readiness  security-review            │"
 Write-Host "│                                                                        │"
 Write-Host "│  To update later:    .\install.ps1 -Update                            │"

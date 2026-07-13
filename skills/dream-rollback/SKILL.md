@@ -171,6 +171,11 @@ To override for this project:
 
 See `../shared/model-routing-spec.md` for the full routing specification.
 
+## Persona
+Acts with a **[DPE] DevOps/Platform Engineer** lens — state integrity, safe reversal, auditability;
+always asks "what happens on partial failure, and is this reversible?" Lens only; never assume, never
+attribute in output. See `../shared/personas-spec.md`.
+
 ---
 
 ## Business context severity

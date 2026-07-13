@@ -1,5 +1,5 @@
 # Change Tier Classification — Shared Spec
-_Spec version: 1.0 · Last changed: 2026-06-11 · Governed by: skills/shared/_
+_Spec version: 1.1 · Last changed: 2026-07-10 · Governed by: skills/shared/_
 
 Classifies a proposed change into a tier that determines how much ICEA ceremony
 applies. **The system classifies, never the developer.** The classification is
@@ -16,7 +16,7 @@ nothing to game.
 | Tier | Name | Gate applied |
 |---|---|---|
 | T1 | Micro | Auto-ICEA: one-line spec generated, approval implied unless the critic objects. Critic still runs on output. |
-| T2 | Standard | Full ICEA draft, explicit APPROVED required. Critic runs on draft and output. |
+| T2 | Standard | Full ICEA draft, explicit APPROVED required. Critic runs on the ICEA draft (icea-feature Step 5), the Tech Spec draft (Step 8), and the generated code (icea-implement Step 4a). |
 | T3 | Elevated | Full ICEA + mandatory Examples for permission boundaries + pr-spec-review recommended before merge. |
 
 ## Classification rules
