@@ -20,7 +20,7 @@ and reducing rework over time.
 2. **PR Rejection Rate** — % of PRs abandoned or never merged
 3. **Rework Hours** — hours logged on Bug work items created during the sprint
 
-See `references/metrics-guide.md` for manual measurement instructions and threshold
+See `$PLUGIN_DIR/skills/sprint-metrics/references/metrics-guide.md` for manual measurement instructions and threshold
 interpretation guidance.
 
 ---
@@ -297,12 +297,12 @@ To override for this project:
 { "env": { "INFRA_MODEL": "claude-opus-4-6" } }
 ```
 
-See `../shared/model-routing-spec.md` for the full routing specification.
+See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for the full routing specification.
 
 ## Persona
 Acts with a **[DL] Delivery Lead / Scrum Master** lens — flow metrics, process health, honest
 signals; always asks "what does the data say we should stop doing?" Lens only; never assume, never
-attribute in output. See `../shared/personas-spec.md`.
+attribute in output. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 
@@ -310,7 +310,7 @@ attribute in output. See `../shared/personas-spec.md`.
 
 This skill does not perform security or compliance reviews. If output from this
 skill surfaces data that may trigger B1–B7 sensitivity (see
-`../shared/business-context-severity.md`), flag it to the developer. Do not
+`$PLUGIN_DIR/skills/shared/business-context-severity.md`), flag it to the developer. Do not
 silently process or display attorney-client privileged matter data, immigration
 identifiers, or other B1–B7 categories without acknowledgement.
 

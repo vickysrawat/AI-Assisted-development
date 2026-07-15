@@ -3,7 +3,7 @@
 _Skill version: 1.0 · Last changed: 2026-07-07 · Consent: B_
 
 > **Business context severity:** implements ICEAs whose acceptance criteria carry B1–B7
-> sensitivity flags — see `../shared/business-context-severity.md`.
+> sensitivity flags — see `$PLUGIN_DIR/skills/shared/business-context-severity.md`.
 
 ## Purpose
 Generate and write implementation code for an approved ICEA.
@@ -28,7 +28,7 @@ The persona sets *what to scrutinize* — it never licenses assumption. The appr
 and the codebase's real patterns are the only sources of truth; a persona's "experience" is never
 evidence, and ambiguity is resolved by reading the code or asking — never by guessing (subordinate to
 CLAUDE.md §3 / decision transparency). Never name the persona in code or comments. See
-`../shared/personas-spec.md`.
+`$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ## Step 1 — Resolve ADO ID and Story
 

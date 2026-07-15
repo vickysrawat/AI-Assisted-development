@@ -9,7 +9,7 @@ This command uses the **generation tier** — `ICEA_MODEL`
 (default: `claude-opus-4-6`).
 
 To override: `{{ "env": {{ "ICEA_MODEL": "claude-opus-4-6" }} }}` in `.claude/settings.json`.
-See `skills/shared/model-routing-spec.md` for the full specification.
+See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for the full specification.
 
 ---
 

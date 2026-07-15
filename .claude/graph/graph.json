@@ -1,0 +1,512 @@
+{
+  "meta": {
+    "generatedAt": "2026-07-13",
+    "structure": "domain",
+    "pluginVersion": "3.12.0",
+    "repoType": "JS_LIBRARY"
+  },
+  "nodes": [
+    {
+      "id": "ado-tasks",
+      "module": "ado-tasks",
+      "domain": "icea",
+      "type": "service",
+      "detailFile": ".claude/graph/icea/ado-tasks.md",
+      "entryPoint": "skills/ado-tasks/SKILL.md",
+      "paths": [
+        "skills/ado-tasks"
+      ],
+      "fingerprint": "84f064a533acec94e98c9c8821553f58037c1f0b",
+      "hub": false
+    },
+    {
+      "id": "app-readiness",
+      "module": "app-readiness",
+      "domain": "observability",
+      "type": "service",
+      "detailFile": ".claude/graph/observability/app-readiness.md",
+      "entryPoint": "skills/app-readiness/SKILL.md",
+      "paths": [
+        "skills/app-readiness"
+      ],
+      "fingerprint": "cbe8aec1457cc02452111729089fe0b910fcaf29",
+      "hub": false
+    },
+    {
+      "id": "architect",
+      "module": "architect",
+      "domain": "setup",
+      "type": "service",
+      "detailFile": ".claude/graph/setup/architect.md",
+      "entryPoint": "skills/architect/SKILL.md",
+      "paths": [
+        "skills/architect"
+      ],
+      "fingerprint": "7dd655b54f0a08b12066acf7cded2ef962dd0f75",
+      "hub": true
+    },
+    {
+      "id": "code-review",
+      "module": "code-review",
+      "domain": "quality",
+      "type": "service",
+      "detailFile": ".claude/graph/quality/code-review.md",
+      "entryPoint": "skills/code-review/SKILL.md",
+      "paths": [
+        "skills/code-review"
+      ],
+      "fingerprint": "cc0c07862ce70dad388052d477f9f9cae2018ee0",
+      "hub": false
+    },
+    {
+      "id": "commands",
+      "module": "commands",
+      "domain": "platform",
+      "type": "shared-lib",
+      "detailFile": ".claude/graph/platform/commands.md",
+      "entryPoint": "commands",
+      "paths": [
+        "commands"
+      ],
+      "fingerprint": "39180cd5c74633db51884e3ffd24f55a4e90bff9",
+      "hub": false
+    },
+    {
+      "id": "critic",
+      "module": "critic",
+      "domain": "icea",
+      "type": "service",
+      "detailFile": ".claude/graph/icea/critic.md",
+      "entryPoint": "skills/critic/SKILL.md",
+      "paths": [
+        "skills/critic"
+      ],
+      "fingerprint": "da4e9aad2e054e1a6a9ee8d8706327585d8da36a",
+      "hub": false
+    },
+    {
+      "id": "docs-adr",
+      "module": "docs-adr",
+      "domain": "platform",
+      "type": "shared-lib",
+      "detailFile": ".claude/graph/platform/docs-adr.md",
+      "entryPoint": "docs/adr",
+      "paths": [
+        "docs/adr"
+      ],
+      "fingerprint": "324a2925351cb0b5d8903660bab1e193c9dc9213",
+      "hub": false
+    },
+    {
+      "id": "dream-rollback",
+      "module": "dream-rollback",
+      "domain": "quality",
+      "type": "service",
+      "detailFile": ".claude/graph/quality/dream-rollback.md",
+      "entryPoint": "skills/dream-rollback/SKILL.md",
+      "paths": [
+        "skills/dream-rollback"
+      ],
+      "fingerprint": "f497f2a53a9a844d2a1b8a9b20f16324ccb565e9",
+      "hub": false
+    },
+    {
+      "id": "dynamic-scan",
+      "module": "dynamic-scan",
+      "domain": "quality",
+      "type": "service",
+      "detailFile": ".claude/graph/quality/dynamic-scan.md",
+      "entryPoint": "skills/dynamic-scan/SKILL.md",
+      "paths": [
+        "skills/dynamic-scan"
+      ],
+      "fingerprint": "6653e0d4a9ba6076dcabaa098279ba8df2969ff3",
+      "hub": false
+    },
+    {
+      "id": "graph-sync",
+      "module": "graph-sync",
+      "domain": "graph",
+      "type": "service",
+      "detailFile": ".claude/graph/graph/graph-sync.md",
+      "entryPoint": "skills/graph-sync/SKILL.md",
+      "paths": [
+        "skills/graph-sync"
+      ],
+      "fingerprint": "61e31c5a3195bba8faae60cf8f8c54d93925b4ec",
+      "hub": false
+    },
+    {
+      "id": "graph-viz",
+      "module": "graph-viz",
+      "domain": "graph",
+      "type": "service",
+      "detailFile": ".claude/graph/graph/graph-viz.md",
+      "entryPoint": "skills/graph-viz/SKILL.md",
+      "paths": [
+        "skills/graph-viz"
+      ],
+      "fingerprint": "330d42cd91beda6123af1b4b01ea6c3f389c9f0a",
+      "hub": false
+    },
+    {
+      "id": "icea-approve",
+      "module": "icea-approve",
+      "domain": "icea",
+      "type": "service",
+      "detailFile": ".claude/graph/icea/icea-approve.md",
+      "entryPoint": "skills/icea-approve/SKILL.md",
+      "paths": [
+        "skills/icea-approve"
+      ],
+      "fingerprint": "e5f826cbe007d23e10a8efc4a24be9225d413d0e",
+      "hub": false
+    },
+    {
+      "id": "icea-feature",
+      "module": "icea-feature",
+      "domain": "icea",
+      "type": "service",
+      "detailFile": ".claude/graph/icea/icea-feature.md",
+      "entryPoint": "skills/icea-feature/SKILL.md",
+      "paths": [
+        "skills/icea-feature"
+      ],
+      "fingerprint": "3fe15c3d0ad9844caed828a488dafa165758e8ef",
+      "hub": true
+    },
+    {
+      "id": "icea-implement",
+      "module": "icea-implement",
+      "domain": "icea",
+      "type": "service",
+      "detailFile": ".claude/graph/icea/icea-implement.md",
+      "entryPoint": "skills/icea-implement/SKILL.md",
+      "paths": [
+        "skills/icea-implement"
+      ],
+      "fingerprint": "7b15ce69deb9783677a660439adcfd0043e3f168",
+      "hub": false
+    },
+    {
+      "id": "icea-review",
+      "module": "icea-review",
+      "domain": "icea",
+      "type": "service",
+      "detailFile": ".claude/graph/icea/icea-review.md",
+      "entryPoint": "skills/icea-review/SKILL.md",
+      "paths": [
+        "skills/icea-review"
+      ],
+      "fingerprint": "7c29cd6afb4d1243ad4c4c2db62fa92743538944",
+      "hub": false
+    },
+    {
+      "id": "icea-revise",
+      "module": "icea-revise",
+      "domain": "icea",
+      "type": "service",
+      "detailFile": ".claude/graph/icea/icea-revise.md",
+      "entryPoint": "skills/icea-revise/SKILL.md",
+      "paths": [
+        "skills/icea-revise"
+      ],
+      "fingerprint": "a9cf1ce58bc26544a74ae897fb2e0f872d50d665",
+      "hub": false
+    },
+    {
+      "id": "icea-status",
+      "module": "icea-status",
+      "domain": "icea",
+      "type": "service",
+      "detailFile": ".claude/graph/icea/icea-status.md",
+      "entryPoint": "skills/icea-status/SKILL.md",
+      "paths": [
+        "skills/icea-status"
+      ],
+      "fingerprint": "81c1ef9b03b9903b2f97adbad7bda2f3981fa172",
+      "hub": false
+    },
+    {
+      "id": "plugin-readiness",
+      "module": "plugin-readiness",
+      "domain": "observability",
+      "type": "service",
+      "detailFile": ".claude/graph/observability/plugin-readiness.md",
+      "entryPoint": "skills/plugin-readiness/SKILL.md",
+      "paths": [
+        "skills/plugin-readiness"
+      ],
+      "fingerprint": "7e54639f5530c7b03723ebdf4fa81c384f8a86eb",
+      "hub": false
+    },
+    {
+      "id": "pr-create",
+      "module": "pr-create",
+      "domain": "pr-ado",
+      "type": "service",
+      "detailFile": ".claude/graph/pr-ado/pr-create.md",
+      "entryPoint": "skills/pr-create/SKILL.md",
+      "paths": [
+        "skills/pr-create"
+      ],
+      "fingerprint": "17af1711bbacf3280667d5ac617260667920a433",
+      "hub": false
+    },
+    {
+      "id": "pr-describe",
+      "module": "pr-describe",
+      "domain": "pr-ado",
+      "type": "service",
+      "detailFile": ".claude/graph/pr-ado/pr-describe.md",
+      "entryPoint": "skills/pr-describe/SKILL.md",
+      "paths": [
+        "skills/pr-describe"
+      ],
+      "fingerprint": "fc6183d1413e8828f3b8050c1c075a44e1f24a7e",
+      "hub": false
+    },
+    {
+      "id": "pr-spec-review",
+      "module": "pr-spec-review",
+      "domain": "pr-ado",
+      "type": "service",
+      "detailFile": ".claude/graph/pr-ado/pr-spec-review.md",
+      "entryPoint": "skills/pr-spec-review/SKILL.md",
+      "paths": [
+        "skills/pr-spec-review"
+      ],
+      "fingerprint": "pending",
+      "hub": false
+    },
+    {
+      "id": "project-deploy",
+      "module": "project-deploy",
+      "domain": "setup",
+      "type": "shared-lib",
+      "detailFile": ".claude/graph/setup/project-deploy.md",
+      "entryPoint": "_project-deploy/hooks",
+      "paths": [
+        "_project-deploy"
+      ],
+      "fingerprint": "ac75a9cd79cf51186abe98a07bc552085502b718",
+      "hub": false
+    },
+    {
+      "id": "rules",
+      "module": "rules",
+      "domain": "platform",
+      "type": "shared-lib",
+      "detailFile": ".claude/graph/platform/rules.md",
+      "entryPoint": "rules",
+      "paths": [
+        "rules"
+      ],
+      "fingerprint": "203eb969519ed6a103b765988d59e121753d9e39",
+      "hub": false
+    },
+    {
+      "id": "scripts",
+      "module": "scripts",
+      "domain": "setup",
+      "type": "shared-lib",
+      "detailFile": ".claude/graph/setup/scripts.md",
+      "entryPoint": "scripts/setup-init-bootstrap.cjs",
+      "paths": [
+        "scripts"
+      ],
+      "fingerprint": "c60fe5c6200e2fdf40cfd45fd50d2ed8eea2db07",
+      "hub": true
+    },
+    {
+      "id": "security",
+      "module": "security",
+      "domain": "quality",
+      "type": "service",
+      "detailFile": ".claude/graph/quality/security.md",
+      "entryPoint": "skills/security/SKILL.md",
+      "paths": [
+        "skills/security"
+      ],
+      "fingerprint": "d0703e47180f9e2b9be614d14c7e9aff71ce4f5c",
+      "hub": false
+    },
+    {
+      "id": "setup-status",
+      "module": "setup-status",
+      "domain": "setup",
+      "type": "service",
+      "detailFile": ".claude/graph/setup/setup-status.md",
+      "entryPoint": "skills/setup-status/SKILL.md",
+      "paths": [
+        "skills/setup-status"
+      ],
+      "fingerprint": "72c18a27925087050d0af583a1ac4ad7ed5ea2b1",
+      "hub": false
+    },
+    {
+      "id": "setup-sync",
+      "module": "setup-sync",
+      "domain": "setup",
+      "type": "service",
+      "detailFile": ".claude/graph/setup/setup-sync.md",
+      "entryPoint": "skills/setup-sync/SKILL.md",
+      "paths": [
+        "skills/setup-sync"
+      ],
+      "fingerprint": "ea63d165bbaf9ae2fb4f8390db46180c39b7954f",
+      "hub": false
+    },
+    {
+      "id": "setup-teardown",
+      "module": "setup-teardown",
+      "domain": "setup",
+      "type": "service",
+      "detailFile": ".claude/graph/setup/setup-teardown.md",
+      "entryPoint": "skills/setup-teardown/SKILL.md",
+      "paths": [
+        "skills/setup-teardown"
+      ],
+      "fingerprint": "1bbb914c25fdb09782a04f98560cc86964e6c756",
+      "hub": false
+    },
+    {
+      "id": "shared",
+      "module": "shared",
+      "domain": "platform",
+      "type": "shared-lib",
+      "detailFile": ".claude/graph/platform/shared.md",
+      "entryPoint": "skills/shared",
+      "paths": [
+        "skills/shared"
+      ],
+      "fingerprint": "3e0e394d152d15b8eee983dd751968fb5aa7e436",
+      "hub": true
+    },
+    {
+      "id": "sprint-metrics",
+      "module": "sprint-metrics",
+      "domain": "pr-ado",
+      "type": "service",
+      "detailFile": ".claude/graph/pr-ado/sprint-metrics.md",
+      "entryPoint": "skills/sprint-metrics/SKILL.md",
+      "paths": [
+        "skills/sprint-metrics"
+      ],
+      "fingerprint": "fab605c910c2bf2cf4d45a5b2cd4d9c35ef8396e",
+      "hub": false
+    },
+    {
+      "id": "tests",
+      "module": "tests",
+      "domain": "platform",
+      "type": "shared-lib",
+      "detailFile": ".claude/graph/platform/tests.md",
+      "entryPoint": "tests/validate.js",
+      "paths": [
+        "tests"
+      ],
+      "fingerprint": "887a0228f9abc6bacf8d813ad96c4a2ddf9a7f6a",
+      "hub": false
+    },
+    {
+      "id": "token-analysis",
+      "module": "token-analysis",
+      "domain": "observability",
+      "type": "service",
+      "detailFile": ".claude/graph/observability/token-analysis.md",
+      "entryPoint": "skills/token-analysis/SKILL.md",
+      "paths": [
+        "skills/token-analysis"
+      ],
+      "fingerprint": "e3968b33d71b267b53f6058106c664433702e8c3",
+      "hub": false
+    }
+  ],
+  "edges": [
+    {
+      "from": "architect",
+      "to": "scripts",
+      "type": "INFERRED",
+      "confidence": 0.95
+    },
+    {
+      "from": "architect",
+      "to": "shared",
+      "type": "INFERRED",
+      "confidence": 0.9
+    },
+    {
+      "from": "code-review",
+      "to": "shared",
+      "type": "INFERRED",
+      "confidence": 0.9
+    },
+    {
+      "from": "commands",
+      "to": "shared",
+      "type": "INFERRED",
+      "confidence": 0.7
+    },
+    {
+      "from": "graph-sync",
+      "to": "shared",
+      "type": "INFERRED",
+      "confidence": 0.9
+    },
+    {
+      "from": "icea-feature",
+      "to": "critic",
+      "type": "INFERRED",
+      "confidence": 0.95
+    },
+    {
+      "from": "icea-feature",
+      "to": "shared",
+      "type": "INFERRED",
+      "confidence": 0.9
+    },
+    {
+      "from": "icea-implement",
+      "to": "critic",
+      "type": "INFERRED",
+      "confidence": 0.95
+    },
+    {
+      "from": "pr-create",
+      "to": "shared",
+      "type": "INFERRED",
+      "confidence": 0.8
+    },
+    {
+      "from": "scripts",
+      "to": "project-deploy",
+      "type": "INFERRED",
+      "confidence": 0.8
+    },
+    {
+      "from": "security",
+      "to": "shared",
+      "type": "INFERRED",
+      "confidence": 0.9
+    },
+    {
+      "from": "setup-status",
+      "to": "shared",
+      "type": "INFERRED",
+      "confidence": 0.9
+    },
+    {
+      "from": "setup-sync",
+      "to": "scripts",
+      "type": "INFERRED",
+      "confidence": 0.95
+    },
+    {
+      "from": "sprint-metrics",
+      "to": "shared",
+      "type": "INFERRED",
+      "confidence": 0.8
+    }
+  ]
+}

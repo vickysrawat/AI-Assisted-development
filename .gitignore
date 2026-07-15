@@ -53,6 +53,7 @@ tests/results/
 # .claude/hooks/check-settings-secrets.cjs blocks a secret from reaching the shared file at
 # both write-time (PreToolUse) and commit-time (pre-commit).
 
+
 # === ai-assisted-development (managed) ===
 .claude/settings.local.json
 .claude/security-checkpoint.json

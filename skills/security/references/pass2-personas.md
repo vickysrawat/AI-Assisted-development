@@ -9,7 +9,7 @@ Pass 2 runs several focused reviews, each anchored to one threat model. Each
 persona has ONE job. They catch what flat checklists miss because they reason
 about intent, context, and interaction patterns — not just syntax matching.
 
-All personas are subordinate to `../../shared/personas-spec.md` guardrails:
+All personas are subordinate to `$PLUGIN_DIR/skills/shared/personas-spec.md` guardrails:
 - Lens, not roleplay. Never write in-character.
 - Stack-agnostic. Expertise is the project's detected stack.
 - Governance subordination. A persona's "experience" is never evidence.
@@ -28,7 +28,7 @@ combination as a Pass 1 or prior persona finding. Only report findings that
 add NEW information.
 ```
 
-See `../../shared/three-pass-spec.md` § Pass 2 for the full de-duplication
+See `$PLUGIN_DIR/skills/shared/three-pass-spec.md` § Pass 2 for the full de-duplication
 protocol and persona ordering rules.
 
 ---

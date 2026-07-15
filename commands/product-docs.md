@@ -5,6 +5,8 @@ argument-hint: (no arguments needed)
 
 <skill>product-docs</skill>
 
+> **Plugin path:** Read `.claude/plugin-path.txt` to get `PLUGIN_DIR`. If absent, use the Node.js resolver from `skills/shared/plugin-path-resolution.md §1a`.
+
 ## Your task
 
 Generate a **Product Detail Document** and/or **User Guide** as self-contained HTML files
@@ -62,8 +64,8 @@ environments, team or owner. If nothing is readable, ask the user for:
 
 Using the `product-docs` skill:
 
-1. Load `skills/product-docs/references/product-detail-template.html` for the Product Detail Document.
-2. Load `skills/product-docs/references/user-guide-template.html` for the User Guide.
+1. Load `$PLUGIN_DIR/skills/product-docs/references/product-detail-template.html` for the Product Detail Document.
+2. Load `$PLUGIN_DIR/skills/product-docs/references/user-guide-template.html` for the User Guide.
 3. Replace every `{{PLACEHOLDER}}` with real values derived from Step 2.
 4. Remove any `{{#if}}` / `{{#each}}` blocks that have no data.
 5. Write each file to the **project root** using Node.js:

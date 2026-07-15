@@ -23,7 +23,7 @@ code snippet** — matching Coverity's output format.
 
 ---
 
-> **Single-writer assumption**: This skill writes to a persistent cache file. See `../shared/single-writer-assumption.md` for concurrency constraints and CI guidance.
+> **Single-writer assumption**: This skill writes to a persistent cache file. See `$PLUGIN_DIR/skills/shared/single-writer-assumption.md` for concurrency constraints and CI guidance.
 
 ## Model routing
 
@@ -34,7 +34,7 @@ To override for this project, set in `.claude/settings.json`:
 { "env": { "REVIEW_MODEL": "claude-sonnet-4-6" } }
 ```
 
-See `../shared/model-routing-spec.md` for full routing documentation.
+See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for full routing documentation.
 
 ## Persona
 
@@ -46,14 +46,14 @@ detected_stacks), never assuming one.
 The persona sets *what to scrutinize* — it never licenses assumption. Every finding must trace to
 real code (file/function/event path); a persona's "experience" is never evidence, and no defect is
 reported without the path that proves it (subordinate to CLAUDE.md section 3 / decision
-transparency). Never name the persona in any finding. See `../shared/personas-spec.md`.
+transparency). Never name the persona in any finding. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 
 ## Scan Architecture — Three Passes
 
 This skill implements the three-pass scan architecture defined in
-`../shared/three-pass-spec.md`. Read that spec for the full architecture.
+`$PLUGIN_DIR/skills/shared/three-pass-spec.md`. Read that spec for the full architecture.
 
 ```
 Pass 1 — STRUCTURED RULE-BASED SCAN
@@ -80,7 +80,7 @@ Pass 3 — FREE-FLOW ADVERSARIAL PASS
 If no scope flag was provided, present the interactive menu and WAIT for the
 developer to choose. Do not proceed without a selection.
 
-See `../shared/interactive-menu-spec.md` for the full menu specification.
+See `$PLUGIN_DIR/skills/shared/interactive-menu-spec.md` for the full menu specification.
 
 The skill icon is a clipboard. The skill name is "Code Review".
 
@@ -110,7 +110,7 @@ for a pure Python project. Polyglot repos load all matching files.
 
 ### Step 0c — Determine scope
 
-Apply scope flags per `../shared/scope-flags-spec.md`. Supported flags:
+Apply scope flags per `$PLUGIN_DIR/skills/shared/scope-flags-spec.md`. Supported flags:
 
 | Flag | Behaviour |
 |---|---|
@@ -128,7 +128,7 @@ Apply scope flags per `../shared/scope-flags-spec.md`. Supported flags:
 ### Step 0d — Build candidate file list
 
 Enumerate from the project root. NEVER restrict to `src/` or any subdirectory.
-Use the canonical find command from `../shared/scope-flags-spec.md`.
+Use the canonical find command from `$PLUGIN_DIR/skills/shared/scope-flags-spec.md`.
 
 ### Step 0e — Sort by priority
 
@@ -145,7 +145,7 @@ For default scans: read `.claude/file-cache.json`, compare charCount, skip uncha
 For `--full` / `--ci`: skip cache, scan all.
 For `--changed` / `--pr`: git-derived list, no cache.
 
-See `../shared/file-cache-schema.md` for schema and merge rules.
+See `$PLUGIN_DIR/skills/shared/file-cache-schema.md` for schema and merge rules.
 
 ### Step 0g — Load references and report scope
 
@@ -162,10 +162,10 @@ Load language-specific checkers for detected stack:
 
 | Extensions in scope | Also load |
 |---|---|
-| `*.cs` | `references/checkers-dotnet.md` |
-| `*.ts`, `*.js`, `*.html` | `references/checkers-typescript.md` |
-| `*.java` | `references/checkers-java.md` |
-| `*.py` | `references/checkers-python.md` |
+| `*.cs` | `$PLUGIN_DIR/skills/code-review/references/checkers-dotnet.md` |
+| `*.ts`, `*.js`, `*.html` | `$PLUGIN_DIR/skills/code-review/references/checkers-typescript.md` |
+| `*.java` | `$PLUGIN_DIR/skills/code-review/references/checkers-java.md` |
+| `*.py` | `$PLUGIN_DIR/skills/code-review/references/checkers-python.md` |
 
 If a file's language has no specific checker file, use universal categories from
 `checkers.md` alone.
@@ -190,20 +190,20 @@ And stop.
 
 ### Step 0h — Write checkpoint
 
-Write the checkpoint file per `../shared/checkpoint-schema.md` before scanning.
+Write the checkpoint file per `$PLUGIN_DIR/skills/shared/checkpoint-schema.md` before scanning.
 Update after each file. Delete on completion.
 
 ---
 
 ## Pass 1 — Structured Rule-Based Scan
 
-Apply the deterministic checker patterns from `references/checkers.md` and
+Apply the deterministic checker patterns from `$PLUGIN_DIR/skills/code-review/references/checkers.md` and
 the language-specific checkers to every in-scope file. This is the
 Coverity-equivalent pass.
 
 ### What Pass 1 checks
 
-Categories from `references/checkers.md`:
+Categories from `$PLUGIN_DIR/skills/code-review/references/checkers.md`:
 
 | Category | Checkers |
 |---|---|
@@ -221,16 +221,16 @@ Categories from `references/checkers.md`:
 
 ### Analysis rules
 
-Per `references/analysis-rules.md`:
+Per `$PLUGIN_DIR/skills/code-review/references/analysis-rules.md`:
 - Inter-procedural: follow data across function boundaries
 - Path-sensitive: only report reachable defects
 - No false positives without caveat (mark uncertain as [Needs Verification])
 - Minimum event depth: 2-3+ events per finding
-- Business context override: per `../shared/business-context-severity.md`
+- Business context override: per `$PLUGIN_DIR/skills/shared/business-context-severity.md`
 
 ### Pass 1 output format
 
-Per `references/output-format.md`:
+Per `$PLUGIN_DIR/skills/code-review/references/output-format.md`:
 
 ```
 ### CID {N} | {CHECKER_NAME} | Impact: {severity}
@@ -248,14 +248,14 @@ Per `references/output-format.md`:
 **References:** CWE-{id} | OWASP {category} | {link}
 ```
 
-Every finding gets a fingerprint per `../shared/fingerprint-spec.md`. Set Pass: 1.
+Every finding gets a fingerprint per `$PLUGIN_DIR/skills/shared/fingerprint-spec.md`. Set Pass: 1.
 Update checkpoint after each file.
 
 ---
 
 ## Pass 2 — Specialized Persona Passes
 
-Load `references/pass2-personas.md` for persona definitions.
+Load `$PLUGIN_DIR/skills/code-review/references/pass2-personas.md` for persona definitions.
 
 Run three focused reviews sequentially. Each persona:
 - Receives the file set + ALL prior findings (Pass 1 + prior personas)
@@ -281,8 +281,8 @@ Only report NEW findings that add information not captured above.
 
 ### Pass 2 output
 
-Findings follow the format in `references/pass2-personas.md`. Fingerprint
-fixable findings per `../shared/fingerprint-spec.md`. Set Pass: 2.
+Findings follow the format in `$PLUGIN_DIR/skills/code-review/references/pass2-personas.md`. Fingerprint
+fixable findings per `$PLUGIN_DIR/skills/shared/fingerprint-spec.md`. Set Pass: 2.
 
 ---
 
@@ -339,7 +339,7 @@ Write to `CodeReviews/code-review-{YYYY-MM-DD}.html` and Markdown report.
 
 ### Ledger update
 
-Write or update `CodeReviews/code-review-ledger.md` per `../shared/ledger-schema.md`.
+Write or update `CodeReviews/code-review-ledger.md` per `$PLUGIN_DIR/skills/shared/ledger-schema.md`.
 
 Read existing ledger first:
 ```bash
@@ -354,7 +354,7 @@ grep -q "^CodeReviews/" .gitignore 2>/dev/null || echo "CodeReviews/" >> .gitign
 
 ### Cache update
 
-Update `.claude/file-cache.json` per `../shared/file-cache-schema.md`:
+Update `.claude/file-cache.json` per `$PLUGIN_DIR/skills/shared/file-cache-schema.md`:
 - Update charCount, lastScanned, add "code-review" to scannedBy
 - Merge with existing entries
 
@@ -368,23 +368,23 @@ Delete `.claude/code-review-checkpoint.json` on successful completion.
 
 | File | When to load |
 |------|-------------|
-| `references/checkers.md` | Always — universal checker categories |
-| `references/checkers-dotnet.md` | C# / ASP.NET / WCF / EF / Dapper |
-| `references/checkers-typescript.md` | Angular / TypeScript / Node.js |
-| `references/checkers-java.md` | Java / Spring Boot / JPA |
-| `references/checkers-python.md` | Python / FastAPI / Django / Flask |
-| `references/pass2-personas.md` | Always — Pass 2 persona definitions |
-| `references/analysis-rules.md` | Always — analysis meta-rules |
-| `references/output-format.md` | Always — finding format |
-| `references/webconfig-checks.md` | ASP.NET Framework web.config analysis |
-| `../shared/three-pass-spec.md` | Architecture reference |
-| `../shared/interactive-menu-spec.md` | Menu specification |
-| `../shared/scope-flags-spec.md` | Scope flag definitions |
-| `../shared/file-cache-schema.md` | Cache schema and merge rules |
-| `../shared/checkpoint-schema.md` | Checkpoint schema |
-| `../shared/fingerprint-spec.md` | Fingerprint generation |
-| `../shared/ledger-schema.md` | Ledger format and reconciliation |
-| `../shared/business-context-severity.md` | B1-B7 override triggers |
-| `../shared/source-file-consent.md` | Consent category enforcement |
-| `../shared/dismissed-findings-reconciliation.md` | Rule 5 dismissed finding handling |
-| `../shared/graph-index-schema.md` / `graph-module-schema.md` | Knowledge graph for --area |
+| `$PLUGIN_DIR/skills/code-review/references/checkers.md` | Always — universal checker categories |
+| `$PLUGIN_DIR/skills/code-review/references/checkers-dotnet.md` | C# / ASP.NET / WCF / EF / Dapper |
+| `$PLUGIN_DIR/skills/code-review/references/checkers-typescript.md` | Angular / TypeScript / Node.js |
+| `$PLUGIN_DIR/skills/code-review/references/checkers-java.md` | Java / Spring Boot / JPA |
+| `$PLUGIN_DIR/skills/code-review/references/checkers-python.md` | Python / FastAPI / Django / Flask |
+| `$PLUGIN_DIR/skills/code-review/references/pass2-personas.md` | Always — Pass 2 persona definitions |
+| `$PLUGIN_DIR/skills/code-review/references/analysis-rules.md` | Always — analysis meta-rules |
+| `$PLUGIN_DIR/skills/code-review/references/output-format.md` | Always — finding format |
+| `$PLUGIN_DIR/skills/code-review/references/webconfig-checks.md` | ASP.NET Framework web.config analysis |
+| `$PLUGIN_DIR/skills/shared/three-pass-spec.md` | Architecture reference |
+| `$PLUGIN_DIR/skills/shared/interactive-menu-spec.md` | Menu specification |
+| `$PLUGIN_DIR/skills/shared/scope-flags-spec.md` | Scope flag definitions |
+| `$PLUGIN_DIR/skills/shared/file-cache-schema.md` | Cache schema and merge rules |
+| `$PLUGIN_DIR/skills/shared/checkpoint-schema.md` | Checkpoint schema |
+| `$PLUGIN_DIR/skills/shared/fingerprint-spec.md` | Fingerprint generation |
+| `$PLUGIN_DIR/skills/shared/ledger-schema.md` | Ledger format and reconciliation |
+| `$PLUGIN_DIR/skills/shared/business-context-severity.md` | B1-B7 override triggers |
+| `$PLUGIN_DIR/skills/shared/source-file-consent.md` | Consent category enforcement |
+| `$PLUGIN_DIR/skills/shared/dismissed-findings-reconciliation.md` | Rule 5 dismissed finding handling |
+| `$PLUGIN_DIR/skills/shared/graph-index-schema.md` / `graph-module-schema.md` | Knowledge graph for --area |

@@ -175,6 +175,54 @@ show the paths and ask the developer to confirm they match their local checkout.
 Correct any wrong paths in `.claude/settings.local.json`. Mark done when confirmed.
 If `externalPathsFound` is 0, mark done immediately.
 
+**2d — External Repository Discovery** (always run — guarded by `external_stacks_prompted` flag):
+
+```bash
+node -e "
+const fs=require('fs');
+try {
+  const s=JSON.parse(fs.readFileSync('.claude/dream-init-state.json','utf8'));
+  console.log(s.external_stacks_prompted===true ? 'SKIP' : 'ASK');
+} catch(e) { console.log('ASK'); }
+"
+```
+
+If output is `SKIP` → skip this step entirely (user was already asked).
+
+If output is `ASK`:
+1. Read current `additionalDirectories` from `.claude/settings.local.json` and show them:
+   `"Auto-detected external directories: [list, or 'none']"`
+
+2. Ask the developer:
+   ```
+   Does this application depend on services in separate repositories NOT listed above?
+   (e.g. a .NET API, a Java service, a Python microservice in its own git repo)
+
+   Enter absolute path(s), one per line — or press Enter to skip.
+   You can add more later with /sync-dirs.
+   ```
+
+3. If paths provided: validate each exists on disk (warn and skip missing).
+   Merge valid paths into `additionalDirectories` in `.claude/settings.local.json` (no duplicates).
+
+4. Set `external_stacks_prompted: true` in `.claude/dream-init-state.json`
+   (write this BEFORE running detection — guards against re-prompt if detection fails):
+   ```bash
+   node -e "
+   const fs=require('fs'), p='.claude/dream-init-state.json';
+   const s=JSON.parse(fs.readFileSync(p,'utf8'));
+   s.external_stacks_prompted=true;
+   fs.writeFileSync(p,JSON.stringify(s,null,2)+'\n');
+   "
+   ```
+
+5. Run external stack detection:
+   ```bash
+   node "$PLUGIN_DIR/scripts/external-stack-detection.cjs"
+   ```
+
+6. Tell the developer: `"external_detected_stacks: [result]. Add more repos later with /sync-dirs."`
+
 ---
 
 ### Step 3 — Analysis LLM work (manifest items order 4–5)

@@ -31,7 +31,7 @@ defaults below.
 
 ## Codebase Orientation (optional — run if the knowledge graph exists)
 
-> Schema: `../shared/graph-index-schema.md` · `../shared/graph-module-schema.md`
+> Schema: `$PLUGIN_DIR/skills/shared/graph-index-schema.md` · `$PLUGIN_DIR/skills/shared/graph-module-schema.md`
 
 Before executing, check for orientation files — do not scan source:
 
@@ -79,7 +79,7 @@ For each changed file, identify:
 ### Step 4 — Generate the PR Description
 
 Output the full PR description using the template in
-`references/pr-description-template.md`.
+`$PLUGIN_DIR/skills/pr-describe/references/pr-description-template.md`.
 
 Fill every section from the diff and ICEA. Never leave a placeholder unfilled.
 If a section genuinely has no content, write "N/A — not applicable for this change."
@@ -124,7 +124,7 @@ To override for this project, set in `.claude/settings.json`:
 { "env": { "ICEA_MODEL": "claude-opus-4-6" } }
 ```
 
-See `../shared/model-routing-spec.md` for full routing documentation.
+See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for full routing documentation.
 
 ## Persona
 
@@ -135,13 +135,13 @@ what the diff actually does?" Reads the diff in this project's actual stack idio
 The persona sets *what to scrutinize* — it never licenses assumption. The diff and the ICEA are the
 only sources of truth; never describe a change that isn't in the diff, and flag scope creep rather
 than rationalise it (subordinate to CLAUDE.md §3 / decision transparency). Never name the persona in
-the PR description. See `../shared/personas-spec.md`.
+the PR description. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ## Business context severity
 
 This skill does not perform security or compliance reviews. If output from this
 skill surfaces data that may trigger B1–B7 sensitivity (see
-`../shared/business-context-severity.md`), flag it to the developer. Do not
+`$PLUGIN_DIR/skills/shared/business-context-severity.md`), flag it to the developer. Do not
 silently process or display attorney-client privileged matter data, immigration
 identifiers, or other B1–B7 categories without acknowledgement.
 

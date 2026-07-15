@@ -9,7 +9,7 @@ This command uses the **infrastructure tier** — `INFRA_MODEL`
 (default: `claude-sonnet-4-6`).
 
 To override: `{{ "env": {{ "INFRA_MODEL": "claude-opus-4-6" }} }}` in `.claude/settings.json`.
-See `skills/shared/model-routing-spec.md` for the full specification.
+See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for the full specification.
 
 ---
 
@@ -24,7 +24,7 @@ The persona sets *what to scrutinize* — it never licenses assumption. The arch
 knowledge graph, and (with Step-4 consent) the one source file are the only sources of truth; a
 persona's "experience" is never evidence — never invent a detail the docs don't contain (subordinate
 to CLAUDE.md §3 / decision transparency). Never name the persona in the answer. See
-`skills/shared/personas-spec.md`.
+`$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 
@@ -141,7 +141,7 @@ Do not read additional files unless the developer explicitly asks.
 
 ## Hard Rules
 
-This command follows `skills/shared/source-file-consent.md` Category B.
+This command follows `$PLUGIN_DIR/skills/shared/source-file-consent.md` Category B.
 The gate in Step 4 is the implementation of that spec.
 
 - NEVER scan `src/` or any directory without an explicit developer confirmation in Step 4

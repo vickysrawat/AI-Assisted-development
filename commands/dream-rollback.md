@@ -9,4 +9,6 @@ argument-hint: (no arguments — interactive selection from run history)
 
 Run the dream-rollback skill to reverse a specific Dream run.
 
-Read `skills/dream-rollback/SKILL.md` and follow its instructions exactly.
+Read `.claude/plugin-path.txt` to get `PLUGIN_DIR` (if absent, use the Node.js resolver from `skills/shared/plugin-path-resolution.md §1a`), then:
+
+Read `$PLUGIN_DIR/skills/dream-rollback/SKILL.md` and follow its instructions exactly.

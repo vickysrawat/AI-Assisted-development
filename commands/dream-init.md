@@ -454,7 +454,7 @@ deploy_rule() {
 
 #### Step 4d — Map external project directories
 
-Read `skills/external-dir-map/SKILL.md` and execute it in full.
+Read `$PLUGIN_DIR/skills/external-dir-map/SKILL.md` and execute it in full.
 
 This step scans the manifest files for each detected stack (`.sln`, `pom.xml`,
 `settings.gradle`, `angular.json`, `package.json`, `pyproject.toml`) to find
@@ -1060,7 +1060,7 @@ fi
 The `graph-stale-detect.sh` script:
 - Reads each node's `paths` and stored `fingerprint` from `.claude/graph/graph.json`
 - Recomputes the **module-wide** fingerprint (hash over all source files under the
-  module's paths, not a single entry-point file — see `skills/shared/graph-json-schema.md`)
+  module's paths, not a single entry-point file — see `$PLUGIN_DIR/skills/shared/graph-json-schema.md`)
 - Writes `.claude/graph/.stale` (listing the drifted module ids) if any mismatch found
 - No LLM involved — pure shell + one node JSON read, completes in < 1 second
 

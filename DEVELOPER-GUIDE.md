@@ -105,9 +105,9 @@ Follow the conventions used by existing skills:
 
 - Start with a `## Purpose` section explaining what the skill does and what it doesn't do.
 - List hard rules in a `## Hard Rules` section at the end — things the skill must never do regardless of user input.
-- Add a `## Model routing` section citing `../shared/model-routing-spec.md` and stating which tier the skill belongs to.
-- If the skill reads or writes a shared cache file, add a `## Single-writer assumption` note citing `../shared/single-writer-assumption.md`.
-- Reference data that is large or only needed for specific conditions (e.g. language-specific checklists) goes in `references/` and is loaded lazily in the relevant step, not at skill start.
+- Add a `## Model routing` section citing `$PLUGIN_DIR/skills/shared/model-routing-spec.md` and stating which tier the skill belongs to.
+- If the skill reads or writes a shared cache file, add a `## Single-writer assumption` note citing `$PLUGIN_DIR/skills/shared/single-writer-assumption.md`.
+- Reference data that is large or only needed for specific conditions (e.g. language-specific checklists) goes in `references/` and is loaded lazily in the relevant step, not at skill start. Reference these files as `$PLUGIN_DIR/skills/<name>/references/X` — **never** as bare `references/X` (resolves to `<project_root>/references/` which doesn't exist in target projects).
 
 ### 4. Register in plugin.json
 
@@ -163,11 +163,14 @@ Create `_project-deploy/commands/<command-name>.md` and update `setup-init` to d
 ## Shared primitives layer
 
 `skills/shared/` is the single source of truth for conventions that span multiple skills.
-**Never duplicate a shared spec inside a skill.** Reference it with a relative path:
+**Never duplicate a shared spec inside a skill.** Reference it using the plugin path:
 
 ```markdown
-> Schema: `../shared/graph-index-schema.md`
+> Schema: `$PLUGIN_DIR/skills/shared/graph-index-schema.md`
 ```
+
+> ⚠ **Do NOT use `../shared/X`** (or bare `references/X`). These paths resolve from the
+> target project's CWD, not the plugin directory — they fail silently at runtime. See ADR 0054.
 
 ### When to promote something to shared/
 
@@ -376,12 +379,12 @@ be JSON with `hookSpecificOutput.additionalContext` (see ADR 0049).
 Every skill that produces findings (`code-review`, `security`, `dynamic-scan`) maintains
 a persistent ledger with five reconciliation states: Still Open, Newly Fixed, New,
 Already Fixed, and **Dismissed**. The Dismissed state is governed by
-`skills/shared/dismissed-findings-reconciliation.md` — never implement Rule 5 inline
+`$PLUGIN_DIR/skills/shared/dismissed-findings-reconciliation.md` — never implement Rule 5 inline
 in a skill. The three scan skills delegate to the shared spec.
 
 Dismissed findings are excluded from all gate counts. `accepted-risk` dismissals on
 Critical/High findings are surfaced as informational in `checkin` output and the
-`pr-create` PR description via `skills/shared/findings-gate.md`.
+`pr-create` PR description via `$PLUGIN_DIR/skills/shared/findings-gate.md`.
 
 The `/dismiss` command (with `--undo`) is the only supported way to move a finding
 into or out of the Dismissed state. Manual ledger edits are not supported.
@@ -507,7 +510,7 @@ the shown default), write your answers into the installed `config.json`, and run
 | `install.sh` / `install.ps1` | Prompt on fresh install → write `config.json`; derive clone URL + marketplace name/description; generic placeholder fallbacks only |
 | `plugin.json`, `marketplace.json` | Written by `scripts/sync-config.sh` from `config.json` |
 | Runtime skills (`ado-tasks`, `pr-create`, …) | Read `Organization` / `Project` from **CLAUDE.md §2** (seeded from config by `setup-init` Step 5d) |
-| Skills locating the plugin dir (`setup-init`, `setup-sync`) | **Registry read** — `~/.claude/plugins/installed_plugins.json`, matching any key starting with `ai-assisted-development@` (fork-agnostic), preferring the `user` scope; falls back to the source-tree glob if the registry is absent. Canonical snippet: `skills/shared/plugin-path-resolution.md` |
+| Skills locating the plugin dir (`setup-init`, `setup-sync`) | **Registry read** — `~/.claude/plugins/installed_plugins.json`, matching any key starting with `ai-assisted-development@` (fork-agnostic), preferring the `user` scope; falls back to the source-tree glob if the registry is absent. Canonical snippet: `$PLUGIN_DIR/skills/shared/plugin-path-resolution.md` |
 | Reference docs & guides | Use `<your-org>` / `<your-project>` placeholders — never real values |
 
 The command namespace `ai-assisted-development` (used in every `/ai-assisted-development:cmd`)

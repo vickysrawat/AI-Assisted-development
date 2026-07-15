@@ -3,7 +3,7 @@
 _Skill version: 1.0 · Last changed: 2026-07-07 · Consent: C_
 
 > **Business context severity:** revises ICEAs whose acceptance criteria carry B1–B7
-> sensitivity flags — see `../shared/business-context-severity.md`.
+> sensitivity flags — see `$PLUGIN_DIR/skills/shared/business-context-severity.md`.
 
 ## Purpose
 Revise an existing ICEA and/or Tech Spec document in response to:
@@ -44,7 +44,7 @@ The persona sets *what to scrutinize* — it never licenses assumption. The exis
 the feedback provided are the only sources of truth; never invent a requirement or answer an open
 question the developer hasn't resolved (subordinate to CLAUDE.md §3 / decision transparency). Never
 name the persona in any artifact — distinct from the customer `Personas:` field, which describes the
-product's end-users. See `../shared/personas-spec.md`.
+product's end-users. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 
@@ -169,6 +169,20 @@ Apply the requested changes to both documents as needed. Rules:
   ```
   If a revision log already exists, append — never replace
 
+**Status mutation — apply before writing to temp:**
+
+If the current ICEA Status is `✅ Approved` or `IN PROGRESS`, you MUST replace
+the Status line in the revised content BEFORE writing to temp:
+
+```
+Replace:  Status: ✅ Approved
+With:     Status: DRAFT — Revising (supersedes approval of {prior date})
+```
+
+The temp file MUST NEVER contain `✅ Approved` after a revision session begins.
+Leaving the temp file with `✅ Approved` causes the status reset to be skipped
+when the file is copied to permanent in Step 6.
+
 Write the revised ICEA to temp (TEMP_WRITE_EXEMPT — see below):
 ```bash
 mkdir -p temp
@@ -226,6 +240,11 @@ cp temp/ADO-{ADO_ID}-tech.md {permanent TechSpec path}
 rm temp/ADO-{ADO_ID}-tech.md
 ```
 
+**Verify status before copying — mandatory check:**
+Before executing the cp command, confirm the temp file does NOT contain
+`✅ Approved`. If it does, the status mutation in Step 5 was not applied —
+apply it now by editing the temp file before copying.
+
 **Status-aware reset — only reset if was ✅ Approved or IN PROGRESS:**
 
 | Current Status | Action |
@@ -237,6 +256,18 @@ rm temp/ADO-{ADO_ID}-tech.md
 
 The reset Status line MUST NOT contain the word `Approved` — the floor hook
 checks for `✅ Approved` exactly. Any other form re-blocks the gate.
+
+**Append to AI audit trail (if it exists):**
+```bash
+find docs -path "*${ADO_ID}*" -name "*.ai-audit.md" 2>/dev/null | head -1
+```
+If the file is found, append a row for each revised document:
+```
+| {next #} | {YYYY-MM-DD} | ICEA revised | REVISE ADO-{ID} | {one-line summary of what changed} |
+| {next #} | {YYYY-MM-DD} | Tech Spec revised | REVISE ADO-{ID} | {one-line summary of what changed} |
+```
+(Only append rows for documents that were actually revised in this session.)
+If no audit file is found, skip silently — do not block the revision.
 
 **Plan sync warning:**
 If the ICEA Intent or Context was substantively changed, check whether a

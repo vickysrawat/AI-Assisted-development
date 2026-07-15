@@ -157,7 +157,7 @@ downgrade — from the CVSS score. Always report both when they differ.
 A-Numbers, hearing dates, or attorney-client communications is Critical by business
 severity regardless of CVSS score. Do not let the maths override the context.
 
-**Language-specific notes**: Load `references/language-notes.md` when the user provides code
+**Language-specific notes**: Load `$PLUGIN_DIR/skills/security/references/language-notes.md` when the user provides code
 in Python, JavaScript/Node, Java, Go, C/C++, Ruby, C#, ASP.NET (Framework / Core / 6+ / Web API),
 WCF, Entity Framework, other ORMs (Dapper, NHibernate), or SQL (SQL Server, PostgreSQL, MySQL).
 
@@ -220,7 +220,7 @@ Always pair gaps with a prioritised remediation action and estimated effort (Low
 
 ### 3f. Weekly Security Summary
 
-Load `references/weekly-summary-template.md` for the full HTML template, data input schema,
+Load `$PLUGIN_DIR/skills/security/references/weekly-summary-template.md` for the full HTML template, data input schema,
 and generation instructions.
 
 **Trigger phrases**: "generate weekly summary", "weekly security report", "security digest",

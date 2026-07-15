@@ -9,7 +9,7 @@ This command uses the **review tier** — `CRITIC_MODEL`
 (default: falls back to `REVIEW_MODEL`, default `claude-sonnet-4-6`).
 
 To override: `{{ "env": {{ "CRITIC_MODEL": "claude-sonnet-4-6" }} }}` in `.claude/settings.json`.
-See `skills/shared/model-routing-spec.md` for the full specification.
+See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for the full specification.
 
 ---
 
@@ -82,7 +82,7 @@ Announce before proceeding:
   git diff --name-only          # unstaged
   git diff --name-only --cached # staged
   ```
-- Announce scope before reading any file, per `skills/shared/source-file-consent.md`:
+- Announce scope before reading any file, per `$PLUGIN_DIR/skills/shared/source-file-consent.md`:
   ```
   🔎 Critic — code critique (standalone)
     Will read: {N} changed files ({first 3}, and N more)

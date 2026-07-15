@@ -4,7 +4,7 @@
 #        Supported backends: .NET Core · ASP.NET Framework 4.x · Java/Spring Boot · Python (FastAPI/Django/Flask) · Node.js
 #        Supported frontends: Angular · React. Tracking: Azure DevOps.
 # Last updated: keep this file updated when conventions change
-# Plugin version: 3.12.0
+# Plugin version: 3.13.0
 
 ---
 
@@ -67,9 +67,10 @@ Recognised globally, no /command needed. ADO ID is case-insensitive (`ADO-1847`,
 |---|---|
 | `SAVE PLAN ADO-{ID}` | Write plan to disk → write ICEA draft to `temp/ADO-{ID}-icea.md` → tell developer to open in VS Code preview |
 | `SAVE PLAN ADO-{ID} CONFIRM` | Save plan with open questions — bypass warning |
-| `SAVE ICEA ADO-{ID}` | Copy `temp/ADO-{ID}-icea.md` to permanent docs/ → delete temp → write Tech Spec to `temp/ADO-{ID}-tech.md` |
-| `SAVE TECH ADO-{ID}` | Write Tech Spec to disk (warn if open questions remain) |
-| `SAVE TECH ADO-{ID} CONFIRM` | Write Tech Spec with open questions — bypass warning |
+| `SAVE ICEA ADO-{ID}` | Run critic gate → save critic output → copy `temp/ADO-{ID}-icea.md` to permanent docs/ → delete temp → write Tech Spec to `temp/ADO-{ID}-tech.md` |
+| `SAVE ICEA ADO-{ID} ACCEPT` | Override critic REVISE verdict and save ICEA anyway (with audit note) |
+| `SAVE TECH ADO-{ID}` | Write Tech Spec to disk — hard blocks if open questions remain (no bypass) |
+| `SAVE TECH ADO-{ID} ACCEPT` | Save Tech Spec despite critic REVISE verdict (override with audit note) |
 | `PLAN ADO-{ID}` | Draft ICEA from saved plan — cross-session recovery |
 | `ICEA ADO-{ID}` | Draft Tech Spec from saved ICEA — cross-session recovery |
 | `TECH ADO-{ID}` | Draft Tech Spec from saved ICEA — cross-session recovery |

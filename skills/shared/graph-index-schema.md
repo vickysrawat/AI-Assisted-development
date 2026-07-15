@@ -2,7 +2,7 @@
 _Schema version: 1.1 · Single source of truth for `.claude/graph/graph-index.md`_
 
 The graph index is the always-loaded entry point to the codebase knowledge graph.
-It must stay under 350 tokens. All module detail lives in per-module files — nothing else belongs here.
+It must stay under 1,500 tokens. The table rows stay minimal; bounded context lives in the Module Summaries section appended after the table.
 
 **Companion `graph.json`.** The index (breadth) and the per-module detail files (depth)
 are the always-/lazy-loaded *projection* of `.claude/graph/graph.json`, which holds the
@@ -69,28 +69,48 @@ One row per module. No exceptions, no nested rows, no sub-tables.
 | Detail File | Relative path from `.claude/` — always starts with `graph/` |
 | Entry Point | Single most-representative file in this module; used for fingerprint detection |
 
-### What must NOT appear in the index
+### What must NOT appear in the table
 
 - File lists
-- Module descriptions or summaries
 - Dependency information
 - Patterns or conventions
 - Code snippets
 - Comments or footnotes
 
-All of this belongs in the module detail file.
+Bounded context and key files belong in the **Module Summaries section** (see below), not inline
+in the table. Full patterns and dependency lists belong in the module detail file.
 
 ---
 
-## 350-token ceiling
+## Module Summaries section
 
-If the table would exceed 350 tokens (approx. 1,400 characters), the index is too large.
-Corrective actions in priority order:
-1. Shorten module names (use abbreviations if needed)
-2. Truncate entry-point paths (use filename only, not full path)
-3. Remove the Domain column (merge into Module if unambiguous)
+Append after the module table. One line per module — bounded context sentence + key files only:
 
-Never add a preamble, closing note, or section header beyond the one `# Graph Index` heading.
+```markdown
+## Module Summaries
+
+**<Module>** — <first sentence of the "Bounded context" section from the detail file>. Key files: `<entry point>`[, `<one secondary file>`]
+```
+
+Rules:
+- Copy the bounded context sentence verbatim from the module detail file
+- Key files: always include the entry point from the table; add at most one secondary file if it materially clarifies scope
+- Maximum 1 sentence per module — no bullet lists, no dependency info, no patterns
+- All N modules must appear — same order as the table above
+- Regenerate this section on every graph-sync run (not only when nodes change)
+
+---
+
+## 1,500-token ceiling
+
+If the file would exceed 1,500 tokens (approx. 6,000 characters), corrective actions in priority order:
+1. Shorten bounded context sentences to ≤10 words each
+2. Remove secondary key files (keep only the entry point per module)
+3. Shorten module names (use abbreviations if needed)
+4. Truncate entry-point paths (use filename only, not full path)
+5. Remove the Domain column from the table (merge into Module if unambiguous)
+
+The only permitted section header beyond `# Graph Index` is `## Module Summaries` (see below). No other headers, preambles, or closing notes.
 
 ---
 
@@ -100,7 +120,7 @@ Never add a preamble, closing note, or section header beyond the one `# Graph In
 ---
 paths: always
 ---
-# Graph Index
+<!-- Graph index — auto-generated from graph.json. Do not hand-edit. Run /graph-sync to refresh. -->
 _Generated: 2026-06-20 | Modules: 5 | Structure: flat_
 
 | Module | Domain | Detail File | Entry Point |
@@ -110,4 +130,12 @@ _Generated: 2026-06-20 | Modules: 5 | Structure: flat_
 | Customers | customers | graph/customers.md | src/Customers/CustomerService.cs |
 | Notifications | notifications | graph/notifications.md | src/Notifications/NotificationService.cs |
 | Auth | auth | graph/auth.md | src/Auth/AuthService.cs |
+
+## Module Summaries
+
+**Orders** — Owns order lifecycle from creation to fulfilment; not payment processing. Key files: `src/Orders/OrderService.cs`
+**Payments** — Handles payment capture and refunds via external gateway; not order state. Key files: `src/Payments/PaymentGateway.cs`
+**Customers** — Manages customer profiles and preferences; not authentication. Key files: `src/Customers/CustomerService.cs`
+**Notifications** — Sends email/SMS notifications on order events; not delivery tracking. Key files: `src/Notifications/NotificationService.cs`
+**Auth** — Owns authentication and token issuance; not authorisation policy. Key files: `src/Auth/AuthService.cs`
 ```

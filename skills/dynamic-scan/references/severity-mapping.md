@@ -17,6 +17,6 @@ SQLi → CWE-89, XSS → CWE-79, path traversal → CWE-22, command injection �
 IDOR/BOLA → CWE-639, open redirect → CWE-601, missing authz → CWE-862.
 
 ## Business-context override (mandatory)
-After normalising, apply `../../shared/business-context-severity.md`. Any finding that
+After normalising, apply `$PLUGIN_DIR/skills/shared/business-context-severity.md`. Any finding that
 exposes immigration IDs, privileged matter data, or vulnerable-client data is escalated to
 **Critical** regardless of ZAP's rating, with the B-flag cited (e.g. B2).

@@ -9,12 +9,12 @@ This command uses the **infrastructure tier** — `INFRA_MODEL`
 (default: `claude-sonnet-4-6`).
 
 To override: `{{ "env": {{ "INFRA_MODEL": "claude-opus-4-6" }} }}` in `.claude/settings.json`.
-See `skills/shared/model-routing-spec.md` for the full specification.
+See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for the full specification.
 
 ## Persona
 Acts with a **[SEC] Security Engineer** lens — a dismissal must be genuinely justified, not
 convenient; always asks "are we suppressing a real risk?" Lens only; never assume, never attribute in
-output. See `skills/shared/personas-spec.md`.
+output. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 

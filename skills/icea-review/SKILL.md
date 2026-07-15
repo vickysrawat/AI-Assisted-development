@@ -33,7 +33,7 @@ defaults below.
 
 ## Codebase Orientation (run before Step 1)
 
-> Schema: `../shared/graph-index-schema.md` · `../shared/graph-module-schema.md`
+> Schema: `$PLUGIN_DIR/skills/shared/graph-index-schema.md` · `$PLUGIN_DIR/skills/shared/graph-module-schema.md`
 
 Before collecting the diff, orient yourself to the project without reading raw source files:
 
@@ -63,7 +63,7 @@ Run automatically:
 
 **Source file consent** — this skill operates on the diff and architecture docs.
 Before reading any source file beyond the diff output, apply the gate from
-`../shared/source-file-consent.md` (Category B). State which file, why the diff
+`$PLUGIN_DIR/skills/shared/source-file-consent.md` (Category B). State which file, why the diff
 context is insufficient for that specific finding, what you are looking for,
 and the estimated token cost. Wait for confirmation before reading.
 
@@ -75,7 +75,7 @@ Examples and Acceptance Criteria sections).
 
 ### Step 2 — Run the Seven Checks
 
-Work through each check in `references/review-checks.md` in order.
+Read `.claude/plugin-path.txt` to get PLUGIN_DIR (if absent, use the Node.js resolver from `skills/shared/plugin-path-resolution.md §1a`). Work through each check in `$PLUGIN_DIR/skills/icea-review/references/review-checks.md` in order.
 For each check, scan the full diff before writing the result.
 
 ### Step 3 — Output the Compliance Report
@@ -89,7 +89,7 @@ Reviewed: [date from git log]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-Then output the full report using the format in `references/report-format.md`.
+Then output the full report using the format in `$PLUGIN_DIR/skills/icea-review/references/report-format.md`.
 
 ### Step 4 — Verdict
 
@@ -126,7 +126,7 @@ Use these consistently throughout the report:
 
 **Business context override — mandatory for every review.**
 Before finalising any finding's severity, apply the domain override check from
-`references/review-checks.md` Check 7 and `../shared/business-context-severity.md`.
+`$PLUGIN_DIR/skills/icea-review/references/review-checks.md` Check 7 and `$PLUGIN_DIR/skills/shared/business-context-severity.md`.
 If a Warning or Info finding touches attorney-client data, immigration identifiers,
 active case timelines, vulnerable client data, breach notification obligations,
 physical safety data, or PII in a static-serving directory — escalate it to Critical.
@@ -144,7 +144,7 @@ To override for this project, set in `.claude/settings.json`:
 { "env": { "REVIEW_MODEL": "claude-sonnet-4-6" } }
 ```
 
-See `../shared/model-routing-spec.md` for full routing documentation.
+See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for full routing documentation.
 
 ## Persona
 
@@ -156,7 +156,7 @@ actual stack per layer.
 The persona sets *what to scrutinize* — it never licenses assumption. The approved ICEA and the diff
 are the only sources of truth; never mark an AC met without the implementing code in hand (subordinate
 to CLAUDE.md §3 / decision transparency). Never name the persona in the report. See
-`../shared/personas-spec.md`.
+`$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ## Hard Rules
 

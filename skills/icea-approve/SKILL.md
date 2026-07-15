@@ -3,7 +3,7 @@
 _Skill version: 1.0 · Last changed: 2026-07-07 · Consent: C_
 
 > **Business context severity:** approves ICEAs whose acceptance criteria carry B1–B7
-> sensitivity flags — see `../shared/business-context-severity.md`.
+> sensitivity flags — see `$PLUGIN_DIR/skills/shared/business-context-severity.md`.
 
 ## Purpose
 Approve an ICEA and Tech Spec by ADO ID. Works in any session, including
@@ -20,7 +20,7 @@ Triggered by:
 ## Persona
 Acts with a **[TL] Tech Lead** lens — confirm the ICEA/Tech Spec are genuinely ready before
 approving; always asks "is this actually complete and sound?" Lens only; never assume, never
-attribute in output. See `../shared/personas-spec.md`.
+attribute in output. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 
@@ -106,7 +106,9 @@ On receiving `APPROVE ADO-{ADO_ID}`:
    ```
 3. Write immediately — no gate (ICEA is a collaboration artefact)
 4. Output the ADO work item description block (ready to paste into ADO):
-   See format in `skills/icea-feature/references/ado-description-template.md`
+   Read `.claude/plugin-path.txt` to get `PLUGIN_DIR` (if absent, use the Node.js resolver from
+   `skills/shared/plugin-path-resolution.md §1a`), then see format in
+   `$PLUGIN_DIR/skills/icea-feature/references/ado-description-template.md`
 5. Confirm:
 
 ```

@@ -185,7 +185,7 @@ Testing
 
 ## Check 7 — Security and Business Context
 
-Before running this check, read `../shared/business-context-severity.md` to understand
+Before running this check, read `$PLUGIN_DIR/skills/shared/business-context-severity.md` to understand
 the domain-specific severity override triggers (B1–B7). Apply them to every finding
 in this check — and retroactively to any finding in Checks 1–6 if business context
 warrants escalation.

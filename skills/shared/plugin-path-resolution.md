@@ -6,6 +6,21 @@ of the snippets below verbatim — do **not** glob `plugins/*/plugins/…`, `fin
 `~/.claude`, or crawl the source tree. Those improvisations are what caused slow
 syncs and permission prompts.
 
+## Forbidden path patterns (ADR 0054)
+
+The following patterns **fail at runtime** because `Read` resolves paths from the target
+project's CWD, not the plugin directory:
+
+| ❌ Forbidden | Why | ✅ Correct |
+|---|---|---|
+| `` `../shared/X` `` | `../` from project root escapes the project tree | `` `$PLUGIN_DIR/skills/shared/X` `` |
+| `` `../../shared/X` `` | same, from `references/` subdirectory files | `` `$PLUGIN_DIR/skills/shared/X` `` |
+| `` `references/X` `` (bare) | resolves to `<project_root>/references/` | `` `$PLUGIN_DIR/skills/<name>/references/X` `` |
+| `` `skills/shared/X` `` (bare) | resolves to `<project_root>/skills/shared/` | `` `$PLUGIN_DIR/skills/shared/X` `` |
+
+Every skill that reads any plugin resource must resolve `PLUGIN_DIR` **before** its
+first reference. Place the resolution instruction at the start of the relevant step:
+
 ---
 
 ## 0. Fast path — `.claude/plugin-path.txt`

@@ -55,7 +55,7 @@ If that file is missing, fall back to the project defaults below.
 
 ## Business context sensitivity
 
-Before critiquing, read `../shared/business-context-severity.md`. The critic
+Read `.claude/plugin-path.txt` to get PLUGIN_DIR (if absent, use the Node.js resolver from `skills/shared/plugin-path-resolution.md §1a`). Before critiquing, read `$PLUGIN_DIR/skills/shared/business-context-severity.md`. The critic
 checks whether B1–B7 triggers that apply to the artefact have been handled —
 in ICEA mode, whether the relevant ACs carry the correct sensitivity flag; in
 code mode, whether the generated code actually implements the protection the
@@ -68,7 +68,7 @@ matter data, encrypting at rest).
 
 The critic runs in one of three **modes** (`icea` / `tech` / `code`) from one of
 two **invocation sources** (`internal` / `standalone`). The source determines the
-source-file-consent category — see `../shared/source-file-consent.md`.
+source-file-consent category — see `$PLUGIN_DIR/skills/shared/source-file-consent.md`.
 
 | Mode | Source | Consent | What it reads |
 |---|---|---|---|
@@ -99,7 +99,7 @@ To override for this project, set in `.claude/settings.json`:
 
 If `CRITIC_MODEL` is unset, the skill uses `REVIEW_MODEL`; if that is also
 unset, it falls back to `claude-sonnet-4-6`. See
-`../shared/model-routing-spec.md` for the full specification.
+`$PLUGIN_DIR/skills/shared/model-routing-spec.md` for the full specification.
 
 ---
 
@@ -121,7 +121,7 @@ Technical expertise is **this project's actual stack** (per architecture.md / de
 across every layer present — never a fixed technology. The persona sets *what to scrutinize* — it
 never licenses assumption. The ICEA, the code under review, and the codebase are the only sources of
 truth; a persona's "experience" is never evidence (subordinate to CLAUDE.md §3 / decision
-transparency). Never name the persona in critic output. See `../shared/personas-spec.md`.
+transparency). Never name the persona in critic output. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 
@@ -158,7 +158,7 @@ The command passes a parsed phase argument. Resolve as follows:
 ## Mode: ICEA critique
 
 > **Acting as:** [TL] Marcus Reid — Tech Lead. Scrutinize feasibility, completeness, and fit with
-> how the team builds; expertise = this project's actual stack. See `../shared/personas-spec.md`.
+> how the team builds; expertise = this project's actual stack. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 Critique the ICEA draft against the dimensions below. For each, produce concrete
 findings tied to a specific section or AC — never vague commentary.
@@ -170,7 +170,7 @@ findings tied to a specific section or AC — never vague commentary.
 | **Testability** | Is every Example a concrete, verifiable scenario with an observable outcome? Can a QA engineer write one test per Example without guessing? |
 | **B1–B7 coverage** | Does the Intent or Context imply a sensitivity trigger that no AC flags? (e.g. "matter data" implies B-level client-confidentiality handling.) |
 | **Scope** | Does any AC introduce behaviour beyond the stated Intent? Scope creep is a finding, not a feature. |
-| **Decisions (when a D block exists)** | Anti-strawman audit per `../shared/icea-decisions-spec.md` §2: is each option genuinely distinct on a trade-off axis, or decoration? Does every option carry a real "Choose this when…" steelman? Does the recommendation cite repo evidence (knowledge-graph locations, memory decisions) rather than best-practice filler? A fork the implementation plainly faces but the D block omits is a finding. Manifest check: does every manifest row trace to an AC/Example/Context/D item, and do rows name concrete diff-matchable paths? |
+| **Decisions (when a D block exists)** | Anti-strawman audit per `$PLUGIN_DIR/skills/shared/icea-decisions-spec.md` §2: is each option genuinely distinct on a trade-off axis, or decoration? Does every option carry a real "Choose this when…" steelman? Does the recommendation cite repo evidence (knowledge-graph locations, memory decisions) rather than best-practice filler? A fork the implementation plainly faces but the D block omits is a finding. Manifest check: does every manifest row trace to an AC/Example/Context/D item, and do rows name concrete diff-matchable paths? |
 
 > The **Tech Spec** is critiqued separately by `tech` mode (below) at
 > icea-feature Step 8 — not here. ICEA mode critiques the ICEA draft alone.
@@ -214,7 +214,7 @@ EDIT/APPROVE cycle.
 ## Mode: Tech Spec critique
 
 > **Acting as:** [TL] Marcus Reid — Tech Lead (same persona as icea-feature Step 8,
-> Tech Spec phase). See `../shared/personas-spec.md`.
+> Tech Spec phase). See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 Runs at icea-feature **Step 8**, right after the Tech Spec is drafted from the
 already-saved ICEA and while both are in context. This is the cheapest place to
@@ -230,7 +230,7 @@ to a specific AC, file, or section — never vague commentary.
 | Dimension | The question the critic asks |
 |---|---|
 | **Traceability** | Does every AC from the ICEA map to at least one planned file in the AC→File table (no ⚠ Gap rows)? Does any planned file introduce behaviour beyond the ACs (an orphan in the File→AC table) — scope creep the ICEA never asked for? |
-| **D-option fidelity** | When the ICEA has selected D decisions, does the planned design (Files Changed, approach) follow the CHOSEN option? A Tech Spec that plans the rejected option — or is silent on a decided fork — is a finding (`../shared/icea-decisions-spec.md` §6). |
+| **D-option fidelity** | When the ICEA has selected D decisions, does the planned design (Files Changed, approach) follow the CHOSEN option? A Tech Spec that plans the rejected option — or is silent on a decided fork — is a finding (`$PLUGIN_DIR/skills/shared/icea-decisions-spec.md` §6). |
 | **Coverage matrix** | Is the AC Coverage Matrix present and complete, and does it state an explicit coverage result? |
 | **Test derivation** | Does every functional AC (AC-F*) have a positive and negative test row, and does every non-functional AC (AC-NF*) state a verification method? |
 | **Structural conformance** | Are the mandatory Tech Spec sections present per the template? |
@@ -292,7 +292,7 @@ notes are folded into the Step 9 review. An ICEA-fault concern is surfaced with 
 
 > **Acting as:** [SE] Elena Fischer — Senior Software Engineer. Scrutinize simplicity, edge-case
 > correctness, and fit with the codebase's idioms per layer; expertise = this project's actual
-> stack. See `../shared/personas-spec.md`.
+> stack. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 Critique the generated implementation against five dimensions.
 

@@ -17,6 +17,7 @@
 'use strict';
 
 const fs      = require('fs');
+const os      = require('os');
 const path    = require('path');
 const crypto  = require('crypto');
 const { execSync } = require('child_process');
@@ -256,6 +257,7 @@ async function main() {
   stepDeployProjectSkills(manifest);
   stepGitPreCommit(manifest);
   stepWireSettings(manifest);
+  stepWireUserSettings(manifest);
   stepSeedStateFiles(manifest);
   stepWriteNpmDeps(manifest);
   stepGitignoreSync(manifest);
@@ -626,19 +628,81 @@ function stepWireSettings(manifest) {
       );
       if (settings.hooks.Stop.length === 0) delete settings.hooks.Stop;
     }
+    // PostToolUse hook: memory-log.sh — fires after Write/Edit on memory/MEMORY.md and
+    // appends a lightweight [capture] entry to memory/dream-log.md. Deterministic — does
+    // not rely on Claude following a text instruction. Handles CRLF + Windows backslash paths.
+    if (!settings.hooks.PostToolUse) settings.hooks.PostToolUse = [];
+    const memLogWired = settings.hooks.PostToolUse.some(
+      h => h.hooks && h.hooks.some(x => x.command && x.command.includes('memory-log.sh'))
+    );
+    if (!memLogWired) {
+      settings.hooks.PostToolUse.push({
+        matcher: 'Write|Edit',
+        hooks: [{ type: 'command', command: 'bash .claude/hooks/memory-log.sh' }],
+      });
+      wired = true;
+    }
   }
   if (!settings.customInstructions) {
     settings.customInstructions = 'Response style: suppress preambles and plan-restatement before tool calls. When writing to existing files, show only a unified diff (changed lines + 3 lines of context) rather than the full file content. When writing new files, show the full content. Never echo generated file content to chat if the content is also being written to disk.';
   }
   atomicWrite(settingsPath, JSON.stringify(settings, null, 2));
-  console.log('  ✓ settings.json: PreToolUse (icea-floor + secret-guard) + UserPromptSubmit (memory-capture) hooks '
+  console.log('  ✓ settings.json: PreToolUse (icea-floor + secret-guard) + UserPromptSubmit (memory-capture) + PostToolUse (memory-log) hooks '
     + (NO_HOOKS ? 'skipped (--no-hooks)' : (wired ? 'added' : 'already present')));
   console.log('  ✓ settings.json: autoMemoryEnabled '
     + (autoMemSet ? 'set to false (Dream owns repo memory/)' : 'left as-is (developer override)'));
   markStep(manifest, 'wireSettings', { alreadyWired: !wired, noHooks: NO_HOOKS, autoMemSet });
 }
 
-// ── J: stepSeedStateFiles ─────────────────────────────────────────────────────────
+// ── J: stepWireUserSettings ───────────────────────────────────────────────────────
+// Writes autoMemoryEnabled: false to the USER-level ~/.claude/settings.json so that
+// Claude Code's built-in auto-memory feature is disabled globally for this developer.
+// The project-level setting (.claude/settings.json) is NOT respected by Claude Code
+// for this feature — it must be set at the user level. Not guarded by isDone — runs
+// on every init/sync to catch the case where the user has changed the file since last run.
+
+function stepWireUserSettings(manifest) {
+  const userSettingsPath = path.join(os.homedir(), '.claude', 'settings.json');
+  let userSettings = {};
+  let existed = false;
+  try {
+    if (fs.existsSync(userSettingsPath)) {
+      existed = true;
+      userSettings = JSON.parse(fs.readFileSync(userSettingsPath, 'utf8'));
+    }
+  } catch(e) {
+    warn(manifest, 'autoMemoryEnabled: could not read ~/.claude/settings.json (' + e.message + ') — add "autoMemoryEnabled": false manually to prevent built-in auto-memory writing to your profile instead of memory/MEMORY.md');
+    manifest.operations.wireUserSettings = { status: 'failed', error: 'read: ' + e.message };
+    saveManifest(manifest);
+    return;
+  }
+
+  if (userSettings.autoMemoryEnabled !== undefined) {
+    // Key already explicitly set — respect the developer's choice
+    manifest.operations.wireUserSettings = { status: 'done', set: false, existingValue: userSettings.autoMemoryEnabled };
+    if (userSettings.autoMemoryEnabled !== false) {
+      warn(manifest, 'autoMemoryEnabled is ' + JSON.stringify(userSettings.autoMemoryEnabled) + ' in ~/.claude/settings.json — built-in auto-memory may write to your profile dir instead of memory/MEMORY.md. Set it to false to fix.');
+    } else {
+      console.log('  ✓ user settings.json: autoMemoryEnabled already false (no change)');
+    }
+    saveManifest(manifest);
+    return;
+  }
+
+  // Key is undefined — set it
+  userSettings.autoMemoryEnabled = false;
+  try {
+    atomicWrite(userSettingsPath, JSON.stringify(userSettings, null, 2));
+    console.log('  ✓ user settings.json: autoMemoryEnabled set to false' + (existed ? '' : ' (file created)'));
+    manifest.operations.wireUserSettings = { status: 'done', set: true, existed };
+  } catch(e) {
+    warn(manifest, 'autoMemoryEnabled: could not write ~/.claude/settings.json (' + e.message + ') — add "autoMemoryEnabled": false manually to prevent built-in auto-memory writing to your profile instead of memory/MEMORY.md');
+    manifest.operations.wireUserSettings = { status: 'failed', error: 'write: ' + e.message };
+  }
+  saveManifest(manifest);
+}
+
+// ── K: stepSeedStateFiles ─────────────────────────────────────────────────────────
 
 function stepSeedStateFiles(manifest) {
   if (isDone(manifest, 'seedStateFiles')) { console.log('  — seedStateFiles: done (skip)'); return; }

@@ -11,7 +11,7 @@ has a known vulnerability class, a detection heuristic, and a concrete fix
 template. The same code should always produce the same finding.
 
 For language-specific patterns, load the matching `pass1-patterns-{lang}.md`
-based on detected stack (see `../../shared/three-pass-spec.md` § Stack-agnostic loading).
+based on detected stack (see `$PLUGIN_DIR/skills/shared/three-pass-spec.md` § Stack-agnostic loading).
 
 ---
 
@@ -193,7 +193,7 @@ Severity: Low-High depending on file contents.
 ## Severity calibration
 
 CVSS provides the mathematical baseline. Business context can escalate (never
-downgrade) from the CVSS score. Per `../../shared/business-context-severity.md`:
+downgrade) from the CVSS score. Per `$PLUGIN_DIR/skills/shared/business-context-severity.md`:
 
 | Technical severity | CVSS range | Examples |
 |---|---|---|

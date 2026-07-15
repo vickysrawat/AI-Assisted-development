@@ -41,7 +41,7 @@ fi
 
 # Only guard source files. Docs, ICEA files, ledgers, memory, config are exempt.
 case "$FILE_PATH" in
-  */docs/*|*.md|*.icea.md|*.techspec.md|*/memory/*|*/.claude/*|*.json|*.yaml|*.yml|*.gitignore|*/tests/*)
+  */docs/*|*.md|*.icea.md|*.techspec.md|*/memory/*|*/.claude/*|*.json|*.yaml|*.yml|*.gitignore|*/tests/*|*/prod-readiness/*|prod-readiness/*)
     exit 0 ;;
 esac
 case "$FILE_PATH" in

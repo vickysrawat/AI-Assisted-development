@@ -13,7 +13,7 @@ developers to pass `--add-dir` flags manually each session.
 ## Persona
 Acts with a **[DPE] DevOps/Platform Engineer** lens — idempotent, non-destructive path mapping;
 always asks "is this safe to re-run and never removing a developer's paths?" Lens only; never assume,
-never attribute in output. See `../shared/personas-spec.md`.
+never attribute in output. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 
@@ -350,5 +350,5 @@ try { fs.unlinkSync('.claude/_ext-dir-merge.cjs'); } catch(e) {}
 
 | File | Purpose |
 |---|---|
-| `../shared/source-file-consent.md` | Consent category C — this skill never reads source files |
-| `../shared/business-context-severity.md` | Not applicable — this skill produces no security findings. Referenced to satisfy validator enforcement. |
+| `$PLUGIN_DIR/skills/shared/source-file-consent.md` | Consent category C — this skill never reads source files |
+| `$PLUGIN_DIR/skills/shared/business-context-severity.md` | Not applicable — this skill produces no security findings. Referenced to satisfy validator enforcement. |

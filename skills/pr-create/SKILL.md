@@ -155,7 +155,7 @@ PR description and the draft artifact:
 
 Always runs. No ADO connection required.
 
-Load `skills/shared/findings-gate.md` and execute the canonical bash functions
+Load `$PLUGIN_DIR/skills/shared/findings-gate.md` and execute the canonical bash functions
 defined there verbatim. Do not re-implement the ledger-walking logic inline.
 
 Collect:
@@ -231,7 +231,7 @@ echo $AZURE_DEVOPS_PAT
 - If not set: prompt the developer to paste it for this request only.
 
 After Step 7 completes the variable is no longer referenced.
-See `references/ado-api-guide.md` for PAT scope requirements.
+See `$PLUGIN_DIR/skills/pr-create/references/ado-api-guide.md` for PAT scope requirements.
 
 ### ADO connection details
 
@@ -304,7 +304,7 @@ curl -s --ssl-no-revoke -4 -w "\n%{http_code}" -X POST \
 
 Parse response:
 - HTTP 201 → extract `.pullRequestId` — proceed to Step 9 (connect output)
-- Any other status → extract `.message`, show error, suggest `references/ado-api-guide.md`
+- Any other status → extract `.message`, show error, suggest `$PLUGIN_DIR/skills/pr-create/references/ado-api-guide.md`
 
 **On ADO unreachable (network error, non-HTTP failure):** do not hard fail.
 Inform the developer and fall through to Step 8 (draft output) automatically:
@@ -436,7 +436,7 @@ Next: run /pr-spec-review spec=docs/icea/ADO-<ID>-<name>.md to validate the PR a
 ```
 
 **Connect path — failure:** show HTTP status and `message` field from ADO response.
-Do not retry. Suggest `references/ado-api-guide.md`.
+Do not retry. Suggest `$PLUGIN_DIR/skills/pr-create/references/ado-api-guide.md`.
 
 **Draft path:**
 
@@ -462,7 +462,7 @@ To override for this project, set in `.claude/settings.json`:
 { "env": { "REVIEW_MODEL": "claude-sonnet-4-6" } }
 ```
 
-See `../shared/model-routing-spec.md` for full routing documentation.
+See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for full routing documentation.
 
 ## Persona
 
@@ -472,7 +472,7 @@ a clean, compliant submission; always asks "is this correct and complete before 
 
 The persona sets *what to scrutinize* — it never licenses assumption. The diff, ICEA, and gate
 results are the only sources of truth; never bypass a failing gate silently (subordinate to CLAUDE.md
-§3 / decision transparency). Never name the persona in the PR. See `../shared/personas-spec.md`.
+§3 / decision transparency). Never name the persona in the PR. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 
@@ -482,14 +482,14 @@ This skill is **Category B** — it reads git diffs directly (Steps 1–2) and
 invokes `icea-review` which may request source file access under its own Category B
 gate. `pr-create` does not open additional source files beyond the diff.
 
-See `../shared/source-file-consent.md` for the full consent spec.
+See `$PLUGIN_DIR/skills/shared/source-file-consent.md` for the full consent spec.
 
 ---
 
 ## Business context severity
 
 If output from this skill surfaces data that may trigger B1–B7 sensitivity
-(see `../shared/business-context-severity.md`), flag it to the developer.
+(see `$PLUGIN_DIR/skills/shared/business-context-severity.md`), flag it to the developer.
 Do not silently process or display attorney-client privileged matter data,
 immigration identifiers, or other B1–B7 categories without acknowledgement.
 

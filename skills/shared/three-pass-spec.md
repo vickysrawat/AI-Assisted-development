@@ -54,8 +54,8 @@ finding.
 
 Each skill defines its Pass 1 checkers in language-specific reference files:
 
-- `code-review`: `references/pass1-checkers.md` + `pass1-checkers-{lang}.md`
-- `security`: `references/pass1-patterns.md` + `pass1-patterns-{lang}.md`
+- `code-review`: `$PLUGIN_DIR/skills/code-review/references/pass1-checkers.md` + `pass1-checkers-{lang}.md`
+- `security`: `$PLUGIN_DIR/skills/security/references/pass1-patterns.md` + `pass1-patterns-{lang}.md`
 
 Checkers are loaded dynamically based on Step 0 stack detection. A pure Python
 project never loads .NET checkers. A polyglot repo loads all matching files.
@@ -93,7 +93,7 @@ pattern matches.
 
 ### How personas work
 
-Each skill defines its persona set in `references/pass2-personas.md`. A persona
+Each skill defines its persona set in its own `$PLUGIN_DIR/skills/<skillname>/references/pass2-personas.md`. A persona
 definition includes:
 
 ```

@@ -54,7 +54,7 @@ The persona sets *what to scrutinize* — it never licenses assumption. The sour
 manifests are the only sources of truth; classify and infer from what the code actually shows, never
 from what a persona would "expect" (subordinate to CLAUDE.md §3 / decision transparency). The
 deterministic parts (fingerprints, `graph-extract-edges.js`) are unaffected. Never name the persona
-in any graph artifact. See `../shared/personas-spec.md`.
+in any graph artifact. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 
@@ -339,7 +339,7 @@ node -e '
 ```
 Then derive the source-visible `EXTRACTED` edges **deterministically** (offline, Node stdlib;
 parses imports/usings/requires/ProjectReferences locally — raw source never enters context).
-Resolve `$PLUGIN_DIR` (see `../shared/plugin-path-resolution.md` §1a) and run:
+Resolve `$PLUGIN_DIR` (see `$PLUGIN_DIR/skills/shared/plugin-path-resolution.md` §1a) and run:
 ```bash
 node "$PLUGIN_DIR/scripts/graph-extract-edges.js"
 ```
@@ -360,6 +360,12 @@ Rewrite `graph-index.md` per `graph-index-schema.md` (one row per node, updated
 `Generated`/`Modules`/`Structure`) whenever any node changed or structure changed.
 On flat→domain restructure, move detail files into `<domain>/`, update each file's
 `paths:` and the node `detailFile` values.
+
+After the module table, append a **Module Summaries** section (per schema § Module
+Summaries section): for each node in table order, extract the first sentence of
+the "Bounded context" section from its detail file, plus the first key file listed
+(and a second if it materially clarifies scope). Write this section on every
+graph-index.md rewrite — not only when nodes change.
 
 ---
 

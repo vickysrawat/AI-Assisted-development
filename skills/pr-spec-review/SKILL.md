@@ -26,7 +26,7 @@ Traceability Matrix, and Gaps/Risks Report.
 
 ## Business Context Severity (mandatory — applies to all findings)
 
-Before producing any finding, load `../shared/business-context-severity.md`.
+Read `.claude/plugin-path.txt` to get PLUGIN_DIR (if absent, use the Node.js resolver from `skills/shared/plugin-path-resolution.md §1a`). Before producing any finding, load `$PLUGIN_DIR/skills/shared/business-context-severity.md`.
 Apply the B1–B7 override triggers to every finding. If any finding touches
 attorney-client data, immigration identifiers, active case timelines, vulnerable
 client data, breach notification obligations, physical safety data, or PII in a
@@ -38,7 +38,7 @@ waived by any flag or instruction.
 
 ## Codebase Orientation (optional — run if the knowledge graph exists)
 
-> Schema: `../shared/graph-index-schema.md` · `../shared/graph-module-schema.md`
+> Schema: `$PLUGIN_DIR/skills/shared/graph-index-schema.md` · `$PLUGIN_DIR/skills/shared/graph-module-schema.md`
 
 Before executing, check for orientation files — do not scan source:
 
@@ -56,7 +56,7 @@ To override for this project, set in `.claude/settings.json`:
 { "env": { "REVIEW_MODEL": "claude-sonnet-4-6" } }
 ```
 
-See `../shared/model-routing-spec.md` for full routing documentation.
+See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for full routing documentation.
 
 ## Persona
 
@@ -68,7 +68,7 @@ are in scope. Expertise = this project's actual stack per layer.
 The persona sets *what to scrutinize* — it never licenses assumption. The spec and the PR diff are
 the only sources of truth; never mark a requirement met without the implementing change (subordinate
 to CLAUDE.md §3 / decision transparency). Never name the persona in the report. See
-`../shared/personas-spec.md`.
+`$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ## Step 1 — Gather Inputs
 
@@ -93,7 +93,7 @@ table below, in priority order.
 | Pasted diff text      | Use directly                                        |
 
 After collecting the diff, present a **source file scan request** before
-reading any source file (apply `../shared/source-file-consent.md` Category B bulk gate):
+reading any source file (apply `$PLUGIN_DIR/skills/shared/source-file-consent.md` Category B bulk gate):
 
 ```
 📂 Source file scan request
@@ -131,7 +131,7 @@ in working memory — you will reference it throughout the review.
 
 ## Step 3 — Produce the Review Report
 
-Read `references/output-format.md` for the exact format of all four parts.
+Read `$PLUGIN_DIR/skills/pr-spec-review/references/output-format.md` for the exact format of all four parts.
 
 ### Quick reference
 
@@ -180,13 +180,13 @@ Parse these arguments from the user's message and proceed automatically
 without asking for confirmation — the arguments are sufficient input.
 
 For full argument reference and tips (multiple spec files, large PRs), see
-`references/usage-guide.md`.
+`$PLUGIN_DIR/skills/pr-spec-review/references/usage-guide.md`.
 
 ---
 
 ## Reference Files
 
-- `references/output-format.md` — Exact report format with examples for all
+- `$PLUGIN_DIR/skills/pr-spec-review/references/output-format.md` — Exact report format with examples for all
   four parts. Read before writing output.
-- `references/usage-guide.md` — Invocation patterns, argument reference, tips
+- `$PLUGIN_DIR/skills/pr-spec-review/references/usage-guide.md` — Invocation patterns, argument reference, tips
   for large PRs and multiple spec files.

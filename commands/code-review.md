@@ -5,7 +5,9 @@ argument-hint: [--changed | --pr | --full | --ci | path]
 
 # /code-review
 
-Read `skills/code-review/SKILL.md` and execute it completely from Step 0 to the end.
+> **Plugin path:** Read `.claude/plugin-path.txt` to get `PLUGIN_DIR`. If absent, use the Node.js resolver from `skills/shared/plugin-path-resolution.md §1a`.
+
+Read `$PLUGIN_DIR/skills/code-review/SKILL.md` and execute it completely from Step 0 to the end.
 
 ---
 
@@ -61,7 +63,7 @@ No confirmation prompt is needed. The announcement makes the scan transparent.
 
 ## Step 2 — Execute the code-review skill in full
 
-Read `skills/code-review/SKILL.md` and follow every step exactly.
+Read `$PLUGIN_DIR/skills/code-review/SKILL.md` and follow every step exactly.
 
 When you reach **Step 0b** in the skill, use SCOPE_FLAG from above.
 When you reach **Step 0c** in the skill, run `find .` from the project root — not `src/`.
@@ -81,8 +83,8 @@ CodeReviews/
 **Write the files first. Output only the confirmation summary to the conversation.**
 
 Detect languages and load the appropriate reference file:
-- C# / ASP.NET / WCF / EF -> load `references/checkers-dotnet.md`
-- TypeScript / Angular / Node.js -> load `references/checkers-typescript.md`
+- C# / ASP.NET / WCF / EF -> load `$PLUGIN_DIR/skills/code-review/references/checkers-dotnet.md`
+- TypeScript / Angular / Node.js -> load `$PLUGIN_DIR/skills/code-review/references/checkers-typescript.md`
 - Mixed -> load both
 
 ---
@@ -107,7 +109,7 @@ If it returns `NO_LEDGER_YET`, this is the first run — every finding will be N
 
 #### Step 3a — Phase D: deterministic layer first
 
-Delegate to `skills/shared/phase-d-spec.md` (spec v1.0). In brief:
+Delegate to `$PLUGIN_DIR/skills/shared/phase-d-spec.md` (spec v1.0). In brief:
 
 1. Read the capability profile from `.claude/settings.local.json` → `phaseD`.
    If absent, run the architect-time probe now (Step 4a2 of the architect skill)
@@ -118,7 +120,7 @@ Delegate to `skills/shared/phase-d-spec.md` (spec v1.0). In brief:
    never message text. Fingerprint: `code|file|symbol`.
 3. **JS (eslint mode):** run the project-local eslint with the project's config;
    fingerprint: `rule-id|file|symbol`.
-4. **web.config / app.config:** apply `references/webconfig-checks.md` (build-free,
+4. **web.config / app.config:** apply `$PLUGIN_DIR/skills/code-review/references/webconfig-checks.md` (build-free,
    always available).
 5. **Baseline rule (mandatory):** if the ledger has no `## Baseline` section,
    this is the FIRST Phase D run — write ALL findings to `## Baseline` (they
@@ -181,7 +183,7 @@ Build the reconciled finding set:
    keep Open, update "last seen" to today, keep original "first detected" date.
 
 2. **Newly Fixed** — finding in ledger as Open but NOT in current analysis:
-   **Capability guard first** (per `skills/shared/phase-d-spec.md` §5): if the
+   **Capability guard first** (per `$PLUGIN_DIR/skills/shared/phase-d-spec.md` §5): if the
    finding's `Source` names a deterministic tool that THIS run did not possess
    (check the current machine's capability profile), the absence proves nothing —
    carry the finding forward UNCHANGED, do not touch `last-seen`, do not mark
@@ -206,7 +208,7 @@ Build the reconciled finding set:
    If a previously-Fixed finding REAPPEARS in current analysis: mark as **Regression**,
    note the regression date, and set status back to Open.
 
-5. **Dismissed** — delegate entirely to `skills/shared/dismissed-findings-reconciliation.md`
+5. **Dismissed** — delegate entirely to `$PLUGIN_DIR/skills/shared/dismissed-findings-reconciliation.md`
    (spec v1.0). Do not implement inline logic. The shared spec defines: keep dismissed
    if file unchanged since `dismissed-date`; set `verify-flag: code-changed` and re-open
    as Open (preserving original dismissal metadata as a note) if the file has commits

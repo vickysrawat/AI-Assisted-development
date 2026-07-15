@@ -29,7 +29,11 @@ const msg = [
   "  • Error resolved                   → error + root cause + fix + gotcha to avoid repeating",
   "  • Approach abandoned               → what failed, why, what not to retry",
   "  • Architecture decision            → decision + rationale + alternatives rejected",
-  "If none apply, skip. Format: ### [YYYY-MM-DD] <trigger> — <topic>"
+  "If none apply, skip. Write a SEPARATE entry to memory/MEMORY.md for EACH trigger that fired:",
+  "",
+  "  ### [YYYY-MM-DD] <trigger> — <topic>",
+  "  <what to remember — 1–3 sentences>",
+  "  Trigger: <trigger>  Confidence: 0.70  Source: auto-capture"
 ].join("\n");
 
 process.stdout.write(JSON.stringify({

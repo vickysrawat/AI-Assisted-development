@@ -6,7 +6,7 @@ argument-hint: "[--with-artifacts]  —  omit for plugin entries only; --with-ar
 ## Model routing
 
 This command uses the **infrastructure tier** — `INFRA_MODEL`
-(default: `claude-sonnet-4-6`). See `skills/shared/model-routing-spec.md`.
+(default: `claude-sonnet-4-6`). See `$PLUGIN_DIR/skills/shared/model-routing-spec.md`.
 
 ---
 
@@ -24,7 +24,7 @@ entries inside a **managed block**, and **never removes or reorders your own lin
 > TFS ignores it, so writing one gives zero protection and generated files
 > (`memory/health.html`, `security/`, the credential file) can still be checked in.
 > The fix is to write the file the repo's VCS actually honours. See
-> `skills/shared/vcs-detect-spec.md`.
+> `$PLUGIN_DIR/skills/shared/vcs-detect-spec.md`.
 
 ---
 

@@ -47,6 +47,87 @@ These are processed and removed by /dream each run.
 
 <!-- Auto-capture entries appear below this line -->
 
+### [2026-07-14] Plan approved — dream memory confidence + dream-log + age-aware scoring
+Three-part fix: (1) concrete multi-field format in memory-capture.sh so Claude writes
+`Confidence: 0.70` reliably (abstract template was being ignored); (2) new memory-log.sh
+PostToolUse hook that deterministically appends `### [capture]` entries to dream-log.md on
+every MEMORY.md Write/Edit — Edit extracts from new_string (all new headers), Write takes
+last header; CRLF + Windows path normalization throughout; (3) age-aware bonus in
+commands/dream.md Phase 2 — entries with no Confidence field get +0.00/+0.05/+0.10/+0.15
+based on days since header date, capped at 0.85. First-time gate: presence of `Confidence:`
+field (no dream-log.md parsing). Key risks resolved: no `< /dev/stdin`, `.replace(/\\/g,"/")`,
+date parse failure defaults to +0.00, dream skill skips `### [capture]` lines when finding
+last dream run. Verify 260✓/0✗.
+Trigger: Plan approved  Confidence: 0.70  Source: auto-capture
+
+### [2026-07-13] Plan approved — icea-feature graph orientation fix
+Two-part fix for icea-feature skipping graph orientation and scanning source files:
+1. Enrich `graph-index.md` with a Module Summaries section (bounded context + key files per module inline) so the always-loaded file provides bounded context without requiring a second detail-file read.
+2. Add a required `ORIENTATION: <module> (domain: <domain>) — <bounded context>` output line at the start of icea-feature Step 1, making orientation verifiable.
+Schema ceiling raised 350 → 1,500 tokens. Files: `skills/shared/graph-index-schema.md`, `skills/graph-sync/SKILL.md` (Step 8c), `skills/icea-feature/SKILL.md` (orientation step 2 + Step 1). graph-index.md regenerated in-session from 32 existing detail files. Cache copies updated.
+
+### [2026-07-13] Task completed — prod-readiness/ exempted from icea-floor.sh
+`/plugin-readiness` and `/app-readiness` write HTML reports to `prod-readiness/` — these were blocked by the ICEA floor hook because `*.html` is a guarded extension.
+Fix: added `*/prod-readiness/*|prod-readiness/*` to the exemption `case` clause in all three copies of the hook:
+- `.claude/hooks/icea-floor.sh` (active)
+- `_project-deploy/hooks/icea-floor.sh` (deployment template)
+- `hooks/icea-floor.sh` (older root-level copy — lacked plugin-guide.html carve-out; added prod-readiness only)
+validate.js stays 259✓/0✗.
+
+### [2026-07-13] Task completed — README version updated + plugin-path.txt corrected
+README.md line 5 said "Version 3.5.0"; updated to "Version 3.12.0" (current installed version).
+`.claude/plugin-path.txt` pointed to old dev source path (`c:/Users/rawatv/source/repos/ai-assisted-development`);
+updated to current installed path (`C:/Users/rawatv/.claude/plugins/cache/KirklandAndEllis-marketplace/ai-assisted-development/3.12.0`).
+**Gotcha:** plugin-path.txt goes stale when the plugin is reinstalled/upgraded from source to marketplace install.
+Re-check and update it if architect or graph-sync fail to find the plugin dir.
+
+### [2026-07-13] Task completed — stepWireUserSettings() added to bootstrap (autoMemoryEnabled fix)
+Added `stepWireUserSettings()` to `scripts/setup-init-bootstrap.cjs`. Runs after `stepWireSettings()`
+in both init and sync mode (not guarded by isDone). Writes `autoMemoryEnabled: false` to
+`~/.claude/settings.json` (user-level) only when the key is undefined; respects existing values.
+Failure appends to `manifest.warnings[]` which `printSummary()` already surfaces.
+Also added `const os = require('os')` to imports. validate.js 259✓/0✗. `node --check` clean.
+
+Gotcha: validate.js running via background bash tasks returned empty output files — use
+`node <path> 2>&1 | tail -N` and watch for the task completion summary "exit code 0" instead.
+
+### [2026-07-13] Plan approved — fix autoMemoryEnabled via user-level settings write
+Root cause: `autoMemoryEnabled: false` in project `.claude/settings.json` does NOT suppress
+Claude Code's built-in auto-memory (evidence: `# auto memory` context still injected in session).
+The env-var approach (`env` block) also rejected — only affects child processes, not CC startup.
+Fix: bootstrap `stepWireUserSettings()` writes `autoMemoryEnabled: false` to `~/.claude/settings.json`
+(user-level) during both init and sync. If write fails → adds to `manifest.warnings[]` → surfaced
+in setup-init Step 4 summary with manual fix instructions. Keep project-level setting as defence-in-depth.
+Files: `scripts/setup-init-bootstrap.cjs` only (+ migration note). No skill SKILL.md changes needed.
+
+### [2026-07-13] Task completed — setup-init fully executed for plugin repo (architecture + graph)
+setup-init was resumed from manifest (steps 1-3 already done). Completed steps 4-6:
+- 8 architecture docs populated under .claude/architecture/ (js-library stack, repo=ai-assisted-development plugin)
+- Knowledge graph built: 32 modules, domain structure, 14 INFERRED edges, graph-extract-edges.js added 0 EXTRACTED (expected — skills are markdown, no import statements)
+- Deployment doc approved and written (local plugin, no CI/CD, no auth, AZURE_DEVOPS_PAT only)
+- plugin-path.txt corrected to v3.12.0 installed path
+
+### [2026-07-13] Task completed — graph-viz generated graph.html (32 modules, 4 hubs)
+graph.html written to .claude/graph/graph.html (19KB). Pattern that worked: write a CJS
+script to /c/tmp/ via the Write tool, then run it with `node /c/tmp/<script>.cjs`. This
+avoids all bash quote/backtick issues when embedding large JSON into HTML. The script reads
+graph.json via fs.readFileSync and interpolates it into the template string.
+Note: /c/tmp/ in Git-bash = C:\tmp (Write tool path). These scratch scripts are safe to
+leave there; they don't affect the project.
+
+### [2026-07-13] Error resolved — node -e bash quote issue when writing JSON with backticks
+`node -e "..."` in Bash tool fails with "unexpected EOF looking for matching quote" when the JS
+string contains backtick characters (`). Root cause: bash interpolates backticks inside double-quoted strings.
+Fix: use the **Write tool** to write file content directly (never node -e for JSON or multiline content with backticks).
+Also applies to heredocs with apostrophes/Unicode. Confirmed pattern from MEMORY.md 2026-07-10 entry.
+
+### [2026-07-13] Architecture decision — plugin repo type is js-library for architect skill
+This repo (ai-assisted-development plugin) does not match any standard architect skill detector:
+no .sln, no angular.json, no Spring Boot, no react dep, and package.json has no main/exports/module field.
+The closest supported type is `js-library`. The deployment context is also atypical — no CI/CD pipeline,
+no hosting model (it's a local Claude Code plugin, not a deployed service). The deployment questionnaire
+answers should reflect this: intentionally local, no environments, no auth, no DB.
+
 ### [2026-07-09] Architecture decision — dream-* lifecycle commands renamed to setup-*
 Plugin lifecycle commands (`dream-init`, `dream-sync`, `dream-teardown`, `dream-status`) renamed to
 `setup-*` prefix to separate them from the Dream memory feature (`dream`, `dream-health`, `dream-audit`, `dream-rollback`).

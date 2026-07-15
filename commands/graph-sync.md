@@ -9,7 +9,7 @@ This command uses the **infrastructure tier** — `INFRA_MODEL`
 (default: `claude-sonnet-4-6`, effort: `low`).
 
 To override: `{{ "env": {{ "INFRA_MODEL": "claude-opus-4-6" }} }}` in `.claude/settings.json`.
-See `skills/shared/model-routing-spec.md` for the full specification.
+See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for the full specification.
 
 ---
 
@@ -32,6 +32,8 @@ For first-time graph creation, use `/setup-init` instead.
 
 <skill>graph-sync</skill>
 
-Read `skills/graph-sync/SKILL.md` and follow its instructions exactly.
+Read `.claude/plugin-path.txt` to get `PLUGIN_DIR` (if absent, use the Node.js resolver from `skills/shared/plugin-path-resolution.md §1a`), then:
+
+Read `$PLUGIN_DIR/skills/graph-sync/SKILL.md` and follow its instructions exactly.
 
 Output only the terse status table — no preamble, no file content echoed to chat.

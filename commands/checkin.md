@@ -9,7 +9,7 @@ This command uses the **infrastructure tier** — `INFRA_MODEL`
 (default: `claude-sonnet-4-6`).
 
 To override: `{{ "env": {{ "INFRA_MODEL": "claude-opus-4-6" }} }}` in `.claude/settings.json`.
-See `skills/shared/model-routing-spec.md` for the full specification.
+See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for the full specification.
 
 ---
 
@@ -23,11 +23,13 @@ failing gate through. Expertise spans this project's actual stack per layer.
 The persona sets *what to scrutinize* — it never licenses assumption. The staged/modified files, the
 ICEA, and the ledgers are the only sources of truth; a persona's "experience" is never a substitute
 for an actual check result (subordinate to CLAUDE.md §3 / decision transparency). Never name the
-persona in the verdict. See `skills/shared/personas-spec.md`.
+persona in the verdict. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 
 # /checkin — Pre-commit quality gate
+
+> **Plugin path:** Read `.claude/plugin-path.txt` to get `PLUGIN_DIR`. If absent, use the Node.js resolver from `skills/shared/plugin-path-resolution.md §1a`.
 
 Runs three checks in one pass against your changed files and produces a single
 pass/fail verdict. Replaces the manual sequence of code-review + icea-review +
@@ -98,7 +100,7 @@ Proceeding — type STOP to halt.
 
 This is Category A consent. No confirmation needed.
 
-Load `skills/code-review/SKILL.md` and apply its checker categories to the
+Load `$PLUGIN_DIR/skills/code-review/SKILL.md` and apply its checker categories to the
 changed files only. Do not re-read architecture files — use the shared context
 loaded in Step 2. Use scope `--changed` for this check regardless of any outer flag.
 
@@ -119,10 +121,10 @@ Result:
 
 ## Step 4 — Check B: ICEA compliance
 
-Load `skills/icea-review/SKILL.md` checks (Seven Checks section) and apply
+Load `$PLUGIN_DIR/skills/icea-review/SKILL.md` checks (Seven Checks section) and apply
 them to the diff. Use shared context from Step 2 — do not re-read architecture.
 
-**Tier re-verification** (per `skills/shared/change-tier-spec.md`): if the ICEA
+**Tier re-verification** (per `$PLUGIN_DIR/skills/shared/change-tier-spec.md`): if the ICEA
 header says `Tier: T1`, verify the actual diff still satisfies T1 bounds
 (≤1 file, ≤20 lines, no signature changes, no new dependencies, no T3 trigger).
 If the diff has outgrown T1:
@@ -139,7 +141,7 @@ If an ICEA was found in Step 2:
 - Flag any AC with no corresponding change as **Missing**
 - Flag any changed file with no corresponding AC as **Scope creep**
 
-**Manifest delta** (per `skills/shared/change-manifest-spec.md` §3 — mechanical,
+**Manifest delta** (per `$PLUGIN_DIR/skills/shared/change-manifest-spec.md` §3 — mechanical,
 zero model judgment): if the ICEA contains a Change Manifest, compute:
 ```bash
 # actual touched source/test files
@@ -197,7 +199,7 @@ Result:
 
 ## Step 5b — Business context severity review
 
-Before computing the verdict, load `skills/shared/business-context-severity.md` and
+Before computing the verdict, load `$PLUGIN_DIR/skills/shared/business-context-severity.md` and
 apply all B1–B7 override triggers to every finding from Checks A, B, and C.
 
 If any finding touches a B1–B7 trigger → escalate to Critical. State the trigger.
@@ -208,14 +210,14 @@ This check cannot be skipped.
 
 ## Step 5c — Open security and DAST findings gate
 
-Load `skills/shared/findings-gate.md` and execute the canonical bash functions
+Load `$PLUGIN_DIR/skills/shared/findings-gate.md` and execute the canonical bash functions
 defined there verbatim. Do not re-implement the ledger-walking logic inline.
 
 This gate runs regardless of scope — a known open Critical/High finding blocks
 the commit even if none of the staged files touch it.
 
 Run against all three ledgers and collect the result structure defined in
-`findings-gate.md`:
+`$PLUGIN_DIR/skills/shared/findings-gate.md`:
 
 ```bash
 # Load canonical functions from findings-gate.md — do not inline

@@ -492,7 +492,7 @@ grep -q "icea-floor.sh" .claude/settings.json 2>/dev/null && echo "PreToolUse: W
 
 ### 1q — Phase D coverage health
 
-Per `../shared/phase-d-spec.md` §7. Read the machine-local profile:
+Read `.claude/plugin-path.txt` to get PLUGIN_DIR (if absent, use the Node.js resolver from `skills/shared/plugin-path-resolution.md §1a`). Per `$PLUGIN_DIR/skills/shared/phase-d-spec.md` §7. Read the machine-local profile:
 ```bash
 grep -A20 '"phaseD"' .claude/settings.local.json 2>/dev/null || echo "NO_PROFILE"
 ```
@@ -736,7 +736,7 @@ Recommended actions:
 
 This skill does not perform security or compliance reviews. If output from this
 skill surfaces data that may trigger B1–B7 sensitivity (see
-`../shared/business-context-severity.md`), flag it to the developer. Do not
+`$PLUGIN_DIR/skills/shared/business-context-severity.md`), flag it to the developer. Do not
 silently process or display attorney-client privileged matter data, immigration
 identifiers, or other B1–B7 categories without acknowledgement.
 

@@ -557,7 +557,7 @@ and deploys matching rules to `.claude/rules/`.
 
 **Step 1b — Phase D capability probe (machine-local).** Now that the stack is
 known, probe THIS machine for deterministic analyzers per
-`../shared/phase-d-spec.md` §2 — ladders for detected stacks only. Write
+`$PLUGIN_DIR/skills/shared/phase-d-spec.md` §2 — ladders for detected stacks only. Write
 results to `.claude/settings.local.json` under the `phaseD` key (machine-
 specific, auto-gitignored — NEVER into architecture-deployment.md; tool
 availability is a per-machine fact and a capability claim in a committed file
@@ -614,7 +614,7 @@ stack file overriding the shared one. Every repo type still resolves to the same
 ## Step 3 — Deploy templates to .claude/architecture/
 
 **Populated-files guard (run first):** Check whether all files for this repo type are
-already populated. Use the **two-signal detector** from `../shared/arch-populated-detect.md`
+already populated. Use the **two-signal detector** from `$PLUGIN_DIR/skills/shared/arch-populated-detect.md`
 (`arch_unfilled` = TEMPLATE marker on line 1 **or** a scaffold-only body token) — do NOT
 use a bare `grep TEMPLATE`, which mis-reads a marker-free-but-empty file as populated:
 
@@ -642,7 +642,7 @@ stack file wins — then, for each of the eight resulting files:
    `<!-- TEMPLATE -->` marker retained**, mark as `NEEDS_POPULATION`
 
 To detect whether a file contains real content vs scaffolding, use the two-signal
-`arch_unfilled` detector from `../shared/arch-populated-detect.md` (marker on line 1,
+`arch_unfilled` detector from `$PLUGIN_DIR/skills/shared/arch-populated-detect.md` (marker on line 1,
 or a scaffold-only body token). Every deployed template carries the `<!-- TEMPLATE -->`
 marker through every copy path; it is removed only after a real population pass (Step 5).
 Never strip the marker on copy — an interrupted run would then leave an undetectable
@@ -747,10 +747,10 @@ Flagged sections need manual input — search for ⚠ in the files.
 
 | File | Purpose |
 |---|---|
-| `../shared/graph-json-schema.md` | Schema for `.claude/graph/graph.json` (authoritative structure — typed nodes/edges, fingerprints) |
-| `../shared/graph-index-schema.md` | Schema for `.claude/graph/graph-index.md` (breadth index projection) |
-| `../shared/graph-module-schema.md` | Schema for `.claude/graph/<module>.md` (per-module depth projection) |
-| `../shared/scope-flags-spec.md` | Scope flag definitions (informational) |
+| `$PLUGIN_DIR/skills/shared/graph-json-schema.md` | Schema for `.claude/graph/graph.json` (authoritative structure — typed nodes/edges, fingerprints) |
+| `$PLUGIN_DIR/skills/shared/graph-index-schema.md` | Schema for `.claude/graph/graph-index.md` (breadth index projection) |
+| `$PLUGIN_DIR/skills/shared/graph-module-schema.md` | Schema for `.claude/graph/<module>.md` (per-module depth projection) |
+| `$PLUGIN_DIR/skills/shared/scope-flags-spec.md` | Scope flag definitions (informational) |
 
 ## Model routing
 
@@ -764,7 +764,7 @@ To override for this project:
 { "env": { "INFRA_MODEL": "claude-opus-4-6" } }
 ```
 
-See `../shared/model-routing-spec.md` for the full routing specification.
+See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for the full routing specification.
 
 ## Persona
 
@@ -776,7 +776,7 @@ topology** (per detected_stacks) — never a fixed technology.
 The persona sets *what to scrutinize* — it never licenses assumption. The codebase and its manifests
 are the only sources of truth; document what is actually there, never what a persona would "expect"
 (subordinate to CLAUDE.md §3 / decision transparency). Never name the persona in any artifact. See
-`../shared/personas-spec.md`.
+`$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 
@@ -784,7 +784,7 @@ are the only sources of truth; document what is actually there, never what a per
 
 This skill does not perform security or compliance reviews. If output from this
 skill surfaces data that may trigger B1–B7 sensitivity (see
-`../shared/business-context-severity.md`), flag it to the developer. Do not
+`$PLUGIN_DIR/skills/shared/business-context-severity.md`), flag it to the developer. Do not
 silently process or display attorney-client privileged matter data, immigration
 identifiers, or other B1–B7 categories without acknowledgement.
 
@@ -816,13 +816,13 @@ former `domain-map.md` (retired in v3.0.0, ADR 0017 superseded).
 
 The graph has three parts:
 - **`graph.json`** — the **authoritative structure**: typed nodes, typed edges with
-  confidence, module-wide fingerprints, hub flags. See `../shared/graph-json-schema.md`.
+  confidence, module-wide fingerprints, hub flags. See `$PLUGIN_DIR/skills/shared/graph-json-schema.md`.
   Never auto-loaded (no `paths:`).
 - **`graph-index.md`** — an always-loaded breadth index (module → entry point), *projected
-  from* `graph.json`. See `../shared/graph-index-schema.md`.
+  from* `graph.json`. See `$PLUGIN_DIR/skills/shared/graph-index-schema.md`.
 - **`graph/<module>.md`** — one on-demand depth file per module (bounded context, key files,
   dependencies, patterns; ≤400 tokens; auto-loads via `paths:` frontmatter), *projected from*
-  `graph.json`. See `../shared/graph-module-schema.md`.
+  `graph.json`. See `$PLUGIN_DIR/skills/shared/graph-module-schema.md`.
 
 The graph is **committed and PR-reviewed** — it is *not* gitignored (v3.0.0).
 
@@ -843,7 +843,7 @@ TODAY=$(date +%Y-%m-%d)
 
 ### Step 7-2 — Build `graph.json` (authoritative structure — do this first)
 
-For each module, assemble a node per `../shared/graph-json-schema.md`: `id`, `module`,
+For each module, assemble a node per `$PLUGIN_DIR/skills/shared/graph-json-schema.md`: `id`, `module`,
 `domain`, `type` (classify: `service`/`repository`/`ui`/`datastore`/`external-api`/
 `shared-lib`/`domain`), `detailFile`, `entryPoint`, `paths` (source-root glob(s) — an
 array; multi-root modules list each), and the **module-wide** `fingerprint` computed
@@ -907,7 +907,7 @@ g.directoryCatalog = { generatedAt: TODAY, reviewed: false, staticServing: [...]
 
 Now write `.claude/graph/graph.json` deterministically (sorted, stable key order, includes
 `directoryCatalog`). Then populate the source-visible `EXTRACTED` edges **deterministically**
-— resolve `$PLUGIN_DIR` (`../shared/plugin-path-resolution.md` §1a) and run
+— resolve `$PLUGIN_DIR` (`$PLUGIN_DIR/skills/shared/plugin-path-resolution.md` §1a) and run
 `node "$PLUGIN_DIR/scripts/graph-extract-edges.js"` (parses imports locally, offline;
 rewrites only `EXTRACTED` edges; never touches `nodes`/`fingerprint`s/`directoryCatalog`;
 ADR 0041). **Never hand-write an `EXTRACTED` edge.**
@@ -915,7 +915,7 @@ Confirm: `✓ Written: .claude/graph/graph.json (~N tokens)`.
 
 ### Step 7-3 — Project one detail file per module
 
-For each node, write a detail file following `../shared/graph-module-schema.md` exactly:
+For each node, write a detail file following `$PLUGIN_DIR/skills/shared/graph-module-schema.md` exactly:
 `paths:` frontmatter (first root), the ambient-context comment,
 `_Fingerprint: {node.fingerprint} | Updated: {TODAY}_`, the four sections (Bounded
 context, Key files ≤5, Dependencies with types, Patterns), and — when it fits under 400
@@ -924,7 +924,7 @@ tokens — a `**Depended on by:**` line. Write silently — confirm each with
 
 ### Step 7-4 — Project graph-index.md
 
-Build the index following `../shared/graph-index-schema.md` — `paths: always`
+Build the index following `$PLUGIN_DIR/skills/shared/graph-index-schema.md` — `paths: always`
 frontmatter, header line (`Generated | Modules: N | Structure`), and one table row
 per node (`Module | Domain | Detail File | Entry Point`), matching `graph.json` exactly.
 

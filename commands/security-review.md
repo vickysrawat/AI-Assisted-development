@@ -5,7 +5,9 @@ argument-hint: [--changed | --pr | --full | --ci]
 
 # /security-review
 
-Read `skills/security/SKILL.md` and execute it completely from Step 0 to the end.
+> **Plugin path:** Read `.claude/plugin-path.txt` to get `PLUGIN_DIR`. If absent, use the Node.js resolver from `skills/shared/plugin-path-resolution.md §1a`.
+
+Read `$PLUGIN_DIR/skills/security/SKILL.md` and execute it completely from Step 0 to the end.
 Pass the scope flag from the user's invocation directly into the skill's Step 0b.
 
 ---
@@ -59,7 +61,7 @@ No confirmation prompt is needed. The announcement makes the scan transparent.
 
 ## Step 2 — Execute the security skill in full
 
-Read `skills/security/SKILL.md` and follow every step exactly.
+Read `$PLUGIN_DIR/skills/security/SKILL.md` and follow every step exactly.
 
 When you reach **Step 0b** in the skill, use SCOPE_FLAG resolved above.
 When you reach **Step 0c** in the skill, run the `find .` command exactly as written —
@@ -82,7 +84,7 @@ mkdir -p security
 
 After the skill completes its analysis, write a self-contained HTML report to
 `security/security-review-<date>.html`. Use the structure defined in
-`skills/security/references/output-formats.md`.
+`$PLUGIN_DIR/skills/security/references/output-formats.md`.
 
 ```bash
 !node -e "

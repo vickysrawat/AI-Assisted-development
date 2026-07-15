@@ -114,7 +114,7 @@ Skills reference this spec in their `## Reference Files` table and in the
 reconciliation step. Use the following inline reference block:
 
 ```markdown
-**Dismissed finding reconciliation** — delegate to `../shared/dismissed-findings-reconciliation.md`.
+**Dismissed finding reconciliation** — delegate to `$PLUGIN_DIR/skills/shared/dismissed-findings-reconciliation.md`.
 Rule 5 (dismissed finding reappears in scan): keep dismissed and update last-seen if
 the file is unchanged; re-open as Open with a verify-flag note if the file has changed
 since the dismissal date.

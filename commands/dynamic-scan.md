@@ -5,7 +5,9 @@ argument-hint: [--url <target>] [--stack mvc|api|angular|blazor|razorpages] [--a
 
 # /dynamic-scan
 
-Read `skills/dynamic-scan/SKILL.md` and execute it completely from Step 0 to the end.
+> **Plugin path:** Read `.claude/plugin-path.txt` to get `PLUGIN_DIR`. If absent, use the Node.js resolver from `skills/shared/plugin-path-resolution.md §1a`.
+
+Read `$PLUGIN_DIR/skills/dynamic-scan/SKILL.md` and execute it completely from Step 0 to the end.
 Pass the invocation flags into the skill's Step 0d.
 
 This is the runtime (DAST) counterpart to `/security-review` (static SAST). Use
@@ -44,7 +46,7 @@ Announce the resolved configuration before doing anything:
 
 ## Step 1 — Execute the dynamic-scan skill in full
 
-Read `skills/dynamic-scan/SKILL.md` and follow every step exactly:
+Read `$PLUGIN_DIR/skills/dynamic-scan/SKILL.md` and follow every step exactly:
 pre-flight (Docker, stack detection, HTTPS cert, Windows-auth check) → auth setup + the
 `stats.auth.state.loggedin` verification gate → route discovery → generate and run the ZAP
 Automation Framework `zap-plan.yaml` → parse/baseline/severity/diff → source-mapped fixes.
@@ -63,9 +65,10 @@ mkdir -p dynamic-scan
 
 ## Step 3 — Write the HTML report
 
-After the skill completes its analysis, write the self-contained report to
+Read `.claude/plugin-path.txt` to get `PLUGIN_DIR` (if absent, use the Node.js resolver from
+`skills/shared/plugin-path-resolution.md §1a`), then write the self-contained report to
 `dynamic-scan/dynamic-scan-<date>.html` using the structure in
-`skills/dynamic-scan/references/report-format.md`.
+`$PLUGIN_DIR/skills/dynamic-scan/references/report-format.md`.
 
 ---
 

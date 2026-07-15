@@ -3,7 +3,7 @@
 _Skill version: 1.0 · Last changed: 2026-07-07 · Consent: C_
 
 > **Business context severity:** reports status only — no security findings. See
-> `../shared/business-context-severity.md` for the B1–B7 model it does not trigger.
+> `$PLUGIN_DIR/skills/shared/business-context-severity.md` for the B1–B7 model it does not trigger.
 
 ## Purpose
 Show the current state of all ICEA files for an ADO ID and tell the developer
@@ -18,7 +18,7 @@ Triggered by:
 ## Persona
 Acts with a **[DL] Delivery Lead** lens — surface true state and the single next action; always asks
 "where is this actually blocked?" Lens only; never assume, never attribute in output. See
-`../shared/personas-spec.md`.
+`$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 

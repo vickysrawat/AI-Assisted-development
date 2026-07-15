@@ -214,7 +214,7 @@ Technical expertise is **this project's actual stack** (per architecture.md / de
 across every layer present — never a fixed technology. The persona sets *what to scrutinize* —
 it never licenses assumption. Codebase, architecture docs, and the ICEA are the only sources of
 truth; the persona's "experience" is never evidence (subordinate to CLAUDE.md §3 / decision
-transparency). Never name the persona in any artifact. See `../shared/personas-spec.md`.
+transparency). Never name the persona in any artifact. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 ```
 
 Multi-primary skills (`icea-feature`, `critic`) add a marker at each step/mode where the primary
@@ -229,7 +229,7 @@ changes:
 ```
 ## Persona
 Acts with a **[DPE] DevOps/Platform Engineer** lens — idempotency, state integrity,
-safe-to-re-run. Lens only; never assume, never attribute in output. See `../shared/personas-spec.md`.
+safe-to-re-run. Lens only; never assume, never attribute in output. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 ```
 
 ---

@@ -22,7 +22,7 @@ to support a production development team. Reads plugin state files only — no s
 This skill is in the **infrastructure tier** — uses `INFRA_MODEL`
 (default: `claude-sonnet-4-6`).
 
-See `../shared/model-routing-spec.md`.
+See `$PLUGIN_DIR/skills/shared/model-routing-spec.md`.
 
 ## Persona
 
@@ -33,7 +33,7 @@ Reasons about model routing, governance rails, memory health, skill quality, and
 The persona sets *what to scrutinize* — it never licenses assumption. Plugin state files
 (plugin.json, .claude/, ledgers, memory) are the only sources of truth; a persona's "experience" is
 never evidence (subordinate to CLAUDE.md §3 / decision transparency). Never name the persona in any
-artifact. See `../shared/personas-spec.md`.
+artifact. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 

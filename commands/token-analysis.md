@@ -5,6 +5,8 @@ argument-hint: [sessions=N — number of sessions to analyse, default 10]
 
 # /token-analysis
 
+> **Plugin path:** Read `.claude/plugin-path.txt` to get `PLUGIN_DIR`. If absent, use the Node.js resolver from `skills/shared/plugin-path-resolution.md §1a`.
+
 <skill>token-analysis</skill>
 
 ## Your task
@@ -32,7 +34,7 @@ mkdir -p token-analysis
 
 ### Step 3 — Run the token-analysis skill
 
-Read `skills/token-analysis/SKILL.md` and follow its instructions exactly.
+Read `$PLUGIN_DIR/skills/token-analysis/SKILL.md` and follow its instructions exactly.
 The skill reads and updates `token-analysis/token-graph.json` automatically.
 
 ---
@@ -40,7 +42,7 @@ The skill reads and updates `token-analysis/token-graph.json` automatically.
 ### Step 4 — Write the HTML report
 
 The skill produces structured data. Write the complete HTML report using the
-template in `skills/token-analysis/references/report-template.md`.
+template in `$PLUGIN_DIR/skills/token-analysis/references/report-template.md`.
 
 ```bash
 node -e "

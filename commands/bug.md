@@ -25,7 +25,7 @@ layer.
 The persona sets *what to scrutinize* — it never licenses assumption. The failing behaviour and the
 code are the only sources of truth; diagnose from evidence, never a guessed cause (subordinate to
 CLAUDE.md §3 / decision transparency). Never name the persona in the spec, fix, or commit. See
-`skills/shared/personas-spec.md`.
+`$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 
@@ -137,7 +137,7 @@ If `REJECT [reason]`:
 ## Step 6 — Apply the fix
 
 Once APPROVED, apply the source file consent gate from
-`skills/shared/source-file-consent.md` (Category B — post-approval):
+`$PLUGIN_DIR/skills/shared/source-file-consent.md` (Category B — post-approval):
 
 For **each** file listed under "Files likely involved", present the gate before reading:
 

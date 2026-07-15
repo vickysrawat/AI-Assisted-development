@@ -10,6 +10,8 @@ argument-hint: (no arguments needed)
 Run the setup-status skill to produce a health report for all Dream plugin
 infrastructure in the current project.
 
-Read `skills/setup-status/SKILL.md` and follow its instructions exactly.
+Read `.claude/plugin-path.txt` to get `PLUGIN_DIR` (if absent, use the Node.js resolver from `skills/shared/plugin-path-resolution.md §1a`), then:
+
+Read `$PLUGIN_DIR/skills/setup-status/SKILL.md` and follow its instructions exactly.
 
 Output only the formatted status report — no preamble.

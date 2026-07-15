@@ -17,8 +17,8 @@ Generates two document types on demand:
 
 | Document | Purpose | Template |
 |---|---|---|
-| **Product Detail Document** | Stakeholder-facing HTML overview — problem statement, target users, features, architecture, environments, business rules, NFRs, metrics, future roadmap | `references/product-detail-template.html` |
-| **User Guide** | End-user step-by-step HTML instructions — prerequisites, setup, core workflows, tips, troubleshooting, FAQ | `references/user-guide-template.html` |
+| **Product Detail Document** | Stakeholder-facing HTML overview — problem statement, target users, features, architecture, environments, business rules, NFRs, metrics, future roadmap | `$PLUGIN_DIR/skills/product-docs/references/product-detail-template.html` |
+| **User Guide** | End-user step-by-step HTML instructions — prerequisites, setup, core workflows, tips, troubleshooting, FAQ | `$PLUGIN_DIR/skills/product-docs/references/user-guide-template.html` |
 
 ---
 
@@ -32,7 +32,7 @@ To override for this project, set in `.claude/settings.json`:
 { "env": { "ICEA_MODEL": "claude-opus-4-6" } }
 ```
 
-See `../shared/model-routing-spec.md` for full routing documentation.
+See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for full routing documentation.
 
 ## Persona
 
@@ -43,7 +43,7 @@ document's audience (stakeholder vs end-user).
 The persona sets *what to scrutinize* — it never licenses assumption. The codebase, architecture
 docs, and the developer's answers are the only sources of truth; never document a feature or behaviour
 that isn't there (subordinate to CLAUDE.md §3 / decision transparency). Never name the persona in the
-documents. See `../shared/personas-spec.md`.
+documents. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ## Step 1 — Confirm which documents to create
 
@@ -98,7 +98,7 @@ If critical info is missing (no README and no CLAUDE.md), ask the user for:
 
 For each document the user confirmed:
 
-1. Read the relevant template from `references/` (load only what is needed).
+1. Read the relevant template from `$PLUGIN_DIR/skills/product-docs/references/` (load only what is needed).
 2. Replace every `{{PLACEHOLDER}}` with real project data derived from Step 2.
 3. Remove any `{{#if}}` / `{{#each}}` blocks that have no data — never leave empty sections.
 4. Output a **complete, self-contained HTML file** — all CSS is already inline in the
@@ -163,8 +163,8 @@ Load these on demand — do not load both upfront if only one document was reque
 
 | File | When to load |
 |---|---|
-| `references/product-detail-template.html` | Generating the Product Detail Document |
-| `references/user-guide-template.html` | Generating the User Guide |
+| `$PLUGIN_DIR/skills/product-docs/references/product-detail-template.html` | Generating the Product Detail Document |
+| `$PLUGIN_DIR/skills/product-docs/references/user-guide-template.html` | Generating the User Guide |
 
 ---
 
@@ -172,6 +172,6 @@ Load these on demand — do not load both upfront if only one document was reque
 
 This skill does not perform security or compliance reviews. If output from this
 skill surfaces data that may trigger B1–B7 sensitivity (see
-`../shared/business-context-severity.md`), flag it to the developer. Do not
+`$PLUGIN_DIR/skills/shared/business-context-severity.md`), flag it to the developer. Do not
 silently process or display attorney-client privileged matter data, immigration
 identifiers, or other B1–B7 categories without acknowledgement.

@@ -1,41 +1,41 @@
 {
   "schemaVersion": "1",
-  "pluginVersion": "3.7.0",
-  "pluginDir": "c:\\Users\\rawatv\\source\\repos\\ai-assisted-development",
+  "pluginVersion": "3.12.0",
+  "pluginDir": "C:\\Users\\rawatv\\OneDrive - Kirkland\\Desktop\\Vivek\\Learning\\AI Learning\\Plugin\\AI-Assisted-development",
   "mode": "init",
-  "projectRoot": "C:\\Users\\rawatv\\source\\repos\\ai-assisted-development",
-  "startedAt": "2026-07-09T14:53:05.220Z",
-  "completedAt": "2026-07-09T14:55:11.215Z",
+  "projectRoot": "C:\\Users\\rawatv\\OneDrive - Kirkland\\Desktop\\Vivek\\Learning\\AI Learning\\Plugin\\AI-Assisted-development",
+  "startedAt": "2026-07-13T21:47:27.164Z",
+  "completedAt": "2026-07-13T21:56:12.405Z",
   "status": "complete",
   "vcs": "git",
   "operations": {
     "createDirectories": {
       "status": "done",
-      "created": [
+      "created": [],
+      "existed": [
+        ".claude",
         ".claude\\rules",
         ".claude\\commands",
         ".claude\\hooks",
         ".claude\\skills",
         ".claude\\architecture",
         ".claude\\graph",
+        "memory",
         "temp",
         "token-analysis"
-      ],
-      "existed": [
-        ".claude",
-        "memory"
       ]
     },
     "deployStubs": {
       "status": "done",
-      "deployed": 38,
-      "skipped": 0,
+      "deployed": 0,
+      "skipped": 38,
       "failed": []
     },
     "deployHooks": {
       "status": "done",
       "deployed": [
         "findings-gate-precommit.sh",
+        "check-settings-secrets.cjs",
         "graph-stale-detect.sh",
         "icea-floor.sh",
         "memory-capture.sh",
@@ -47,7 +47,7 @@
     },
     "writePluginPath": {
       "status": "done",
-      "path": "c:/Users/rawatv/source/repos/ai-assisted-development"
+      "path": "C:/Users/rawatv/OneDrive - Kirkland/Desktop/Vivek/Learning/AI Learning/Plugin/AI-Assisted-development"
     },
     "deployProjectSkills": {
       "status": "done",
@@ -62,23 +62,29 @@
     },
     "wireSettings": {
       "status": "done",
-      "alreadyWired": false,
-      "noHooks": false
+      "alreadyWired": true,
+      "noHooks": false,
+      "autoMemSet": false
+    },
+    "wireUserSettings": {
+      "status": "done",
+      "set": false,
+      "existingValue": false
     },
     "seedStateFiles": {
       "status": "done",
       "items": [
         {
           "file": ".claude\\dream-init-state.json",
-          "result": "created"
+          "result": "existed"
         },
         {
           "file": ".claude\\file-cache.json",
-          "result": "created"
+          "result": "existed"
         },
         {
           "file": "token-analysis\\token-graph.json",
-          "result": "created"
+          "result": "existed"
         },
         {
           "file": "memory\\MEMORY.md",
@@ -100,7 +106,7 @@
       "vcs": "git",
       "file": ".gitignore",
       "result": "updated",
-      "entriesWritten": 9,
+      "entriesWritten": 16,
       "tfvcDetected": false
     },
     "externalDirScan": {

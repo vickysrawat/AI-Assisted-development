@@ -5,7 +5,9 @@ argument-hint: "[--quick | --full]"
 
 # /app-readiness
 
-Read `skills/app-readiness/SKILL.md` and execute it completely.
+> **Plugin path:** Read `.claude/plugin-path.txt` to get `PLUGIN_DIR`. If absent, use the Node.js resolver from `skills/shared/plugin-path-resolution.md §1a`.
+
+Read `$PLUGIN_DIR/skills/app-readiness/SKILL.md` and execute it completely.
 
 ## Step 0 — Resolve scope flag
 
@@ -22,7 +24,7 @@ Announce:
 
 ## Step 1 — Execute the skill
 
-Read `skills/app-readiness/SKILL.md` and follow every step.
+Read `$PLUGIN_DIR/skills/app-readiness/SKILL.md` and follow every step.
 Pass the resolved scope flag into Step 0 of the skill.
 
 ## Step 2 — Write HTML report

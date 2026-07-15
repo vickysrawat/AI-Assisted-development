@@ -38,7 +38,7 @@ defaults below.
 
 ## Codebase Orientation (optional — run if architecture docs exist)
 
-> Schema: `../shared/graph-index-schema.md` · `../shared/graph-module-schema.md`
+> Schema: `$PLUGIN_DIR/skills/shared/graph-index-schema.md` · `$PLUGIN_DIR/skills/shared/graph-module-schema.md`
 
 Before executing, check for orientation files — do not scan source:
 
@@ -84,7 +84,7 @@ echo $AZURE_DEVOPS_PAT
 - **Not set:** prompt the developer:
   > "Your `AZURE_DEVOPS_PAT` is not set. Paste it here for this request
   > only, or set it as a Windows User Environment Variable for persistence.
-  > See `references/ado-connection-guide.md` for storage options."
+  > See `$PLUGIN_DIR/skills/ado-tasks/references/ado-connection-guide.md` for storage options."
 
 Build the auth header and immediately scrub the raw PAT:
 
@@ -101,7 +101,7 @@ ADO_PROJECT=$(grep -E "^- Project\s*:" CLAUDE.md 2>/dev/null | sed 's/.*: *//')
 ```
 
 Fetch the work item — **always include `--ssl-no-revoke -4`** on a
-corporate network (see `references/ado-connection-guide.md` for why):
+corporate network (see `$PLUGIN_DIR/skills/ado-tasks/references/ado-connection-guide.md` for why):
 
 ```bash
 curl -s --ssl-no-revoke -4 \
@@ -168,7 +168,7 @@ Output two things:
 **B) Full task cards** — one block per task with all fields ready to paste
    into Azure DevOps
 
-Use the formats defined in `references/task-formats.md`.
+Read `.claude/plugin-path.txt` to get PLUGIN_DIR (if absent, use the Node.js resolver from `$PLUGIN_DIR/skills/shared/plugin-path-resolution.md §1a`). Use the formats defined in `$PLUGIN_DIR/skills/ado-tasks/references/task-formats.md`.
 
 ### Step 4 — Generate Effort Estimate Summary
 
@@ -204,7 +204,7 @@ Title: As a [role], I want [capability] so that [benefit]
 [Full ICEA paste block — Intent / Context / Examples / Acceptance Criteria]
 ```
 
-See format in `references/task-formats.md`.
+See format in `$PLUGIN_DIR/skills/ado-tasks/references/task-formats.md`.
 
 ### Step 6 — Definition of Ready Checklist
 
@@ -237,7 +237,7 @@ To override for this project, set in `.claude/settings.json`:
 { "env": { "ICEA_MODEL": "claude-opus-4-6" } }
 ```
 
-See `../shared/model-routing-spec.md` for full routing documentation.
+See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for full routing documentation.
 
 ## Persona
 
@@ -249,13 +249,13 @@ actual stack per layer, never a fixed technology.
 The persona sets *what to scrutinize* — it never licenses assumption. The approved ICEA, architecture
 docs, and the codebase are the only sources of truth; a persona's "experience" is never evidence
 (subordinate to CLAUDE.md §3 / decision transparency). Never name the persona in any artifact. See
-`../shared/personas-spec.md`.
+`$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ## Business context severity
 
 This skill does not perform security or compliance reviews. If output from this
 skill surfaces data that may trigger B1–B7 sensitivity (see
-`../shared/business-context-severity.md`), flag it to the developer. Do not
+`$PLUGIN_DIR/skills/shared/business-context-severity.md`), flag it to the developer. Do not
 silently process or display attorney-client privileged matter data, immigration
 identifiers, or other B1–B7 categories without acknowledgement.
 
@@ -270,7 +270,7 @@ identifiers, or other B1–B7 categories without acknowledgement.
 - ALWAYS include a test task for every implementation task
 - If the ICEA has no Node.js context, do not generate Node.js tasks
 - Estimates are rough ranges only — flag them as such
-- ALWAYS use `--ssl-no-revoke -4` on every ADO curl call — see `references/ado-connection-guide.md`
+- ALWAYS use `--ssl-no-revoke -4` on every ADO curl call — see `$PLUGIN_DIR/skills/ado-tasks/references/ado-connection-guide.md`
 - ALWAYS use Node.js for JSON parsing, not Python — Python may not be available on Windows
 - NEVER log or display the PAT value; unset it immediately after building the auth header
 - If no ICEA file exists, proceed from ADO work item but flag it with the

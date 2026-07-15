@@ -33,7 +33,7 @@ project defaults below.
 ## Business context severity
 
 ICEA acceptance criteria carry B1–B7 sensitivity flags where relevant (immigration IDs,
-privileged matter data, vulnerable-client data). See `../shared/business-context-severity.md`.
+privileged matter data, vulnerable-client data). See `$PLUGIN_DIR/skills/shared/business-context-severity.md`.
 
 ## Invocation
 
@@ -58,18 +58,19 @@ Do NOT trigger for:
 
 ## Codebase Orientation (run before Step 1)
 
-> Schema: `../shared/graph-index-schema.md` · `../shared/graph-module-schema.md`
+> Schema: `$PLUGIN_DIR/skills/shared/graph-index-schema.md` · `$PLUGIN_DIR/skills/shared/graph-module-schema.md`
 
 Before intercepting the feature request, orient yourself to the project without
 reading raw source files:
 
 1. **Read `.claude/architecture/architecture.md`** if it exists — this gives the
    system overview, layer responsibilities, and key patterns.
-2. **Read `.claude/graph/graph-index.md`** if it exists — the module table
-   (Module · Domain · Detail File · Entry Point) is the codebase breadth index.
-   Match the feature request to the closest **Module** row, then **read that
-   module's detail file** (`.claude/graph/<module>.md`) for bounded context,
-   key files, dependencies, and patterns.
+2. **Use `.claude/graph/graph-index.md`** — it is auto-loaded via `paths: always`
+   and already in context. Its **Module Summaries** section lists every module's
+   bounded context and key files inline. Match the feature request to the closest
+   module entry and use its summary directly — **no detail file read needed** for
+   basic orientation. Only read the module's detail file (the `Detail File` column
+   path) if you additionally need patterns or the full dependency list.
 3. **Read `.claude/architecture/architecture-deployment.md`** if it exists — this gives the
    hosting model (IIS / container / App Service), auth strategy (Entra ID / JWT / API key),
    environment list, and CI/CD pipeline. Reference this when drafting ACs for API endpoints,
@@ -114,7 +115,7 @@ reading raw source files:
    Continuing without codebase context…
    ```
 5. Do NOT scan `src/`, read controller files, or open any source file.
-   This skill is Category C under `../shared/source-file-consent.md` —
+   This skill is Category C under `$PLUGIN_DIR/skills/shared/source-file-consent.md` —
    it operates on architecture docs and the knowledge graph only. The graph
    was built from source; use it instead of re-reading source files.
 
@@ -135,7 +136,12 @@ reading raw source files:
 ### Step 1 — Intercept, Classify, and Collect Identifiers
 
 > **Acting as:** [PO] Priya Nair — Product Owner (through Step 6). Weigh [TL] feasibility concerns.
-> See `../shared/personas-spec.md`.
+> See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
+
+> **Required first output — orientation declaration:**
+> Before collecting identifiers or drafting anything, output this line:
+> `ORIENTATION: <module> (domain: <domain>) — <bounded context from Module Summaries in graph-index.md>`
+> This line must be the first output of this skill. An ICEA response that omits it is incomplete.
 
 **Collect three identifiers.** If any are missing, ask in a single prompt:
 
@@ -236,7 +242,7 @@ Review above. Correct anything wrong, answer open questions, or:
 
 > **Note — two senses of "persona":** the `Personas:` field above describes the product's
 > **end-users** (customer personas — who the feature is for). This is distinct from the **Expert
-> Persona** the model is *acting as* to do this planning ([PO], per `../shared/personas-spec.md`).
+> Persona** the model is *acting as* to do this planning ([PO], per `$PLUGIN_DIR/skills/shared/personas-spec.md`).
 > Fill the field with end-users; never put the Expert Persona there.
 
 **⛔ STOP — plan gate. Do not continue. Do not draft the ICEA. Do not write any file.**
@@ -283,6 +289,11 @@ If any open questions remain:
 
 On `SAVE PLAN ADO-{ADO_ID}` (or `SAVE PLAN ADO-{ADO_ID} CONFIRM`):
 
+⚠ **NEVER write the plan to `temp/`** — plans are written DIRECTLY to the
+permanent UserStory folder. There is no temp staging for plans. Unlike the
+ICEA and Tech Spec (which stage in temp/ before final save), the plan is
+saved permanently in one step.
+
 Write plan to disk — always to the UserStory folder regardless of type:
 ```
 docs/Release{RELEASE_ID}/Sprint{SPRINT_ID}/UserStory{ADO_ID}/ADO-{ADO_ID}-{feature}.plan.md
@@ -290,6 +301,21 @@ docs/Release{RELEASE_ID}/Sprint{SPRINT_ID}/UserStory{ADO_ID}/ADO-{ADO_ID}-{featu
 
 The Story vs Epic determination happens at Step 10 (Tech Spec sizing).
 The folder name never changes — the ICEA type is recorded inside the file.
+
+Create the AI audit trail file (derived — no gate):
+```
+docs/Release{RELEASE_ID}/Sprint{SPRINT_ID}/UserStory{ADO_ID}/ADO-{ADO_ID}-{feature}.ai-audit.md
+```
+
+Initial content:
+```markdown
+# AI Audit Trail — {Feature Name}
+ADO #{ADO_ID} · Release {RELEASE_ID} · Sprint {SPRINT_ID}
+
+| # | Date | Event | Triggered by | Summary |
+|---|---|---|---|---|
+| 1 | {YYYY-MM-DD} | Plan generated | SAVE PLAN | {one-line summary of plan scope} |
+```
 
 Confirm and immediately proceed to Step 5:
 ```
@@ -332,7 +358,7 @@ Only proceed past this point when `PLAN_GATE_PASSED` is confirmed.
 ---
 
 Draft the full ICEA using the template in
-`skills/icea-feature/references/icea-template.md`.
+`$PLUGIN_DIR/skills/icea-feature/references/icea-template.md`.
 
 Populate from the plan automatically — never re-ask answered questions:
 
@@ -426,6 +452,42 @@ Review the ICEA in VS Code preview. When ready: SAVE ICEA ADO-{ADO_ID}
 
 ### Step 7 — On SAVE ICEA ADO-{ID}
 
+**⛔ CRITIC GATE — run before copying temp to permanent:**
+
+Run the critic against `temp/ADO-{ADO_ID}-icea.md` (mode = icea, source = internal):
+```
+Read .claude/plugin-path.txt to get PLUGIN_DIR (if absent, use §1a resolver), then
+Read $PLUGIN_DIR/skills/critic/SKILL.md and execute it with mode = icea, source = internal.
+```
+
+**If critic verdict is `PASS` or `PASS WITH NOTES`:**
+- Show: `✅ Critic: {verdict} — proceeding to save.`
+- Save critic output to:
+  ```
+  docs/Release{RELEASE_ID}/Sprint{SPRINT_ID}/UserStory{ADO_ID}/ADO-{ADO_ID}-{feature}.icea-critic-{YYYY-MM-DD}.md
+  ```
+  Content:
+  ```markdown
+  # ICEA Critic — ADO #{ADO_ID}
+  Date: {YYYY-MM-DD}
+  Verdict: {PASS | PASS WITH NOTES}
+
+  {Full critic output}
+  ```
+- Proceed to copy temp → permanent.
+
+**If critic verdict is `REVISE`:**
+- Show the findings.
+- Do NOT copy temp → permanent.
+- Prompt:
+  ```
+  ⛔ Critic found issues — ICEA not saved.
+  Address the findings above and update the temp file, then reply:
+    SAVE ICEA ADO-{ADO_ID}           ← to re-run critic and save
+    SAVE ICEA ADO-{ADO_ID} ACCEPT    ← to override and save anyway (not recommended)
+  ```
+- If developer uses `SAVE ICEA ADO-{ADO_ID} ACCEPT`: save the critic output with verdict REVISE (override noted), then proceed to copy.
+
 Copy temp file to permanent location with `Status: DRAFT` — always to the UserStory folder:
 ```bash
 DEST_DIR="docs/Release${RELEASE_ID}/Sprint${SPRINT_ID}/UserStory${ADO_ID}"
@@ -435,10 +497,20 @@ cp temp/ADO-{ADO_ID}-icea.md \
 rm temp/ADO-{ADO_ID}-icea.md
 ```
 
+Append to the AI audit trail file:
+```bash
+AUDIT_FILE="docs/Release${RELEASE_ID}/Sprint${SPRINT_ID}/UserStory${ADO_ID}/ADO-${ADO_ID}-{feature}.ai-audit.md"
+```
+Append row:
+```
+| {next #} | {YYYY-MM-DD} | ICEA drafted | SAVE ICEA | Critic: {PASS/PASS WITH NOTES/REVISE+ACCEPT} |
+```
+
 Confirm and immediately proceed to Step 8:
 ```
 ✅ ICEA saved — ADO #{ADO_ID}
    Path: docs/Release{RELEASE_ID}/Sprint{SPRINT_ID}/UserStory{ADO_ID}/ADO-{ADO_ID}-{feature}.icea.md
+   Critic: docs/.../ADO-{ADO_ID}-{feature}.icea-critic-{YYYY-MM-DD}.md
    Temp file cleaned up.
 
 Drafting Tech Spec now...
@@ -450,7 +522,7 @@ Drafting Tech Spec now...
 
 > **Acting as:** [TL] Marcus Reid — Tech Lead (Steps 7–10, Tech Spec phase). Weigh [SE]
 > implementation concerns. Expertise = this project's actual stack per layer. See
-> `../shared/personas-spec.md`.
+> `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 **⛔ MECHANICAL GATE — run this check before any Tech Spec work begins:**
 
@@ -483,28 +555,41 @@ appropriate framework overlay.
 
 **Template selection:**
 
-Read the detected stack from `.claude/dream-init-state.json`:
+Read the combined stack from `.claude/dream-init-state.json` (primary ∪ external):
 
 ```bash
 node -e "
   const fs = require('fs');
   try {
     const s = JSON.parse(fs.readFileSync('.claude/dream-init-state.json', 'utf8'));
-    const stacks = s.detected_stacks || [];
-    process.stdout.write(stacks.join(' '));
+    const all = [...new Set([...(s.detected_stacks||[]), ...(s.external_detected_stacks||[])])];
+    process.stdout.write(all.join(' '));
   } catch(e) { process.stdout.write('unknown'); }
 "
 ```
 
-Select overlay based on detected stacks:
+Select overlay based on all_stacks (primary ∪ external):
 
-| detected_stacks contains | Overlay to use |
+| all_stacks contains | Overlay to use |
 |---|---|
-| `dotnet` or `dotnet-framework`, NO `angular` | `techspec-aspnet-mvc-jquery.md` |
-| `dotnet` or `dotnet-framework` + `angular` | `techspec-aspnet-api-angular.md` *(future)* |
-| `java` | `techspec-java-spring-angular.md` *(future)* |
-| `python` | `techspec-python-fastapi.md` *(future)* |
-| `unknown` or unrecognised | Use base template only — tell developer no overlay available for their stack |
+| `dotnet` or `dotnet_framework`, no `angular`, no `nodejs` | `techspec-aspnet-mvc-jquery.md` |
+| `dotnet` or `dotnet_framework` + `angular`, no `nodejs` | `techspec-aspnet-api-angular.md` |
+| `angular` + `nodejs` (with or without `dotnet`/`dotnet_framework`) | `techspec-angular-nodejs.md` |
+| `java` | base only — Java overlay not yet available |
+| `python` | base only — Python overlay not yet available |
+| `angular` only (no `nodejs`, no `dotnet`) | base only — known gap, no SPA-only overlay |
+| `unknown` or unrecognised | base only — tell developer no overlay for their stack |
+
+`dotnet` (modern .NET Core/5+/10) and `dotnet_framework` (legacy .NET Framework 4.x:
+System.Web / WCF) are mutually exclusive — a project has one, not both.
+
+If the selected overlay file is missing at `$PLUGIN_DIR` (verify with `ls` before
+reading), fall back to base template only:
+`"⚠ Overlay file not found — using base template. Check .claude/dream-init-state.json."`
+
+For `techspec-angular-nodejs.md`: if `dotnet` OR `dotnet_framework` appears in
+all_stacks → populate the .NET API layer sections (mark as PRESENT). If neither
+appears → omit those sections entirely.
 
 Read `.claude/plugin-path.txt` to get PLUGIN_DIR (if absent, use §1a resolver),
 then read both files:
@@ -514,7 +599,7 @@ $PLUGIN_DIR/skills/icea-feature/references/techspec-{overlay}.md
 ```
 
 The base template defines the skeleton. The overlay replaces the
-framework-specific sections (Files Changed, Controller/Service/View
+framework-specific sections (Files Changed, Controller/Service/View/Node.js
 implementation, API Changes, Auth & Security, Reviewer Checklist).
 
 **Key sections to populate from the ICEA:**
@@ -635,15 +720,49 @@ Review the Tech Spec in VS Code preview. When ready: SAVE TECH ADO-{ADO_ID}
 
 ### Step 10 — On SAVE TECH ADO-{ID}
 
-**Check for open questions first:**
-If any ❓ blocks remain:
+**Check for open questions first — HARD BLOCK:**
+If any ❓ blocks remain in the Tech Spec:
 ```
-⚠ {N} open question(s) remain in the Tech Spec.
-  Reply SAVE TECH ADO-{ADO_ID} CONFIRM to save with open questions,
-  or answer them first.
+⛔ {N} open question(s) remain in the Tech Spec.
+   You must answer all open questions before saving.
+   Tech Spec CANNOT be saved with open questions.
+
+Answer each question in chat — I will update the temp file after each answer.
 ```
 
-On `SAVE TECH ADO-{ADO_ID}` (or `SAVE TECH ADO-{ADO_ID} CONFIRM`):
+Do NOT proceed until all ❓ blocks are resolved. There is no CONFIRM bypass.
+
+**⛔ CRITIC GATE — run after open-questions pass, before writing permanent files:**
+
+Run the critic against `temp/ADO-{ADO_ID}-tech.md` and the saved ICEA file at
+`$ICEA_FILE` (mode = tech, source = internal):
+```
+Read .claude/plugin-path.txt to get PLUGIN_DIR (if absent, use §1a resolver), then
+Read $PLUGIN_DIR/skills/critic/SKILL.md and execute it with mode = tech, source = internal.
+```
+
+**If critic verdict is `PASS` or `PASS WITH NOTES`:**
+- Show: `✅ Critic: {verdict} — proceeding to save.`
+- Save critic output to:
+  ```
+  docs/Release{RELEASE_ID}/Sprint{SPRINT_ID}/UserStory{ADO_ID}/ADO-{ADO_ID}-{feature}.icea-tech-critic-{YYYY-MM-DD}.md
+  ```
+  Content:
+  ```markdown
+  # ICEA-Tech Critic — ADO #{ADO_ID}
+  Date: {YYYY-MM-DD}
+  Verdict: {PASS | PASS WITH NOTES}
+
+  {Full critic output}
+  ```
+- Proceed to write all permanent files.
+
+**If critic verdict is `REVISE`:**
+- Show the findings.
+- Do NOT write permanent files.
+- If the fault is in the **Tech Spec**: update temp and reply `SAVE TECH ADO-{ID}` to re-run.
+- If the fault is in the **ICEA**: direct to `REVISE ADO-{ID}` then re-run `TECH ADO-{ID}`.
+- Override: `SAVE TECH ADO-{ADO_ID} ACCEPT` to save despite findings (adds REVISE+ACCEPT to audit trail).
 
 All files written to the same UserStory folder — always:
 ```
@@ -689,20 +808,32 @@ docs/Release{RELEASE_ID}/Sprint{SPRINT_ID}/UserStory{ADO_ID}/
 4. If EPIC: write Epic doc (QA/review guide — derived, no interaction):
    `ADO-{ADO_ID}-{feature}.epic.md` (same UserStory folder)
 
-5. Clean up any remaining temp files for this ADO:
+5. Append to AI audit trail:
+   ```bash
+   AUDIT_FILE="docs/Release${RELEASE_ID}/Sprint${SPRINT_ID}/UserStory${ADO_ID}/ADO-${ADO_ID}-{feature}.ai-audit.md"
+   ```
+   Append row:
+   ```
+   | {next #} | {YYYY-MM-DD} | Tech Spec drafted | SAVE TECH | Critic: {PASS/PASS WITH NOTES/REVISE+ACCEPT} |
+   ```
+
+6. Clean up any remaining temp files for this ADO:
    ```bash
    rm -f temp/ADO-{ADO_ID}-icea.md temp/ADO-{ADO_ID}-tech.md
    ```
 
-6. Confirm:
+7. Confirm:
 ```
 ✅ Documents saved — ADO #{ADO_ID} · Release {RELEASE_ID} · Sprint {SPRINT_ID}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Plan     → docs/Release{R}/Sprint{S}/UserStory{ADO_ID}/ADO-{ADO_ID}-{feature}.plan.md
-  ICEA     → ...ADO-{ADO_ID}-{feature}.icea.md  [Type: {STORY/EPIC} · {N} SP]
-  TechSpec → ...ADO-{ADO_ID}-{feature}.techspec.md
-  Tracker  → ...ADO-{ADO_ID}-{feature}.tracker.md
-  Epic doc → ...ADO-{ADO_ID}-{feature}.epic.md  (Epic only)
+  Plan          → docs/Release{R}/Sprint{S}/UserStory{ADO_ID}/ADO-{ADO_ID}-{feature}.plan.md
+  ICEA          → ...ADO-{ADO_ID}-{feature}.icea.md  [Type: {STORY/EPIC} · {N} SP]
+  TechSpec      → ...ADO-{ADO_ID}-{feature}.techspec.md
+  ICEA Critic   → ...ADO-{ADO_ID}-{feature}.icea-critic-{YYYY-MM-DD}.md
+  Tech Critic   → ...ADO-{ADO_ID}-{feature}.icea-tech-critic-{YYYY-MM-DD}.md
+  Tracker       → ...ADO-{ADO_ID}-{feature}.tracker.md
+  AI Audit      → ...ADO-{ADO_ID}-{feature}.ai-audit.md
+  Epic doc      → ...ADO-{ADO_ID}-{feature}.epic.md  (Epic only)
   Temp files cleaned up.
 
 {If EPIC:}
@@ -739,7 +870,7 @@ This skill is in the **generation tier** — it uses `ICEA_MODEL`
 (default: `claude-opus-4-6`).
 
 To override: set `ICEA_MODEL` in `.claude/settings.json`.
-See `../shared/model-routing-spec.md` for full routing documentation.
+See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for full routing documentation.
 
 ## Persona
 
@@ -758,11 +889,12 @@ never licenses assumption. The codebase, architecture docs, and the developer's 
 sources of truth; a persona's "experience" is never evidence (subordinate to CLAUDE.md §3 / decision
 transparency). Never name the persona in any artifact — note this is distinct from the customer
 `Personas:` field in the plan/ICEA, which describes the product's end-users. See
-`../shared/personas-spec.md`.
+`$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ## Hard Rules
 
 - NEVER write any file before SAVE PLAN ADO-{ID} is received
+- NEVER write the plan file to temp/ — plans go directly to docs/Release{R}/Sprint{S}/UserStory{ID}/ in one step, no temp staging
 - NEVER draft ICEA before plan is saved to disk — Step 5 mechanical gate enforces this
 - NEVER advance from Step 2 or Step 3 to Step 5 proactively — wait for SAVE PLAN ADO-{ID}
 - NEVER save ICEA before developer sends SAVE ICEA ADO-{ID} — Step 5 STOP block enforces this
@@ -792,7 +924,8 @@ transparency). Never name the persona in any artifact — note this is distinct 
 - ALWAYS rewrite temp file after each iterative change so VS Code preview auto-refreshes
 - ALWAYS confirm each change with one line in chat: `✅ Updated — {section}. Refresh preview.`
 - ALWAYS update gap / open question list after each answer
-- ALWAYS warn and require CONFIRM if open questions remain at SAVE PLAN or SAVE TECH time
+- ALWAYS warn and require CONFIRM if open questions remain at SAVE PLAN time
+- NEVER allow SAVE TECH with open ❓ blocks — open questions are a hard block (no CONFIRM bypass); developer MUST answer them first
 - ALWAYS populate ICEA from plan — carry forward all answered items automatically
 - ALWAYS update Story Breakdown in ICEA when Tech Spec sizing is complete
 - ALWAYS clean up temp files on SAVE TECH (rm -f temp/ADO-{ID}-icea.md temp/ADO-{ID}-tech.md)

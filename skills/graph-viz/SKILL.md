@@ -37,7 +37,7 @@ regenerate it on demand with `/graph-viz` (a cheap, deterministic template fill 
 ## Persona
 Acts with a **[DPE] DevOps/Platform Engineer** lens — deterministic, self-contained, offline-safe
 output; always asks "is this reproducible and dependency-free?" Lens only; never assume, never
-attribute in output. See `../shared/personas-spec.md`.
+attribute in output. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 

@@ -12,7 +12,7 @@ Use the format that fits the task. Mix formats when a task spans domains.
 
 **CVSS is a floor, not a ceiling.** A finding can be Critical even when the CVSS
 mathematical score falls below 9.0. The full business override specification is in
-`../shared/business-context-severity.md` — that spec is the single source of truth.
+`$PLUGIN_DIR/skills/shared/business-context-severity.md` — that spec is the single source of truth.
 The rules below are a summary; the shared spec takes precedence. Business context, data classification, and
 regulatory or ethical exposure can all mandate an override. When overriding, you must
 state both the CVSS score and the reason for the business severity escalation.
@@ -185,7 +185,7 @@ CIS Controls v8, PCI-DSS v4, HIPAA Security Rule.
 Numbered list. Each step: what to do, how to do it (command/config if applicable), why it matters.
 
 ### 2g. Weekly Security Summary (HTML)
-Load `references/weekly-summary-template.md` for the full HTML template and data input format.
+Load `$PLUGIN_DIR/skills/security/references/weekly-summary-template.md` for the full HTML template and data input format.
 
 The summary is a self-contained HTML file combining:
 - Overall security health score and RAG status

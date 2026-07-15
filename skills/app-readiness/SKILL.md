@@ -30,7 +30,7 @@ For higher-quality analysis on complex architectures:
 { "env": { "INFRA_MODEL": "claude-opus-4-6" } }
 ```
 
-See `../shared/model-routing-spec.md`.
+See `$PLUGIN_DIR/skills/shared/model-routing-spec.md`.
 
 ## Persona
 
@@ -42,14 +42,14 @@ operational posture — never a fixed technology.
 The persona sets *what to scrutinize* — it never licenses assumption. Architecture docs, ADO pipeline
 state, and the codebase are the only sources of truth; a persona's "experience" is never evidence
 (subordinate to CLAUDE.md §3 / decision transparency). Never name the persona in any artifact. See
-`../shared/personas-spec.md`.
+`$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 
 ## Source file consent
 
 This skill is **Category B** — requires explicit consent before reading any source file.
-See `../shared/source-file-consent.md`.
+See `$PLUGIN_DIR/skills/shared/source-file-consent.md`.
 
 Phase 0 (bash), Phase 1 (architecture docs + ADO API), and Phase 2 (readiness checks)
 produce the full report without reading any source files.
@@ -210,7 +210,7 @@ ADO_AUTH=$(printf ':%s' "$AZURE_DEVOPS_PAT" | base64 -w 0)
 unset AZURE_DEVOPS_PAT
 ```
 
-Then run these checks using `references/ado-pipelines-api.md`:
+Then run these checks using `$PLUGIN_DIR/skills/app-readiness/references/ado-pipelines-api.md`:
 
 **4a — List pipelines and last run**
 ```bash
@@ -414,7 +414,7 @@ Score 4: Score 3 + Managed Identity for service-to-service, no Client Secrets in
          MSAL session storage on frontend.
 Score 5: Score 4 + Conditional Access (MFA), penetration test done, CA policies documented.
 
-**Always apply B1–B7 business context severity from `../shared/business-context-severity.md`.**
+**Always apply B1–B7 business context severity from `$PLUGIN_DIR/skills/shared/business-context-severity.md`.**
 Any unresolved B1–B7 finding is a blocker regardless of CVSS score.
 
 ---
@@ -492,7 +492,7 @@ Score 5: Score 4 + E2E tests for critical paths, flaky tests tracked and resolve
 
 ## Step 6 — Apply business context severity
 
-Before determining the verdict, apply B1–B7 from `../shared/business-context-severity.md`
+Before determining the verdict, apply B1–B7 from `$PLUGIN_DIR/skills/shared/business-context-severity.md`
 to every finding. Any finding touching attorney-client data, immigration identifiers,
 active case timelines, vulnerable client data, or real PII in a static directory
 is a blocker regardless of its domain score.
@@ -514,7 +514,7 @@ Critical domains: EA-2 (Resilience), EA-3 (Observability), EA-4 (Security), EA-8
 
 ## Step 8 — Phase 3: Targeted source reads (--full only)
 
-For each domain scored Red, apply the Category B consent gate from `../shared/source-file-consent.md`.
+For each domain scored Red, apply the Category B consent gate from `$PLUGIN_DIR/skills/shared/source-file-consent.md`.
 Maximum 5 files across the entire assessment. Each read must state:
 - Which domain it serves
 - What it is confirming

@@ -1,3 +1,30 @@
+## [3.12.1] — 2026-07-15
+
+### Fixed — All plugin file references corrected to use `$PLUGIN_DIR/skills/...` (ADR 0054)
+- **The problem.** ~150 path references across `skills/*/SKILL.md`, `skills/*/references/*.md`,
+  and `commands/*.md` used patterns that fail at runtime: `` `../shared/X` `` (escapes the project
+  tree from CWD), `` `../../shared/X` `` (same, from references/ subdirectories), and bare
+  `` `references/X` `` (resolves to `<project_root>/references/` which doesn't exist in target
+  projects). Claude's `Read` tool resolves all paths from the target project root, not from the
+  plugin cache directory where SKILL.md files live.
+- **The fix.** All three patterns replaced with the canonical `$PLUGIN_DIR/skills/...` prefix
+  across 40+ files. `PLUGIN_DIR` is resolved via `.claude/plugin-path.txt` (fast path) with
+  the §1a Node.js registry resolver as fallback. Skills that lacked a `PLUGIN_DIR` resolution
+  step (critic, pr-spec-review, dynamic-scan, dream-status, setup-status, icea-review,
+  ado-tasks, token-analysis) had one added before their first plugin file reference.
+- **Runtime impact.** Skills that read shared specs (`business-context-severity.md`,
+  `fingerprint-spec.md`, `ledger-schema.md`, `scope-flags-spec.md`, etc.) or their own
+  reference files (checker catalogs, templates, output-format specs) will now find those files
+  correctly when invoked from any target project. No target project changes required — fixes
+  take effect automatically from the plugin cache.
+- **Documentation.** `DEVELOPER-GUIDE.md` skill authoring section updated to show correct
+  `$PLUGIN_DIR/skills/shared/` pattern. `skills/shared/README.md` updated. ADR 0054 written.
+  Self-referential broken paths in `dismissed-findings-reconciliation.md` and `personas-spec.md`
+  corrected. `skills/shared/plugin-path-resolution.md` updated with explicit forbidden-pattern
+  guidance.
+
+---
+
 ## [3.12.0] — 2026-07-12
 
 ### Added — Shared non-secret `settings.json` with a secret guard, plus shared durable artifacts

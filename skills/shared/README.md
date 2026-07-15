@@ -78,5 +78,5 @@ the permanent storage options instead.
 1. A file belongs here only if **two or more skills** read or write the same artifact
 2. The file in `shared/` is the **single source of truth** — skill-local copies are
    forbidden once a spec is promoted here
-3. Reference from a skill using the relative path `../shared/<filename>`
+3. Reference from a skill using the plugin path `$PLUGIN_DIR/skills/shared/<filename>` where PLUGIN_DIR is resolved via `.claude/plugin-path.txt`. The old relative path `../shared/<filename>` only works from the plugin directory, not from a target project's CWD.
 4. When updating a shared spec, update **all** skills that reference it in the same commit

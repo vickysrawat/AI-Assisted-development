@@ -9,7 +9,7 @@ This command uses the **infrastructure tier** — `INFRA_MODEL`
 (default: `claude-sonnet-4-6`).
 
 To override: `{{ "env": {{ "INFRA_MODEL": "claude-opus-4-6" }} }}` in `.claude/settings.json`.
-See `skills/shared/model-routing-spec.md` for the full specification.
+See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for the full specification.
 
 ---
 
@@ -90,6 +90,11 @@ Add `memory/.dream-lock` to `.gitignore` if not already present.
 Read `memory/dream-log.md` to find the date of the last dream run.
 If no previous run exists, search the last 10 conversations.
 If a previous run exists, search all conversations updated after that date.
+
+> `memory/dream-log.md` may contain `### [capture]` lines written by the memory-log
+> PostToolUse hook — these are lightweight audit events, not dream run records.
+> When searching for the last dream run date, match only `## Dream run —` (H2) headers
+> and skip all `### [capture]` lines.
 
 ### Token budget guard
 
@@ -189,6 +194,27 @@ but haven't been explicitly confirmed by the user as knowledge to keep.
 
 **Auto-capture entries (Trigger: tags from MEMORY.md) start at 0.70** — they
 fired at a specific moment and represent high-signal knowledge.
+
+**Age-based confidence bonus** — apply only when the entry has no `Confidence:`
+field in its text (meaning it has never been scored by a prior `/dream` run).
+Compute `days_since_capture` from today minus the `### [YYYY-MM-DD]` header date.
+If the date is missing or malformed, apply **+0.00** (no bonus — safe default).
+
+| Entry age at this dream run | Bonus | Rationale |
+|-----------------------------|-------|-----------|
+| < 14 days                   | +0.00 | Too recent — no survival signal yet |
+| 14–28 days                  | +0.05 | Survived one sprint without deletion |
+| 28–56 days                  | +0.10 | Survived two sprints |
+| > 56 days                   | +0.15 | Survived 3+ sprints — strong implicit confirmation |
+
+Cap baseline + age bonus at **0.85** before applying per-session reference bonuses.
+Entries that already contain `Confidence:` were scored in a prior run — use that
+recorded value as the starting point and apply normal decay/bonus instead.
+
+> Known limitation: entries written before this rule was deployed have no `Confidence:`
+> field but may have already been through prior dream runs. They receive the age bonus
+> once on the first post-deployment run. The decay rule (−0.1/cycle) corrects any
+> inflation by the following cycle.
 
 **Entries confirmed across multiple sessions get +0.15 per additional session**
 up to a maximum of 0.95 before PROMOTE threshold is reached.
@@ -340,6 +366,12 @@ Append to `memory/dream-log.md`:
 | session-NNN | YYYY-MM-DD | [link](url) | <brief description> |
 | MEMORY.md | — | manual | <N entries processed> |
 
+### Score rationale
+- Entry N: 0.XX base (<source type>) [± adjustment (<reason>)] = <final> [— note]
+- Entry N: 0.70 base (auto-capture) + 0.15 (confirmed 3+ sessions) = 0.85 — capped
+- Entry N: 0.65 base (session-sourced) → decay −0.10 (1 cycle unreferenced) = 0.55
+- (Omit entries that land at their raw base score with no adjustments)
+
 ### Operations applied
 
 #### [ADD] "<entry>" → memory/topic-<slug>.md
@@ -372,6 +404,50 @@ Append to `memory/dream-log.md`:
 ### Notes
 <Patterns noticed, recurring topics, things worth watching>
 ```
+
+## Phase 7 — Write Last Run Summary
+
+After appending to `dream-log.md`, **overwrite** `memory/dream-last-run.md` with a
+human-readable summary of what this run found and decided. This file is overwritten every
+run — it is not an audit trail (that is `dream-log.md`); it is a quick post-run reference.
+
+```markdown
+# Dream Last Run Summary
+**Run date:** <ISO date time>
+**Sessions searched:** N | **Sessions with knowledge:** N | **Trigger:** manual /dream
+
+## Candidate inventory
+| # | Title | Source | Existing? | Score |
+|---|-------|--------|-----------|-------|
+| 1 | <title> | <short session ref or MEMORY.md> | No | 0.XX |
+| 2 | <title> | MEMORY.md ×N + sessions | Yes | 0.XX |
+
+(One row per knowledge candidate. "Existing?" = Yes if already in a topic file.)
+
+## Score rationale
+- Entry 2: 0.70 base (auto-capture) + 0.15 (confirmed 3+ sessions) = 0.85 — capped
+- Entry 6: 0.70 base → decay −0.30 (3 cycles unreferenced) = 0.40
+- (Omit entries at their raw base with no adjustments)
+
+## Tier breakdown
+**Tier 1 (auto-applied):** N operations
+- [ADD] "ADO-87708 UnitIdentifier feature" → memory/topic-ado-87708.md (score 0.85)
+- [ADD] "Plugin infrastructure notes" → memory/topic-plugin-infra.md (score 0.75)
+
+**Tier 2 (shown for approval):** N operations
+- [UPDATE] "Test runner convention" → memory/topic-testing.md (score 0.80)
+
+**Tier 3 (human review):** N operations
+- (none)
+
+---
+_Overwritten by every `/dream` run. For the full audit trail see `memory/dream-log.md`._
+```
+
+Rules:
+- Always include all three tier headings, even when count is 0 — use `- (none)` as the body.
+- Use the same short session ref format as the inventory table (e.g. `session 429f88e2`), not full URLs.
+- The inventory table covers ALL candidates (including those with KEEP operations), not just those with applied changes.
 
 ---
 

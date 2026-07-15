@@ -9,7 +9,7 @@ This command uses the **infrastructure tier** — `INFRA_MODEL`
 (default: `claude-sonnet-4-6`).
 
 To override: `{{ "env": {{ "INFRA_MODEL": "claude-opus-4-6" }} }}` in `.claude/settings.json`.
-See `skills/shared/model-routing-spec.md` for the full specification.
+See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for the full specification.
 
 ---
 
@@ -23,7 +23,7 @@ fixed technology.
 The persona sets *what to scrutinize* — it never licenses assumption. The changed source and existing
 docs are the only sources of truth; document what is actually there, never what a persona would
 "expect" (subordinate to CLAUDE.md §3 / decision transparency). Never name the persona in the docs.
-See `skills/shared/personas-spec.md`.
+See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 
@@ -93,7 +93,7 @@ If `MODE=error`, output and stop:
 ```
 
 **If `MODE=docfile`** — apply the source-file consent gate (Step 4), then re-run the matching
-`## File {PROMPT} Prompt` section of `skills/architect/prompts/<detected-stack>.md` against the
+`## File {PROMPT} Prompt` section of `$PLUGIN_DIR/skills/architect/prompts/<detected-stack>.md` against the
 current code, write the result to `.claude/architecture/{FILE}` (overwriting), and STOP. Flag any
 undetectable section with `> ⚠ Could not determine — needs manual input`; never invent authz
 rules, SLAs, or timeouts.
@@ -243,7 +243,7 @@ And stop.
 
 ## Step 4 — Source file consent gate, then read changed entry-point files
 
-Before reading any source file, apply `skills/shared/source-file-consent.md`
+Before reading any source file, apply `$PLUGIN_DIR/skills/shared/source-file-consent.md`
 (Category B). Present one consolidated gate for all files needed:
 
 ```

@@ -15,7 +15,7 @@ description: >
 _Skill version: 1.0 · Last changed: 2026-07-07 · Consent: C_
 
 > **Business context severity:** infrastructure skill — no security findings. See
-> `../shared/business-context-severity.md` for the B1–B7 model it does not trigger.
+> `$PLUGIN_DIR/skills/shared/business-context-severity.md` for the B1–B7 model it does not trigger.
 
 ## Purpose
 Re-provision an existing project after a plugin upgrade. Reads the provisioned
@@ -33,7 +33,7 @@ Triggered by: `/setup-sync` or `/setup-init --upgrade`
 ## Persona
 Acts with a **[DPE] DevOps/Platform Engineer** lens — idempotent re-provisioning, state integrity,
 safe-to-re-run; always asks "is this idempotent, and what happens on partial failure?" Lens only;
-never assume, never attribute in output. See `../shared/personas-spec.md`.
+never assume, never attribute in output. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 
@@ -246,6 +246,76 @@ the installed plugin's `CLAUDE.md` before resolving placeholders.
 ```
 Run /ai-assisted-development:gitignore-sync
 ```
+
+---
+
+## Step 5b — External stack detection
+
+Field-state-triggered — runs after every sync, not tied to any specific migration.
+`$PLUGIN_DIR` is already resolved in Step 1 — reuse it here.
+
+Read the current state:
+
+```bash
+node -e "
+const fs=require('fs');
+try {
+  const s=JSON.parse(fs.readFileSync('.claude/dream-init-state.json','utf8'));
+  const prompted = s.external_stacks_prompted===true ? 'true' : 'false';
+  const hasDirs  = ((JSON.parse(fs.readFileSync('.claude/settings.local.json','utf8'))||{}).additionalDirectories||[]).length > 0;
+  console.log('PROMPTED=' + prompted);
+  console.log('HAS_DIRS=' + hasDirs);
+} catch(e) { console.log('PROMPTED=false'); console.log('HAS_DIRS=false'); }
+"
+```
+
+**Case 1 — PROMPTED=true (user was already asked):**
+Run detection silently to refresh results (dirs may have changed):
+```bash
+node "$PLUGIN_DIR/scripts/external-stack-detection.cjs"
+```
+Report: `"external_detected_stacks refreshed: [result]"`
+
+**Case 2 — PROMPTED=false, HAS_DIRS=true:**
+Set flag then run detection silently:
+```bash
+node -e "
+const fs=require('fs'),p='.claude/dream-init-state.json';
+const s=JSON.parse(fs.readFileSync(p,'utf8'));
+s.external_stacks_prompted=true;
+fs.writeFileSync(p,JSON.stringify(s,null,2)+'\n');
+"
+node "$PLUGIN_DIR/scripts/external-stack-detection.cjs"
+```
+Report: `"external_detected_stacks: [result]"`
+
+**Case 3 — PROMPTED=false, HAS_DIRS=false:**
+Ask the developer:
+```
+This project may call APIs in separate repositories (e.g. a .NET API, a Java service).
+Providing paths lets Claude Code generate accurate Tech Specs spanning all layers.
+
+Enter absolute path(s) to external repos, one per line — or Enter to skip:
+```
+
+If paths provided:
+1. Validate each exists on disk (warn and skip missing)
+2. Merge into `additionalDirectories` in `.claude/settings.local.json`
+3. Set `external_stacks_prompted: true` (write before detection):
+   ```bash
+   node -e "
+   const fs=require('fs'),p='.claude/dream-init-state.json';
+   const s=JSON.parse(fs.readFileSync(p,'utf8'));
+   s.external_stacks_prompted=true;
+   fs.writeFileSync(p,JSON.stringify(s,null,2)+'\n');
+   "
+   ```
+4. `node "$PLUGIN_DIR/scripts/external-stack-detection.cjs"`
+5. Report: `"external_detected_stacks: [result]"`
+
+If skipped:
+1. Set `external_stacks_prompted: true` (same bash above)
+2. Tell developer: `"Run /sync-dirs any time to add external repos."`
 
 ---
 

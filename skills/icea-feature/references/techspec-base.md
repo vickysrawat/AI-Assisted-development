@@ -4,11 +4,12 @@
 # API contract, auth pattern) are defined in the overlay template for
 # each stack. Step 8 selects the overlay from detected_stacks.
 #
-# Overlay templates:
-#   techspec-aspnet-mvc-jquery.md   — ASP.NET MVC + jQuery/Bootstrap
-#   techspec-aspnet-api-angular.md  — ASP.NET Web API + Angular
-#   techspec-java-spring-angular.md — Java Spring Boot + Angular
-#   techspec-python-fastapi.md      — Python FastAPI + Angular/React
+# Overlay templates (overlay replaces framework-specific sections):
+#   techspec-aspnet-mvc-jquery.md   — ASP.NET MVC + jQuery/Bootstrap           [available]
+#   techspec-aspnet-api-angular.md  — ASP.NET/dotnet Web API + Angular          [available]
+#   techspec-angular-nodejs.md      — Angular + Node.js [+ optional .NET API]   [available]
+#   techspec-java-spring-angular.md — Java Spring Boot + Angular                [future]
+#   techspec-python-fastapi.md      — Python FastAPI + Angular/React            [future]
 
 ---
 

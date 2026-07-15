@@ -16,8 +16,7 @@ consolidation guidance and thresholds moved out of CLAUDE.md to keep session con
 ```
 ### [auto] YYYY-MM-DD — <topic>
 <what to remember>
-Trigger: <which trigger fired>
-Source: auto-capture
+Trigger: <which trigger fired>  Confidence: 0.70  Source: auto-capture
 ```
 
 These live under `memory/MEMORY.md`. See `commands/dream.md` / `commands/dream-health.md`

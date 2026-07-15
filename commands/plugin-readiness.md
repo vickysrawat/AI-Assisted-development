@@ -5,7 +5,9 @@ argument-hint: "(no arguments needed)"
 
 # /plugin-readiness
 
-Read `skills/plugin-readiness/SKILL.md` and execute it completely.
+> **Plugin path:** Read `.claude/plugin-path.txt` to get `PLUGIN_DIR`. If absent, use the Node.js resolver from `skills/shared/plugin-path-resolution.md §1a`.
+
+Read `$PLUGIN_DIR/skills/plugin-readiness/SKILL.md` and execute it completely.
 
 ## Step 1 — Announce
 
@@ -16,7 +18,7 @@ Read `skills/plugin-readiness/SKILL.md` and execute it completely.
 
 ## Step 2 — Execute the skill
 
-Read `skills/plugin-readiness/SKILL.md` and follow every step.
+Read `$PLUGIN_DIR/skills/plugin-readiness/SKILL.md` and follow every step.
 
 ## Step 3 — Write HTML report
 

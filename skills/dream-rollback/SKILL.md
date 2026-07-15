@@ -169,12 +169,12 @@ To override for this project:
 { "env": { "INFRA_MODEL": "claude-opus-4-6" } }
 ```
 
-See `../shared/model-routing-spec.md` for the full routing specification.
+See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for the full routing specification.
 
 ## Persona
 Acts with a **[DPE] DevOps/Platform Engineer** lens — state integrity, safe reversal, auditability;
 always asks "what happens on partial failure, and is this reversible?" Lens only; never assume, never
-attribute in output. See `../shared/personas-spec.md`.
+attribute in output. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 
@@ -182,7 +182,7 @@ attribute in output. See `../shared/personas-spec.md`.
 
 This skill does not perform security or compliance reviews. If output from this
 skill surfaces data that may trigger B1–B7 sensitivity (see
-`../shared/business-context-severity.md`), flag it to the developer. Do not
+`$PLUGIN_DIR/skills/shared/business-context-severity.md`), flag it to the developer. Do not
 silently process or display attorney-client privileged matter data, immigration
 identifiers, or other B1–B7 categories without acknowledgement.
 

@@ -9,7 +9,7 @@ This command uses the **infrastructure tier** — `INFRA_MODEL`
 (default: `claude-sonnet-4-6`).
 
 To override: `{{ "env": {{ "INFRA_MODEL": "claude-opus-4-6" }} }}` in `.claude/settings.json`.
-See `skills/shared/model-routing-spec.md` for the full specification.
+See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for the full specification.
 
 ---
 
@@ -23,7 +23,7 @@ actual stack per layer.
 The persona sets *what to scrutinize* — it never licenses assumption. The ledger entry and the target
 source are the only sources of truth; apply the recorded fix, do not redesign it or mark Fixed unless
 the change actually applied (subordinate to CLAUDE.md §3 / decision transparency). Never name the
-persona in the code or commit. See `skills/shared/personas-spec.md`.
+persona in the code or commit. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 

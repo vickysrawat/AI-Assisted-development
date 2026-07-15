@@ -25,7 +25,9 @@ If neither sprint name nor date range is provided, ask:
 
 ### Step 2 — Run the sprint-metrics skill
 
-Read `skills/sprint-metrics/SKILL.md` and follow its instructions exactly,
+Read `.claude/plugin-path.txt` to get `PLUGIN_DIR` (if absent, use the Node.js resolver from `skills/shared/plugin-path-resolution.md §1a`), then:
+
+Read `$PLUGIN_DIR/skills/sprint-metrics/SKILL.md` and follow its instructions exactly,
 passing through the resolved sprint scope and optional capacity.
 
 ---

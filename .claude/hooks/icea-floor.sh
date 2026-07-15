@@ -48,7 +48,7 @@ FILE_PATH="${FILE_PATH//\\//}"
 # The plugin's own published guides (plugin-guide.html, user-guide.html) are
 # plugin infrastructure, not application source — exempt like docs/.
 case "$FILE_PATH" in
-  */docs/*|*.md|*.icea.md|*.techspec.md|*/memory/*|*/.claude/*|*.json|*.yaml|*.yml|*.gitignore|*/tests/*|*/plugin-guide.html|plugin-guide.html|*/user-guide.html|user-guide.html)
+  */docs/*|*.md|*.icea.md|*.techspec.md|*/memory/*|*/.claude/*|*.json|*.yaml|*.yml|*.gitignore|*/tests/*|*/plugin-guide.html|plugin-guide.html|*/user-guide.html|user-guide.html|*/prod-readiness/*|prod-readiness/*)
     exit 0 ;;
 esac
 case "$FILE_PATH" in

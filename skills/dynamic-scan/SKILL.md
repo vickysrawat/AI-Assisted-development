@@ -19,19 +19,19 @@ the dynamic (DAST) counterpart to the static `security` skill (SAST). They share
 flags, model routing, consent rules, and business-context severity.
 
 > **Business-context severity**: All findings produced by this skill are re-rated using
-> `../shared/business-context-severity.md`. A runtime finding that exposes immigration
+> `$PLUGIN_DIR/skills/shared/business-context-severity.md`. A runtime finding that exposes immigration
 > IDs, privileged matter data, or vulnerable-client data is escalated to Critical even
 > when ZAP's own risk rating is lower. Apply the B1–B7 overrides before writing the report.
 
 > **Source-file consent**: This skill is Category A for the live scan itself (the user
 > invoked `/dynamic-scan`), but reading application source to map a finding back to a
-> file (Step 5) is Category B. See `../shared/source-file-consent.md`.
+> file (Step 5) is Category B. See `$PLUGIN_DIR/skills/shared/source-file-consent.md`.
 
 > **Single-writer assumption**: This skill writes a report and a baseline file under the
-> project. See `../shared/single-writer-assumption.md` for concurrency constraints.
+> project. See `$PLUGIN_DIR/skills/shared/single-writer-assumption.md` for concurrency constraints.
 
 > **Model routing**: This is an analysis task. Use `REVIEW_MODEL` (default
-> `claude-sonnet-4-6`). See `../shared/model-routing-spec.md`.
+> `claude-sonnet-4-6`). See `$PLUGIN_DIR/skills/shared/model-routing-spec.md`.
 
 ---
 
@@ -44,7 +44,7 @@ actual stack (Angular SPA, ASP.NET MVC/Web API, Blazor, Razor) — never assumin
 The persona sets *what to scrutinize* — it never licenses assumption. ZAP output, the live target's
 responses, and (Category B) mapped source are the only sources of truth; a persona's "experience" is
 never a substitute for an observed finding (subordinate to CLAUDE.md §3 / decision transparency).
-Never name the persona in the report or ledger. See `../shared/personas-spec.md`.
+Never name the persona in the report or ledger. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 
@@ -121,18 +121,18 @@ a pure MVC app, etc.
 
 | Detected | Load reference |
 |---|---|
-| ANGULAR | `references/zap-angular-spa.md` + `references/route-extraction.md` |
-| MVC | `references/zap-aspnet-mvc.md` + `references/route-extraction.md` |
-| API | `references/zap-aspnet-api.md` |
-| BLAZOR | `references/zap-aspnet-blazor.md` |
-| RAZORPAGES | `references/zap-aspnet-mvc.md` (Razor Pages shares MVC handling) |
-| SPRING_BOOT | `references/zap-spring-boot.md` + `references/route-extraction.md` |
-| PYTHON_WEB (FastAPI/Django/Flask) | `references/zap-python-web.md` + `references/route-extraction.md` |
-| any auth needed | `references/zap-auth.md` |
-| Windows Auth | `references/zap-windows-auth.md` |
-| NPM / PIP / NUGET / MAVEN_GRADLE | `references/dependency-scan.md` |
-| always (reporting) | `references/severity-mapping.md` + `references/report-format.md` |
-| always (the plan) | `references/zap-automation-plan.md` |
+| ANGULAR | `$PLUGIN_DIR/skills/dynamic-scan/references/zap-angular-spa.md` + `$PLUGIN_DIR/skills/dynamic-scan/references/route-extraction.md` |
+| MVC | `$PLUGIN_DIR/skills/dynamic-scan/references/zap-aspnet-mvc.md` + `$PLUGIN_DIR/skills/dynamic-scan/references/route-extraction.md` |
+| API | `$PLUGIN_DIR/skills/dynamic-scan/references/zap-aspnet-api.md` |
+| BLAZOR | `$PLUGIN_DIR/skills/dynamic-scan/references/zap-aspnet-blazor.md` |
+| RAZORPAGES | `$PLUGIN_DIR/skills/dynamic-scan/references/zap-aspnet-mvc.md` (Razor Pages shares MVC handling) |
+| SPRING_BOOT | `$PLUGIN_DIR/skills/dynamic-scan/references/zap-spring-boot.md` + `$PLUGIN_DIR/skills/dynamic-scan/references/route-extraction.md` |
+| PYTHON_WEB (FastAPI/Django/Flask) | `$PLUGIN_DIR/skills/dynamic-scan/references/zap-python-web.md` + `$PLUGIN_DIR/skills/dynamic-scan/references/route-extraction.md` |
+| any auth needed | `$PLUGIN_DIR/skills/dynamic-scan/references/zap-auth.md` |
+| Windows Auth | `$PLUGIN_DIR/skills/dynamic-scan/references/zap-windows-auth.md` |
+| NPM / PIP / NUGET / MAVEN_GRADLE | `$PLUGIN_DIR/skills/dynamic-scan/references/dependency-scan.md` |
+| always (reporting) | `$PLUGIN_DIR/skills/dynamic-scan/references/severity-mapping.md` + `$PLUGIN_DIR/skills/dynamic-scan/references/report-format.md` |
+| always (the plan) | `$PLUGIN_DIR/skills/dynamic-scan/references/zap-automation-plan.md` |
 
 Announce:
 ```
@@ -147,7 +147,7 @@ Announce:
 
 ### Step 0d — Resolve scope flag
 
-Adopt the canonical flags from `../shared/scope-flags-spec.md`. Dynamic-scan-specific flags:
+Adopt the canonical flags from `$PLUGIN_DIR/skills/shared/scope-flags-spec.md`. Dynamic-scan-specific flags:
 
 | Flag | Behaviour |
 |---|---|
@@ -169,7 +169,7 @@ Adopt the canonical flags from `../shared/scope-flags-spec.md`. Dynamic-scan-spe
 ### Step 0e — Windows Authentication check (potential blocker)
 
 If `--auth windows` or Windows Auth is detected (IIS app, NTLM/Negotiate), STOP and read
-`references/zap-windows-auth.md`. NTLM is a built-in ZAP method but is unreliable headless
+`$PLUGIN_DIR/skills/dynamic-scan/references/zap-windows-auth.md`. NTLM is a built-in ZAP method but is unreliable headless
 in Docker. Present the three options there (Desktop-GUI-test-then-export context, Basic-auth
 fallback, or pre-authenticated session cookie) and let the user choose before continuing.
 
@@ -206,7 +206,7 @@ env:
 
 ### Step 1c — Configure authentication (if any)
 
-Read `references/zap-auth.md` for the per-type YAML. Summary:
+Read `.claude/plugin-path.txt` to get PLUGIN_DIR (if absent, use the Node.js resolver from `skills/shared/plugin-path-resolution.md §1a`). Read `$PLUGIN_DIR/skills/dynamic-scan/references/zap-auth.md` for the per-type YAML. Summary:
 - `form` → form-based auth job with login URL + username/password field names.
 - `token` → set `ZAP_AUTH_HEADER_VALUE` at the **system level** (never in the plan's `env`
   block — ZAP ignores auth header vars defined there). Decode JWTs and flag weak `alg`.
@@ -236,7 +236,7 @@ After the first authenticated request, check ZAP's internal statistic
 
 Spiders miss lazy-loaded SPA routes and attribute-routed API endpoints. Seed ZAP with a
 known route list so coverage does not depend on the spider alone. Read
-`references/route-extraction.md`.
+`$PLUGIN_DIR/skills/dynamic-scan/references/route-extraction.md`.
 
 - **Angular** → parse `*-routing.module.ts` / `app.routes.ts` for `path:` entries.
 - **MVC / Razor Pages** → `[Route]`, `[HttpGet/Post/...]` attributes + conventional
@@ -251,7 +251,7 @@ Feed the resulting URLs into the plan as additional spider seed URLs (or, for AP
 
 ## 3. Build and run the Automation Framework plan
 
-Read `references/zap-automation-plan.md` for the full per-stack YAML templates. The skill
+Read `$PLUGIN_DIR/skills/dynamic-scan/references/zap-automation-plan.md` for the full per-stack YAML templates. The skill
 **generates a single `zap-plan.yaml`** with jobs in this order, then runs it. Do not chain
 the legacy `zap-baseline.py` / `zap-full-scan.py` scripts — the Automation Framework is the
 maintained path.
@@ -279,7 +279,7 @@ docker run --rm \
   zap.sh -cmd -autorun /zap/wrk/zap-plan.yaml
 ```
 
-In parallel (or when `--deps-only`), run the dependency audit from `references/dependency-scan.md`:
+In parallel (or when `--deps-only`), run the dependency audit from `$PLUGIN_DIR/skills/dynamic-scan/references/dependency-scan.md`:
 
 ```bash
 # .NET (built into the SDK — no extra tooling)
@@ -296,10 +296,10 @@ pip-audit -f json
 
 1. Read the JSON report ZAP wrote to `dynamic-scan/`.
 2. **Baseline**: if `--baseline` given, suppress alerts listed in it via the plan's
-   `alertFilter` job. See `references/baseline-tuning.md`. Keep noise (missing headers on
+   `alertFilter` job. See `$PLUGIN_DIR/skills/dynamic-scan/references/baseline-tuning.md`. Keep noise (missing headers on
    static assets, CSP-on-JSON-API) out of the report so the signal stays trusted.
-3. **Severity**: translate ZAP risk → CVSS/CWE using `references/severity-mapping.md`, then
-   apply the B1–B7 business overrides from `../shared/business-context-severity.md`.
+3. **Severity**: translate ZAP risk → CVSS/CWE using `$PLUGIN_DIR/skills/dynamic-scan/references/severity-mapping.md`, then
+   apply the B1–B7 business overrides from `$PLUGIN_DIR/skills/shared/business-context-severity.md`.
 4. **Diff**: if `--diff` given, compare against the previous `dynamic-scan/` report and show
    only NEW findings — the "did this PR introduce a vulnerability?" signal.
 
@@ -308,10 +308,10 @@ pip-audit -f json
 ## 5. Fix suggestions (with source mapping)
 
 For each confirmed finding, map the HTTP-layer result back to source. Read
-`references/finding-to-source.md`. ZAP gives a URL + parameter; resolve it to the MVC
+`$PLUGIN_DIR/skills/dynamic-scan/references/finding-to-source.md`. ZAP gives a URL + parameter; resolve it to the MVC
 controller/action or API route, locate the `.cs`/`.ts` file, and propose a concrete fix in
 that file. Reading that source file is **Category B consent** — use the gate from
-`../shared/source-file-consent.md` before opening it.
+`$PLUGIN_DIR/skills/shared/source-file-consent.md` before opening it.
 
 For dependency findings: state direct vs transitive, the patched version, and whether the
 upgrade is safe (`npm audit fix --dry-run` / `dotnet add package` to the fixed version).
@@ -321,7 +321,7 @@ upgrade is safe (`npm audit fix --dry-run` / `dotnet add package` to the fixed v
 ## 6. Report and cleanup
 
 Write a self-contained HTML report to `dynamic-scan/` (mirrors how `security` writes to
-`security/`). Use the structure in `references/report-format.md`.
+`security/`). Use the structure in `$PLUGIN_DIR/skills/dynamic-scan/references/report-format.md`.
 
 **Cleanup (mandatory):** ZAP session and context files can contain plaintext credentials.
 Delete them after the report is written, and ensure `dynamic-scan/` is gitignored except
@@ -365,7 +365,7 @@ mkdir -p dynamic-scan
 
 **Reconcile with existing ledger** — apply the standard five reconciliation rules.
 For the Dismissed rule (Rule 5), delegate entirely to
-`../shared/dismissed-findings-reconciliation.md` (spec v1.0): keep dismissed if
+`$PLUGIN_DIR/skills/shared/dismissed-findings-reconciliation.md` (spec v1.0): keep dismissed if
 file unchanged since `dismissed-date`; set `verify-flag: code-changed` and re-open
 as Open (preserving original dismissal metadata) if the file has commits since
 `dismissed-date`. Never count dismissed findings toward open totals.

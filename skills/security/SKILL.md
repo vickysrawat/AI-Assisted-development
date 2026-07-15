@@ -17,7 +17,7 @@ loads only matching reference files.
 
 ---
 
-> **Single-writer assumption**: This skill writes to a persistent cache file. See `../shared/single-writer-assumption.md` for concurrency constraints and CI guidance.
+> **Single-writer assumption**: This skill writes to a persistent cache file. See `$PLUGIN_DIR/skills/shared/single-writer-assumption.md` for concurrency constraints and CI guidance.
 
 ## Model routing
 
@@ -28,7 +28,7 @@ To override for this project, set in `.claude/settings.json`:
 { "env": { "REVIEW_MODEL": "claude-sonnet-4-6" } }
 ```
 
-See `../shared/model-routing-spec.md` for full routing documentation.
+See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for full routing documentation.
 
 ## Persona
 
@@ -41,14 +41,14 @@ detected_stacks), every layer present — never a fixed technology.
 The persona sets *what to scrutinize* — it never licenses assumption. Findings must cite evidence
 (file/function/pattern); a persona's "experience" is never evidence and never a substitute for the
 free-form pass's citation rule (ADR 0045). Subordinate to CLAUDE.md section 3 (do not assume). Never
-name the persona in the report or ledger. See `../shared/personas-spec.md`.
+name the persona in the report or ledger. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 
 ## Scan Architecture — Three Passes
 
 This skill implements the three-pass scan architecture defined in
-`../shared/three-pass-spec.md`. Read that spec for the full architecture.
+`$PLUGIN_DIR/skills/shared/three-pass-spec.md`. Read that spec for the full architecture.
 
 ```
 Pass 1 — STRUCTURED RULE-BASED SCAN
@@ -75,7 +75,7 @@ Pass 3 — FREE-FLOW ADVERSARIAL PASS
 If no scope flag was provided, present the interactive menu and WAIT for the
 developer to choose. Do not proceed without a selection.
 
-See `../shared/interactive-menu-spec.md` for the full menu specification.
+See `$PLUGIN_DIR/skills/shared/interactive-menu-spec.md` for the full menu specification.
 
 The skill icon is a shield. The skill name is "Security Review".
 
@@ -107,7 +107,7 @@ compliance-controls.md only if the user mentions a compliance framework.
 
 ### Step 0c — Determine scope
 
-Apply scope flags per `../shared/scope-flags-spec.md`. Supported flags:
+Apply scope flags per `$PLUGIN_DIR/skills/shared/scope-flags-spec.md`. Supported flags:
 
 | Flag | Behaviour |
 |---|---|
@@ -125,7 +125,7 @@ Apply scope flags per `../shared/scope-flags-spec.md`. Supported flags:
 ### Step 0d — Build candidate file list
 
 Enumerate from the project root. NEVER restrict to `src/` or any subdirectory.
-Use the canonical find command from `../shared/scope-flags-spec.md`.
+Use the canonical find command from `$PLUGIN_DIR/skills/shared/scope-flags-spec.md`.
 
 ### Step 0e — Sort by priority
 
@@ -140,7 +140,7 @@ Use the canonical find command from `../shared/scope-flags-spec.md`.
 ### Step 0f — Cache-aware file selection
 
 For default scans (no `--full`, `--ci`, `--changed`, `--pr`):
-- Read `.claude/file-cache.json` per `../shared/file-cache-schema.md`
+- Read `.claude/file-cache.json` per `$PLUGIN_DIR/skills/shared/file-cache-schema.md`
 - Compare charCount for each file; skip unchanged files
 - If no cache exists, treat all files as changed (first run)
 
@@ -197,7 +197,7 @@ And stop.
 
 ### Step 0h — Write checkpoint
 
-Write the checkpoint file per `../shared/checkpoint-schema.md` before scanning.
+Write the checkpoint file per `$PLUGIN_DIR/skills/shared/checkpoint-schema.md` before scanning.
 Update after each file. Delete on completion.
 
 ---
@@ -206,7 +206,7 @@ Update after each file. Delete on completion.
 
 **This runs BEFORE Pass 1, regardless of scope flag.**
 
-Load and execute `references/static-asset-audit.md`. This check enumerates
+Load and execute `$PLUGIN_DIR/skills/security/references/static-asset-audit.md`. This check enumerates
 static-serving directories completely even on `--changed` or `--pr` scans —
 a data file committed to `public/` weeks ago is a live exposure now.
 
@@ -219,7 +219,7 @@ Any CRITICAL finding from this audit is reported immediately, before Pass 1.
 **This runs BEFORE Pass 1, regardless of scope flag.**
 
 Check `.gitignore` coverage for sensitive file patterns per
-`references/pass1-patterns.md` section SEC-GITIGNORE.
+`$PLUGIN_DIR/skills/security/references/pass1-patterns.md` section SEC-GITIGNORE.
 
 ```bash
 SENSITIVE_PATTERNS=(
@@ -249,13 +249,13 @@ done
 
 ## Pass 1 — Structured Rule-Based Scan
 
-Apply the deterministic security patterns from `references/pass1-patterns.md`
-and the language-specific patterns from `references/language-notes.md` to every
+Apply the deterministic security patterns from `$PLUGIN_DIR/skills/security/references/pass1-patterns.md`
+and the language-specific patterns from `$PLUGIN_DIR/skills/security/references/language-notes.md` to every
 in-scope file.
 
 ### What Pass 1 checks
 
-Load `references/pass1-patterns.md` for the full pattern catalog. Categories:
+Load `$PLUGIN_DIR/skills/security/references/pass1-patterns.md` for the full pattern catalog. Categories:
 
 | Category | ID | Focus |
 |---|---|---|
@@ -278,7 +278,7 @@ Load `references/pass1-patterns.md` for the full pattern catalog. Categories:
 ### Pass 1 output
 
 Every finding gets:
-1. A fingerprint per `../shared/fingerprint-spec.md`
+1. A fingerprint per `$PLUGIN_DIR/skills/shared/fingerprint-spec.md`
 2. A pattern ID (SEC-INJ, SEC-AUTH, etc.)
 3. File, function/location
 4. Severity (technical + business override)
@@ -292,7 +292,7 @@ Update the checkpoint after each file.
 
 ## Pass 2 — Specialized Persona Passes
 
-Load `references/pass2-personas.md` for persona definitions.
+Load `$PLUGIN_DIR/skills/security/references/pass2-personas.md` for persona definitions.
 
 Run four focused reviews sequentially. Each persona:
 - Receives the file set + ALL prior findings (Pass 1 + prior personas)
@@ -319,8 +319,8 @@ Only report NEW findings that add information not captured above.
 
 ### Pass 2 output
 
-Findings follow the format in `references/pass2-personas.md`. Fingerprint
-fixable findings per `../shared/fingerprint-spec.md`. Set Pass: 2.
+Findings follow the format in `$PLUGIN_DIR/skills/security/references/pass2-personas.md`. Fingerprint
+fixable findings per `$PLUGIN_DIR/skills/shared/fingerprint-spec.md`. Set Pass: 2.
 
 ---
 
@@ -380,19 +380,19 @@ Write to `security/security-review-{YYYY-MM-DD}.html`.
 
 ### Ledger update
 
-Write or update `security/security-ledger.md` per `../shared/ledger-schema.md`.
+Write or update `security/security-ledger.md` per `$PLUGIN_DIR/skills/shared/ledger-schema.md`.
 
 Read existing ledger first:
 ```bash
 cat security/security-ledger.md 2>/dev/null || echo "NO_LEDGER_YET"
 ```
 
-Apply reconciliation rules from `../shared/ledger-schema.md`:
+Apply reconciliation rules from `$PLUGIN_DIR/skills/shared/ledger-schema.md`:
 1. Still Open → keep Open, update last-seen
 2. Newly Fixed → mark Fixed
 3. New → add as Open
 4. Already Fixed → leave unchanged
-5. Dismissed → delegate to `../shared/dismissed-findings-reconciliation.md`
+5. Dismissed → delegate to `$PLUGIN_DIR/skills/shared/dismissed-findings-reconciliation.md`
 
 Create folder and add to .gitignore:
 ```bash
@@ -402,7 +402,7 @@ grep -q "^security/" .gitignore 2>/dev/null || echo "security/" >> .gitignore
 
 ### Cache update
 
-Update `.claude/file-cache.json` per `../shared/file-cache-schema.md`:
+Update `.claude/file-cache.json` per `$PLUGIN_DIR/skills/shared/file-cache-schema.md`:
 - Update charCount, lastScanned, add "security" to scannedBy
 - Merge with existing entries
 
@@ -416,27 +416,27 @@ Delete `.claude/security-checkpoint.json` on successful completion.
 
 | File | When to load |
 |------|-------------|
-| `references/pass1-patterns.md` | Always — Pass 1 structured patterns |
-| `references/pass2-personas.md` | Always — Pass 2 persona definitions |
-| `references/static-asset-audit.md` | Always — pre-scan check |
-| `references/output-formats.md` | Always — report formatting rules |
-| `references/cross-cutting-principles.md` | Always — writing quality rules |
-| `references/language-notes.md` | Only detected language sections |
-| `references/domain-guidance.md` | Pass 2 + Pass 3 context (cloud, threat model, IR sections) |
-| `references/cloud-checks.md` | Only if cloud/IaC files detected (P4 persona) |
-| `references/compliance-controls.md` | Only if user mentions a compliance framework |
-| `references/weekly-summary-template.md` | Only for weekly summary requests |
-| `../shared/three-pass-spec.md` | Architecture reference |
-| `../shared/interactive-menu-spec.md` | Menu specification |
-| `../shared/scope-flags-spec.md` | Scope flag definitions |
-| `../shared/file-cache-schema.md` | Cache schema and merge rules |
-| `../shared/checkpoint-schema.md` | Checkpoint schema |
-| `../shared/fingerprint-spec.md` | Fingerprint generation |
-| `../shared/ledger-schema.md` | Ledger format and reconciliation |
-| `../shared/business-context-severity.md` | B1-B7 override triggers |
-| `../shared/source-file-consent.md` | Consent category enforcement |
-| `../shared/dismissed-findings-reconciliation.md` | Rule 5 dismissed finding handling |
-| `../shared/graph-index-schema.md` / `graph-module-schema.md` | Knowledge graph for --area |
+| `$PLUGIN_DIR/skills/security/references/pass1-patterns.md` | Always — Pass 1 structured patterns |
+| `$PLUGIN_DIR/skills/security/references/pass2-personas.md` | Always — Pass 2 persona definitions |
+| `$PLUGIN_DIR/skills/security/references/static-asset-audit.md` | Always — pre-scan check |
+| `$PLUGIN_DIR/skills/security/references/output-formats.md` | Always — report formatting rules |
+| `$PLUGIN_DIR/skills/security/references/cross-cutting-principles.md` | Always — writing quality rules |
+| `$PLUGIN_DIR/skills/security/references/language-notes.md` | Only detected language sections |
+| `$PLUGIN_DIR/skills/security/references/domain-guidance.md` | Pass 2 + Pass 3 context (cloud, threat model, IR sections) |
+| `$PLUGIN_DIR/skills/security/references/cloud-checks.md` | Only if cloud/IaC files detected (P4 persona) |
+| `$PLUGIN_DIR/skills/security/references/compliance-controls.md` | Only if user mentions a compliance framework |
+| `$PLUGIN_DIR/skills/security/references/weekly-summary-template.md` | Only for weekly summary requests |
+| `$PLUGIN_DIR/skills/shared/three-pass-spec.md` | Architecture reference |
+| `$PLUGIN_DIR/skills/shared/interactive-menu-spec.md` | Menu specification |
+| `$PLUGIN_DIR/skills/shared/scope-flags-spec.md` | Scope flag definitions |
+| `$PLUGIN_DIR/skills/shared/file-cache-schema.md` | Cache schema and merge rules |
+| `$PLUGIN_DIR/skills/shared/checkpoint-schema.md` | Checkpoint schema |
+| `$PLUGIN_DIR/skills/shared/fingerprint-spec.md` | Fingerprint generation |
+| `$PLUGIN_DIR/skills/shared/ledger-schema.md` | Ledger format and reconciliation |
+| `$PLUGIN_DIR/skills/shared/business-context-severity.md` | B1-B7 override triggers |
+| `$PLUGIN_DIR/skills/shared/source-file-consent.md` | Consent category enforcement |
+| `$PLUGIN_DIR/skills/shared/dismissed-findings-reconciliation.md` | Rule 5 dismissed finding handling |
+| `$PLUGIN_DIR/skills/shared/graph-index-schema.md` / `graph-module-schema.md` | Knowledge graph for --area |
 
 ---
 

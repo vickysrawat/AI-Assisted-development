@@ -13,7 +13,7 @@ description: >
 _Skill version: 2.0 · Last changed: 2026-07-08 · Consent: C_
 
 > **Business context severity:** infrastructure skill — no security findings. See
-> `../shared/business-context-severity.md` for the B1–B7 model it does not trigger.
+> `$PLUGIN_DIR/skills/shared/business-context-severity.md` for the B1–B7 model it does not trigger.
 
 ## Purpose
 

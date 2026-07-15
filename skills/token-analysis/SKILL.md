@@ -22,7 +22,7 @@ delta only — new sessions and changed files only.
 Token estimation: **characters ÷ 4** throughout. Consistent methodology makes
 comparisons valid even if absolute numbers are approximate.
 
-See `references/graph-schema.md` for the full cache structure.
+See `$PLUGIN_DIR/skills/token-analysis/references/graph-schema.md` for the full cache structure.
 
 ---
 
@@ -221,7 +221,7 @@ Recompute `graph.aggregates` using ALL sessions in the graph
 
 ## Step 6 — Recommendations
 
-Load `references/recommendations.md`.
+Load `$PLUGIN_DIR/skills/token-analysis/references/recommendations.md`.
 
 For each recommendation entry, evaluate its trigger condition against
 the current graph data. Apply only triggered recommendations.
@@ -251,7 +251,7 @@ rewritten version, estimated saving.
 ---
 
 
-> **Single-writer assumption**: This skill writes to a persistent cache file. See `../shared/single-writer-assumption.md` for concurrency constraints and CI guidance.
+> **Single-writer assumption**: This skill writes to a persistent cache file. See `$PLUGIN_DIR/skills/shared/single-writer-assumption.md` for concurrency constraints and CI guidance.
 
 ## Step 7 — Write updated graph
 
@@ -286,7 +286,7 @@ Assemble the final data object for the report template:
 }
 ```
 
-Pass to `references/report-template.md`.
+Pass to `$PLUGIN_DIR/skills/token-analysis/references/report-template.md`.
 
 ---
 
@@ -361,12 +361,12 @@ To override for this project:
 { "env": { "INFRA_MODEL": "claude-opus-4-6" } }
 ```
 
-See `../shared/model-routing-spec.md` for the full routing specification.
+See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for the full routing specification.
 
 ## Persona
 Acts with a **[DPE] DevOps/Platform Engineer** lens — deterministic analysis, reproducible metrics,
 cache integrity; always asks "what's the real cost driver here?" Lens only; never assume, never
-attribute in output. See `../shared/personas-spec.md`.
+attribute in output. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 
@@ -374,6 +374,6 @@ attribute in output. See `../shared/personas-spec.md`.
 
 This skill does not perform security or compliance reviews. If output from this
 skill surfaces data that may trigger B1–B7 sensitivity (see
-`../shared/business-context-severity.md`), flag it to the developer. Do not
+`$PLUGIN_DIR/skills/shared/business-context-severity.md`), flag it to the developer. Do not
 silently process or display attorney-client privileged matter data, immigration
 identifiers, or other B1–B7 categories without acknowledgement.

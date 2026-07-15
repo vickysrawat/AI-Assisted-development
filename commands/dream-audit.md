@@ -6,7 +6,7 @@ argument-hint: "[--days <N>] (citation window, default 90)"
 ## Model routing
 
 This command uses the **infrastructure tier** — `INFRA_MODEL`
-(default: `claude-sonnet-4-6`). See `skills/shared/model-routing-spec.md`.
+(default: `claude-sonnet-4-6`). See `$PLUGIN_DIR/skills/shared/model-routing-spec.md`.
 
 ---
 
