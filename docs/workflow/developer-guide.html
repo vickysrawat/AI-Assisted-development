@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- documents-plugin-version: 3.9.0 -->
+<!-- documents-plugin-version: 3.12.0 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -827,7 +827,7 @@
 
     <!-- HERO -->
     <div class="hero">
-      <div class="hero-kicker">Developer guide · v3.9.0</div>
+      <div class="hero-kicker">Developer guide · v3.12.0</div>
       <h1 class="hero-title">From feature request<br>to working code.</h1>
       <p class="hero-sub">
         Everything the plugin does, in one place — integrate it into your project, drive the
@@ -881,7 +881,7 @@
               <tbody>
                 <tr><td>memory/</td><td>Creates <code>MEMORY.md</code> and <code>dream-log.md</code></td></tr>
                 <tr><td>Commands</td><td>Deploys command stubs to <code>.claude/commands/</code></td></tr>
-                <tr><td>Hooks</td><td>Deploys enforcement hooks to <code>.claude/hooks/</code> and wires the PreToolUse/Stop hooks into <code>.claude/settings.json</code></td></tr>
+                <tr><td>Hooks</td><td>Deploys enforcement hooks to <code>.claude/hooks/</code> (including the secret guard <code>check-settings-secrets.cjs</code>) and wires them into <code>.claude/settings.json</code> as PreToolUse entries</td></tr>
                 <tr><td>State</td><td>Seeds <code>.claude/dream-init-state.json</code>, <code>.claude/file-cache.json</code>, and <code>token-graph.json</code></td></tr>
                 <tr><td>Ignore file</td><td>Writes the VCS-aware ignore file — <code>.gitignore</code> on Git or <code>.tfignore</code> on TFVC — with a managed block</td></tr>
                 <tr><td>Toolchain</td><td>Detects the git/bash paths on Windows</td></tr>
@@ -1985,7 +1985,7 @@ To start implementation:
               <tbody>
                 <tr><td><code>A</code> Static analysis</td><td>Runs <code>code-review</code> over staged/modified files for code-quality defects.</td></tr>
                 <tr><td><code>B</code> ICEA compliance</td><td>Runs <code>icea-review</code> over the diff — tier re-verification and manifest delta included.</td></tr>
-                <tr><td><code>C</code> Secrets scan</td><td>Scans staged files for secrets and sensitive files; confirms <code>.claude/settings.json</code> is ignored.</td></tr>
+                <tr><td><code>C</code> Secrets scan</td><td>Scans staged files for secrets and sensitive files; confirms the secret store <code>.claude/settings.local.json</code> is ignored and that no secret has reached the committed <code>.claude/settings.json</code>.</td></tr>
                 <tr><td><code>D</code> Findings gate</td><td>Blocks on open Critical/High findings across the code-review, security, and dynamic-scan ledgers.</td></tr>
               </tbody>
             </table>
@@ -2607,7 +2607,7 @@ To start implementation:
             <span class="step-chevron">&rsaquo;</span>
           </div>
           <div class="step-body"><div class="step-body-inner">
-            <p>Each skill routes to a model based on the kind of work it does. The mapping is driven by environment variables, so you can point generation, review, and infrastructure tasks at different models without editing any skill. Override any variable per project in <code>.claude/settings.json</code> under the <code>env</code> key.</p>
+            <p>Each skill routes to a model based on the kind of work it does. The mapping is driven by environment variables, so you can point generation, review, and infrastructure tasks at different models without editing any skill. Override model routing in the committed <code>.claude/settings.json</code> under the <code>env</code> key. The PAT (<code>AZURE_DEVOPS_PAT</code>) goes in the gitignored <code>.claude/settings.local.json</code> — Claude Code merges local over shared at runtime.</p>
             <div class="callout info"><span class="callout-icon">i</span><span>The authoritative table of variables, defaults, and per-skill assignments lives in <code>skills/shared/model-routing-spec.md</code>.</span></div>
           </div></div>
         </div>
@@ -2619,7 +2619,7 @@ To start implementation:
             <span class="step-chevron">&rsaquo;</span>
           </div>
           <div class="step-body"><div class="step-body-inner">
-            <p>Set any of these in <code>.claude/settings.json</code> &rarr; <code>env</code> to route a task class to a specific model.</p>
+            <p>Set any of these in <code>.claude/settings.json</code> &rarr; <code>env</code> to route a task class to a specific model. These are non-secret values — safe in the committed shared file.</p>
             <table class="ref-table">
               <thead><tr><th>Variable</th><th>Routes</th></tr></thead>
               <tbody>
