@@ -1,6 +1,6 @@
 'use strict';
 // Generates docs/presentations/ai-assisted-development-story.pptx
-// "AI-Assisted Development — From Coder to Conductor" · v3.9.0 · 44-slide people-first arc.
+// "AI-Assisted Development — From Coder to Conductor" · v3.13.0 · 45-slide people-first arc.
 // Slides stay MINIMAL; the full talk-through narration lives in each slide's speaker notes
 // (s.addNotes) as one continuous first-person script.
 // To change the deck: edit this file and re-run `node scripts/gen-story-pptx.cjs`.
@@ -253,7 +253,7 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     fontFace: FONT, fontSize: 18, color: 'cdd9e6', wrap: true,
   });
 
-  const badges = ['v3.9.0', '52 ADRs on disk', '5 acts · 5 absences', '38 commands · 26 skills'];
+  const badges = ['v3.13.0', '55 ADRs on disk', '5 acts · 5 absences', '38 commands · 26 skills'];
   badges.forEach((b, i) => {
     s.addShape(pptx.ShapeType.roundRect, {
       x: 0.6 + i * 2.9, y: 4.1, w: 2.75, h: 0.38,
@@ -274,7 +274,25 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     fontFace: FONT, fontSize: 9, color: '7a92a8',
   });
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`I want to tell you a story about a job that changed — and the job is yours. For years the deal was simple: you understood the code, you made the change, you pushed it, and you asked someone to review it. Somewhere in the last couple of years that quietly stopped being the whole job, because the AI writes the code now. So what's actually left for you? That's what this talk is about. I'll tell it in five acts, the way we really lived it — through the fifty-two decisions we made building a plugin to survive the change. Let me start with a confession.`);
+  s.addNotes(`Let me start with a question. Who here is still writing code? Like, actually writing it yourself?
+
+…Anyone?
+
+Yeah. That's kind of the point.
+
+The AI writes the code now. And honestly — the interesting question was never whether it replaces us. It's what's left.
+
+I keep coming back to four things it can't take.
+
+Craft — if I'm not writing the code, what is my craft now? What do I bring?
+
+Responsibility — when it gets it wrong, who actually understands what went wrong? And who answers for it?
+
+Team — there's a new member on every team now. Never sleeps, never complains, and sometimes confidently ships something completely broken. Do we work with it… or manage it?
+
+And a fourth one that keeps me up at night — judgment. AI can generate code but it can't decide if something should be built. That's still a human call. And in a world where it's this easy to ship things fast… that call matters more than ever.
+
+Everything ahead is built around those four.`);
 }
 
 // ── 2. THE STATEMENT (full-bleed quote) ──────────────────────────────────────
@@ -290,7 +308,11 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     fontFace: FONT, fontSize: 13, color: '6b8199', align: 'center',
   });
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`Here's the confession — and I suspect it's yours too. This is how most of us have always worked: I understand the change, I make it, I push it, I tell the lead to review it and ping me if there's a problem. Read that line and notice how completely reasonable it sounds. I want you to sit with it for a second, because I'm about to show you why this exact sentence — the one that served us well for a decade — quietly stopped working.`);
+  s.addNotes(`Look at this. Understand the change. Make it. Push it. Ask someone to review it.
+
+Honestly — how many of us still run this exact process today?
+
+I bet… most of us. Because it works. And it did — for a long time. So what quietly changed?`);
 }
 
 // ── 3. THE REVEAL (the loop is broken) ────────────────────────────────────────
@@ -323,7 +345,17 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     fontFace: FONT, fontSize: 13, italic: true, color: C.muted, align: 'center',
   });
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`That sentence worked for years — but only because of one word we never said out loud: peer. When my reviewer was a human, they pushed back. They asked "are you sure?" They caught me heading in the wrong direction and stopped me before it cost anything. Now my peer is an AI. It's fast, it's confident — and it never hesitates, never doubts, never asks whether I actually meant what I said. So the loop still runs exactly as before: make it, push it, review it. But look at what's gone — the one node that used to check intent. Nobody is asking "are you sure?" anymore. And honestly, everything I built next was one long attempt to put that missing check back.`);
+  s.addNotes(`So let's look into what changed.
+
+That one person in this process — the one who'd ask "are you sure about this?" — is quietly being replaced by an AI.
+
+And one more question worth asking. Even when we have a human reviewer… how many are actually reviewing it themselves? Or are they just delegating to AI?
+
+So now we've got AI writing and reviewing the code. Two AIs agreeing and nobody in that loop is asking "are you sure?"
+
+This process looks the same. But that one person who used to keep it honest — gone from both ends.
+
+Everything I built next was one long attempt to put that missing check back.`);
 }
 
 // ── 4. YOUR ROLE NOW (5 shifts) ──────────────────────────────────────────────
@@ -350,7 +382,13 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
   });
   s.addText('Coder  →  Conductor', { x: 0.6, y: 6.45, w: 12.1, h: 0.4, fontFace: FONT, fontSize: 14, bold: true, color: C.gold, align: 'center' });
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`So if the AI is doing the typing, what is the job now? The coding got cheaper — which means the thinking got more valuable, and the thinking is now the work. There are five shifts. You wear the BA hat, turning a one-line ask into a real requirement. You understand the whole system like a solution architect, not just the file you happen to be touching. You review the AI's plan and you can say what's out of scope, and why. You stop being the coder who only looks at the impacted lines. And above all, you become the reviewer managing an agent to a result. Coder to conductor — that's the promotion. Everything that follows is what it actually takes to do it.`);
+  s.addNotes(`So when coding gets cheaper, thinking gets more valuable — and thinking, that's the job now.
+
+Five things shifted. You're the one who turns a one-line ask into an actual requirement. You need to understand the whole system, not just the file you happen to be in. You have to look at the AI's plan and be able to say what's out of scope and why. You can't just look at the impacted lines anymore. And most importantly, you're now the person managing an agent to a result — not writing it yourself.
+
+It's less like coding and more like conducting. And honestly, it's a harder job.
+
+So let's look at each of these five.`);
 }
 
 // ── 5. NEW RESPONSIBILITIES, NOT NEW TOOLS (bridge) ───────────────────────────
@@ -407,7 +445,11 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     });
   });
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`Here's the honest version of how this got built: we did not design it up front. We took those five responsibilities, tried to actually do each one with an AI in the loop, and walked straight into a wall every single time. You can't own intent if nothing captures intent. You can't review judgment you can't see. You can't carry a decision forward if the tool forgets it by lunch. Five responsibilities, five walls, in the order we hit them. Hold onto this table — at the very end we'll read it backwards, and every wall will have a door.`);
+  s.addNotes(`So here's the matrix. Three columns — your new responsibility, what was missing, and the system we built to fill it.
+
+Spec. Trust. Continuity. Knowledge. Observability.
+
+Five gaps. Five systems. Let's go through them one by one.`);
 }
 
 // ── 7. PLUGIN, NOT A PROMPT LIBRARY ───────────────────────────────────────────
@@ -421,7 +463,7 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
   const stats = [
     { n: '38', label: 'Commands', sub: 'Thin entry points into governed workflows' },
     { n: '26', label: 'Skills', sub: 'Behavioral modules with shared primitives' },
-    { n: '52', label: 'ADRs', sub: 'Decisions on disk — every choice traceable' },
+    { n: '55', label: 'ADRs', sub: 'Decisions on disk — every choice traceable' },
     { n: '5',  label: 'Acts', sub: 'Five discoveries, each built on the last' },
   ];
   stats.forEach((st, i) => {
@@ -437,7 +479,13 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     fontFace: FONT, fontSize: 12, italic: true, color: C.muted, wrap: true,
   });
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`One framing before we start climbing. What we built is a plugin, not a prompt library — and that distinction is the whole game. A prompt library assists how you already work; it's a suggestion. A plugin enforces how you've agreed to work; it's a system. If your job is now to manage an AI instead of out-typing it, suggestions aren't enough — you need something that holds. Thirty-eight commands, twenty-six skills, fifty-two decisions on disk. And it did not arrive complete — it started as a single gate and kept telling us what it was still missing. Which brings us to act one.`);
+  s.addNotes(`So the question is — why a plugin and not just a prompt library?
+
+A prompt is a suggestion, and the AI may or may not follow it. A plugin enforces how you work — it's not optional, it's the system. And in this new role, where you're managing an AI rather than out-typing it, a suggestion simply isn't enough — you need something that actually holds.
+
+What we ended up with is a governance workflow — five discoveries, each one unlocking the next. Let's start with the first.
+
+Thirty-eight commands. Twenty-six skills. Fifty-two decisions written down. And it didn't arrive like that — it started as a single gate. The rest of it kept becoming obvious only after we'd hit the thing it didn't do yet. That's act one.`);
 }
 
 // ══════════════════════════ ACT I — SPEC (8–12) ══════════════════════════
@@ -449,7 +497,7 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     'The AI won’t ask what you meant. So you have to say it first.',
     'ADRs 0001 · 0002 · 0005 · 0006 · 0010 · 0028');
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`Act one. Structure around the spec. The wall here is the simplest one and the most expensive: the AI will never ask you what you meant, so somebody has to say it first — and that somebody is now you.`);
+  s.addNotes(`So discovery one is Spec — and the reason it comes first is straightforward. The AI will never ask you what you meant. It'll take whatever you give it and build with complete confidence, even if it's heading in entirely the wrong direction. Someone has to capture the intent before that happens, and that someone is you. That's what the spec is for.`);
 }
 
 // ── 9. ACT I FAILURE: NOBODY OWNED THE INTENT ─────────────────────────────────
@@ -467,7 +515,13 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
   s.addText('THE ROI THESIS  ·  ADR 0001', { x: 0.8, y: 4.55, w: 11, h: 0.28, fontFace: MONO, fontSize: 8, bold: true, color: C.gold, charSpacing: 1.5 });
   s.addText('"One good spec you own up front prevents roughly three PRs that would have bounced."', { x: 0.8, y: 4.85, w: 11.5, h: 0.75, fontFace: FONT, fontSize: 16, bold: true, color: C.navy, wrap: true });
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`So here's the first wall we hit. Back then the spec — if it existed at all — lived in a Slack thread, and the code lived in the pull request, and the first time anyone put the two side by side was code review, days later. By then the AI had already written confidently in whatever direction it assumed. Business logic had leaked into controllers. And nobody had actually agreed on what we were building in the first place. The expensive part was never the bugs — it was the rework. We measured it, and one decent spec written up front saved about three PRs that would otherwise have bounced. That's the number that turned "write a spec" from a nag into a business case — and it's the reason act one exists.`);
+  s.addNotes(`How many of you are working on stories where the requirement lives in a user story, an email, a chat message, or someone's head?
+
+I bet… most of you. And the real issue is not where it lives — it is that nobody has a complete picture of what is actually being built.
+
+So the requirement is scattered, the code lives in the pull request, and the first time anyone compares the two is during code review — days later, after the AI has already built confidently against whatever it assumed.
+
+That is why we built the spec process. To make sure the AI is not assuming, and you are not rewriting.`);
 }
 
 // ── 10. WHAT ICEA IS (quadrant) ───────────────────────────────────────────────
@@ -494,7 +548,11 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     s.addText(c.feeds, { x: x + 0.25, y: y + 1.15, w: 5.5, h: 1.0, fontFace: FONT, fontSize: 11, color: C.ink, wrap: true, valign: 'top' });
   });
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`Before I go any further I owe you a definition, because I'm going to lean on this thing all talk. ICEA is four questions you answer so the AI has nothing left to guess. Intent — what are we building, and why; the one-liner from the business becomes a real goal. Context — where it lives and what constrains it: the stack, the auth, the data, the edges. Examples — you show instead of tell: given, when, then; the happy path, the error, the permission boundary. And Acceptance — a definition of done you could pass or fail without an argument. It is not a form. It's you doing the thinking. And notice each part feeds something downstream — the work item, the design, the tests, the ticket close.`);
+  s.addNotes(`So what is the spec? We call it ICEA — four questions that together give the AI everything it needs to build the right thing.
+
+The first is Intent — what are we actually building and why, not the ticket title but the real business goal behind the ask. The second is Context — this is where you describe where the feature lives, what the stack looks like, what the auth model is, and what the edge cases are. The third is Examples — this is where you show instead of tell, using real scenarios, given this situation, when this happens, then this is the expected result. And the fourth is Acceptance — a definition of done that is specific enough that you could test it and get a clear pass or fail, with no room for argument.
+
+It is not a form. It is the thinking that used to just not happen — and each part feeds directly into what comes next, whether that is the design, the tests, or closing the ticket.`);
 }
 
 // ── 11. SAMPLE ICEA (document mock — "screenshot") ────────────────────────────
@@ -535,7 +593,9 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
   s.addText('Sign-off:   Product ✅   ·   Tech Lead ✅', { x: secX, y: yy + 0.12, w: secW, h: 0.3, fontFace: MONO, fontSize: 10, bold: true, color: C.muted });
 
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`Those are the four questions in the abstract — but let me show you a real one, because this is what you're actually signing. Here's the ICEA for a small feature: a search filter on a deals grid, filled in and approved. Notice how short it is. The intent is one sentence with a measurable success metric — find a matter in under five seconds. The context names the exact files that change and pins the tier. The examples are given-when-then, not prose. And the acceptance criteria are things you could pass or fail without arguing, including a hard performance number — p95 under three hundred milliseconds. Then, down at the bottom, a named product owner and a named tech lead have signed it. That's the whole of act one on a single page: this is what "owning the intent" actually looks like, and it's exactly what the AI builds against. So the real question is — why does making people write this change how they behave?`);
+  s.addNotes(`What you're looking at is a sample ICEA format.
+
+Let me show you the real one.`);
 }
 
 // ── 12. THE SPEC IS YOU THINKING ──────────────────────────────────────────────
@@ -557,7 +617,13 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     { y: 3.3, h: 1.95 }
   );
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`Here's the reframe that changed everything for us. For a while people treated the ICEA step as a form the tool was making them fill in — pure friction. It isn't. It's the moment you do the part of the job that's now yours: turning a vague ask into an intent the AI can't misread. And the fascinating thing we watched happen — once developers knew a thin spec would come back and bounce their own PR, they started thinking harder up front, entirely on their own. Nobody enforced better specs. The incentive did. Now let me be honest about the floor: we wanted server-side enforcement, but the plugin never actually runs in our CI. So instead of pretending we can make bypass impossible, we make it visible. Honesty over overclaim — you'll hear me say that more than once today.`);
+  s.addNotes(`For a while, people just treated it like a form. Something the tool was making them fill out before they could get on with the actual work. I get it — it feels that way.
+
+But that's not what it is. This is actually the craft — the thinking that made you good at this job in the first place. Taking something ambiguous and making it precise enough to build against. That skill didn't go away when the AI started writing the code. It became everything.
+
+And honestly the thing that surprised me most — we never had to tell anyone. Once the pain of a thin spec landed on the person who wrote it… they just changed. Quietly.
+
+One honest admission — we wanted CI enforcement. The plugin doesn't run there. So bypass is possible. We just made sure it leaves a trace. There's a difference between "can't bypass" and "can't bypass quietly" — and we settled for the second one.`);
 }
 
 // ── 12. YOU WRITE THE CONTRACT ────────────────────────────────────────────────
@@ -589,7 +655,13 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     x: 0.5, y: 4.9, w: 12.3, h: 0.4, fontFace: FONT, fontSize: 12, italic: true, color: C.muted, align: 'center',
   });
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`So mechanically, act one turns into a relationship. You write the contract — Intent, Context, Examples, Acceptance. The AI is the contractor that builds against it. The word APPROVE is your signature; nothing gets built before it. And before a single file lands on disk, you see the diff and you sign again. Underneath there's a three-rung ladder — the model proposes, hooks intercept, Git and CI hold a visible floor — but the point isn't the plumbing. The point is that at every step there's a named human who owns a decision. That's the exact thing that vanished the moment the AI became the peer, and this is where we put it back. Which sets up the next problem.`);
+  s.addNotes(`Mechanically, act one is really just a relationship. You write the contract — Intent, Context, Examples, Acceptance. The AI builds against it. You type APPROVE, and that's your signature. Nothing gets built without it. And before a single file lands on disk, you see the diff and you sign again.
+
+Under the hood there's a ladder — the model proposes, hooks intercept, Git and CI hold the floor — but I don't really care about the plumbing here. What matters is that at every step, there's a named person who owns a decision.
+
+That's the exact thing that disappeared when the AI became the peer. This is where we put it back.
+
+And it creates a new problem almost immediately.`);
 }
 
 // ══════════════════════════ ACT II — TRUST (13–18) ══════════════════════════
@@ -601,7 +673,17 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     'You were asked to trust the AI’s judgment — with no way to see it or measure it.',
     'ADRs 0011 · 0012 · 0013 · 0015 · 0023 · 0047 · 0052');
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`Act two. Trust without measurement. We had gates now — but a new problem showed up right behind them. You're told to review the AI's judgment. Fine. But how do you review judgment you can't see, from a peer you have no way to calibrate?`);
+  s.addNotes(`Act two. Trust without measurement.
+
+We now have gates. So the problem is solved, right?
+
+Not quite. Because now you're asked to review the AI's judgment.
+
+Sure, fine. But… how do you review judgment you can't see?
+
+Think about it for a second. What does that actually mean?
+
+Let's look at the failure scenario.`);
 }
 
 // ── 14. ACT II FAILURE: REVIEWING BLIND ───────────────────────────────────────
@@ -618,7 +700,13 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     x: 0.6, y: 5.4, w: 12.1, h: 0.4, fontFace: FONT, fontSize: 13, italic: true, color: C.muted,
   });
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`This is the wall that bothered me the most. Think about when review actually happened. The ICEA review happened before any code existed. The code review happened afterwards, once the spec had already faded from everyone's memory. So the single most important comparison — does this code actually match what we agreed — had no one positioned to make it. The window was simply empty. On top of that, a generalist AI was reviewing specialist work; a security problem read through a helpful-assistant lens sails right past. And the entire feedback loop was three words: "the AI did a good job." I was being asked to extend trust with no instrument to measure it — and every task, whether it was spec drafting or a security review, hit the exact same model. That's not trust. That's hope.`);
+  s.addNotes(`This is the wall that bothered me the most.
+
+We have always considered review as a gate, but when does it actually happen. ICEA review was before any code existed, and the code review was afterwards — by that time everyone has already forgotten the spec. So that one comparison "does code actually do what we agreed on?" never happened.
+
+On top of that, a generalist AI was reviewing specialist work, so a security problem reviewed through a general lens will get skipped, and the only response we get was: the AI said it looks good.
+
+I was being asked to trust something I had no way to measure. Same model, same lens — spec drafting, security review, architecture decisions — every time. That is not trust. That is just hoping.`);
 }
 
 // ── 15. THE CRITIC (three gates) ──────────────────────────────────────────────
@@ -645,7 +733,15 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     x: 0.5, y: 4.25, w: 12.3, h: 0.4, fontFace: MONO, fontSize: 9, color: C.muted, align: 'center',
   });
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`So we built the one thing that could stand where I couldn't: the critic. I can't be in the room at the instant the AI generates code — but something can, and it can hand me a real second opinion instead of a blank diff. It fires at three moments, each one where intent and output are both fresh: on the ICEA draft, checking my intent; on the tech spec, checking my design against that intent; and on the generated code, before a single file is written. On that last gate it can actually send the work back to be redone — up to twice — before it ever reaches me. So by the time I'm reviewing, it has already survived a skeptic. And then it deliberately gets out of the way: no ledger, no bookkeeping, because its whole job is to sharpen my review, not to become another thing I have to manage.`);
+  s.addNotes(`So I built the one thing that could be there when I could not — the critic.
+
+When the AI generates code, the critic engine hands me a real second opinion instead of a blank diff. And it fires at three important moments, each time with a specialized persona and a different model.
+
+After the ICEA is drafted, the critic analyzes the document and provides a second opinion on whether the intent is clear and complete. When the tech spec is generated, it loads the ICEA into memory and maps the tech spec against it. And after the code is generated, it loads the tech spec and validates the code against what was agreed.
+
+At each step, if it finds discrepancies, it surfaces the findings to the developer — and up to twice, it can send the work back for rework before it ever reaches the lead.
+
+So by the time the lead starts the review, it has already survived a skeptic. Then it gets out of the way.`);
 }
 
 // ── 16. TWO AXES: CAPABILITY + ROLE ───────────────────────────────────────────
@@ -674,7 +770,11 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     });
   });
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`Here's something good reviewers do without even noticing. You read a change once as a product person — are we even building the right thing — then again as a security person, then again as the poor soul who has to maintain it in eighteen months. You switch hats. A generalist AI doesn't, unless you make it. So we split judgment on two axes: which brain is on the task, and which hat it's wearing. Same model, a completely different read when the lens changes — the security engineer notices exactly what the helpful assistant just missed.`);
+  s.addNotes(`How many of you have been a reviewer? When you look at code, do you just put on the Tech Lead hat and ignore the intent?
+
+No. You wear different hats and use different lenses — security, product, maintainability — depending on what you are looking at.
+
+That is exactly what I built here. Different models provide different lenses, used by different personas for specialized activities. Same code, completely different read depending on who is looking and why.`);
 }
 
 // ── 17. 13 LENSES ─────────────────────────────────────────────────────────────
@@ -707,7 +807,11 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     s.addText(p.q, { x: x + 0.12, y: y + 0.62, w: 2.7, h: 0.68, fontFace: FONT, fontSize: 10, italic: true, color: C.muted, wrap: true });
   });
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`Taken all the way, that's thirteen lenses — the questions your best product owner, tech lead, security engineer, QA, architect, and tech writer would each ask. Nobody can hold thirteen viewpoints in their head on every single review; I certainly can't. So the plugin asks them for you and brings back what each one flagged. It's seniority, distributed — so the quality of a review stops depending on whether one particular person happened to remember the failure modes that morning.`);
+  s.addNotes(`So as you can see, we have thirteen personas in total, each one giving a different perspective on the same code.
+
+I can bet… no one can hold thirteen viewpoints in their head on every single review. So the plugin asks them for you and brings back what each one flagged.
+
+I hope this is making sense. Next, let us look into some of the design decisions we took to make this work.`);
 }
 
 // ── 18. TRUST PILLARS ─────────────────────────────────────────────────────────
@@ -721,7 +825,13 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
   ];
   items.forEach((item, i) => { addAhaBox(s, item.tag, item.q, item.body, item.adr, { y: 1.0 + i * 1.95, h: 1.78 }); });
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`But a second opinion is only worth something if you trust the thing giving it — so three things had to be true. One: you can see what it read. Every source file it opens, it declares first, because for a tool you're supposed to trust, opacity is poison. Two: the right brain was on the job — critical judgment routed to the stronger model, routine work to the faster one. And three: it judges risk by your domain, not by a textbook. A "medium" finding that exposes privileged client data is not medium in our world — so business context can escalate a finding, but it can never quietly downgrade one. Get those three right and the second opinion becomes something you'd actually stake your name on.`);
+  s.addNotes(`This process of trust was built on three design principles.
+
+First, you can see what it reads. Every file it opens, it declares upfront — because if you are supposed to trust a tool, you need to know what it is actually doing. Second, we always need the right brain on the job. Critical judgment is routed to a stronger model, routine work to a faster one. Third, risk should be judged by business context, not a textbook. A medium finding that exposes privileged client data is not medium in a legal domain. Business context can escalate a finding — and it can never quietly downgrade one.
+
+Once we got those three right, the second opinion becomes something you can actually trust.
+
+With that, let us move on to the next act.`);
 }
 
 // ══════════════════════════ ACT III — CONTINUITY (19–21) ══════════════════════════
@@ -733,7 +843,13 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     'Your decisions can’t live in a chat window that closes.',
     'ADRs 0031 · 0032 · 0034 · 0035');
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`Act three. Continuity between sessions. We had good gates and a critic we could trust — and then every morning the whole thing started over from zero, because none of it survived the session that created it.`);
+  s.addNotes(`Act three. Continuity between sessions.
+
+How many of you have faced this? You work with AI through a session — you take decisions, fix mistakes, have a real back and forth — and then at the end of the day, you close the session. Next morning, your AI agent is making the same mistakes you fixed yesterday.
+
+The model is not the issue. It is the memory.
+
+So with that, let us first look into the failure mode.`);
 }
 
 // ── 20. ACT III FAILURE: DECISIONS DIDN'T SURVIVE ─────────────────────────────
@@ -750,7 +866,13 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     x: 0.6, y: 5.5, w: 12.1, h: 0.4, fontFace: FONT, fontSize: 13, italic: true, color: C.muted,
   });
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`Let me make this one concrete, because it's really an ownership problem dressed up as a memory problem. I'd approve a direction on Monday. Friday's session had no idea it ever happened, and would cheerfully recommend the opposite. My tech lead would approve a spec by email, but the plugin had already forgotten the context he was approving. Everything we decided lived inside a conversation — and conversations close. Now think about that from where you're standing: you are the one accountable for these calls. You cannot be answerable for a decision the system can't even remember you made. That's not an inconvenience — that's the floor falling out from under the whole idea of ownership.`);
+  s.addNotes(`Let us see what is actually falling off under the disguise of a memory issue.
+
+Governance — there is no place for enforcement if nothing is remembered. Authority — your decisions are meaningless if every next session makes the same mistake. Auditability — no trail of who decided what, when, why, and whether the decision was followed. Consistency — AI is free to make assumptions, so the same task will follow different approaches. Traceability — the chain between the conversation and code is broken, you can not connect a requirement to a decision. Finally, Accountability — this is the deepest one… you can not be answerable for whether decisions were followed, if the system never knew they existed.
+
+Overall, it is the Ownership issue.
+
+Next, let us see how I solved it.`);
 }
 
 // ── 21. TRUTH ON DISK + KEYWORD HANDLERS ──────────────────────────────────────
@@ -772,7 +894,7 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     { y: 3.2, h: 1.9 }
   );
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`The fix turned out to be almost boring, and that's exactly why I trust it. We moved the source of truth off the conversation and onto disk. Your approval is a recorded state now, not a message in a thread, so closing the session resets nothing. And you drive it in plain language, from wherever you already are — you type "APPROVE ADO-1847" in Teams, on your phone, three days later, and it's actioned; "ADO-1847," "ADO #1847," or just "1847," they all resolve. You speak, in whatever channel you're in; the workflow remembers, on disk. Now — that's one kind of continuity. There's a second kind, and it's the part I'm most proud of.`);
+  s.addNotes(`The fix is simple — instead of explaining it, let me just show you what it means, "Save the truth and then talk to it like a person."`);
 }
 
 // ══════════════════════════ DREAM INTERLUDE (22–26) ══════════════════════════
@@ -786,7 +908,13 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     'ADR 0007');
   s.addShape(pptx.ShapeType.ellipse, { x: 11.4, y: 0.7, w: 1.0, h: 1.0, fill: { color: 'a78bfa', transparency: 55 }, line: { type: 'none' } });
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`I'm going to pause the five acts for a moment, because this next piece deserves its own spotlight. There's a second kind of memory — not one ticket's state, but everything the team learns over time — and it turned out to be the most interesting thing we built. Here's the catch, though: memory you can't see or correct isn't an asset. It's a liability. This is Dream.`);
+  s.addNotes(`Before we go to the next act, let me take a detour here — because this next piece deserves its own moment.
+
+Dream… hmmm. Have you ever noticed, if you do not get good sleep then you start forgetting small things?
+
+Our brain is like a model, and whole day it is accumulating a lot of information. The only time it can train itself on this new information is when we sleep — so it adds, updates, deletes and promotes memories to keep those organized.
+
+So I built the same system and called it Dream. Let us quickly go through the next three slides and then let us look into a live example of Dream.`);
 }
 
 // ── 23. MEMORY WITHOUT DISCIPLINE ─────────────────────────────────────────────
@@ -912,7 +1040,11 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     'You can’t review a change you can’t place in the whole system.',
     'ADRs 0016 · 0017→0038 · 0039 · 0041 · 0042 · 0043 · 0050');
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`Act four. Structured knowledge of the codebase. This is the biggest act, because it's the thing your new role leans on the hardest: you cannot review a change well if you can't place it inside the whole system.`);
+  s.addNotes(`Act four. Structured knowledge of the codebase.
+
+How many of you have been asked to work on an application you have never worked on before? A new member joins your team and spends hours fixing a small issue.
+
+Let us look into the problem a little deeper.`);
 }
 
 // ── 28. TWO DEVELOPERS ────────────────────────────────────────────────────────
@@ -935,7 +1067,15 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     x: 0.85, y: 4.85, w: 11.6, h: 1.2, fontFace: FONT, fontSize: 15, bold: true, color: 'eef4fb', wrap: true, valign: 'middle',
   });
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`Let me start with two developers you already know. Same team, same bug handed to both. The first finds it in twenty minutes, fixes it cleanly, and it never comes back. The second spends two days, patches the symptom, and quietly breaks something else. Same seniority, same intelligence — so what's the difference? It isn't talent. The first developer understands the system. They carry a model of how the whole thing fits together, so a change is just a small edit to a structure they already know. The second is reading code cold, one file at a time, hoping to find the thread. Now here's the uncomfortable part, and it's the whole reason this act exists: your AI is that second developer. Fast, confident, and completely without a model of your system — unless you give it one. And honestly, so are you, the first time you open an unfamiliar codebase. This act is about turning both of you into the first developer.`);
+  s.addNotes(`Let me start with two developers you probably recognize.
+
+They are on the same team, handed the same bug. The first finds it in twenty minutes, fixes it cleanly, and it never comes back. The second spends two days, patches the symptom, and quietly breaks something else — same seniority, same intelligence.
+
+So, what is the difference? Because it is not talent. The first developer understands the system and carries a picture of how everything fits together, so a change is just a small edit to a structure they already have in their head. The second is reading cold, one file at a time, hoping to find the thread.
+
+Now let us talk about the uncomfortable part: your AI is that second developer — fast, confident, and completely without a model of your system unless you give it one. And honestly, so are you, the first time you open an unfamiliar codebase. This act is about turning both of you into the first developer.
+
+Before we look into the live example, let me give you a bit of statistics…`);
 }
 
 // ── 29. READS COLD EVERY TIME ─────────────────────────────────────────────────
@@ -1083,7 +1223,11 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
   const s = pptx.addSlide();
   addInterludeOpener(s, 'INTERLUDE · GUARDRAILS', 'Your conventions live in the system', 'Identical AI behavior — every developer, every session, no matter who’s driving.', null);
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`Quick detour between acts, because I keep saying the AI "behaves" — and behavior doesn't happen by accident. This one is about consistency: the AI acting the same way for every developer, every session, regardless of who's driving. Because you are not the only person managing this AI, and it cannot be allowed to drift into a different personality for each of us.`);
+  s.addNotes(`Before moving on to the last act, let me take a quick detour — because I keep saying manage your AI and not work with it.
+
+The only way to achieve that is through consistency — ensuring AI behaves the same way, no matter which developer is managing it.
+
+Let us look at how I achieved it.`);
 }
 
 // ── 35. GUARDRAILS: LAYERS + PROBABILISTIC/DETERMINISTIC ──────────────────────
@@ -1099,7 +1243,19 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
   s.addText('Probabilistic guidance everywhere  ·  deterministic guardrails exactly where the risk is real', { x: 0.75, y: 4.62, w: 12.0, h: 0.4, fontFace: FONT, fontSize: 13, bold: true, color: C.navy });
   s.addText('The skills and commands carry hard rules too, and the source-file consent model gates what the AI is even allowed to read.', { x: 0.75, y: 5.05, w: 12.0, h: 0.85, fontFace: FONT, fontSize: 12, color: C.muted, wrap: true });
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`Two layers keep it on the rails, and you don't have to police either one. The first is the always-on system prompt — CLAUDE.md, loaded every session — carrying the rules that apply everywhere: the write gate, "Dapper with parameterised SQL, never EF Core," the commit and branch format. The second is forty-three scoped rule files, each of which only wakes up when you touch a matching file: open a C# file and the .NET and data-access rules appear, open a React component and the React rules appear, and they cost nothing the rest of the time. And there's a real difference in how these bind — a prompt instructs the model, which is flexible but ultimately a suggestion; a hook intercepts the actual tool call, mechanically, and it does not negotiate. Flexible guidance everywhere, hard guardrails exactly where the risk is real. Which brings us to the final act.`);
+  s.addNotes(`How many of you think guardrails are just system prompts? You tell the model "do not do this" and it nods along.
+
+Spoiler alert: it is lying.
+
+A prompt guardrail is a suggestion. A really polite one. The AI can ignore it — and I bet, probably on a Friday.
+
+I started my design with CLAUDE.md as the centerpiece and forty-three scoped rule files that auto-invoke when needed. Brilliant, right? The right rule at the right time. Except — plot twist — they are still prompts, still probabilistic, still ignorable.
+
+The issue is not the model, but this probabilistic nature — which is good for reasoning, but not for enforcement.
+
+So I designed a hooks system to bring enforcement. Hooks intercept a tool call itself and define a deterministic gate that the AI cannot ignore.
+
+With that… let us move on to the last act of this session. I am sure you will love this.`);
 }
 
 // ══════════════════════════ ACT V — OBSERVABILITY (36–40) ══════════════════════════
@@ -1111,7 +1267,18 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     'You’re accountable for what ships. “The AI said it’s fine” isn’t evidence.',
     'ADRs 0004 · 0014 · 0015 · 0019 · 0020 · 0045');
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`Act five, the last one. Observability. And notice I did not call it enforcement — we already did enforcement, back in act one with the gate and just now with the guardrails. This act is about something else entirely. You are accountable for what ships, and "the AI said it's fine" is not evidence.`);
+  s.addNotes(`Act five… Observability.
+
+So, we built enforcement — gates that cannot be bypassed, guardrails that stick. Excellent — we are in control.
+
+Then something ships and breaks in production.
+
+Client asks: "What happened?"
+You say: "AI said it was fine." And the client stares at you.
+
+How many of you are comfortable with this?
+
+Let us dig deep into this… as this is one thing that will make or break the trust on you, as you are accountable for the system.`);
 }
 
 // ── 37. ACT V FAILURE: ZERO OBSERVABILITY ─────────────────────────────────────
@@ -1133,7 +1300,15 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
   });
   s.addText('Accountable — with trust as the only instrument. Trust doesn’t survive an audit.', { x: 0.5, y: 6.0, w: 12.3, h: 0.4, fontFace: FONT, fontSize: 13, italic: true, color: C.muted, align: 'center' });
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`Here's the last wall, and it's the one an auditor would walk straight into. For everything we'd built, one question still had no answer: what did the AI actually do, and can you prove it was right? There was no trail of its decisions. There was no line you could draw from a requirement to the code that satisfies it. There was no evidence that what shipped matched what we agreed. And when somebody decided a finding didn't matter and waved it off, the reason went with them — just gone. So there I was, accountable for the quality of everything that shipped, with trust as my only instrument. And trust, as we'd already learned the hard way, does not survive an audit.`);
+  s.addNotes(`Here is the last wall — and it is the one that would make an auditor stare.
+
+Accountability requires observability. You need to see the decision tree. What did it consider? What did it rule out? What tradeoffs did it make? And many more questions. Without that, you are not accountable — you are just hoping.
+
+So you need logs. Traces. A complete record of what the system decided and why. Not for punishment. For proof. So when something goes wrong, you can walk the chain. So you can say: "Here is exactly what happened, here is where it diverged from the plan, here is what we will fix."
+
+That is when you actually own the outcome. Because without observability, enforcement is just security theater with better intentions.
+
+Now, let us look into how we implemented it.`);
 }
 
 // ── 38. TRACEABILITY ──────────────────────────────────────────────────────────
@@ -1237,10 +1412,10 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
   s.addNotes(`One thing before I land this, and it's about credibility. A tool that demands you be accountable had better be accountable itself — so the plugin turns its whole philosophy inward. Setup used to be thirty to sixty sequential AI calls before any real work even began; we collapsed it into a single deterministic bootstrap script, because what can be mechanical should be. And it refuses to overclaim: there was a point where a hidden dependency could quietly fail and still report success — that's gone now, replaced by one honest resolver that either knows the answer or tells you it doesn't. It practices exactly what it enforces.`);
 }
 
-// ── 42. WHAT 52 DECISIONS TAUGHT US ───────────────────────────────────────────
+// ── 42. WHAT 55 DECISIONS TAUGHT US ───────────────────────────────────────────
 {
   const s = pptx.addSlide();
-  addSlideHeading(s, 'What 52 decisions taught us');
+  addSlideHeading(s, 'What 55 decisions taught us');
   const principles = [
     { n: '01', title: 'Gates are incentive structures', body: 'They change what people do before anyone else has to review their work.', adr: 'ADR 0001' },
     { n: '02', title: 'Honesty over overclaim', body: 'Never claim a floor the system can’t hold. Make bypass visible instead.', adr: 'ADR 0010' },
@@ -1264,7 +1439,15 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     s.addText(p.adr, { x: x + 0.12, y: y + 1.72, w: w - 0.25, h: 0.22, fontFace: MONO, fontSize: 8, color: C.muted });
   });
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`Fifty-two decisions, and honestly a handful of lessons that outlived any single feature. Gates are incentive structures — they change what people do before anyone else has to review the work. Honesty over overclaim — never promise a floor you can't hold; make bypass visible instead of pretending it's impossible. One source of truth per concept, because duplication is the enemy. You don't grant trust, you measure it. What a parser can know, a parser should know. Friction is multiplicative across fifty sessions a month, so the small wins compound. And design for the deployment reality you actually have, not the tidy one on the slide.`);
+  s.addNotes(`Fifty-five decisions, and a handful of lessons that outlived any single feature.
+
+Gates work because they are incentive structures — they change behavior before review is needed. Make bypass visible instead of pretending it is impossible. One source of truth per concept. Duplication kills you. If a parser can know it, a parser should know it. You do not grant trust — you measure it.
+
+When code ships, you need the thread: what did the system consider, where did it apply the rules, what did it trade off? That is accountability. That is proof.
+
+Friction compounds across fifty sessions. Small wins add up. Design for the reality you have, not the slide. That is where decisions actually live.
+
+When you can show why something shipped, you own the outcome. Not because you prevented failure. Because you can trace what happened and fix it if you were wrong.`);
 }
 
 // ── 43. BOOKEND: RESPONSIBILITIES ANSWERED ────────────────────────────────────
@@ -1289,7 +1472,13 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
   });
   s.addText('Each wall became visible only after you’d climbed the one before it.', { x: 0.5, y: 6.35, w: 12.3, h: 0.4, fontFace: FONT, fontSize: 12, italic: true, color: C.muted, align: 'center' });
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`Now let's go back to where we started. Remember that table of five walls? Read it forward, it was a list of everything that was broken. Read it backward, and it's the whole talk. You have to own the intent — the spec gate makes that the path of least resistance. You have to review the AI's judgment — the critic gives you a real second opinion at the one moment it's possible. You have to carry decisions forward — disk state and Dream mean they survive the session. You have to understand the whole system — the graph and the architecture docs hand you the map. And you have to prove it held — traceability and the ledgers give you the evidence. Every one of those walls only became visible after we'd climbed the one before it. That's not tidy design. That's just how it actually happened.`);
+  s.addNotes(`Let us go back to where we started. That table of five walls.
+
+Read it one way, it is a list of everything that was broken. Read it the other way — it is actually the whole talk.
+
+Own the intent: the spec gate makes that the path of least resistance. Review the AI's judgment: the critic hands you a real second opinion at the one moment it is possible. Carry decisions forward: disk state and Dream mean they survive the session. Understand the whole system: the graph and the architecture docs give you the map. Prove it held: traceability and the ledgers give you the evidence.
+
+Every single one of those walls only became visible after we had climbed the one before it. That was not a plan. That is just how it actually happened.`);
 }
 
 // ── 44. IN SUMMARY ────────────────────────────────────────────────────────────
@@ -1301,12 +1490,12 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     x: 0.6, y: 0.95, w: 12, h: 1.6,
     fontFace: FONT, fontSize: 34, bold: true, color: C.white, wrap: true,
   });
-  s.addText('The coding got cheaper; the thinking became the job — wearing the BA hat, holding the system in your head, judging the plan, owning the decisions, proving what shipped. That’s a role, not a tool. And 52 decisions on disk exist to make that role trustworthy — so when you sign off, you sign off on evidence, not faith.', {
+  s.addText(`The coding got cheaper; the thinking became the job — wearing the BA hat, holding the system in your head, judging the plan, owning the decisions, proving what shipped. That’s a role, not a tool. And 55 decisions on disk exist to make that role trustworthy — so when you sign off, you sign off on evidence, not faith.`, {
     x: 0.6, y: 2.55, w: 12, h: 1.4,
     fontFace: FONT, fontSize: 15, color: 'cdd9e6', wrap: true,
   });
   const paths = [
-    { label: 'THE DECISIONS', body: 'docs/adr/\n52 ADRs, numbered and dated' },
+    { label: 'THE DECISIONS', body: 'docs/adr/\n55 ADRs, numbered and dated' },
     { label: 'THE PRINCIPLES', body: 'CLAUDE.md\nThe principles, every session' },
     { label: 'GO DEEPER ON DREAM', body: 'dream-skill.pptx\nThe 19-slide deep-dive' },
   ];
@@ -1318,7 +1507,17 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
   });
   s.addText('Discussion.', { x: 0.6, y: 6.35, w: 12, h: 0.35, fontFace: FONT, fontSize: 14, color: '9db2c7' });
   addSlideNumber(s, ++PAGE, TOTAL);
-  s.addNotes(`So here's the whole thing in a breath. You are not the coder anymore — the coding got cheaper, and it's not where your value lives now. You're the reviewer who manages an AI to a result: wearing the BA hat, holding the system in your head, judging the plan, owning the decisions, proving what shipped. That is a role, not a tool — and honestly it's a bigger job than the one you had. Everything we built, all fifty-two decisions on disk, exists for exactly one reason: to make that role trustworthy, so that when you sign off, you're signing off on evidence and not on faith. The decisions are all in docs/adr. The principles live in CLAUDE.md, loaded every session. And if you want to go deeper on the memory system, there's a whole deck on Dream. That's the story — from coder to conductor. Let's talk.`);
+  s.addNotes(`So here is the whole thing.
+
+You are not the coder anymore. The coding got cheaper, and that is not where your value lives now. You are the person who manages an AI to a result — wearing the BA hat, holding the system in your head, judging the plan, owning the decisions, proving what shipped.
+
+That is a role, not a tool. And honestly? It is a harder job than the one you had.
+
+Everything we built — all fifty-five decisions written down — exists for one reason: to make that role something you can actually trust. So when you sign off, you are signing off on evidence. Not on faith.
+
+The decisions are all in docs/adr. The principles live in CLAUDE.md, loaded every session. And if you want to go deeper on the memory system, there is a whole deck on Dream.
+
+That is the story. Let us talk.`);
 }
 
 // ─── Write output ─────────────────────────────────────────────────────────────

@@ -48,6 +48,22 @@ product's end-users. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ---
 
+## Source Search Guardrail
+
+> **Apply before every Grep / Glob / Find / source-file Read in this skill:**
+> 1. Check `.claude/graph/graph-index.md` (auto-loaded) — Module Summaries answer most
+>    "where does X live?" and "what depends on Y?" questions without touching source.
+> 2. Check the relevant architecture doc (`architecture.md`, `architecture-data.md`,
+>    `architecture-integrations.md`, `architecture-security.md`) for pattern and convention
+>    questions.
+> 3. Only run a live source search if the above genuinely cannot answer the question.
+>    When you do, state why inline: "Graph does not capture X — running live search."
+>
+> **Exempt from this guardrail:** the Fix 6 implementation check (`grep "ADO-${ADO_ID}"`)
+> — this checks for ADO-tagged code, which the graph does not track. It runs unconditionally.
+
+---
+
 ## Step 2 — Locate existing files
 
 ```bash
@@ -162,7 +178,8 @@ Apply the requested changes to both documents as needed. Rules:
   Tech Spec (or vice versa), update both and flag the impact explicitly
 - **Never invent** class names, file paths, or technical details not
   present in the updated information or architecture docs — raise a new
-  ❓ block instead
+  ❓ block instead. Apply the Source Search Guardrail above before any
+  lookup to verify a name or location
 - **Append to revision log** in both documents:
   ```
   {date} — {brief description of what changed and why}

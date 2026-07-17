@@ -49,20 +49,20 @@ If not, rewrite until it does.}
 ## Examples
 
 ### Happy Path
-**Given** {precondition}
-**When** {action}
+**Given** {precondition}  
+**When** {action}  
 **Then** {observable outcome}
 
 ### Edge Cases
-**Given** {edge precondition}
-**When** {action}
+**Given** {edge precondition}  
+**When** {action}  
 **Then** {expected behaviour}
 
 {Minimum two edge cases.}
 
 ### Error States
-**Given** {error precondition}
-**When** {action}
+**Given** {error precondition}  
+**When** {action}  
 **Then** {user-visible error message and system behaviour}
 
 {Every error state must have a user-visible message defined.}
@@ -77,9 +77,9 @@ If not, rewrite until it does.}
 - [ ] AC-NF1: {non-functional criterion — target value + verification method}
 
 ### Out of Scope
-{Item 1 — minimum three items. Taken from plan Won't Haves + story-specific items.}
-{Item 2}
-{Item 3}
+- {Item 1 — minimum three items. Taken from plan Won't Haves + story-specific items.}
+- {Item 2}
+- {Item 3}
 
 ### Assumptions
 - {Assumption} — **verified** / **unverified**

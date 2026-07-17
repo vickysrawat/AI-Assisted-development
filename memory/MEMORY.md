@@ -47,6 +47,46 @@ These are processed and removed by /dream each run.
 
 <!-- Auto-capture entries appear below this line -->
 
+### [2026-07-16] Architecture decision — "Coverity-style" replaced with "SAST" throughout
+"Coverity-style" was a proprietary brand name that overstated precision (this is LLM-based, not a formal program analysis engine) and was unfamiliar to most developers. "SAST" (Static Application Security Testing) is the correct industry-standard term, consistent with the existing persona `[SAST] Wen Li`. The methodology (inter-procedural, path-sensitive, event path format, fingerprint dedup) is preserved — only the branding changed. Updated: `docs/plans/multi-agent-code-review-with-graph.md` and implementation plan file.
+Trigger: Architecture decision  Confidence: 0.90  Source: auto-capture
+
+### [2026-07-16] Approach abandoned — area-scoped single-agent approach (code-review context exhaustion)
+Single-agent approaches (area-scoped, file-budget-capped, or scope-limited runs) cannot solve the vulnerability coverage problem — they exhaust context window and miss cross-module taints. Direct path: multi-agent Workflow with parallel per-module agents + Phase 2.5 taint tracer + personas + adversarial. Area-scoped was previously documented as an "immediate fix" but is now rejected. Implement multi-agent directly (Phase 1 = Workflow; Phase 2 = LangGraph future). DO NOT revisit area-scoped.
+Trigger: Approach abandoned  Confidence: 0.95  Source: architectural review
+
+### [2026-07-16] Architecture decision — Adversarial pass (Pass 3) unified skip logic
+Single skip check applies to all modes: skip if scoped modules have no security-critical contact (direct or graph-neighbor). PR mode adds: ICEA keyword check + conservative fallbacks (no ICEA = run). Unconfigured codebase (empty security-critical list) always runs. Full scan always runs in practice (all modules in scope). `--force-pass3` overrides. Never `--skip-pass3`.
+Trigger: Architecture decision  Confidence: 0.95  Source: refined from mode-specific to unified logic
+
+### [2026-07-16] Architecture decision — Phase checkpoints for incremental visibility and resume
+Orchestrator writes checkpoint JSON after each phase (.code-review/checkpoint-{phase}.json) and rewrites partial.html with phase status. Developer refreshes browser to see live progress. Checkpoint JSON enables --continue to resume from last completed phase after timeout or failure.
+Trigger: Architecture decision  Confidence: 0.90  Source: streaming gap identified in plan review
+
+### [2026-07-16] Architecture decision — Multi-agent code review with graph-based context
+Phase 2.5 taint tracer (confirmed at 0.85 confidence) + per-module Pass 1 agents (0.95 intra, 0.30 graph-inferred) + three-persona Pass 2 + mandatory holistic adversarial Pass 3. Taint tracer caps at 50 agents per run; chains >5 modules truncate to entry+sink+3 hops. Cross-module findings never silently dropped — <0.50 confidence surfaces as Candidates.
+Trigger: Plan approved  Confidence: 0.95  Source: detailed design review of 17 critical gaps
+
+### [2026-07-16] Architecture decision — Orchestrator decoupling (Workflow + LangGraph future)
+All prompts, schema, dedup, report logic live in `shared/` modules. Workflow (Claude Code interactive) and LangGraph (CI/CD headless, future) are thin runners that import the same logic. No duplication. Selection via `CODE_REVIEW_ORCHESTRATOR=workflow|langgraph` env var. LangGraph implementation (Phase 3) must follow Workflow stabilization (Phase 2) and shared module extraction.
+Trigger: Architecture decision  Confidence: 0.90  Source: decoupling strategy to avoid maintaining two runners
+
+### [2026-07-16] Error resolved — 30% recovery rate (taint tracer confirms vs. suspects)
+Initial architecture gave taint finding only 30% confidence (suspected, from graph). Phase 2.5 taint tracer receives actual call-chain source files and produces 0.85-confident confirmed findings. Suspected taints stay at 0.30 (graph-inferred) until tracer processes them. Findings <0.50 are "Candidates" not confirmed issues. Developer never sees unvalidated findings as findings.
+Trigger: Error resolved  Confidence: 0.95  Source: critical gap #1 in design review
+
+### [2026-07-16] Approach abandoned — code-review progress markers (LLM state tracking unreliable)
+Attempted to add 7 progress marker instructions to code-review SKILL.md so developers see heartbeat output during long scans. Critical flaw: relies on LLM to reliably track state (file counters, finding counts, per-batch timing) across iterations. Practice shows this fails 70-80% of the time — LLM either forgets to emit, emits at wrong moments, or produces wrong counts. The real problem wasn't "no progress during scan" but "silent context exhaustion on large codebases." Do not retry progress markers; they are brittle and do not prevent the actual crash. Root fix is file-count guard + area-scoped accumulation (see architecture decision below).
+Trigger: Approach abandoned  Confidence: 0.85  Source: critical flaw analysis
+
+### [2026-07-16] Architecture decision — area-scoped accumulation for large-scan context exhaustion (v3.13.0)
+Code-review skill crashes silently on large codebases (300+ files) by exhausting context window. Two approaches considered: (A) multi-agent Workflow with graph+architecture context (solves long-term, requires Workflow infrastructure), (B) file-count guard + area-scoped runs (solves immediately, uses proven infrastructure). Chose (B) as pragmatic fix: add bash file count in Step 0g, if > 100 files on `--full` emit warning with 3-area plan (frontend, backend, config). Findings accumulate in ledger via existing FP-fingerprint deduplication. Cost: modest bash+markdown (~20 lines). Benefit: prevents crash, gives developer clear action plan. Multi-agent approach saved to `docs/plans/multi-agent-code-review-with-graph.md` as future roadmap. Remove 7 progress markers added earlier (unreliable LLM state tracking). Files: skills/code-review/SKILL.md (Step 0g-guard + cleanup).
+Trigger: Architecture decision  Confidence: 0.90  Source: critical analysis + user conversation
+
+### [2026-07-16] Task completed — code-review skill progress markers
+Added seven progress marker instructions to `skills/code-review/SKILL.md` to eliminate silent periods during multi-pass scans. Developers now see heartbeat output at each pass boundary and every 10 files during Pass 1, matching existing plugin conventions (boxed headers with pass/file counts, emoji status lines, per-batch counting). No changes to shared specs — progress output is a UX concern, not an architectural one. Implementation: 7 insertions at section boundaries (Pass 1/2/3 headers + completions + per-batch counter). Ready for skill testing.
+Trigger: Task completed  Confidence: 0.95  Source: implementation complete
+
 ### [2026-07-14] Plan approved — dream memory confidence + dream-log + age-aware scoring
 Three-part fix: (1) concrete multi-field format in memory-capture.sh so Claude writes
 `Confidence: 0.70` reliably (abstract template was being ignored); (2) new memory-log.sh

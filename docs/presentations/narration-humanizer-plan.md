@@ -1,13 +1,13 @@
 # Narration Humanizer — Session Plan
 # File: ai-assisted-development-story.pptx
-# Last updated: 2026-07-14
-# Resume from: SLIDE 11
+# Last updated: 2026-07-15
+# Resume from: SLIDE 16
 
 ---
 
 ## PROGRESS
 
-> **▶ RESUME AT: SLIDE 11**
+> **▶ RESUME AT: SLIDE 16**
 
 | Slide | Status | Narration Summary |
 |---|---|---|
@@ -21,12 +21,12 @@
 | 8 | ✅ Locked | Discovery one: Spec → AI never asks "are you sure?" → "Someone has to capture the intent before that happens, and that someone is you" |
 | 9 | ✅ Locked | Requirement scattered in stories/email/chat → AI builds against assumptions → "That is why we built the spec process. To make sure the AI is not assuming, and you are not rewriting" |
 | 10 | ✅ Locked | ICEA defined → Intent, Context, Examples, Acceptance → each explained as flowing sentence → "It is the thinking that used to just not happen" |
-| **11** | **▶ RESUME HERE** | — |
-| 12 | 🔲 Pending | — |
-| 13 | 🔲 Pending | — |
-| 14 | 🔲 Pending | — |
-| 15 | 🔲 Pending | — |
-| 16 | 🔲 Pending | — |
+| 11 | ✅ Locked | Sample ICEA on screen → "What you're looking at is a sample ICEA format. Let me show you the real one." → live walkthrough |
+| 12 | ⏭ Skipped | Content covered during live ICEA walkthrough |
+| 13 | ⏭ Skipped | Content covered during live ICEA walkthrough |
+| 14 | ✅ Locked | Act two: trust without measurement → gates exist but reviewing unseen judgment → "Let's look at the failure scenario" |
+| 15 | ✅ Locked | Review timing gap → ICEA before code, code review after spec forgotten → generalist AI misses specialist issues → "That is not trust. That is just hoping." |
+| **16** | **▶ RESUME HERE** | Draft ready — critic narration, not yet approved |
 | 17 | 🔲 Pending | — |
 | 18 | 🔲 Pending | — |
 | 19 | 🔲 Pending | — |
@@ -109,7 +109,7 @@
 - **Do not start sentences with "And" as a paragraph opener** — feels like you walked in mid-conversation
 - **Do not show the pain/struggle narrative** — focus on what was built and why, not the wall we hit
 - **Do not reference Slack** — the team does not use Slack
-- **Do not use "isn't" or "aren't"** — use "is not" and "are not" instead
+- **Do not use any contractions** — "is not", "can not", "do not", "it is", "I am", "we are", "I have", never "isn't", "can't", "don't", "it's", "I'm", "we're", "I've"
 - **Do not telegraph the structure** — "Watch them line up one to one" robs the ending of its punch
 
 ---

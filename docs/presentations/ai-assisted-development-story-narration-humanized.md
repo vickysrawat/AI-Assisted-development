@@ -250,19 +250,13 @@ It is not a form. It is the thinking that used to just not happen — and each p
 > Those are the four questions in the abstract — but let me show you a real one, because this is what you're actually signing. Here's the ICEA for a feature: a search filter on a deals grid, filled in and approved. Notice how short it is. The intent is one sentence with a measurable success metric — find a matter in under five seconds. The context names the exact files that change and pins the tier. The examples are given-when-then, not prose. And the acceptance criteria are things you could pass or fail without arguing, including a hard performance number — p95 under three hundred milliseconds. Then, down at the bottom, a named product owner and a named tech lead have signed it. That's the whole of act one on a single page: this is what "owning the intent" actually looks like, and it's exactly what the AI builds against. So the real question is — why does making people write this change how they behave?
 
 **HUMANIZED:**
-That's the abstract version. Let me show you a real one — because this is what you're actually signing.
+What you're looking at is a sample ICEA format.
 
-Here's an ICEA for a feature: a search filter on a deals grid. It's filled in, it's approved. This is what thorough looks like — not long for the sake of it, but complete. Every section has to earn its place. The intent is one sentence with a measurable success metric — find a matter in under five seconds. Context names the exact files that change. Examples are given-when-then, not prose. And the acceptance criteria — you could pass or fail them without arguing about it, including a hard performance number. P95 under 300ms.
-
-And at the bottom? A named product owner and a named tech lead have signed it. Real names.
-
-That's act one on one page. Because here's what actually happens when you write it. You think. And thinking finds the gaps. Better to find them now than three days into a PR review.
+Let me show you the real one.
 
 **WHY IT'S BETTER:**
-- "Real names." — short emphasis; the original just states it
-- "the question I get asked most" — positions what follows as a genuine FAQ, not a rhetorical setup
-- Removed "small feature" — ICEA is never small, it's thorough by design; "This is what thorough looks like" reframes it correctly
-- Breaking the ICEA items into shorter sentences creates natural pointing-at-screen rhythm
+- No explanation of the sample — speaker does a live walkthrough of the real document
+- Two sentences only; the narration gets out of the way and hands control to the presenter
 
 ---
 
@@ -318,11 +312,20 @@ And it creates a new problem almost immediately.
 **HUMANIZED:**
 Act two. Trust without measurement.
 
-We had gates now. But a new problem showed up right behind them. You're told to review the AI's judgment. Sure, fine. But how do you review judgment you can't see… from something you have no way to calibrate?
+We now have gates. So the problem is solved, right?
+
+Not quite. Because now you're asked to review the AI's judgment.
+
+Sure, fine. But… how do you review judgment you can't see?
+
+Think about it for a second. What does that actually mean?
+
+Let's look at the failure scenario.
 
 **WHY IT'S BETTER:**
-- "Sure, fine" — more dismissive, more real — acknowledges the false confidence of just "having a gate"
-- "from something you have no way to calibrate" — "something" rather than "a peer" acknowledges the AI isn't really a peer
+- Opens with a false-resolution question — pulls the audience in before the reveal
+- "Think about it for a second" — invites the room to explore the problem together
+- Closes by handing off to the next slide naturally, no essay signposting
 
 ---
 
@@ -334,16 +337,17 @@ We had gates now. But a new problem showed up right behind them. You're told to 
 **HUMANIZED:**
 This is the wall that bothered me the most.
 
-Think about when review actually happened. ICEA review was before any code existed. Code review was afterwards, once the spec had faded from everyone's memory. So the one comparison that mattered most — does this code actually match what we agreed — nobody was positioned to make it. That moment just didn't exist.
+We have always considered review as a gate, but when does it actually happen. ICEA review was before any code existed, and the code review was afterwards — by that time everyone has already forgotten the spec. So that one comparison "does code actually do what we agreed on?" never happened.
 
-And on top of that, a generalist AI was reviewing specialist work. A security problem read through a "helpful assistant" lens just sails right past. And the entire feedback loop I was getting was basically: "the AI did a good job."
+On top of that, a generalist AI was reviewing specialist work, so a security problem reviewed through a general lens will get skipped, and the only response we get was: the AI said it looks good.
 
-I was being asked to trust something with no way to measure it. Spec drafting, security review, architecture decisions — same model, same lens, every time. That's not trust. That's just hoping.
+I was being asked to trust something I had no way to measure. Same model, same lens — spec drafting, security review, architecture decisions — every time. That is not trust. That is just hoping.
 
 **WHY IT'S BETTER:**
-- "That moment just didn't exist" replaces "The window was simply empty" — concrete language over abstract
-- "basically: 'the AI did a good job'" — "basically" is natural hedging
-- "That's just hoping" replaces "That's hope" — "just hoping" has more exhaustion in it
+- "We have always considered review as a gate, but when does it actually happen" — invites the audience to think rather than just stating the problem
+- Flows as connected speech throughout — no broken fragments
+- "the AI said it looks good" — plain, no quotes, more natural
+- Final two sentences kept short deliberately — they're the landing point
 
 ---
 
@@ -353,18 +357,20 @@ I was being asked to trust something with no way to measure it. Spec drafting, s
 > So we built the one thing that could stand where I couldn't: the critic. I can't be in the room at the instant the AI generates code — but something can, and it can hand me a real second opinion instead of a blank diff. It fires at three moments, each one where intent and output are both fresh: on the ICEA draft, checking my intent; on the tech spec, checking my design against that intent; and on the generated code, before a single file is written. On that last gate it can actually send the work back to be redone — up to twice — before it ever reaches me. So by the time I'm reviewing, it has already survived a skeptic. And then it deliberately gets out of the way: no ledger, no bookkeeping, because its whole job is to sharpen my review, not to become another thing I have to manage.
 
 **HUMANIZED:**
-So we built the one thing that could be there when I couldn't — the critic.
+So I built the one thing that could be there when I could not — the critic.
 
-I can't be in the room the instant the AI generates code. Something else can be. And it can hand me a real second opinion instead of a blank diff. It fires at three moments — the ICEA draft, the tech spec, and the generated code — each one where the intent and the output are both fresh enough to compare.
+When the AI generates code, the critic engine hands me a real second opinion instead of a blank diff. And it fires at three important moments, each time with a specialized persona and a different model.
 
-On that last gate, it can actually send the work back to be redone before it ever reaches me. Up to twice. So by the time I'm looking at it, it's already survived a skeptic.
+After the ICEA is drafted, the critic analyzes the document and provides a second opinion on whether the intent is clear and complete. When the tech spec is generated, it loads the ICEA into memory and maps the tech spec against it. And after the code is generated, it loads the tech spec and validates the code against what was agreed.
 
-Then it gets out of the way. No ledger, no bookkeeping. It's there to sharpen my review, not to become another thing I have to manage.
+At each step, if it finds discrepancies, it surfaces the findings to the developer — and up to twice, it can send the work back for rework before it ever reaches the lead.
+
+So by the time the lead starts the review, it has already survived a skeptic. Then it gets out of the way.
 
 **WHY IT'S BETTER:**
-- "Something else can be." — short emphatic sentence
-- "fresh enough to compare" — the "enough" is natural hedging
-- Last paragraph shortened — "deliberately gets out of the way" removed "deliberately"; natural verbs don't need that adverb
+- Three critic moments explained with what each one actually does — not just named
+- Specialized persona and different model called out — sets up Slides 17–18 naturally
+- "Then it gets out of the way" — no bookkeeping, no fanfare; mirrors the no-ledger design
 
 ---
 
@@ -374,16 +380,16 @@ Then it gets out of the way. No ledger, no bookkeeping. It's there to sharpen my
 > Here's something good reviewers do without even noticing. You read a change once as a product person — are we even building the right thing — then again as a security person, then again as the poor soul who has to maintain it in eighteen months. You switch hats. A generalist AI doesn't, unless you make it. So we split judgment on two axes: which brain is on the task, and which hat it's wearing. Same model, a completely different read when the lens changes — the security engineer notices exactly what the helpful assistant just missed.
 
 **HUMANIZED:**
-Here's something good reviewers do without realizing they're doing it. You read a change once as a product person — are we even building the right thing. Then you read it again as a security person. Then again as the poor soul who'll be maintaining this in eighteen months. You switch hats.
+How many of you have been a reviewer? When you look at code, do you just put on the Tech Lead hat and ignore the intent?
 
-A generalist AI doesn't do that. Unless you make it.
+No. You wear different hats and use different lenses — security, product, maintainability — depending on what you are looking at.
 
-So we split judgment two ways: which brain is on the task, and which hat it's wearing. Same model — completely different read. The security engineer catches exactly what the helpful assistant just walked right past.
+That is exactly what I built here. Different models provide different lenses, used by different personas for specialized activities. Same code, completely different read depending on who is looking and why.
 
 **WHY IT'S BETTER:**
-- "without realizing they're doing it" — more natural than "without even noticing"
-- "The security engineer catches exactly what the helpful assistant just walked right past" — "walked right past" is more visual and natural than "missed"
-- "Unless you make it." as a standalone — the pause lands better
+- Opens with audience self-identification — pulls the room in before the reveal
+- "That is exactly what I built here" — personal ownership, not abstract description
+- No contractions throughout
 
 ---
 
@@ -393,14 +399,16 @@ So we split judgment two ways: which brain is on the task, and which hat it's we
 > Taken all the way, that's thirteen lenses — the questions your best product owner, tech lead, security engineer, QA, architect, and tech writer would each ask. Nobody can hold thirteen viewpoints in their head on every single review; I certainly can't. So the plugin asks them for you and brings back what each one flagged. It's seniority, distributed — so the quality of a review stops depending on whether one particular person happened to remember the failure modes that morning.
 
 **HUMANIZED:**
-Taken all the way — that's thirteen lenses. The questions your best product owner, tech lead, security engineer, QA, architect, and tech writer would each ask.
+So as you can see, we have thirteen personas in total, each one giving a different perspective on the same code.
 
-Nobody holds thirteen viewpoints in their head on every review. I definitely don't. So the plugin asks them for you and brings back what each one flagged. The quality of a review stops depending on whether the right person happened to remember the right failure mode that morning.
+I can bet… no one can hold thirteen viewpoints in their head on every single review. So the plugin asks them for you and brings back what each one flagged.
+
+I hope this is making sense. Next, let us look into some of the design decisions we took to make this work.
 
 **WHY IT'S BETTER:**
-- "I definitely don't" — more emphatic admission than "I certainly can't"
-- Removed "It's seniority, distributed" — another bumper sticker phrase
-- "happened to remember the right failure mode" — slightly more specific than "happened to remember the failure modes"
+- "I can bet…" — consistent audience recognition beat established in earlier slides
+- Closes with a natural transition to design decisions rather than a summary statement
+- No contractions throughout
 
 ---
 
@@ -410,16 +418,19 @@ Nobody holds thirteen viewpoints in their head on every review. I definitely don
 > But a second opinion is only worth something if you trust the thing giving it — so three things had to be true. One: you can see what it read. Every source file it opens, it declares first, because for a tool you're supposed to trust, opacity is poison. Two: the right brain was on the job — critical judgment routed to the stronger model, routine work to the faster one. And three: it judges risk by your domain, not by a textbook. A "medium" finding that exposes privileged client data is not medium in our world — so business context can escalate a finding, but it can never quietly downgrade one. Get those three right and the second opinion becomes something you'd actually stake your name on.
 
 **HUMANIZED:**
-But a second opinion is only worth something if you trust the thing giving it. Three things had to be true for that.
+This process of trust was built on three design principles.
 
-First — you can see what it read. Every file it opens, it declares upfront. If you're supposed to trust a tool, opacity is the one thing that kills it. Second — the right brain is on the job. Critical judgment routed to the stronger model, routine work to the faster one. Third — it judges risk by your context, not a textbook. A "medium" finding that exposes privileged client data is not medium in our world. Business context can escalate a finding. It can never quietly downgrade one.
+First, you can see what it reads. Every file it opens, it declares upfront — because if you are supposed to trust a tool, you need to know what it is actually doing. Second, we always need the right brain on the job. Critical judgment is routed to a stronger model, routine work to a faster one. Third, risk should be judged by business context, not a textbook. A medium finding that exposes privileged client data is not medium in a legal domain. Business context can escalate a finding — and it can never quietly downgrade one.
 
-Get those three right… and the second opinion becomes something you'd actually stake your name on. That matters to me.
+Once we got those three right, the second opinion becomes something you can actually trust.
+
+With that, let us move on to the next act.
 
 **WHY IT'S BETTER:**
-- "If you're supposed to trust a tool, opacity is the one thing that kills it" — "the one thing" is more personal than "is poison"
-- "That matters to me." — personal stake is very human; AI-generated text never says this
-- Moving from "One/Two/Three" to "First/Second/Third" — more natural spoken enumeration
+- Framed as design principles — connects to the engineering decisions thread
+- Legal domain example grounds the business context rule in a real scenario
+- "With that, let us move on to the next act" — natural spoken transition, no essay signposting
+- No contractions throughout
 
 ---
 
@@ -431,11 +442,16 @@ Get those three right… and the second opinion becomes something you'd actually
 **HUMANIZED:**
 Act three. Continuity between sessions.
 
-We had good gates. We had a critic we actually trusted. And then every morning… the whole thing started over from zero. Because none of it survived the session that created it.
+How many of you have faced this? You work with AI through a session — you take decisions, fix mistakes, have a real back and forth — and then at the end of the day, you close the session. Next morning, your AI agent is making the same mistakes you fixed yesterday.
+
+The model is not the issue. It is the memory.
+
+So with that, let us first look into the failure mode.
 
 **WHY IT'S BETTER:**
-- The pause "…" before "the whole thing started over" is a real speaker beat
-- "the whole thing started over from zero" — breaking this out creates the effect of discovered frustration
+- Opens with audience self-identification — immediate recognition before the explanation
+- "The model is not the issue. It is the memory." — short punchy reframe after the flowing setup
+- Transitions directly to the failure mode slide rather than restating the problem
 
 ---
 
@@ -445,17 +461,18 @@ We had good gates. We had a critic we actually trusted. And then every morning�
 > Let me make this one concrete, because it's really an ownership problem dressed up as a memory problem. I'd approve a direction on Monday. Friday's session had no idea it ever happened, and would cheerfully recommend the opposite. My tech lead would approve a spec by email, but the plugin had already forgotten the context he was approving. Everything we decided lived inside a conversation — and conversations close. Now think about that from where you're standing: you are the one accountable for these calls. You cannot be answerable for a decision the system can't even remember you made. That's not an inconvenience — that's the floor falling out from under the whole idea of ownership.
 
 **HUMANIZED:**
-Let me make this concrete, because it's really an ownership problem wearing a memory problem's clothes.
+Let us see what is actually falling off under the disguise of a memory issue.
 
-I'd approve a direction on Monday. Friday's session would cheerfully recommend the opposite — had no idea Monday happened. My tech lead would approve a spec by email, but the plugin had already forgotten the context he was approving against. Everything we decided lived inside a conversation. And conversations close.
+Governance — there is no place for enforcement if nothing is remembered. Authority — your decisions are meaningless if every next session makes the same mistake. Auditability — no trail of who decided what, when, why, and whether the decision was followed. Consistency — AI is free to make assumptions, so the same task will follow different approaches. Traceability — the chain between the conversation and code is broken, you can not connect a requirement to a decision. Finally, Accountability — this is the deepest one… you can not be answerable for whether decisions were followed, if the system never knew they existed.
 
-Think about that from where you're standing. You're the one accountable for these calls. You can't be answerable for a decision the system doesn't even remember you made. That's not an inconvenience. That's the ground falling out from under the whole idea of ownership.
+Overall, it is the Ownership issue.
+
+Next, let us see how I solved it.
 
 **WHY IT'S BETTER:**
-- "wearing a memory problem's clothes" — reworked idiom is more natural
-- "had no idea Monday happened" — casual, real
-- "the ground falling out" vs "the floor falling out" — more idiomatic
-- Breaking the final thought into shorter sentences gives each clause room to land
+- Speaker's own words — authentic voice throughout
+- Six dimensions named and explained in flowing speech, not a slide read-aloud
+- "Finally, Accountability — this is the deepest one…" — builds to the real point naturally
 
 ---
 
@@ -465,18 +482,12 @@ Think about that from where you're standing. You're the one accountable for thes
 > The fix turned out to be almost boring, and that's exactly why I trust it. We moved the source of truth off the conversation and onto disk. Your approval is a recorded state now, not a message in a thread, so closing the session resets nothing. And you drive it in plain language, from wherever you already are — you type "APPROVE ADO-1847" in Teams, on your phone, three days later, and it's actioned; "ADO-1847," "ADO #1847," or just "1847," they all resolve. You speak, in whatever channel you're in; the workflow remembers, on disk. Now — that's one kind of continuity. There's a second kind, and it's the part I'm most proud of.
 
 **HUMANIZED:**
-The fix turned out to be almost boring, and honestly that's exactly why I trust it.
-
-We moved the source of truth off the conversation and onto disk. Your approval is a recorded state now, not a message in a thread. Closing the session doesn't reset anything. And you drive it in plain language from wherever you are — you type "APPROVE ADO-1847" in Teams, on your phone, three days later, and it's done. "ADO-1847," "ADO #1847," just "1847" — they all resolve the same way.
-
-You speak, wherever you are. The workflow remembers, on disk.
-
-Now — that's one kind of continuity. There's a second kind, and it's the piece I'm most proud of.
+The fix is simple — instead of explaining it, let me just show you what it means, "Save the truth and then talk to it like a person."
 
 **WHY IT'S BETTER:**
-- "honestly that's exactly why I trust it" — "honestly" grounds the claim
-- "it's done" vs "it's actioned" — "actioned" is corporate jargon
-- "The workflow remembers, on disk." — as a two-part sentence it creates a real cadence
+- Drops the explanation entirely — speaker demos it live
+- The quoted phrase "Save the truth and then talk to it like a person" does all the work
+- Gets out of the way immediately
 
 ---
 
@@ -486,80 +497,37 @@ Now — that's one kind of continuity. There's a second kind, and it's the piece
 > I'm going to pause the five acts for a moment, because this next piece deserves its own spotlight. There's a second kind of memory — not one ticket's state, but everything the team learns over time — and it turned out to be the most interesting thing we built. Here's the catch, though: memory you can't see or correct isn't an asset. It's a liability. This is Dream.
 
 **HUMANIZED:**
-I'm going to take a detour here, because this next piece deserves its own moment.
+Before we go to the next act, let me take a detour here — because this next piece deserves its own moment.
 
-There's a second kind of memory — not one ticket's state, but everything the team learns over time. It turned out to be the most interesting thing we built. Maybe the most important.
+Dream… hmmm. Have you ever noticed, if you do not get good sleep then you start forgetting small things?
 
-Here's the catch though: memory you can't see or correct isn't an asset. It's a liability. This is Dream.
+Our brain is like a model, and whole day it is accumulating a lot of information. The only time it can train itself on this new information is when we sleep — so it adds, updates, deletes and promotes memories to keep those organized.
+
+So I built the same system and called it Dream. Let us quickly go through the next three slides and then let us look into a live example of Dream.
 
 **WHY IT'S BETTER:**
-- "Maybe the most important." — hedged personal opinion, very human
-- "I'm going to take a detour" vs "pause the five acts" — more casual framing
-- Rhythm: separating "Here's the catch though:" as a standalone creates a natural breath before the reveal
+- Speaker's own words — authentic voice throughout
+- Brain/sleep analogy makes the concept immediately intuitive
+- Signals to audience that next 3 slides are quick before the live demo
+- No contractions throughout
 
 ---
 
 ### SLIDE 24
 
-**ORIGINAL:**
-> Let me show you the failure first, because you've almost certainly felt it. You tell the AI on Monday: we use pnpm, we've migrated to Vitest. By Friday it's confidently suggesting npm and Jest again. Not because it got dumber — because unmanaged memory rots. It grows every single session. It starts contradicting itself: pnpm versus npm, Jest versus Vitest, both sitting there as if both are true. Stale notes pile up — "deploy to staging today," written weeks ago. And past a couple hundred lines, the model literally cannot see the bottom of the file. At that point your memory isn't neutral, it's harmful — it's feeding the AI wrong signal with total confidence. A bad memory is genuinely worse than no memory at all.
-
-**HUMANIZED:**
-Let me show you the failure first, because I'm pretty sure you've felt this.
-
-You tell the AI on Monday: we use pnpm, we've migrated to Vitest. Friday, it's confidently suggesting npm and Jest again. Not because it got dumber — because unmanaged memory rots.
-
-It grows every session. It starts contradicting itself: pnpm on one line, npm on the next. Both just… sitting there as if both are true. Stale notes pile up — "deploy to staging today," written six weeks ago. And once it gets past a couple hundred lines, the model literally can't see the bottom of the file anymore.
-
-At that point, your memory isn't neutral. It's actively harmful — feeding the AI wrong signal with complete confidence.
-
-A bad memory is genuinely worse than no memory at all.
-
-**WHY IT'S BETTER:**
-- "I'm pretty sure you've felt this" vs "you've almost certainly felt it" — softer, more collegial
-- "Both just… sitting there" — the pause creates the visual
-- "six weeks ago" vs "weeks ago" — specific detail feels real
-- Last line kept as-is because it's already excellent — strong closer, no changes needed
+**SKIPPED** — speaker skims this slide during the Dream intro sequence before the live demo.
 
 ---
 
 ### SLIDE 25
 
-**ORIGINAL:**
-> So we gave memory something like sleep — and I mean that as the actual design, not a cute metaphor. Every five to eight sessions, Dream does what your brain does overnight: it keeps what proved true, prunes what's stale, and strengthens the patterns worth keeping. Six phases — it takes inventory of what's there, scores each fact's confidence, proposes changes, stops for your review, applies them in a safe order, and logs everything it did. It runs periodically, and — this matters — it never writes a single thing without showing you first.
-
-**HUMANIZED:**
-So we gave memory something like sleep. And I mean that as the actual design, not a metaphor that sounded nice in the planning doc.
-
-Every five to eight sessions, Dream does what your brain does overnight: keeps what proved true, prunes what's stale, strengthens the patterns worth keeping. Six phases — it takes inventory, scores each fact's confidence, proposes changes, stops and waits for your review, applies them in a safe order, logs what it did.
-
-It runs periodically. And this matters: it never writes a single thing without showing you first.
-
-**WHY IT'S BETTER:**
-- "that sounded nice in the planning doc" — self-aware aside shows real experience
-- "stops and waits for your review" — "waits" is more patient-sounding, more human
-- "And this matters:" — direct, no performance
+**SKIPPED** — speaker skims this slide during the Dream intro sequence before the live demo.
 
 ---
 
 ### SLIDE 26
 
-**ORIGINAL:**
-> Let me walk you through the whole life of a single fact, because this is the part I'm proudest of. It's born automatically — you never type "remember this." At five natural moments in your work — a plan approved, a task finished, an error fixed, an approach abandoned, an architecture decision made — the important "why" gets captured while it's still fresh. Then it has to earn its keep. Every fact carries a confidence score, and every cycle it isn't used, it loses a tenth of a point. So "deploy to staging today," written in session three, quietly fades — 0.7, 0.6, 0.5 — until it drops below the line and deletes itself around session sixteen. Nobody went hunting for it. Born automatically, retired automatically. You don't feed it and you don't weed it — it curates itself.
-
-**HUMANIZED:**
-Let me walk you through the life of a single fact, because this is the part I'm most proud of.
-
-It's born automatically. You never type "remember this." At five natural moments in your work — plan approved, task finished, error fixed, approach abandoned, architecture decision made — the important "why" gets captured while it's still fresh.
-
-Then it has to earn its keep. Every fact carries a confidence score. Every cycle it isn't used, it loses a tenth of a point. So "deploy to staging today," written in session three, quietly fades — 0.7, 0.6, 0.5 — until it drops below the line and deletes itself, around session sixteen. Nobody went hunting for it.
-
-Born automatically. Retired automatically. You don't feed it, you don't weed it. It takes care of itself.
-
-**WHY IT'S BETTER:**
-- "It takes care of itself" vs "it curates itself" — "curates" is the corporate word here
-- Shorter sentences in the last paragraph create a satisfying rhythm
-- "most proud of" vs "proudest of" — tiny natural speech preference
+**SKIPPED** — speaker skims this slide during the Dream intro sequence before the live demo.
 
 ---
 
@@ -568,19 +536,7 @@ Born automatically. Retired automatically. You don't feed it, you don't weed it.
 **ORIGINAL:**
 > And here's the part that makes it safe to trust: you are never not in control. Dream sorts every change into three tiers. Trivial things apply silently. Content changes show you a before-and-after and wait. And anything that touches your always-loaded CLAUDE.md — promoting a fact to permanent, or demoting one out of it — always stops for an explicit yes or no, no matter how high the confidence score is. Every run is written to an append-only log with its reasoning and its sources, and any run can be rolled back. That's the whole point: it's your project's memory, and you sign off on what it's allowed to remember. If you want the full mechanics, there's a nineteen-slide deep-dive deck just on Dream. Now — back to the acts.
 
-**HUMANIZED:**
-And here's the part that makes it actually safe to trust: you're never not in control.
-
-Dream sorts every change into three tiers. Trivial things apply silently. Content changes show you a before-and-after and wait for you. Anything that touches your always-loaded CLAUDE.md — promoting a fact to permanent, or demoting one out — always stops for an explicit yes or no. Doesn't matter how high the confidence score is.
-
-Every run writes to an append-only log with its reasoning and its sources. Any run can be rolled back. It's your project's memory, and you're the one who decides what it's allowed to remember.
-
-If you want to go deep on this, there's a full deck on just Dream. Nineteen slides. But for now — back to the acts.
-
-**WHY IT'S BETTER:**
-- "Doesn't matter how high the confidence score is" — fragment, spoken rhythm
-- "you're the one who decides" — more direct than "you sign off on"
-- "Nineteen slides. But for now" — the casual aside before snapping back is natural
+**SKIPPED** — speaker skims this slide during the Dream intro sequence before the live demo.
 
 ---
 
@@ -592,11 +548,14 @@ If you want to go deep on this, there's a full deck on just Dream. Nineteen slid
 **HUMANIZED:**
 Act four. Structured knowledge of the codebase.
 
-This one's the biggest act — because it's the thing your new role leans on hardest. You can't review a change well if you can't place it inside the whole system. Can't. And most of us are pretending we can.
+How many of you have been asked to work on an application you have never worked on before? A new member joins your team and spends hours fixing a small issue.
+
+Let us look into the problem a little deeper.
 
 **WHY IT'S BETTER:**
-- "Can't. And most of us are pretending we can." — the admission is authentic and confrontational in a good way
-- "This one's the biggest act" vs "This is the biggest act" — conversational contraction
+- Short and direct — sets up the problem and hands off to the next slide
+- Audience question creates immediate recognition
+- No contractions throughout
 
 ---
 
@@ -608,18 +567,19 @@ This one's the biggest act — because it's the thing your new role leans on har
 **HUMANIZED:**
 Let me start with two developers you probably recognize.
 
-Same team, same bug handed to both. The first finds it in twenty minutes, fixes it cleanly, never comes back. The second spends two days, patches the symptom, quietly breaks something else. Same seniority, same intelligence.
+They are on the same team, handed the same bug. The first finds it in twenty minutes, fixes it cleanly, and it never comes back. The second spends two days, patches the symptom, and quietly breaks something else — same seniority, same intelligence.
 
-What's the difference? It's not talent. The first developer understands the system. They carry a picture of how everything fits together, so a change is just a small edit to a structure they already have in their head. The second is reading cold, one file at a time, hoping to find the thread.
+So, what is the difference? Because it is not talent. The first developer understands the system and carries a picture of how everything fits together, so a change is just a small edit to a structure they already have in their head. The second is reading cold, one file at a time, hoping to find the thread.
 
-Here's the uncomfortable part: your AI is that second developer. Fast, confident — and completely without a model of your system, unless you give it one.
+Now let us talk about the uncomfortable part: your AI is that second developer — fast, confident, and completely without a model of your system unless you give it one. And honestly, so are you, the first time you open an unfamiliar codebase. This act is about turning both of you into the first developer.
 
-And honestly? So are you, the first time you open an unfamiliar codebase. This act is about turning both of you into the first developer.
+Before we look into the live example, let me give you a bit of statistics…
 
 **WHY IT'S BETTER:**
-- "a picture of how everything fits together" — more natural than "a model of how the whole thing fits together"
-- "So are you" — moved the "And honestly?" emphasis earlier for impact
-- "Here's the uncomfortable part:" as its own setup sentence — the colon-pause works well
+- Speaker's own words throughout — authentic voice
+- "So, what is the difference? Because it is not talent." — natural spoken reframe
+- Closes by setting up a statistics slide before the live demo
+- No contractions throughout
 
 ---
 
@@ -628,15 +588,7 @@ And honestly? So are you, the first time you open an unfamiliar codebase. This a
 **ORIGINAL:**
 > And I could prove the AI was that second developer. Three months in, we ran a token analysis, and the number was ugly: it was treating every single run as a cold start, re-scanning fifty files when forty-eight of them hadn't changed in a week. Reading cold, file by file, exactly like the developer who struggles. Cache-aware scanning fixed the cost — eighty to ninety-five percent off after the first run. But the deeper lesson is the one that matters here: re-reading raw text was never going to make it, or you, the developer who understands the system. For that you need a model — not a bigger pile of text.
 
-**HUMANIZED:**
-And I had proof. Three months in, we ran a token analysis, and the number was bad. It was treating every run as a cold start — re-scanning fifty files when forty-eight of them hadn't changed in a week. Reading cold, file by file, exactly like the developer who struggles.
-
-Cache-aware scanning fixed the cost — eighty to ninety-five percent off after the first run. But that's not actually the lesson that matters here. Re-reading raw text was never going to make it — or you — the developer who understands the system. For that, you need a model. Not a bigger pile of text.
-
-**WHY IT'S BETTER:**
-- "the number was bad" vs "the number was ugly" — "ugly" is theatrical; "bad" is direct
-- "that's not actually the lesson that matters here" — more natural transition than "But the deeper lesson is the one that matters here"
-- "Not a bigger pile of text." — kept as-is, it's a strong close
+**SKIPPED** — speaker covers during live demo or skims.
 
 ---
 
@@ -645,21 +597,7 @@ Cache-aware scanning fixed the cost — eighty to ninety-five percent off after 
 **ORIGINAL:**
 > So we build the map once, and we keep it current. It's a knowledge graph, and it's the map the machine reads: what depends on what, which modules are the hubs, what's gone stale — traversed and searched in milliseconds, one read instead of a hundred. On disk it's three things: a lean index that's always loaded, per-module detail files that only load when you're actually working in that area, and a graph.json underneath that is the real source of truth. And every relationship carries a confidence level — extracted means a parser knows it for a fact, inferred means the model judged it, ambiguous means a human should look. So the map doesn't just tell you the shape of the system; it tells you how much to trust each line on it. This retired the old per-feature domain-map entirely.
 
-**HUMANIZED:**
-So we build the map once, and we keep it current.
-
-It's a knowledge graph — the map the machine actually reads. What depends on what, which modules are the hubs, what's gone stale. Traversed in milliseconds, one read instead of a hundred.
-
-On disk it's three things: a lean index that's always loaded, per-module detail files that only load when you're working in that area, and a graph.json underneath that's the real source of truth.
-
-And every relationship carries a confidence level. Extracted means a parser knows it for a fact. Inferred means the model judged it. Ambiguous means a human should look. So the map doesn't just tell you the shape of the system — it tells you how much to trust each line on it.
-
-That retired the old per-feature domain map entirely.
-
-**WHY IT'S BETTER:**
-- Breaking the final sentence out of the paragraph gives it proper emphasis
-- "the map the machine actually reads" — "actually" adds subtle weight
-- Three-part breakdown uses natural spoken rhythm with separate sentences rather than a comma list
+**SKIPPED** — speaker covers during live demo or skims.
 
 ---
 
@@ -668,19 +606,7 @@ That retired the old per-feature domain map entirely.
 **ORIGINAL:**
 > There's a principle underneath that graph that I care about a lot. The part a machine can know for certain — which file imports which — should be computed by a parser, not guessed by a language model. So we extract the import graph deterministically: same code in, same graph out, every time, for free, completely offline. The model's judgment is reserved only for the genuinely ambiguous relationships a parser can't resolve. Before, the graph was non-deterministic, token-expensive, and approximate — the same file could produce different edges on different runs. After, it's identical every time, free, and accurate. What a parser can know, a parser should know.
 
-**HUMANIZED:**
-There's a principle underneath that graph that I actually care about.
-
-The part a machine can know for certain — which file imports which — should be computed by a parser, not guessed by a language model. So we extract the import graph deterministically. Same code in, same graph out, every time, for free, offline.
-
-The model's judgment is reserved only for the genuinely ambiguous stuff a parser can't resolve. Before: the graph was non-deterministic, token-expensive, approximate — the same file could produce different edges on different runs. After: identical every time. Free. Accurate.
-
-If a parser can know it, a parser should know it.
-
-**WHY IT'S BETTER:**
-- Before/After structure with colons is more punchy than the original's prose form
-- "Free. Accurate." — short sentences in the "after" column mirror the simplicity being described
-- Last line changed from "What a parser can know" to "If a parser can know it" — slightly more natural cadence
+**SKIPPED** — speaker covers during live demo or skims.
 
 ---
 
@@ -689,17 +615,7 @@ If a parser can know it, a parser should know it.
 **ORIGINAL:**
 > Now, the graph tells you what connects to what. But that's not actually the question you ask when you put on the architect hat. You ask: what is the data? Who do we depend on, and what happens when they fall over? Who's allowed to do what? And why did we build it this way in the first place? So the graph is only half the knowledge system. The other half is the architecture documents — and unlike the graph, these are written for a human to read, and they're generated from your actual application. We grew the set from four documents to eight, and the four new ones each answer a real architect's question: the data model, the integrations and how they fail, the security and authorization model, and the decision log — the why.
 
-**HUMANIZED:**
-The graph tells you what connects to what. But that's not the question you're actually asking when you put on the architect hat.
-
-You're asking: what is the data? Who do we depend on, and what happens when they fall over? Who's allowed to do what? And maybe most importantly — why did we build it this way in the first place?
-
-The graph is half the knowledge system. The other half is the architecture documents. Unlike the graph, these are written for a person to read, and they're generated from your actual application. We grew the set from four to eight documents — the four new ones each answer one of those real architect questions. Data model, integrations and failure modes, security and authorization, and the decision log. The why.
-
-**WHY IT'S BETTER:**
-- "And maybe most importantly" — hedged emphasis is natural
-- "written for a person to read" vs "written for a human to read" — "person" is warmer
-- "The why." as a standalone closer echoes the question format earlier
+**SKIPPED** — speaker covers during live demo or skims.
 
 ---
 
@@ -708,19 +624,7 @@ The graph is half the knowledge system. The other half is the architecture docum
 **ORIGINAL:**
 > Two things make these documents worth relying on instead of rotting on a shelf. First, how they're written: the AI fills in only what the code actually proves, and everything it can't verify — an authorization rule, an SLA, a retry policy, the rationale behind a decision — it flags as "needs manual input" rather than inventing it. It never makes up the parts a human has to own. Second, they don't go stale, because they aren't decoration: they're committed and pull-request-reviewed like source, their diagrams render right inside the PR, and four different skills read them on every run — security, ICEA planning, reviews, readiness. A document that's actually consumed stays honest. And notice that decision log — the why, written down — because that is the exact principle this whole talk is built on.
 
-**HUMANIZED:**
-Two things make these worth relying on instead of just rotting on a shelf.
-
-First, how they're written. The AI fills in only what the code actually proves. Anything it can't verify — an authorization rule, an SLA, a retry policy, the reason behind a decision — it flags as "needs manual input." It never invents the parts a human has to own.
-
-Second, they don't go stale — because they're not decoration. They're committed and PR-reviewed like source. Their diagrams render right inside the PR. Four different skills read them on every run: security, ICEA planning, reviews, readiness. A document that's actually being used stays honest.
-
-And that decision log — the why, written down — that's the principle this whole talk keeps coming back to.
-
-**WHY IT'S BETTER:**
-- "just rotting on a shelf" — "just" adds the casual tone
-- "The reason behind a decision" vs "the rationale behind a decision" — "rationale" is formal register
-- "that's the principle this whole talk keeps coming back to" vs "that is the exact principle this whole talk is built on" — less grandiose
+**SKIPPED** — speaker covers during live demo or skims.
 
 ---
 
@@ -730,13 +634,16 @@ And that decision log — the why, written down — that's the principle this wh
 > Quick detour between acts, because I keep saying the AI "behaves" — and behavior doesn't happen by accident. This one is about consistency: the AI acting the same way for every developer, every session, regardless of who's driving. Because you are not the only person managing this AI, and it cannot be allowed to drift into a different personality for each of us.
 
 **HUMANIZED:**
-Quick detour between acts, because I keep saying the AI "behaves" — and behavior doesn't just happen.
+Before moving on to the last act, let me take a quick detour — because I keep saying manage your AI and not work with it.
 
-This is about consistency. The AI acting the same way for every developer, every session, no matter who's driving. Because you're not the only person managing this AI. And if you let it, it'll drift into a different personality for each of you.
+The only way to achieve that is through consistency — ensuring AI behaves the same way, no matter which developer is managing it.
+
+Let us look at how I achieved it.
 
 **WHY IT'S BETTER:**
-- "it'll drift into a different personality" — active construction replaces the passive "cannot be allowed to drift"
-- "no matter who's driving" — more casual than "regardless of who's driving"
+- Speaker's own framing — "manage your AI and not work with it" echoes the talk's central thesis
+- "The only way to achieve that" — connects directly to the prior sentence naturally
+- No contractions throughout
 
 ---
 
@@ -746,18 +653,25 @@ This is about consistency. The AI acting the same way for every developer, every
 > Two layers keep it on the rails, and you don't have to police either one. The first is the always-on system prompt — CLAUDE.md, loaded every session — carrying the rules that apply everywhere: the write gate, "Dapper with parameterised SQL, never EF Core," the commit and branch format. The second is forty-three scoped rule files, each of which only wakes up when you touch a matching file: open a C# file and the .NET and data-access rules appear, open a React component and the React rules appear, and they cost nothing the rest of the time. And there's a real difference in how these bind — a prompt instructs the model, which is flexible but ultimately a suggestion; a hook intercepts the actual tool call, mechanically, and it does not negotiate. Flexible guidance everywhere, hard guardrails exactly where the risk is real. Which brings us to the final act.
 
 **HUMANIZED:**
-Two layers keep it on the rails, and you don't have to police either one.
+How many of you think guardrails are just system prompts? You tell the model "do not do this" and it nods along.
 
-First: the always-on system prompt — CLAUDE.md, loaded every session — carrying the rules that apply everywhere. The write gate, "Dapper with parameterised SQL, never EF Core," the commit and branch format. Second: forty-three scoped rule files, each one only waking up when you touch a matching file. Open a C# file and the .NET rules appear. Open a React component and the React rules appear. They cost nothing the rest of the time.
+Spoiler alert: it is lying.
 
-There's a real difference in how these bind. A prompt instructs the model — flexible, but ultimately a suggestion. A hook intercepts the actual tool call, mechanically. It doesn't negotiate. Flexible guidance everywhere. Hard guardrails exactly where the risk is real.
+A prompt guardrail is a suggestion. A really polite one. The AI can ignore it — and I bet, probably on a Friday.
 
-That's act four. Last act next.
+I started my design with CLAUDE.md as the centerpiece and forty-three scoped rule files that auto-invoke when needed. Brilliant, right? The right rule at the right time. Except — plot twist — they are still prompts, still probabilistic, still ignorable.
+
+The issue is not the model, but this probabilistic nature — which is good for reasoning, but not for enforcement.
+
+So I designed a hooks system to bring enforcement. Hooks intercept a tool call itself and define a deterministic gate that the AI cannot ignore.
+
+With that… let us move on to the last act of this session. I am sure you will love this.
 
 **WHY IT'S BETTER:**
-- "That's act four. Last act next." — more natural transition than "Which brings us to the final act"
-- "It doesn't negotiate." — shorter, harder
-- Line breaks used as structural beats rather than prose flow
+- Speaker's own words — authentic voice with real humor
+- "Spoiler alert: it is lying." and "plot twist" land as genuine punchlines
+- Builds the prompt → hooks logic naturally, no lecturing
+- No contractions throughout
 
 ---
 
@@ -767,16 +681,23 @@ That's act four. Last act next.
 > Act five, the last one. Observability. And notice I did not call it enforcement — we already did enforcement, back in act one with the gate and just now with the guardrails. This act is about something else entirely. You are accountable for what ships, and "the AI said it's fine" is not evidence.
 
 **HUMANIZED:**
-Act five. Observability.
+Act five… Observability.
 
-Notice I didn't call it enforcement. We already did enforcement — back in act one with the gate, and just now with the guardrails. This act is about something different.
+So, we built enforcement — gates that cannot be bypassed, guardrails that stick. Excellent — we are in control.
 
-You are accountable for what ships. And "the AI said it's fine" is not evidence.
+Then something ships and breaks in production.
+
+Client asks: "What happened?"
+You say: "AI said it was fine." And the client stares at you.
+
+How many of you are comfortable with this?
+
+Let us dig deep into this… as this is one thing that will make or break the trust on you, as you are accountable for the system.
 
 **WHY IT'S BETTER:**
-- "Notice I didn't call it enforcement" vs "notice I did not call it" — contraction
-- The final two sentences broken apart — the pause between them lets the second one land
-- "something different" vs "something else entirely" — "else entirely" is rhetorical inflation
+- Speaker's own words — dialogue format lands naturally
+- Audience question after the scenario creates real discomfort before the reveal
+- No contractions throughout
 
 ---
 
@@ -786,16 +707,20 @@ You are accountable for what ships. And "the AI said it's fine" is not evidence.
 > Here's the last wall, and it's the one an auditor would walk straight into. For everything we'd built, one question still had no answer: what did the AI actually do, and can you prove it was right? There was no trail of its decisions. There was no line you could draw from a requirement to the code that satisfies it. There was no evidence that what shipped matched what we agreed. And when somebody decided a finding didn't matter and waved it off, the reason went with them — just gone. So there I was, accountable for the quality of everything that shipped, with trust as my only instrument. And trust, as we'd already learned the hard way, does not survive an audit.
 
 **HUMANIZED:**
-Here's the last wall — and it's the one that would stop an auditor cold.
+Here is the last wall — and it is the one that would make an auditor stare.
 
-For everything we'd built, one question still had no answer: what did the AI actually do, and can you prove it was right? No trail of its decisions. No line from a requirement to the code that satisfies it. No evidence that what shipped matched what we agreed. And when someone decided a finding didn't matter and waved it off… the reason just left with them.
+Accountability requires observability. You need to see the decision tree. What did it consider? What did it rule out? What tradeoffs did it make? And many more questions. Without that, you are not accountable — you are just hoping.
 
-So there I was, accountable for everything that shipped, with trust as my only instrument. And trust doesn't survive an audit. We'd already found that out the hard way.
+So you need logs. Traces. A complete record of what the system decided and why. Not for punishment. For proof. So when something goes wrong, you can walk the chain. So you can say: "Here is exactly what happened, here is where it diverged from the plan, here is what we will fix."
+
+That is when you actually own the outcome. Because without observability, enforcement is just security theater with better intentions.
+
+Now, let us look into how we implemented it.
 
 **WHY IT'S BETTER:**
-- "would stop an auditor cold" vs "an auditor would walk straight into" — the image is clearer
-- "the reason just left with them" — "just left" is more natural than "just gone"
-- Moving "we'd already found that out the hard way" to follow the claim — natural speech order
+- Speaker's own words — builds from the accountability problem to the solution naturally
+- "enforcement is just security theater with better intentions" — strong punchline closer
+- No contractions throughout
 
 ---
 
@@ -804,17 +729,7 @@ So there I was, accountable for everything that shipped, with trust as my only i
 **ORIGINAL:**
 > So we started with the biggest question of all: can you prove you built what you agreed to — and only what you agreed to? Every acceptance criterion in the ICEA now maps forward: to the tasks, to the changed files, all the way down to the exact lines that implement it. The PR compliance report draws that line for you — this criterion, satisfied right here. And it works in reverse too, which is the part reviewers love: if a file changes behavior that traces back to no criterion at all, that's scope creep, and it gets flagged. So "did we build what we agreed, and nothing we didn't?" stops being a matter of opinion in a review meeting and becomes a matter of evidence.
 
-**HUMANIZED:**
-So we started with the biggest question: can you prove you built what you agreed to — and only what you agreed to?
-
-Every acceptance criterion in the ICEA now maps forward — to the tasks, to the changed files, all the way down to the exact lines that implement it. The PR compliance report draws that line for you. This criterion, satisfied right here.
-
-And it works in reverse too, which is the part reviewers actually love. If a file changes behavior that doesn't trace back to any criterion, that's scope creep — and it gets flagged. "Did we build what we agreed, and nothing we didn't?" stops being an opinion in a review meeting and becomes evidence.
-
-**WHY IT'S BETTER:**
-- "that reviewers actually love" — "actually" is a natural emphasis word in speech
-- "stops being an opinion" vs "stops being a matter of opinion" — tighter
-- "This criterion, satisfied right here." — kept as fragment; it works as a pointing gesture
+**SKIPPED** — speaker covers during live demo or walkthrough.
 
 ---
 
@@ -823,19 +738,7 @@ And it works in reverse too, which is the part reviewers actually love. If a fil
 **ORIGINAL:**
 > Then the findings. Every one gets a fingerprint and a permanent home — a ledger, with one shared schema across code review, security, and dynamic scanning. A finding is Open; or Fixed, with the actual commit and author that closed it; or Dismissed, with a written reason you can go back and challenge; or Baseline — inherited debt we track but never block you on. And here's my favorite detail: a dismissal is a claim about a specific piece of code, so the instant that code changes, the finding re-opens itself. You cannot quietly bury a problem by dismissing it once. You can even see how each finding was caught — parsers first for what's provable, then model judgment for intent, then a capped architectural pass for the cross-file risks, clearly labelled as hypotheses. Full visibility into every issue, and how it surfaced.
 
-**HUMANIZED:**
-Then the findings. Every one gets a fingerprint and a permanent home — a ledger, one shared schema across code review, security, and dynamic scanning.
-
-A finding is Open. Or Fixed, with the actual commit and author that closed it. Or Dismissed, with a written reason you can go back and challenge later. Or Baseline — inherited debt we track but never block on.
-
-Here's my favorite part: a dismissal is a claim about a specific piece of code. The instant that code changes, the finding re-opens itself. You can't quietly bury a problem by dismissing it once.
-
-And you can see how each one was caught — parsers first for what's provable, then model judgment for intent, then a capped architectural pass for cross-file risks, clearly labeled as hypotheses. Full visibility into what surfaced, and how.
-
-**WHY IT'S BETTER:**
-- "Here's my favorite part" vs "here's my favorite detail" — "part" is warmer
-- The four finding states each on their own line — real speech rhythm when pointing at a screen
-- "Full visibility into what surfaced, and how" — slightly reordered for natural spoken cadence
+**SKIPPED** — speaker covers during live demo or walkthrough.
 
 ---
 
@@ -844,18 +747,7 @@ And you can see how each one was caught — parsers first for what's provable, t
 **ORIGINAL:**
 > And then zoom all the way out, because observability isn't only about one finding or one PR — it's about the trend. After every sprint, the numbers come straight out of Azure DevOps: how often the ICEA workflow was actually followed, how often PRs got rejected, how many hours went to rework. Health dashboards show memory confidence and decay, how stale the graph has drifted, and open findings across every ledger. So the question stops being "is this one change clean" and becomes "is the whole way we work with AI getting better, month over month" — answered with numbers instead of anecdotes. That's the last act. Let me bring it home.
 
-**HUMANIZED:**
-Now zoom out, because observability isn't just about one finding or one PR. It's about the trend.
-
-After every sprint, the numbers come straight from Azure DevOps: how often the ICEA workflow was actually followed, how often PRs got rejected, how many hours went to rework. Health dashboards show memory confidence and decay, how stale the graph has drifted, open findings across every ledger.
-
-The question shifts from "is this one change clean" to "is the whole way we work with AI getting better, month over month" — answered with numbers, not stories.
-
-That's all five acts. Let me close it out.
-
-**WHY IT'S BETTER:**
-- "not stories" vs "instead of anecdotes" — "stories" is the natural informal version
-- "Let me close it out" vs "Let me bring it home" — less theatrical
+**SKIPPED** — speaker covers during live demo or walkthrough.
 
 ---
 
@@ -864,16 +756,7 @@ That's all five acts. Let me close it out.
 **ORIGINAL:**
 > One thing before I land this, and it's about credibility. A tool that demands you be accountable had better be accountable itself — so the plugin turns its whole philosophy inward. Setup used to be thirty to sixty sequential AI calls before any real work even began; we collapsed it into a single deterministic bootstrap script, because what can be mechanical should be. And it refuses to overclaim: there was a point where a hidden dependency could quietly fail and still report success — that's gone now, replaced by one honest resolver that either knows the answer or tells you it doesn't. It practices exactly what it enforces.
 
-**HUMANIZED:**
-One more thing before I close, and it's about credibility. A tool that demands you be accountable had better hold itself accountable too.
-
-Setup used to be thirty to sixty sequential AI calls before any real work began. We collapsed it into a single deterministic bootstrap script — because if it can be mechanical, it should be. And it refuses to overclaim: there was a point where a hidden dependency could quietly fail and still report success. That's gone now — replaced by one honest resolver that either knows the answer or says it doesn't.
-
-It does what it enforces.
-
-**WHY IT'S BETTER:**
-- "hold itself accountable too" — active; the original was slightly passive
-- "It does what it enforces." replaces "It practices exactly what it enforces." — "practices" is redundant; five words down to four with more punch
+**SKIPPED** — speaker covers during live demo or walkthrough.
 
 ---
 
@@ -883,14 +766,21 @@ It does what it enforces.
 > Fifty-two decisions, and honestly a handful of lessons that outlived any single feature. Gates are incentive structures — they change what people do before anyone else has to review the work. Honesty over overclaim — never promise a floor you can't hold; make bypass visible instead of pretending it's impossible. One source of truth per concept, because duplication is the enemy. You don't grant trust, you measure it. What a parser can know, a parser should know. Friction is multiplicative across fifty sessions a month, so the small wins compound. And design for the deployment reality you actually have, not the tidy one on the slide.
 
 **HUMANIZED:**
-Fifty-two decisions, and a handful of lessons that outlived any single feature.
+Fifty-five decisions, and a handful of lessons that outlived any single feature.
 
-Gates are incentive structures — they change what people do before anyone has to review anything. Never promise a floor you can't hold; make bypass visible instead of pretending it's impossible. One source of truth per concept — duplication is the slow killer. You don't grant trust, you measure it. If a parser can know it, a parser should know it. Friction compounds across fifty sessions a month — the small wins add up. And design for the deployment reality you actually have, not the clean one on the slide.
+Gates work because they are incentive structures — they change behavior before review is needed. Make bypass visible instead of pretending it is impossible. One source of truth per concept. Duplication kills you. If a parser can know it, a parser should know it. You do not grant trust — you measure it.
+
+When code ships, you need the thread: what did the system consider, where did it apply the rules, what did it trade off? That is accountability. That is proof.
+
+Friction compounds across fifty sessions. Small wins add up. Design for the reality you have, not the slide. That is where decisions actually live.
+
+When you can show why something shipped, you own the outcome. Not because you prevented failure. Because you can trace what happened and fix it if you were wrong.
 
 **WHY IT'S BETTER:**
-- "duplication is the slow killer" vs "duplication is the enemy" — more vivid
-- "the clean one on the slide" vs "the tidy one on the slide" — "clean" echoes the tech context better
-- Removed section headers ("Honesty over overclaim") — these are written structural labels, not how people speak
+- Speaker's own words — punchy, earned, no filler
+- "Duplication kills you" — harder than "duplication is the enemy"
+- Closes on ownership and traceability — echoes the accountability thread from Slide 38
+- No contractions throughout
 
 ---
 
@@ -900,17 +790,18 @@ Gates are incentive structures — they change what people do before anyone has 
 > Now let's go back to where we started. Remember that table of five walls? Read it forward, it was a list of everything that was broken. Read it backward, and it's the whole talk. You have to own the intent — the spec gate makes that the path of least resistance. You have to review the AI's judgment — the critic gives you a real second opinion at the one moment it's possible. You have to carry decisions forward — disk state and Dream mean they survive the session. You have to understand the whole system — the graph and the architecture docs hand you the map. And you have to prove it held — traceability and the ledgers give you the evidence. Every one of those walls only became visible after we'd climbed the one before it. That's not tidy design. That's just how it actually happened.
 
 **HUMANIZED:**
-Let's go back to where we started. That table of five walls.
+Let us go back to where we started. That table of five walls.
 
-Read it one way, it's a list of everything that was broken. Read it the other way — it's actually the whole talk.
+Read it one way, it is a list of everything that was broken. Read it the other way — it is actually the whole talk.
 
-Own the intent: the spec gate makes that the path of least resistance. Review the AI's judgment: the critic hands you a real second opinion at the one moment it's possible. Carry decisions forward: disk state and Dream mean they survive the session. Understand the whole system: the graph and the architecture docs give you the map. Prove it held: traceability and the ledgers give you the evidence.
+Own the intent: the spec gate makes that the path of least resistance. Review the AI's judgment: the critic hands you a real second opinion at the one moment it is possible. Carry decisions forward: disk state and Dream mean they survive the session. Understand the whole system: the graph and the architecture docs give you the map. Prove it held: traceability and the ledgers give you the evidence.
 
-Every single one of those walls only became visible after we'd climbed the one before it. That wasn't a plan. That's just how it actually happened.
+Every single one of those walls only became visible after we had climbed the one before it. That was not a plan. That is just how it actually happened.
 
 **WHY IT'S BETTER:**
-- "That wasn't a plan. That's just how it actually happened." — "That's not tidy design" is a bit too self-congratulatory in its self-deprecation; "That wasn't a plan" is more direct and honest
+- "That was not a plan. That is just how it actually happened." — honest self-deprecation, no performance
 - "Read it the other way" — more casual than "Read it backward"
+- No contractions throughout
 
 ---
 
@@ -920,21 +811,22 @@ Every single one of those walls only became visible after we'd climbed the one b
 > So here's the whole thing in a breath. You are not the coder anymore — the coding got cheaper, and it's not where your value lives now. You're the reviewer who manages an AI to a result: wearing the BA hat, holding the system in your head, judging the plan, owning the decisions, proving what shipped. That is a role, not a tool — and honestly it's a bigger job than the one you had. Everything we built, all fifty-two decisions on disk, exists for exactly one reason: to make that role trustworthy, so that when you sign off, you're signing off on evidence and not on faith. The decisions are all in docs/adr. The principles live in CLAUDE.md, loaded every session. And if you want to go deeper on the memory system, there's a whole deck on Dream. That's the story — from coder to conductor. Let's talk.
 
 **HUMANIZED:**
-So here's the whole thing.
+So here is the whole thing.
 
-You're not the coder anymore. The coding got cheaper, and that's not where your value lives now. You're the person who manages an AI to a result — wearing the BA hat, holding the system in your head, judging the plan, owning the decisions, proving what shipped.
+You are not the coder anymore. The coding got cheaper, and that is not where your value lives now. You are the person who manages an AI to a result — wearing the BA hat, holding the system in your head, judging the plan, owning the decisions, proving what shipped.
 
-That's a role, not a tool. And honestly? It's a harder job than the one you had.
+That is a role, not a tool. And honestly? It is a harder job than the one you had.
 
-Everything we built — all fifty-two decisions written down — exists for one reason: to make that role something you can actually trust. So when you sign off, you're signing off on evidence. Not on faith.
+Everything we built — all fifty-five decisions written down — exists for one reason: to make that role something you can actually trust. So when you sign off, you are signing off on evidence. Not on faith.
 
-The decisions are all in docs/adr. The principles live in CLAUDE.md, loaded every session. And if you want to go deeper on the memory system, there's a whole deck on Dream.
+The decisions are all in docs/adr. The principles live in CLAUDE.md, loaded every session. And if you want to go deeper on the memory system, there is a whole deck on Dream.
 
-That's the story. Let's talk.
+That is the story. Let us talk.
 
 **WHY IT'S BETTER:**
-- Removed "from coder to conductor" — we've been building to this the whole time; just ending with "That's the story. Let's talk." lets it breathe
-- "It's a harder job than the one you had" vs "it's a bigger job" — "harder" is more honest
+- "fifty-five decisions" — correct count
+- Ends simply — "That is the story. Let us talk." — no fanfare
+- No contractions throughout
 - "Not on faith." — standalone fragment closes the loop on the faith/trust thread in a satisfying way
 - "So here's the whole thing in a breath" removed the "in a breath" — slight affectation
 

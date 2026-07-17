@@ -193,6 +193,15 @@ And stop.
 Write the checkpoint file per `$PLUGIN_DIR/skills/shared/checkpoint-schema.md` before scanning.
 Update after each file. Delete on completion.
 
+**Progress marker:** Before analyzing the first file in Pass 1, emit:
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Pass 1 — Structured Rule-Based Scan
+  Files to scan  : {N}  (or "Files remaining: {pending} of {total}" when resuming)
+  Checkers loaded: {comma-separated list of loaded checker files}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
 ---
 
 ## Pass 1 — Structured Rule-Based Scan
@@ -251,9 +260,27 @@ Per `$PLUGIN_DIR/skills/code-review/references/output-format.md`:
 Every finding gets a fingerprint per `$PLUGIN_DIR/skills/shared/fingerprint-spec.md`. Set Pass: 1.
 Update checkpoint after each file.
 
+**Progress marker:** After every 10th file completes in Pass 1, and always after the final file, emit a single indented line:
+```
+  Pass 1 progress: {done} / {total} files scanned — {finding_count} finding(s) so far
+```
+
+**Progress marker:** After the last file in Pass 1, emit:
+```
+✅ Pass 1 complete — {N} finding(s): {critical} Critical, {high} High, {medium} Medium, {low} Low
+```
+
 ---
 
 ## Pass 2 — Specialized Persona Passes
+
+**Progress marker:** Before beginning Pass 2, emit:
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Pass 2 — Specialized Persona Passes
+  Personas: P1 Reliability Engineer | P2 Concurrency Specialist | P3 API Contract Reviewer
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
 
 Load `$PLUGIN_DIR/skills/code-review/references/pass2-personas.md` for persona definitions.
 
@@ -284,9 +311,23 @@ Only report NEW findings that add information not captured above.
 Findings follow the format in `$PLUGIN_DIR/skills/code-review/references/pass2-personas.md`. Fingerprint
 fixable findings per `$PLUGIN_DIR/skills/shared/fingerprint-spec.md`. Set Pass: 2.
 
+**Progress marker:** After all active Pass 2 personas complete, emit:
+```
+✅ Pass 2 complete — {N} additional finding(s) across {active_count} persona(s)
+```
+(Count only personas that ran — exclude any that were skipped.)
+
 ---
 
 ## Pass 3 — Free-Flow Adversarial Pass
+
+**Progress marker:** Before beginning Pass 3, emit:
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Pass 3 — Free-Flow Adversarial Pass
+  De-scoped from all prior findings. Architectural + interaction risks.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
 
 De-scoped from everything above. Receives ALL prior findings and MUST NOT
 re-report any of them.
@@ -321,6 +362,12 @@ treating as confirmed defects."
 
 Advisory findings. Not fingerprinted. Not entered in the ledger unless promoted.
 Set Pass: 3.
+
+**Progress marker:** After Pass 3 completes, emit:
+```
+✅ Pass 3 complete — {N} risk hypothesis/hypotheses (advisory, not in ledger)
+```
+(Use "hypothesis" for N=1, "hypotheses" for N≠1.)
 
 ---
 
