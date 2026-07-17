@@ -47,6 +47,22 @@ These are processed and removed by /dream each run.
 
 <!-- Auto-capture entries appear below this line -->
 
+### [2026-07-17] Task completed — Multi-agent code review plan Rounds 5 & 6 critic (11 issues)
+Round 5 (8 issues): N4 fixed to merge-base diff (not HEAD); N11 excludes Candidates from ledger; N12 capped tracer confidence at 0.89 (later superseded by Round 6 N14); N13 fixed with file-existence check (later improved by N15 mtime comparison). Round 6 (3 issues): N14 replaced unconditional cap with _source:'tracer' tag in deduplicateBySinkLocation — collision-only fingerprint anchoring, full confidence preserved for non-colliding tracer findings. N15 replaced file-existence with pre/post mtime comparison. N16 added contentHash cache-buster to buildPass1Prompt — converts N9 staleness footgun into solved problem.
+Trigger: Task completed  Confidence: 0.70  Source: auto-capture
+
+### [2026-07-17] Architecture decision — _source tag approach for tracer fingerprint stability
+Tracer upgrade findings are tagged `_source: 'tracer'` at push time. `deduplicateBySinkLocation` uses this to always anchor collisions on the Pass 1 (sink-side) fingerprint, ensuring ledger continuity. Confidence uses `Math.max` — highest confidence wins regardless of which fingerprint is the anchor. This is strictly better than the Round 5 cap approach (which silently understated confidence for all tracer findings, not just collision cases).
+Trigger: Architecture decision  Confidence: 0.70  Source: auto-capture
+
+### [2026-07-17] Task completed — Multi-agent code review plan Round 4 critic (8 issues)
+Round 4 incorporated 7 of 8 issues into the plan. N1 (failed suspects vanish from Candidates): push untraced/deferred suspects into allFindings at confidence=0.30 — they appear in report Candidates. N2 (duplicate findings): added `deduplicateBySinkLocation()` secondary dedup by (file:line:checker). N4 (--changed mode missing file diff): git diff in Step 0b, changedFiles arg, module filtering in Section G. N5 (candidates/conflicted uncapped): added 50-item caps matching confirmed pattern. N6 (retired checkers loop forever): RETIRED_CHECKERS constant + Rule 3B check. N7 (HAIKU_MODEL literal string): fixed to `${HAIKU_MODEL:-claude-haiku-4-5-20251001}`. N8 (checkpoint never cleared): write "COMPLETED" marker on success, check for it before resume. N3 was a false alarm — Workflow resumeFromRunId memoizes agent() calls transparently at runtime.
+Trigger: Task completed  Confidence: 0.70  Source: auto-capture
+
+### [2026-07-17] Architecture decision — Secondary dedup by sink location in multi-agent code review
+`deduplicateBySinkLocation()` performs a second dedup pass keyed on `(file:line:checker)` after fingerprint dedup. Required because tracer confirmed findings use entry-side fingerprints while intra-module Pass 1 findings use sink-side fingerprints — the same physical code defect gets two different fingerprints by design. Merge strategy: keep higher confidence, union callers, prefer dataFlow with confirmed steps.
+Trigger: Architecture decision  Confidence: 0.70  Source: auto-capture
+
 ### [2026-07-16] Architecture decision — "Coverity-style" replaced with "SAST" throughout
 "Coverity-style" was a proprietary brand name that overstated precision (this is LLM-based, not a formal program analysis engine) and was unfamiliar to most developers. "SAST" (Static Application Security Testing) is the correct industry-standard term, consistent with the existing persona `[SAST] Wen Li`. The methodology (inter-procedural, path-sensitive, event path format, fingerprint dedup) is preserved — only the branding changed. Updated: `docs/plans/multi-agent-code-review-with-graph.md` and implementation plan file.
 Trigger: Architecture decision  Confidence: 0.90  Source: auto-capture

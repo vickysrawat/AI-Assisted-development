@@ -1,20 +1,25 @@
 # Multi-Agent Code Review — Testing Strategy
 
-**Status:** Testing spec — design complete, ready for implementation  
+**Status:** Testing spec — aligned with implementation plan after 6 critic rounds  
 **Prerequisite:** Architecture spec (`multi-agent-code-review-with-graph.md`) approved  
-**Date:** 2026-07-16
+**Date:** 2026-07-17
 
 ---
 
 ## Overview
 
 Why this document exists:
-- The multi-agent system has two categories of code: (1) deterministic shared/ modules (dedup, schema, ledger, report, skip-logic), (2) LLM-driven agents (module agent, tracer, personas, adversarial)
+- The multi-agent system has two categories of code: (1) deterministic logic inline in `code-review.workflow.js` (dedup, schema, ledger merge, skip-logic), (2) LLM-driven agents (module agent, tracer, personas, adversarial)
 - These require fundamentally different testing approaches
-- Neither unit tests alone, nor evals alone, provide sufficient coverage
+- Neither structural validation alone, nor evals alone, provide sufficient coverage
+
+**Implementation note:** The plugin has no npm/Jest setup — it is pure Markdown + Node.js CJS scripts
+with no build step. The `shared/` directory contains Markdown specification docs, NOT runtime JS modules.
+All deterministic logic is inline in `skills/code-review/runners/workflow/code-review.workflow.js`.
+Unit tests run as plain Node.js scripts; the primary gate is `node tests/validate.js` (259 checks, offline).
 
 What this document covers:
-- Layer 1: Unit tests for all deterministic shared/ modules
+- Layer 1: Structural + unit tests for deterministic logic in the workflow script
 - Layer 2: Integration tests with fixture-based LLM calls
 - Layer 3: Evaluation framework (recall, precision, calibration)
 - Layer 4: A/B test methodology for model/prompt changes
@@ -23,11 +28,14 @@ What this document covers:
 
 ---
 
-## Layer 1 — Unit Tests
+## Layer 1 — Structural + Unit Tests
 
-**Framework:** Jest (Node.js; matches shared/ module language)  
+**Framework:** Plain Node.js scripts (no Jest — plugin has no npm/build step)  
+**Primary gate:** `node tests/validate.js` (259 structural checks, offline, no API key)  
+**Secondary:** `bash scripts/validate-bash.sh` (bash-only fallback)  
+**Syntax check:** `node --check skills/code-review/runners/workflow/code-review.workflow.js`  
 **Run:** Every commit, target < 30s total  
-**Files:** `skills/code-review/test/unit/*.test.js`
+**Files:** `skills/code-review/test/unit/*.js` (plain Node.js assert scripts)
 
 ### 1.1 dedup.test.js
 
@@ -46,12 +54,20 @@ mergeRuleA() — Pass 1 agent merge (same finding, different callers)
   ✅ evidence differs → tags "dedup-candidate", keeps both evidence versions
   ✅ does NOT modify confidence downward (merge never reduces)
 
-mergeRuleB() — Tracer upgrade
-  ✅ confidence → tracer value replaces existing unconditionally (0.30 → 0.85)
-  ✅ dataFlow.steps[] → populated from tracer output
-  ✅ status → "suspected" changed to "confirmed"
-  ✅ fingerprint not in existing findings → treated as new confirmed finding (edge case)
-  ✅ action !== "upgrade" → no update applied (ruled-out case)
+mergeRuleB() — RETIRED (verify it is dead code)
+  ✅ mergeRuleB is defined in the workflow script
+  ✅ mergeRuleB is NEVER called anywhere in the orchestration body
+  (mergeRuleB assumed suspects were pre-populated in allFindings[] — they are not)
+
+deduplicateBySinkLocation() — Secondary dedup by (file:line:checker)
+  ✅ two findings with same file:line:checker but different fingerprints → merged
+  ✅ Pass 1 finding (_source not 'tracer') + tracer finding (_source:'tracer') at same location
+     → Pass 1 fingerprint wins as anchor (sink-side, stable)
+  ✅ two tracer findings at same location → higher confidence wins as anchor
+  ✅ confidence → Math.max(ex.confidence, f.confidence) regardless of anchor
+  ✅ callers[] → union of both lists
+  ✅ dataFlow → anchor's dataFlow used if it has steps[]; otherwise falls back to other's
+  ✅ finding with no file or line=0 → passed through unchanged (Candidate entries)
 
 detectDedupCollision()
   ✅ same fingerprint, different evidence snippets → returns collision object with both
@@ -95,8 +111,9 @@ Confidence routing:
 
 Coverage table:
   ✅ scanned modules listed with finding count
-  ✅ skipped modules listed with "timeout after retry" note
+  ✅ failed modules listed with "null result" note (module agents do NOT retry — null = coverage gap)
   ✅ deferred suspects show count + "--continue" message
+  ✅ only confirmed findings (confidence ≥ 0.50) appear in ledger; Candidates (< 0.50) in-report only
 ```
 
 ### 1.3 schema.test.js
@@ -165,7 +182,7 @@ Security keyword extraction from ICEA text:
 ### 2.1 Fixture Files
 
 ```
-skills/code-review/test/integration/fixtures/
+skills/code-review/test/fixtures/
 
 UserController.cs
   // Known vulnerability: MISSING_AUTH_CHECK at line 42
@@ -240,8 +257,8 @@ Assert:
   ✅ MISSING_AUTH_CHECK found in UserController.cs
   ✅ TAINTED_SQL found in UserService.cs
   ✅ Each finding has confidence ≥ 0.50 OR is routed to Candidates
-  ✅ Ledger is written to .code-review/ledger.json
-  ✅ partial.html exists and is non-empty after Phase 2
+  ✅ Ledger is written to CodeReviews/code-review-ledger.md (Markdown, not JSON)
+  ✅ partial.html exists and is non-empty after Phase 2 (.code-review/partial.html)
   ✅ Full schema validation on all findings in output
 ```
 
@@ -368,7 +385,7 @@ Human spot-check: 10% of judge verdicts reviewed by a human per eval run
 ## Layer 4 — A/B Tests
 
 **Purpose:** Validate that prompt/model changes improve quality before merging  
-**Run:** Manually, triggered by changes to `shared/prompts.js`, `shared/checkers.js`, or model routing  
+**Run:** Manually, triggered by changes to prompt builder functions in the workflow script, checker lists, or model routing  
 **Framework:** Node.js script that runs eval twice with different configs and compares
 
 ### 4.1 Test Matrix
@@ -377,9 +394,10 @@ Human spot-check: 10% of judge verdicts reviewed by a human per eval run
 |---|---|---|
 | Haiku vs Sonnet (Pass 1) | Recall + cost/min | Sonnet wins recall by >5% → switch |
 | Graph context on vs off | Cross-module recall | Off loses >10% → keep on |
-| ICEA context on vs off (Pass3) | Skip accuracy | Off causes false skip → keep on |
-| Prompt v1 vs v2 (checker list) | Recall by checker | v2 wins ≥ 3/12 checkers → adopt |
+| ICEA context on vs off (Pass 3) | Skip accuracy | Off causes false skip → keep on |
+| buildPass1Prompt v1 vs v2 | Recall by checker | v2 wins ≥ 3/12 checkers → adopt |
 | 12-checker list vs description | Overall recall | Winner by >5% on eval dataset → use |
+| contentHash cache-buster on vs off | Stale result rate on --continue | On prevents stale hits → keep |
 
 ### 4.2 How to Run
 
@@ -443,7 +461,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: cd skills/code-review && npm test -- --testPathPattern=test/unit
+      - run: node tests/validate.js                          # 259 structural checks, no API key
+      - run: node --check skills/code-review/runners/workflow/code-review.workflow.js
+      - run: bash scripts/validate-bash.sh                  # bash fallback gate
 
   integration:
     if: github.event_name == 'pull_request' || github.event_name == 'schedule'
@@ -452,7 +472,7 @@ jobs:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
     steps:
       - uses: actions/checkout@v4
-      - run: cd skills/code-review && npm test -- --testPathPattern=test/integration
+      - run: node tests/runner.js --skill code-review        # fixture-based LLM integration tests
 
   evals:
     if: github.event_name == 'schedule'
@@ -474,7 +494,10 @@ jobs:
 
 | Component | Tool | Notes |
 |---|---|---|
-| Unit + integration | Jest | `jest.config.js` at `skills/code-review/`, `testTimeout: 60000` for integration |
+| Structural gate | `node tests/validate.js` | 259 checks, offline, no API key — primary gate |
+| Bash fallback gate | `bash scripts/validate-bash.sh` | Checks runner file exists, SKILL.md metadata, scenario YAML presence |
+| Syntax check | `node --check <workflow.js>` | Catches JS syntax errors before any LLM call |
+| Integration tests | `node tests/runner.js` | Live LLM calls, fixture-based, requires ANTHROPIC_API_KEY |
 | Eval runner | Node.js script | `eval-runner.js`, uses Anthropic SDK, outputs JSON to `.code-review/eval-results/` |
 | LLM judge | Claude Sonnet | Always Sonnet regardless of Pass 1 model under test |
 | A/B compare | Node.js script | `compare.js`, reads two eval JSON files, outputs diff table to stdout |
@@ -485,12 +508,18 @@ jobs:
 
 Before declaring testing infrastructure complete:
 
-- [ ] Unit tests exist for all `shared/` modules (`dedup`, `report`, `schema`, `skip-logic`)
-- [ ] Pass 3 skip truth table covered by tests (all 7 conditions explicitly)
-- [ ] Integration fixture files exist (UserController + UserService + UserRepository + Clean)
+- [ ] `node tests/validate.js` passes (259+ checks) — primary structural gate
+- [ ] `node --check skills/code-review/runners/workflow/code-review.workflow.js` — no syntax errors
+- [ ] `bash scripts/validate-bash.sh` passes — bash fallback gate
+- [ ] Unit tests exist for inline workflow logic: `dedup`, `deduplicateBySinkLocation`, `updateLedger`, `shouldSkipPass3`
+- [ ] `mergeRuleB` is present in workflow script AND verified never called in orchestration body
+- [ ] `deduplicateBySinkLocation` tested: Pass 1 anchor wins on tracer collision; confidence uses Math.max
+- [ ] Pass 3 skip truth table covered (all 7 conditions, including `changed` mode treated as pr-like)
+- [ ] Fixture files exist at `skills/code-review/test/fixtures/` with `// FINDING: <CHECKER>` markers at declared line ±2
+- [ ] Fixture line validation added to `tests/validate.js` (fixtureExpectations block)
 - [ ] Eval dataset exists with ≥ 10 ground truth samples covering all 12 MVP checkers
 - [ ] LLM-as-judge prompt defined in full
 - [ ] Eval runner outputs JSON with recall + precision + calibration + byChecker metrics
 - [ ] A/B test baseline recorded for Haiku vs Sonnet on Pass 1 recall
-- [ ] CI YAML configured to run unit on commit, unit+integration on PR, evals weekly
-- [ ] Tooling choices locked: Jest for unit, Node.js script for eval, Sonnet for judge
+- [ ] CI YAML uses `node tests/validate.js` (not npm test — no Jest/npm in plugin)
+- [ ] Tooling: plain Node.js for all tests; Sonnet for LLM judge; no Jest dependency

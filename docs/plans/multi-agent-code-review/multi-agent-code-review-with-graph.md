@@ -1,7 +1,8 @@
 # Multi-Agent Code Review with Graph + Architecture Context
 
-**Status:** Architectural spec — design review complete, all decisions resolved  
-**Date:** 2026-07-16  
+**Status:** Architectural spec — aligned with implementation plan after 6 critic rounds  
+**Date:** 2026-07-17  
+**Implementation plan:** `docs/plans/multi-agent-code-review/multi-agent-code-review-implementation-plan.md`  
 **Implementation:** Multi-agent Workflow (direct path — area-scoped single-agent approach abandoned)  
 **Rationale:** Single-agent approaches miss vulnerabilities due to context window exhaustion. Multi-agent is required for comprehensive coverage.
 
@@ -40,12 +41,12 @@ graph TB
             LG["LangGraph Runner<br/>code-review.graph.py<br/>CI/CD headless · future"]
         end
 
-        subgraph Shared["shared/ (orchestrator-agnostic)"]
-            Prompts["prompts.js<br/>buildPass1Prompt · buildTracerPrompt<br/>buildPersonaPrompt · buildAdversarialPrompt"]
-            Schema["schema.js<br/>Finding schema · Ledger schema<br/>fingerprint key"]
-            Dedup["dedup.js<br/>mergeRuleA (Pass 1 agents)<br/>mergeRuleB (tracer upgrade)"]
-            Report["report.js<br/>buildHTMLReport · updateLedger<br/>buildCoverageTable"]
-            Checkers["checkers.js<br/>12 MVP checkers · domain profiles<br/>Pass 2 lenses · Pass 3 attack categories"]
+        subgraph Shared["shared/ (Phase 1: Markdown specs · Phase 2: runtime JS)"]
+            Prompts["prompts/ specs<br/>Pass1 · Tracer · Persona · Adversarial"]
+            Schema["specs/schema-spec.md<br/>Finding schema · Ledger schema<br/>fingerprint key"]
+            Dedup["specs/dedup-spec.md<br/>mergeRuleA · mergeRuleB (retired)<br/>deduplicateBySinkLocation"]
+            Report["specs/ledger-merge-spec.md<br/>updateLedger · 5 merge rules<br/>report format"]
+            Checkers["12 MVP checkers · domain profiles<br/>Pass 2 lenses · Pass 3 attack categories<br/>(inline in workflow script, Phase 1)"]
         end
     end
 
@@ -67,8 +68,8 @@ graph TB
     subgraph Outputs["Outputs"]
         CP[".code-review/checkpoint-*.json<br/>phase checkpoints · resume support"]
         PH[".code-review/partial.html<br/>live progress · refresh in browser"]
-        FH[".code-review/report.html<br/>final HTML report · 8 sections"]
-        LED[".code-review/ledger.json<br/>fingerprint history · regression tracking"]
+        FH["CodeReviews/code-review-{today}.html<br/>final HTML report · 8 sections"]
+        LED["CodeReviews/code-review-ledger.md<br/>fingerprint history · regression tracking (Markdown)"]
     end
 
     Dev -->|"/code-review --mode --scope"| Skill
@@ -217,27 +218,34 @@ Orchestrator
   │
   │     Tracer output:
   │       { action: "upgrade", fingerprint: "FP-xxx", confidence: 0.85,
-  │         dataFlow: { steps: [...] } }
-  │       NOT a new finding — orchestrator updates the existing finding in-place
-  │       Ruled-out → finding removed from confirmed[] entirely
+  │         sinkFile, sinkFunction, sinkLine, sinkModule, dataFlow: { steps: [...] } }
+  │       Creates a NEW confirmed finding in allFindings[] at the sink location.
+  │       Uses the entry-side fingerprint (stable: computed by module agent, returned by tracer).
+  │       Suspects are NOT pre-populated in allFindings[] — mergeRuleB is RETIRED (dead code).
+  │       Ruled-out → suspect not added to findings (stays as Candidate if tracer fails)
   │
   ├── Deduplication (orchestrator — no agent)
   │     Fingerprint key: hash(file + function + line + checker) — NOT caller or moduleId
   │     Pass 1 merge (same finding, two callers):
   │       callers[] → union; confidence → keep highest; severity → keep highest
   │       evidence differs → tag "dedup-candidate", keep both
-  │     Tracer upgrade (tracer vs. existing Pass 1 finding, same fingerprint):
-  │       confidence → tracer value replaces module value unconditionally
-  │       dataFlow.steps[] → populated by tracer; confirmed flags set
-  │       status: "suspected" → status: "confirmed"
+  │     Tracer upgrade (tracer creates NEW finding at sink location):
+  │       fingerprint → entry-side fp from suspect (stable across module agent → tracer → ledger)
+  │       file/function/line → sinkFile/sinkFunction/sinkLine from TRACER_SCHEMA
+  │       _source: 'tracer' tag → used by deduplicateBySinkLocation() for anchor selection
+  │       If tracer finding collides with Pass 1 finding at same (file:line:checker):
+  │         Pass 1 fingerprint (sink-side, stable) always wins as anchor; confidence = Math.max
   │
   ├── Phase 3 (Pass 2) — [parallel] Persona agents (self-skipping)
   │     P1 Reliability, P2 Concurrency (self-skipping), P3 API Contract
   │     Run in PARALLEL — no data dependency between personas
   │     Input: aggregated confirmed findings + graph-index + arch docs
-  │     P2 self-skip: reads findings; if no category:"concurrency" findings exist →
-  │       exits with { decision: "not-applicable", reason: "no concurrency patterns" }
-  │       (one short call; appears in coverage as "P2: not-applicable")
+  │     P2 self-skip: reads findings; if ALL finding.file and finding.moduleId values
+  │       contain no concurrency indicators (async, Task, Thread, Worker, Background,
+  │       Queue, lock, Mutex, Semaphore, Interlocked, ConcurrentDictionary) →
+  │       exits with { decision: "not-applicable" }
+  │       NOTE: Do NOT gate on category:"concurrency" — CHECKERS_PASS1 has no concurrency
+  │       checkers, so Pass 1 never produces concurrency-tagged findings → P2 would always skip.
   │     Persona validation: call getSourceSnippet(file, line, context) on-demand
   │       context=5 (default): 10-line window for Pass 1 evidence verification
   │       context=25: 50-line window for P1/P3 (full method context needed)
@@ -376,12 +384,17 @@ severity    → keep HIGHEST (High beats Medium)
 evidence    → if snippets differ → tag "dedup-candidate", keep both
 ```
 
-### Merge Rule B — Tracer upgrade (tracer output vs. existing Pass 1 finding)
+### Merge Rule B — RETIRED (dead code — kept for historical reference)
 ```
-confidence  → tracer value REPLACES module value unconditionally (0.85 > 0.30)
-dataFlow    → populated from tracer (confirmed flags per step)
-status      → "suspected" → "confirmed"
-Applies only when action: "upgrade" and fingerprint matches existing finding.
+RETIRED: mergeRuleB assumed suspected_taint suspects were pre-populated in allFindings[].
+They are not — suspects live in allSuspects[] only. The tracer creates a NEW finding
+via the orchestration body using the entry-side fingerprint + sink location from TRACER_SCHEMA.
+mergeRuleB is never called. See shared/specs/dedup-spec.md for the full retirement note.
+
+Original design (for reference):
+  confidence  → tracer value REPLACES module value unconditionally (0.85 > 0.30)
+  dataFlow    → populated from tracer (confirmed flags per step)
+  status      → "suspected" → "confirmed"
 ```
 
 ### Confidence Defaults by Source
@@ -405,7 +418,7 @@ Personas CANNOT increase confidence of inherited findings (only tracer upgrades)
 
 ## Implementation Sketch
 
-### 1. `skills/code-review/code-review.workflow.js`
+### 1. `skills/code-review/runners/workflow/code-review.workflow.js`
 
 Orchestration script using Claude Code's Workflow tool:
 
@@ -557,7 +570,7 @@ The orchestrator reads the file directly (Workflow has filesystem access). No ca
   "fingerprint": "FP-xxxxxxxx",
   "firstSeen": "2026-07-10",
   "lastSeen": "2026-07-16",
-  "status": "active | fixed | accepted-risk | false-positive",
+  "status": "active | fixed | false-positive",
   "dismissalReason": "...",
   "remediationTicket": "ADO-NNN",
   "passHistory": [
@@ -660,16 +673,20 @@ A failure is:
 - NOT a failure: agent returned empty findings[] (valid — module had no issues)
 
 ### Fail-Fast Rules
-- Per-phase: >30% of agents in any phase fail → abort that phase immediately
-  (e.g., 50 module agents, 16 timeout → abort Pass 1)
-- Cross-phase: >3 total failures across all phases → abort entire run
+- Per-phase: >30% of agents in any phase fail → abort that phase at phase boundary
+  (e.g., 50 module agents, 16 fail → abort before next phase; fall through to Report)
+  NOTE: parallel() is a barrier — mid-phase abort is impossible. Abort fires between phases.
 - Report on abort: emit findings from completed phases with "SCAN INCOMPLETE" header
+- Cross-phase total failure count (>3 across all phases) is NOT implemented in the Workflow
+  runner — the >30% per-phase check is the only gate.
 
 ### Module Agent Retry
-Module agent timeout → Retry once at full scope (no splitting).
-Splitting a module by file count breaks cross-file analysis — if A.cs calls B.cs
-and they're split, taint analysis fails.
-If retry fails: skip module, emit "Coverage gap — {module} not scanned"
+Module agents do NOT retry individually — a failed agent returns `null` from `parallel()`.
+Null results are counted for the >30% fail-fast check. Failed modules appear as coverage gaps.
+NOTE: Splitting a module by file count breaks cross-file analysis — never split on retry.
+
+Only the **scope agent** retries (once) before aborting the entire run, since it is the
+single point of failure for the module list.
 
 ### Phase Checkpoints — Incremental Report Generation
 
@@ -688,11 +705,13 @@ Checkpoint JSON format:
 ```json
 {
   "phase": "pass1",
-  "completedAt": "ISO-timestamp",
   "findingsCount": 42,
   "suspectCount": 18
 }
 ```
+NOTE: `completedAt` timestamp is omitted — `Date.now()` and `new Date()` are blocked in
+Workflow scripts (they would break resume determinism). Timestamp the checkpoint from SKILL.md
+after the Workflow call if needed.
 
 After each checkpoint, rewrite `.code-review/partial.html`:
 ```
@@ -771,18 +790,29 @@ This enables swapping between Workflow (Claude Code, interactive) and LangGraph
 
 ```
 skills/code-review/
-  shared/
-    prompts.js          # All agent prompts (Pass 1, tracer, personas, adversarial)
-    schema.js           # Finding schema, fingerprint logic, merge rules
-    dedup.js            # Fingerprint(), mergeRuleA(), mergeRuleB()
-    report.js           # buildHTMLReport(), updateLedger(), coverage table
-    checkers.js         # Checker taxonomy by pass and domain profiles
+  shared/                           # Phase 1: Markdown specification docs (NOT runtime code)
+    specs/
+      dedup-spec.md                 # Merge Rule A/B pseudocode, fingerprint key, collision detection
+      schema-spec.md                # Finding field definitions, types, constraints, enums
+      skip-logic-spec.md            # Pass 3 truth table (all 7 conditions)
+      ledger-merge-spec.md          # All 5 ledger merge rules in pseudocode
+    prompts/
+      pass1-prompt-spec.md          # Pass 1 prompt requirements
+      tracer-prompt-spec.md         # Tracer prompt requirements, chain truncation rules
+      persona-prompt-spec.md        # P1/P2/P3 focus areas, context sizes, skip conditions
+      adversarial-prompt-spec.md    # Attack categories, what adversarial agent must NOT do
   runners/
     workflow/
-      code-review.workflow.js   # Workflow runner — orchestrates via agent()
+      code-review.workflow.js       # Workflow runner — self-contained, all logic inline
     langgraph/
-      code-review.graph.py      # LangGraph runner (future) — parallel via Send()
+      code-review.graph.py          # LangGraph runner (future) — parallel via Send()
 ```
+
+**Phase 1 NOTE:** The Workflow runner (`code-review.workflow.js`) is self-contained — no
+`require()` of local files (Workflow scripts cannot import local modules). All schemas, prompt
+builders, dedup logic, and merge rules are defined inline. The `shared/` Markdown specs document
+that logic for the future LangGraph implementation. Phase 2 (LangGraph) will extract these into
+runtime JS/Python modules that both runners import.
 
 ### Orchestrator Selection
 
