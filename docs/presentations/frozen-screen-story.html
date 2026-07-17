@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Frozen Screen That Started a Conspiracy</title>
+<style>
+  :root {
+    --navy: #1a3a5c;
+    --gold: #c8a951;
+    --ink: #2d3436;
+    --muted: #636e72;
+    --bg: #f8f9fa;
+    --card: #ffffff;
+    --line: #dfe6e9;
+    --red: #cc2222;
+    --green: #00b894;
+    --sans: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --mono: 'Cascadia Code', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.7;
+  }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, #0a1825, #1a3a5c 65%, #122d4a);
+    color: #fff;
+    padding: 72px 0 60px;
+    text-align: center;
+  }
+
+  header .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 18px;
+  }
+
+  header h1 {
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    font-weight: 800;
+    line-height: 1.12;
+    color: #fff;
+    max-width: 18ch;
+    margin: 0 auto 16px;
+  }
+
+  header .subtitle {
+    font-size: 1.1rem;
+    color: var(--gold);
+    font-style: italic;
+    margin-bottom: 20px;
+  }
+
+  header .lead {
+    font-size: 1.05rem;
+    color: #cdd9e6;
+    max-width: 54ch;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  /* ── Article body ── */
+  article {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 56px 24px 100px;
+  }
+
+  /* ── Act headings ── */
+  h2 {
+    font-size: 1.55rem;
+    font-weight: 800;
+    color: var(--navy);
+    margin: 56px 0 20px;
+    padding-bottom: 10px;
+    border-bottom: 3px solid var(--gold);
+  }
+
+  h2:first-of-type { margin-top: 0; }
+
+  h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin: 36px 0 14px;
+  }
+
+  /* ── Prose ── */
+  p {
+    font-size: 1.05rem;
+    line-height: 1.75;
+    color: var(--ink);
+    margin-bottom: 18px;
+  }
+
+  em { font-style: italic; }
+
+  strong {
+    font-weight: 700;
+    color: var(--navy);
+  }
+
+  /* ── Opening pull quote ── */
+  .pull-quote {
+    background: linear-gradient(135deg, #0d1f35, #12283d);
+    color: #e8f0f8;
+    border-radius: 12px;
+    padding: 36px 40px;
+    margin: 32px 0 36px;
+    font-size: 1.25rem;
+    line-height: 1.7;
+    position: relative;
+  }
+
+  .pull-quote .big-num {
+    font-family: var(--mono);
+    font-size: 5rem;
+    font-weight: 800;
+    color: rgba(200, 169, 81, .15);
+    line-height: 1;
+    position: absolute;
+    top: 16px;
+    left: 24px;
+    pointer-events: none;
+  }
+
+  .pull-quote blockquote {
+    position: relative;
+    z-index: 1;
+  }
+
+  .pull-quote em {
+    color: #9db2c7;
+  }
+
+  /* ── Divider ── */
+  hr {
+    border: none;
+    border-top: 1px solid var(--line);
+    margin: 48px 0;
+  }
+
+  /* ── Mermaid diagrams ── */
+  .diagram-wrap {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 28px 20px;
+    margin: 28px 0;
+    overflow-x: auto;
+    box-shadow: 0 2px 12px rgba(0,0,0,.05);
+  }
+
+  .diagram-wrap .diagram-label {
+    font-family: var(--mono);
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  .diagram-wrap .mermaid {
+    display: flex;
+    justify-content: center;
+  }
+
+  /* ── Q&A section ── */
+  .qa-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin: 20px 0 28px;
+  }
+
+  .qa-list li {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--gold);
+    border-radius: 0 10px 10px 0;
+    padding: 14px 18px;
+  }
+
+  .qa-list li strong {
+    display: block;
+    font-size: .95rem;
+    color: var(--navy);
+    margin-bottom: 5px;
+  }
+
+  .qa-list li span {
+    font-size: .93rem;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  /* ── Stats strip ── */
+  .stats {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin: 28px 0;
+  }
+
+  .stat {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--gold);
+    border-radius: 10px;
+    padding: 16px 20px;
+    flex: 1;
+    min-width: 130px;
+    text-align: center;
+  }
+
+  .stat .num {
+    font-family: var(--mono);
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--navy);
+    display: block;
+  }
+
+  .stat .lbl {
+    font-size: .82rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* ── Closing callout ── */
+  .closing {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 5px solid var(--gold);
+    border-radius: 0 12px 12px 0;
+    padding: 22px 26px;
+    margin: 36px 0 20px;
+  }
+
+  .closing p {
+    font-size: 1.08rem;
+    font-weight: 600;
+    color: var(--navy);
+    margin-bottom: 12px;
+    line-height: 1.6;
+  }
+
+  .closing p:last-child { margin-bottom: 0; }
+
+  .closing .final-q {
+    font-size: 1rem;
+    font-style: italic;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    padding: 32px 24px;
+    background: #0a1825;
+    color: #7a92a8;
+    font-size: .85rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Static Code Review · Multi-Agent Architecture</div>
+  <h1>The Frozen Screen That Started a Conspiracy</h1>
+  <p class="subtitle">One Dev. No Team. Just 50 AI Agents and a Grudge.</p>
+  <p class="lead">How twenty minutes of silence became a five-phase, multi-agent static analysis system — designed and built by one person.</p>
+</header>
+
+<article>
+
+  <!-- ACT 1 -->
+  <h2>Act 1 — The Silence</h2>
+
+  <div class="pull-quote">
+    <div class="big-num">20</div>
+    <blockquote>
+      I'm sitting there running a static code review.<br>
+      No notification. No error. No progress bar.<br>
+      Just a cursor blinking at me like it has nothing to say.<br><br>
+      <em>Is it scanning? Did it fail? Did it finish and I missed it?</em>
+    </blockquote>
+  </div>
+
+  <p>This is what was happening under the hood:</p>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">The silent failure</div>
+    <div class="mermaid">
+graph LR
+    Dev([Developer]) --> Agent[Single AI Agent]
+    Agent --> F1[File 1]
+    F1 --> F2[File 2]
+    F2 --> F3[File 3]
+    F3 --> FN[300+ files]
+    FN --> STOP["⚠️ Silent Stop\nContext Window Full\nNo Error · No Warning"]
+
+    style Dev fill:#228833,color:#fff
+    style Agent fill:#2244bb,color:#fff
+    style STOP fill:#cc2222,color:#fff
+    </div>
+  </div>
+
+  <p>Static code review is supposed to be the safety net — the thing that catches what human eyes miss. The SQL injection buried three layers deep. The auth check missing on exactly the wrong endpoint. The hardcoded secret someone committed on a Tuesday and forgot about.</p>
+
+  <p>But a safety net with a hole you can't see is worse than no safety net. Because you trust it.</p>
+
+  <p>That twenty-minute nothing was the hole.</p>
+
+  <hr>
+
+  <!-- ACT 2 -->
+  <h2>Act 2 — The Wrong Fix</h2>
+
+  <p>The obvious answer: scope it down. Give the AI less to read. Review one module at a time.</p>
+
+  <p>So I built it that way.</p>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">Attempt 1 — area-scoped review</div>
+    <div class="mermaid">
+graph TD
+    subgraph Scoped["Attempt 1 — Area-Scoped Review"]
+        AgA[Agent: UserController] --> RA[Findings ✅]
+        AgB[Agent: UserService] --> RB[Findings ✅]
+        AgC[Agent: UserRepository] --> RC[Findings ✅]
+    end
+
+    subgraph Hidden["❌ Cross-Module Path — Invisible to All Agents"]
+        UC[UserController\nUntrusted Input Enters] -->|no validation| US[UserService\nPasses It On]
+        US -->|no validation| UR[UserRepository\nSQL Injection HERE]
+    end
+
+    style UC fill:#ff8800,color:#fff
+    style US fill:#ff8800,color:#fff
+    style UR fill:#cc2222,color:#fff
+    style Hidden fill:#fff0f0,stroke:#cc2222
+    </div>
+  </div>
+
+  <p>Then I tested it properly.</p>
+
+  <p>The most dangerous vulnerabilities don't live inside one module. They <em>travel</em>. A user types something into a form. It flows through a controller, into a service, down into a database query — and only at the very end does it become a SQL injection. If your reviewer only sees the controller, it sees data going out. If it only sees the database layer, it sees data arriving but has no idea it was ever untrusted.</p>
+
+  <p>The area-scoped approach had a blind spot exactly where blind spots are most dangerous — across module boundaries.</p>
+
+  <p>I scrapped it.</p>
+
+  <hr>
+
+  <!-- ACT 3 -->
+  <h2>Act 3 — The Real Question</h2>
+
+  <p>I stopped asking <em>how do I make one reviewer smarter</em> and started asking <em>how would an expert actually do this?</em></p>
+
+  <p>A senior security engineer doesn't read 500 files alone. They divide the work. Someone covers authentication. Another traces suspicious data flows. Someone else reviews API contracts. And then someone tries to actually break the system.</p>
+
+  <p>The context window was never the bug. It was a forcing function — pushing me toward the design that should have existed from the start.</p>
+
+  <hr>
+
+  <!-- ACT 4 -->
+  <h2>Act 4 — Building the Machine</h2>
+
+  <h3>Step 1: Parallel Agents</h3>
+
+  <p>What if instead of one AI reading everything, there were many — each reading a small slice, coordinated by something that sees the whole picture?</p>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">Step 1 — parallel agents per module</div>
+    <div class="mermaid">
+graph TD
+    KG[(Knowledge Graph\ngraph-index.md)] --> AgA & AgB & AgC
+
+    AgA["Agent: UserController\n12 checkers · parallel"]
+    AgB["Agent: UserService\n12 checkers · parallel"]
+    AgC["Agent: UserRepository\n12 checkers · parallel"]
+
+    AgA --> MD[Merge + Dedup]
+    AgB --> MD
+    AgC --> MD
+
+    MD --> Report[Combined Report]
+    Report --> GAP["❌ Still blind to\ncross-module taint flows"]
+
+    style KG fill:#225533,color:#fff
+    style AgA fill:#2244bb,color:#fff
+    style AgB fill:#2244bb,color:#fff
+    style AgC fill:#2244bb,color:#fff
+    style MD fill:#444444,color:#fff
+    style GAP fill:#fff0f0,stroke:#cc2222,color:#cc2222
+    </div>
+  </div>
+
+  <p>Better. No context exhaustion. Parallel. Fast. But still missing something — agents could see <em>within</em> their module. They still couldn't see <em>between</em> them.</p>
+
+  <h3>Step 2: The Taint Tracer</h3>
+
+  <p>The agents needed a way to raise their hand — <em>"I saw something suspicious leave my module heading toward the database layer. I can't confirm it's dangerous. Someone should follow it."</em></p>
+
+  <p>So I added Phase 2.5.</p>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">Step 2 — taint tracer (phase 2.5)</div>
+    <div class="mermaid">
+graph TD
+    subgraph P1["Pass 1 — Module Agents · Parallel · Haiku"]
+        MA[Agent: UserController] --> F1[Findings]
+        MB[Agent: UserService] --> F2[Findings]
+        MC[Agent: UserRepository] --> F3[Findings]
+        MA --> SUP["⚠️ Suspect: untrusted input\nheading toward SQL layer"]
+    end
+
+    SUP --> TT
+
+    subgraph TR["Phase 2.5 — Taint Tracer"]
+        TT["Taint Tracer\nReads full call chain:\nUserCtrl → UserSvc → UserRepo\nDoes untrusted data reach SQL?"]
+    end
+
+    TT --> Conf["✅ Confirmed\nconfidence 0.85\nCross-module taint caught"]
+    TT --> Ruled["❌ Ruled Out\nData sanitized en route"]
+
+    style SUP fill:#ff8800,color:#fff
+    style TT fill:#664499,color:#fff
+    style Conf fill:#228822,color:#fff
+    style Ruled fill:#666666,color:#fff
+    </div>
+  </div>
+
+  <p>Now findings that crossed module boundaries could be confirmed — not just suspected.</p>
+
+  <h3>Step 3: The Specialist Personas</h3>
+
+  <p>One finding can look different depending on who reviews it. A reliability engineer sees a resource leak. A concurrency specialist sees a race condition. An API reviewer sees a missing status code.</p>
+
+  <p>I added three specialist personas — running in parallel, each reviewing findings through a different lens.</p>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">Step 3 — three specialist personas in parallel (pass 2)</div>
+    <div class="mermaid">
+graph TD
+    AF[All Confirmed Findings] --> P1 & P2 & P3
+
+    P1["P1 · Reliability Engineer\nNull paths · resource leaks\nexception handling · retry logic"]
+    P2["P2 · Concurrency Specialist\nRace conditions · TOCTOU\nAsync void · deadlocks\n— self-skips if not applicable —"]
+    P3["P3 · API Contract Reviewer\nMissing validation\nWrong status codes\nNo rate limiting on sensitive ops"]
+
+    P1 --> V[validate · challenge · reduce-confidence]
+    P2 --> V
+    P3 --> V
+
+    V --> RF["Reviewed Findings\n🔴 Conflicted — if any persona challenges\n✅ Dismissed — only if ALL three challenge"]
+
+    style AF fill:#225533,color:#fff
+    style P1 fill:#2244bb,color:#fff
+    style P2 fill:#2244bb,color:#fff
+    style P3 fill:#2244bb,color:#fff
+    style RF fill:#334466,color:#fff
+    </div>
+  </div>
+
+  <h3>Step 4: The Adversary</h3>
+
+  <p>The last piece was the hardest to design. All previous passes were looking for known patterns. But the most dangerous vulnerabilities aren't always in a checklist. Sometimes you need someone who isn't reviewing — someone who is <em>attacking</em>.</p>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">Step 4 — adversarial agent (pass 3, conditional)</div>
+    <div class="mermaid">
+graph TD
+    T{Runs when...} --> C1[Scope touches\nsecurity-critical modules]
+    T --> C2[No ICEA found\nconservative default]
+    T --> C3[ICEA contains auth\nor token keywords]
+    T --> C4[--force-pass3 flag set]
+
+    C1 & C2 & C3 & C4 --> AA["🔴 Adversarial Agent\nNot reviewing findings\nActively attacking the system"]
+
+    AA --> AT1[Can I forge a token?]
+    AA --> AT2[Can I access another user's data?]
+    AA --> AT3[Can I escalate privileges?]
+    AA --> AT4[Can I bypass the auth check?]
+    AA --> AT5[Can I inject data that runs later?]
+
+    AT1 & AT2 & AT3 & AT4 & AT5 --> NF["New Findings\nconfidence 0.70\npass 3"]
+
+    style AA fill:#cc2222,color:#fff
+    style T fill:#884400,color:#fff
+    style NF fill:#884400,color:#fff
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ACT 5 -->
+  <h2>Act 5 — The Final Architecture</h2>
+
+  <p>All five phases together:</p>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">Final — 5-phase multi-agent system</div>
+    <div class="mermaid">
+graph TD
+    Dev([Developer]) -->|"/code-review --mode"| SKILL["SKILL.md\nPrerequisite check · Mode detection"]
+
+    SKILL --> Ph1
+
+    subgraph Ph1["Phase 1 — Scope"]
+        SC["Scope Agent\nReads knowledge graph\nBuilds module list + security context"]
+    end
+
+    Ph1 --> Ph2
+
+    subgraph Ph2["Phase 2 — Pass 1 · Parallel · Haiku"]
+        MA1[Module Agent 1] & MA2[Module Agent 2] & MAN[Module Agent N] --> DD["Merge + Dedup\nfindings + suspects"]
+    end
+
+    Ph2 --> Ph25
+
+    subgraph Ph25["Phase 2.5 — Taint Tracer · Parallel · Haiku · cap 50"]
+        TT1[Tracer 1] & TT2[Tracer 2] & TTN[Tracer N] --> TC["Confirmed · Ruled Out · Deferred"]
+    end
+
+    Ph25 --> Ph3
+
+    subgraph Ph3["Phase 3 — Pass 2 · Parallel · Sonnet"]
+        PP1[P1 Reliability] & PP2[P2 Concurrency] & PP3[P3 API Contract]
+    end
+
+    Ph3 --> Ph4
+
+    subgraph Ph4["Phase 4 — Pass 3 · Conditional · Sonnet"]
+        AA[Adversarial Agent]
+    end
+
+    Ph4 --> Ph5
+
+    subgraph Ph5["Phase 5 — Report · Sonnet"]
+        RPT["Assembly Agent\nHTML Report · Ledger Merge"]
+    end
+
+    Ph5 --> O1[CodeReviews/report.html]
+    Ph5 --> O2[code-review-ledger.md]
+    Ph5 --> O3["partial.html — live in browser\n✅ Phase by phase · no silence"]
+
+    style SKILL fill:#334db3,color:#fff
+    style Ph1 fill:#e8f0ff,stroke:#334db3
+    style Ph2 fill:#e8ffe8,stroke:#228833
+    style Ph25 fill:#fffff0,stroke:#888800
+    style Ph3 fill:#fff4e8,stroke:#884400
+    style Ph4 fill:#fff0f0,stroke:#cc2222
+    style Ph5 fill:#f4e8ff,stroke:#664499
+    style AA fill:#cc2222,color:#fff
+    style O3 fill:#228833,color:#fff
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ACT 6 -->
+  <h2>Act 6 — Arguing With Myself</h2>
+
+  <p>Six rounds of self-critique. Sixty issues. Alone.</p>
+
+  <ul class="qa-list">
+    <li>
+      <strong>What if an agent times out?</strong>
+      <span>Count the failures. Abort cleanly if too many fail. No partial results passed off as complete.</span>
+    </li>
+    <li>
+      <strong>What if the cache serves a stale vulnerable result after I fix the bug?</strong>
+      <span>Every module gets a content hash computed from its source. Code changes, hash changes, cache misses. Automatic.</span>
+    </li>
+    <li>
+      <strong>How do I know the scan actually finished and didn't silently abort?</strong>
+      <span>Don't check if the file exists. Check its modification timestamp. A stale file from an earlier run shouldn't count as success.</span>
+    </li>
+    <li>
+      <strong>What about cross-module fingerprints — how do you track the same vulnerability across two files?</strong>
+      <span>The entry-side module assigns the fingerprint before knowing where the data lands. The tracer inherits it. The ledger sees one stable identity, not a new entry every time.</span>
+    </li>
+  </ul>
+
+  <p>Every round the design got tighter. Every question made it more honest about what it knew and what it didn't.</p>
+
+  <hr>
+
+  <!-- ACT 7 -->
+  <h2>Act 7 — What Got Built</h2>
+
+  <div class="stats">
+    <div class="stat"><span class="num">1,300</span><div class="lbl">Line design</div></div>
+    <div class="stat"><span class="num">800</span><div class="lbl">Line script</div></div>
+    <div class="stat"><span class="num">4</span><div class="lbl">Test layers</div></div>
+    <div class="stat"><span class="num">6</span><div class="lbl">Critic rounds</div></div>
+    <div class="stat"><span class="num">1</span><div class="lbl">Developer</div></div>
+  </div>
+
+  <p>But the real thing that got built isn't the code.</p>
+
+  <p>It's the answer to <em>what now?</em></p>
+
+  <div class="closing">
+    <p>The screen has something to say now. Phase by phase. Module by module. Live. No silence. No guessing. Nothing quietly quits halfway through and lets you believe you're safe.</p>
+    <p class="final-q">What silent failure in your stack are you trusting too much?</p>
+  </div>
+
+</article>
+
+<footer>
+  Static Code Review · Multi-Agent Architecture · Built solo · 2026
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    flowchart: { curve: 'basis', useMaxWidth: true },
+    themeVariables: {
+      primaryColor: '#e8f0ff',
+      primaryTextColor: '#1a3a5c',
+      primaryBorderColor: '#2244bb',
+      lineColor: '#636e72',
+      secondaryColor: '#f8f9fa',
+      tertiaryColor: '#fff4e8',
+    }
+  });
+</script>
+</body>
+</html>
