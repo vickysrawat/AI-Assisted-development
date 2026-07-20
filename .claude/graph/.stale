@@ -1,0 +1,3 @@
+# Knowledge graph is stale — run /graph-sync
+# Detected: 2026-07-20T15:55:40
+modules: ado-tasks app-readiness architect code-review commands critic docs-adr dream-rollback dynamic-scan graph-sync graph-viz icea-approve icea-feature icea-implement icea-review icea-revise icea-status plugin-readiness pr-create pr-describe pr-spec-review project-deploy rules scripts security setup-status setup-sync setup-teardown shared sprint-metrics token-analysis
