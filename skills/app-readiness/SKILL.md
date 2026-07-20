@@ -95,7 +95,7 @@ Or run: /ai-assisted-development:update-arch --deployment
 And stop.
 
 Extract and hold:
-- `HOSTING_MODEL` — IIS | container | app-service | windows-service | mixed
+- `HOSTING_MODEL` — IIS | container | app-service | windows-service | vsto | mixed
 - `ADO_ORG` — organisation name
 - `ADO_PROJECT` — project name
 - `PIPELINE_FILE` — pipeline YAML file name(s)
@@ -107,6 +107,10 @@ Extract and hold:
 - `ENTRA_TENANT_MODEL` — single | multi | B2C | unknown
 - `ENTRA_TOKEN_VALIDATION` — AddMicrosoftIdentityWebApi | AddJwtBearer | client-trusts | unknown
 - `ENTRA_SERVICE_TO_SERVICE` — Managed Identity | Client Secret | None
+
+Set `HOSTING_MODEL = vsto` if `architecture-deployment.md` contains any of:
+"ClickOnce", "VSTO", "add-in", "Office add-in", "document customization".
+This takes priority over other hosting model signals.
 
 Also read `.claude/architecture/architecture.md` for tech stack context.
 
@@ -141,6 +145,9 @@ Load the hosting-model-specific checklist:
 - If `HOSTING_MODEL` = `IIS` → the IIS checks in Step 3 apply
 - If `HOSTING_MODEL` = `container` → container checks apply
 - If `HOSTING_MODEL` = `app-service` → App Service checks apply
+- If `HOSTING_MODEL` = `vsto` → load `$PLUGIN_DIR/skills/app-readiness/references/vsto-checklist.md`
+  and use the VSTO evidence collection and scoring defined there (Steps 3–5 use VSTO domains
+  instead of the standard IIS/container domains — see vsto-checklist.md for bash signals and thresholds)
 - If `HOSTING_MODEL` = `mixed` → apply the checks for each component
 
 ---

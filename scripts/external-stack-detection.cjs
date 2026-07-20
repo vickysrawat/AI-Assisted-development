@@ -7,12 +7,14 @@
 // Stack tokens written:
 //   dotnet           — modern .NET Core / .NET 5+ / .NET 10
 //   dotnet_framework — legacy .NET Framework 4.x (System.Web or System.ServiceModel)
+//   vsto             — Visual Studio Tools for Office add-in or document customization
 //   angular          — Angular app (angular.json present)
 //   nodejs           — Node.js server (express/fastify/hono/@nestjs/core in package.json)
 //   java             — Maven or Gradle project
 //   python           — pyproject.toml or requirements.txt present
 //
 // dotnet and dotnet_framework are mutually exclusive — never both for the same repo.
+// vsto always accompanies dotnet_framework (VSTO is always .NET Framework).
 
 'use strict';
 const fs   = require('fs');
@@ -67,16 +69,32 @@ for (var i = 0; i < externalDirs.length; i++) {
   var hasSln = findFiles(dir, function(n) { return n.endsWith('.sln'); }, 1).length > 0;
 
   if (csprojFiles.length || hasSln) {
-    // dotnet_framework: System.Web (MVC/WebForms) OR System.ServiceModel (WCF)
-    // dotnet: modern .NET Core / .NET 5+ / .NET 10
-    // Mutually exclusive — never add both.
-    var isFramework = csprojFiles.some(function(f) {
+    // VSTO: Microsoft.Office.Tools / Interop, VSTO project GUID, or TargetApplication element.
+    // VSTO is always .NET Framework — force dotnet_framework regardless of System.Web absence.
+    var isVsto = csprojFiles.some(function(f) {
       try {
         var c = fs.readFileSync(f, 'utf8');
-        return c.indexOf('System.Web') !== -1 || c.indexOf('System.ServiceModel') !== -1;
+        return c.indexOf('Microsoft.Office.Tools') !== -1 ||
+               c.indexOf('Microsoft.Office.Interop') !== -1 ||
+               c.indexOf('BAA0C2D2') !== -1 ||         // VSTO project type GUID
+               c.indexOf('<TargetApplication>') !== -1; // document-level customization
       } catch(e) { return false; }
     });
-    stacks[isFramework ? 'dotnet_framework' : 'dotnet'] = true;
+    if (isVsto) {
+      stacks['vsto'] = true;
+      stacks['dotnet_framework'] = true; // VSTO is always .NET Framework
+    } else {
+      // dotnet_framework: System.Web (MVC/WebForms) OR System.ServiceModel (WCF)
+      // dotnet: modern .NET Core / .NET 5+ / .NET 10
+      // Mutually exclusive — never add both.
+      var isFramework = csprojFiles.some(function(f) {
+        try {
+          var c = fs.readFileSync(f, 'utf8');
+          return c.indexOf('System.Web') !== -1 || c.indexOf('System.ServiceModel') !== -1;
+        } catch(e) { return false; }
+      });
+      stacks[isFramework ? 'dotnet_framework' : 'dotnet'] = true;
+    }
   }
 
   // Java: Maven or Gradle

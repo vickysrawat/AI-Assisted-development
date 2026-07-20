@@ -20,7 +20,100 @@ const fs      = require('fs');
 const os      = require('os');
 const path    = require('path');
 const crypto  = require('crypto');
-const { execSync } = require('child_process');
+const { execSync, spawnSync } = require('child_process');
+
+// ── Shell detection ──────────────────────────────────────────────────────────────
+// Runs once at setup-init/setup-sync time to determine which shell is available
+// AND permitted by Claude Code's settings. Both checks must pass:
+//
+//  1. Claude Code permission check — reads the deny list from:
+//     - ~/.claude/settings.json  (user-level, highest priority)
+//     - .claude/settings.json    (project-level)
+//     - .claude/settings.local.json (local override)
+//     If Bash is in permissions.deny, Claude Code's tool system blocks it even when
+//     bash.exe exists at the OS level. The two are independent — OS availability is
+//     necessary but not sufficient.
+//
+//  2. OS availability check — spawnSync to verify the binary actually executes.
+//     AppLocker, PATH issues, or corporate policy can block it even if not listed in
+//     Claude Code settings.
+//
+// Result stored in dream-init-state.json as shell_type.
+
+function isToolDeniedInClaudeSettings(toolName) {
+  // Read user-level, project-level, and local override settings — all three locations
+  // can contribute deny rules; any one match is sufficient.
+  const settingsPaths = [
+    path.join(os.homedir(), '.claude', 'settings.json'),   // user profile (global)
+    path.join(process.cwd(), '.claude', 'settings.json'),  // project (committed)
+    path.join(process.cwd(), '.claude', 'settings.local.json'), // local override
+  ];
+  for (const sp of settingsPaths) {
+    try {
+      const s = JSON.parse(fs.readFileSync(sp, 'utf8'));
+      // Support both current format (permissions.deny) and legacy (denyTools)
+      const denyList = [
+        ...((s.permissions && s.permissions.deny) || []),
+        ...(s.denyTools || []),
+      ];
+      // Match broad tool denial only — e.g. "Bash" or "Bash(*)" denies everything.
+      // Pattern-specific entries like "Bash(rm -rf *)" restrict specific commands but
+      // still allow others (like `node -e`), so we don't treat those as full denials.
+      if (denyList.some(d =>
+        typeof d === 'string' && (
+          d === toolName ||                     // exact: "Bash"
+          d === toolName + '(*)'               // wildcard: "Bash(*)"
+        )
+      )) return true;
+    } catch(e) { /* file absent or malformed — skip silently */ }
+  }
+  return false;
+}
+
+function detectShell() {
+  // Two-layer check — BOTH must pass for a shell to be selected:
+  //
+  // Layer 1 — Claude Code settings:
+  //   bash AND powershell commands both go through Claude Code's Bash tool.
+  //   If 'Bash' appears in permissions.deny, Claude Code's tool system blocks
+  //   ALL shell commands during a session — regardless of OS availability.
+  //   Wire to node/.cjs so hooks (which run via hook runner, not Bash tool)
+  //   work correctly, and skill node-e commands have the best chance of running.
+  //
+  // Layer 2 — OS availability:
+  //   Even if Bash tool is allowed, the binary may be blocked by AppLocker,
+  //   missing from PATH, or restricted by corporate policy.
+  const bashToolDenied = isToolDeniedInClaudeSettings('Bash');
+  if (bashToolDenied) {
+    // Log to manifest later via warn() — we don't have manifest here, so stdout suffices.
+    console.log('  ℹ Bash tool denied in Claude Code settings — wiring node/.cjs hooks');
+    return 'node';
+  }
+
+  // Layer 2: OS-level checks (only reached if Claude Code allows Bash tool)
+  try {
+    const r = spawnSync('bash', ['-c', 'exit 0'], { stdio: 'ignore', timeout: 3000 });
+    if (r.status === 0) return 'bash';
+  } catch(e) {}
+
+  try {
+    const r = spawnSync('powershell.exe', ['-NonInteractive', '-Command', 'exit 0'],
+                        { stdio: 'ignore', timeout: 3000 });
+    if (r.status === 0) return 'powershell';
+  } catch(e) {}
+
+  return 'node';
+}
+
+function hookCmd(hookName, shellType) {
+  switch (shellType) {
+    case 'bash':       return `bash .claude/hooks/${hookName}.sh`;
+    // -ExecutionPolicy Bypass required — corporate machines often have Restricted or AllSigned policy
+    case 'powershell': return `powershell.exe -NonInteractive -ExecutionPolicy Bypass -File .claude/hooks/${hookName}.ps1`;
+    // Use bare 'node' — settings.json is committed/team-shared; absolute paths are machine-specific
+    default:           return `node .claude/hooks/${hookName}.cjs`;
+  }
+}
 
 // ── A: Constants ─────────────────────────────────────────────────────────────────
 
@@ -67,12 +160,29 @@ const LEGACY_STUB_FILES = [
 ];
 
 // All hook files from _project-deploy/hooks/
+// Three-path architecture: .sh (bash) · .ps1 (PowerShell) · .cjs (Node.js)
+// All three implementations are deployed so detectShell() can wire whichever is available.
 const HOOK_FILES = [
+  // bash path
   'findings-gate-precommit.sh',
-  'check-settings-secrets.cjs',  // Secret guard for the shared settings.json (PreToolUse + pre-commit)
   'graph-stale-detect.sh',
   'icea-floor.sh',
-  'memory-capture.sh',           // Stop hook: memory capture prompt after every turn
+  'memory-capture.sh',
+  'memory-log.sh',
+  // PowerShell path
+  'findings-gate-precommit.ps1',
+  'graph-stale-detect.ps1',
+  'icea-floor.ps1',
+  'memory-capture.ps1',
+  'memory-log.ps1',
+  // Node.js path (always available — used when bash and PS1 are both blocked)
+  'findings-gate-precommit.cjs',
+  'graph-stale-detect.cjs',
+  'icea-floor.cjs',
+  'memory-capture.cjs',
+  'memory-log.cjs',
+  // Always-node (not shell-dependent)
+  'check-settings-secrets.cjs',
   'validate-ledgers.py',
   'validate-pr-compliance.py',
 ];
@@ -123,6 +233,19 @@ const args        = process.argv.slice(2);
 const MODE        = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'init';
 const REPO_TYPE   = args.includes('--repo-type') ? args[args.indexOf('--repo-type') + 1] : null;
 const NO_HOOKS    = args.includes('--no-hooks');   // opt out of the enforcement floor
+// --shell-type overrides detection when terminal context differs from hook execution context
+// (e.g. AppLocker applies differently to Claude Code's spawned processes vs the terminal).
+// Usage: node setup-init-bootstrap.cjs --mode sync --shell-type=node
+const SHELL_TYPE_OVERRIDE = (() => {
+  const idx = args.findIndex(a => a.startsWith('--shell-type'));
+  if (idx < 0) return null;
+  const arg = args[idx];
+  const val = arg.includes('=') ? arg.split('=')[1] : args[idx + 1];
+  if (!['bash', 'powershell', 'node'].includes(val)) {
+    console.error('  ✗ --shell-type must be one of: bash, powershell, node'); process.exit(1);
+  }
+  return val;
+})();
 const PROJECT_ROOT = path.resolve(process.cwd());
 const MANIFEST_PATH = path.join(PROJECT_ROOT, '.claude', MANIFEST_FILE);
 
@@ -238,7 +361,7 @@ async function main() {
 
   if (!fs.existsSync(path.join(PLUGIN_DIR, '.claude-plugin', 'plugin.json'))) {
     console.error('  ✗ Plugin installation not found at: ' + PLUGIN_DIR);
-    console.error('    Run bash install.sh (or .\\install.ps1) to install the plugin first.');
+    console.error('    Install the plugin first: node install.cjs  (or install.sh / install.ps1)');
     process.exit(1);
   }
 
@@ -255,8 +378,14 @@ async function main() {
   stepDeployHooks(manifest);
   stepWritePluginPath(manifest);
   stepDeployProjectSkills(manifest);
-  stepGitPreCommit(manifest);
-  stepWireSettings(manifest);
+  // Detect shell once — shared by all shell-dependent steps so they use the same result.
+  // SHELL_TYPE_OVERRIDE lets developers force a specific path when AppLocker applies differently
+  // in Claude Code's hook execution context vs the terminal where this bootstrap runs.
+  const shellType = SHELL_TYPE_OVERRIDE || detectShell();
+  if (SHELL_TYPE_OVERRIDE) console.log('  ℹ shell-type overridden to: ' + shellType);
+  stepGitPreCommit(manifest, shellType);
+  stepGitPostMerge(manifest, shellType);
+  stepWireSettings(manifest, shellType);
   stepWireUserSettings(manifest);
   stepSeedStateFiles(manifest);
   stepWriteNpmDeps(manifest);
@@ -510,7 +639,7 @@ function stepDeployProjectSkills(manifest) {
 // Installs findings-gate-precommit.sh as .git/hooks/pre-commit (git repos only).
 // Mechanical + safe: backs up a developer's existing hook once, skips if already ours.
 
-function stepGitPreCommit(manifest) {
+function stepGitPreCommit(manifest, shellType) {
   if (isDone(manifest, 'gitPreCommit')) { console.log('  — gitPreCommit: done (skip)'); return; }
   if (NO_HOOKS) {
     console.log('  — pre-commit   : skipped (--no-hooks)');
@@ -524,7 +653,12 @@ function stepGitPreCommit(manifest) {
     markStep(manifest, 'gitPreCommit', { installed: false, reason: 'not a git repo' });
     return;
   }
-  const srcHook = path.join(PROJECT_ROOT, '.claude', 'hooks', 'findings-gate-precommit.sh');
+  // bash → .sh (Git runs via its bundled bash);  powershell or node → .cjs (#!/usr/bin/env node,
+  // resolved by Git for Windows via PATH — no bash required).
+  const hookFile = shellType === 'bash'
+    ? 'findings-gate-precommit.sh'
+    : 'findings-gate-precommit.cjs';
+  const srcHook = path.join(PROJECT_ROOT, '.claude', 'hooks', hookFile);
   if (!fs.existsSync(srcHook)) {
     warn(manifest, 'pre-commit source hook missing — deployHooks may have failed');
     markStep(manifest, 'gitPreCommit', { installed: false, reason: 'source hook missing' });
@@ -553,10 +687,61 @@ function stepGitPreCommit(manifest) {
   markStep(manifest, 'gitPreCommit', { installed: true, action });
 }
 
+// ── H5: stepGitPostMerge ─────────────────────────────────────────────────────────
+// Installs graph-stale-detect as .git/hooks/post-merge + post-checkout (git repos only).
+// These hooks detect knowledge graph staleness after a pull/merge/checkout.
+
+function stepGitPostMerge(manifest, shellType) {
+  if (isDone(manifest, 'gitPostMerge')) { console.log('  — gitPostMerge: done (skip)'); return; }
+  if (NO_HOOKS) {
+    console.log('  — post-merge   : skipped (--no-hooks)');
+    markStep(manifest, 'gitPostMerge', { installed: false, reason: 'no-hooks' });
+    return;
+  }
+  const gitDir = path.join(PROJECT_ROOT, '.git');
+  if (!fs.existsSync(gitDir)) {
+    console.log('  — post-merge   : not a git repo — skipped');
+    markStep(manifest, 'gitPostMerge', { installed: false, reason: 'not a git repo' });
+    return;
+  }
+  const hookFile = shellType === 'bash'
+    ? 'graph-stale-detect.sh'
+    : 'graph-stale-detect.cjs';
+  const srcHook = path.join(PROJECT_ROOT, '.claude', 'hooks', hookFile);
+  if (!fs.existsSync(srcHook)) {
+    warn(manifest, 'post-merge source hook missing: ' + hookFile + ' — deployHooks may have failed');
+    markStep(manifest, 'gitPostMerge', { installed: false, reason: 'source hook missing' });
+    return;
+  }
+  const hooksDir = path.join(gitDir, 'hooks');
+  fs.mkdirSync(hooksDir, { recursive: true });
+  const srcContent = fs.readFileSync(srcHook);
+  const actions = {};
+  for (const hookName of ['post-merge', 'post-checkout']) {
+    const dest = path.join(hooksDir, hookName);
+    if (fs.existsSync(dest) && fs.readFileSync(dest).equals(srcContent)) {
+      actions[hookName] = 'already current';
+    } else {
+      if (fs.existsSync(dest)) {
+        const backup = dest + '.backup';
+        if (!fs.existsSync(backup)) fs.copyFileSync(dest, backup);
+      }
+      fs.copyFileSync(srcHook, dest);
+      try { fs.chmodSync(dest, 0o755); } catch(e) {}
+      actions[hookName] = 'installed';
+    }
+  }
+  console.log('  ✓ post-merge   : ' + actions['post-merge'] + '  post-checkout: ' + actions['post-checkout']);
+  markStep(manifest, 'gitPostMerge', { installed: true, actions });
+}
+
 // ── I: stepWireSettings ───────────────────────────────────────────────────────────
 
-function stepWireSettings(manifest) {
-  if (isDone(manifest, 'wireSettings')) { console.log('  — wireSettings: done (skip)'); return; }
+function stepWireSettings(manifest, shellType) {
+  // No isDone guard — this function is fully idempotent (hooks use some() before adding,
+  // autoMemoryEnabled only set when missing, customInstructions only set when absent)
+  // and autoMemoryEnabled must be checked on every run: external edits (VS Code, Claude Code
+  // defaults) can remove or change it between runs.
   const settingsPath = path.join(PROJECT_ROOT, '.claude', 'settings.json');
   let settings = {};
   if (fs.existsSync(settingsPath)) {
@@ -582,20 +767,26 @@ function stepWireSettings(manifest) {
   let wired = false;
   if (!NO_HOOKS) {
     if (!settings.hooks) settings.hooks = {};
+
+    // ── PreToolUse: icea-floor ────────────────────────────────────────────────────
     if (!settings.hooks.PreToolUse) settings.hooks.PreToolUse = [];
-    const alreadyWired = settings.hooks.PreToolUse.some(
-      h => h.hooks && h.hooks.some(x => x.command && x.command.includes('icea-floor.sh'))
+    const expectedIceaCmd = hookCmd('icea-floor', shellType);
+    const iceaWired = settings.hooks.PreToolUse.some(
+      h => h.hooks && h.hooks.some(x => x.command === expectedIceaCmd)
     );
-    if (!alreadyWired) {
+    if (!iceaWired) {
+      // Remove any stale icea-floor entry (wrong shell type, old dispatch.cjs, etc.)
+      settings.hooks.PreToolUse = settings.hooks.PreToolUse.filter(
+        h => !(h.hooks && h.hooks.some(x => x.command && x.command.includes('icea-floor')))
+      );
       settings.hooks.PreToolUse.push({
         matcher: 'Write|Edit',
-        hooks: [{ type: 'command', command: 'bash .claude/hooks/icea-floor.sh' }],
+        hooks: [{ type: 'command', command: expectedIceaCmd }],
       });
       wired = true;
     }
-    // Secret guard: settings.json is committed/shared, so block any Write|Edit that would
-    // put a secret into it. The detector self-gates on the file path (no-op for other files).
-    // Wired as a `node` command (not bash) — it parses the PreToolUse JSON directly.
+
+    // ── PreToolUse: secret guard (always node — not shell-dependent) ──────────────
     const secretGuardWired = settings.hooks.PreToolUse.some(
       h => h.hooks && h.hooks.some(x => x.command && x.command.includes('check-settings-secrets.cjs'))
     );
@@ -606,39 +797,44 @@ function stepWireSettings(manifest) {
       });
       wired = true;
     }
-    // UserPromptSubmit hook: memory capture reminder — fires when the user submits a message,
-    // injects additionalContext so Claude sees the memory checklist before the new response.
-    // IMPORTANT: additionalContext is only valid on UserPromptSubmit and PostToolUse events;
-    // Stop hooks do NOT support it (JSON validation fails with "Invalid input" if you try).
+
+    // ── UserPromptSubmit: memory-capture ─────────────────────────────────────────
+    // additionalContext is only valid on UserPromptSubmit and PostToolUse — not Stop.
     if (!settings.hooks.UserPromptSubmit) settings.hooks.UserPromptSubmit = [];
+    const expectedMemCapCmd = hookCmd('memory-capture', shellType);
     const memCapWired = settings.hooks.UserPromptSubmit.some(
-      h => h.hooks && h.hooks.some(x => x.command && x.command.includes('memory-capture.sh'))
+      h => h.hooks && h.hooks.some(x => x.command === expectedMemCapCmd)
     );
     if (!memCapWired) {
+      settings.hooks.UserPromptSubmit = settings.hooks.UserPromptSubmit.filter(
+        h => !(h.hooks && h.hooks.some(x => x.command && x.command.includes('memory-capture')))
+      );
       settings.hooks.UserPromptSubmit.push({
-        hooks: [{ type: 'command', command: 'bash .claude/hooks/memory-capture.sh' }],
+        hooks: [{ type: 'command', command: expectedMemCapCmd }],
       });
       wired = true;
     }
-    // Also clean up any stale Stop entry for memory-capture.sh left by the incorrect
-    // earlier wiring (ADR 0049 correction: Stop → UserPromptSubmit).
+    // Clean up any stale Stop entry (ADR 0049: Stop → UserPromptSubmit migration)
     if (settings.hooks.Stop) {
       settings.hooks.Stop = settings.hooks.Stop.filter(
-        h => !(h.hooks && h.hooks.some(x => x.command && x.command.includes('memory-capture.sh')))
+        h => !(h.hooks && h.hooks.some(x => x.command && x.command.includes('memory-capture')))
       );
       if (settings.hooks.Stop.length === 0) delete settings.hooks.Stop;
     }
-    // PostToolUse hook: memory-log.sh — fires after Write/Edit on memory/MEMORY.md and
-    // appends a lightweight [capture] entry to memory/dream-log.md. Deterministic — does
-    // not rely on Claude following a text instruction. Handles CRLF + Windows backslash paths.
+
+    // ── PostToolUse: memory-log ───────────────────────────────────────────────────
     if (!settings.hooks.PostToolUse) settings.hooks.PostToolUse = [];
+    const expectedMemLogCmd = hookCmd('memory-log', shellType);
     const memLogWired = settings.hooks.PostToolUse.some(
-      h => h.hooks && h.hooks.some(x => x.command && x.command.includes('memory-log.sh'))
+      h => h.hooks && h.hooks.some(x => x.command === expectedMemLogCmd)
     );
     if (!memLogWired) {
+      settings.hooks.PostToolUse = settings.hooks.PostToolUse.filter(
+        h => !(h.hooks && h.hooks.some(x => x.command && x.command.includes('memory-log')))
+      );
       settings.hooks.PostToolUse.push({
         matcher: 'Write|Edit',
-        hooks: [{ type: 'command', command: 'bash .claude/hooks/memory-log.sh' }],
+        hooks: [{ type: 'command', command: expectedMemLogCmd }],
       });
       wired = true;
     }
@@ -651,7 +847,20 @@ function stepWireSettings(manifest) {
     + (NO_HOOKS ? 'skipped (--no-hooks)' : (wired ? 'added' : 'already present')));
   console.log('  ✓ settings.json: autoMemoryEnabled '
     + (autoMemSet ? 'set to false (Dream owns repo memory/)' : 'left as-is (developer override)'));
-  markStep(manifest, 'wireSettings', { alreadyWired: !wired, noHooks: NO_HOOKS, autoMemSet });
+
+  // Persist shell_type to dream-init-state.json so /setup-status can surface it and
+  // developers can verify the detected path matches their hook execution context.
+  const statePath = path.join(PROJECT_ROOT, '.claude', 'dream-init-state.json');
+  if (fs.existsSync(statePath)) {
+    try {
+      const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+      state.shell_type = shellType;
+      atomicWrite(statePath, JSON.stringify(state, null, 2));
+      console.log('  ✓ dream-init-state.json: shell_type = ' + shellType);
+    } catch(e) { /* non-fatal — state file may not exist yet on first init */ }
+  }
+
+  markStep(manifest, 'wireSettings', { alreadyWired: !wired, noHooks: NO_HOOKS, autoMemSet, shellType });
 }
 
 // ── J: stepWireUserSettings ───────────────────────────────────────────────────────
@@ -1125,7 +1334,7 @@ function stepClaudeMd(manifest) {
 function hasProjectContent(claudeMdText) {
   // Heuristic from setup-init Step 5 Phase 1: ≥15 lines AND contains a stack keyword
   const lines    = claudeMdText.split('\n').length;
-  const hasStack = /\.NET|Angular|Node\.js|React|Spring|Python|FastAPI|Django|Flask|Java|TypeScript/i.test(claudeMdText);
+  const hasStack = /\.NET|Angular|Node\.js|React|Spring|Python|FastAPI|Django|Flask|Java|TypeScript|VSTO|Office/i.test(claudeMdText);
   return lines >= 15 && hasStack;
 }
 
@@ -1241,12 +1450,14 @@ const ARCH_TEMPLATE_FOLDER = {
   'PYTHON_FASTAPI':   'python-fastapi',
   'PYTHON_DJANGO':    'python-django',
   'PYTHON_FLASK':     'python-flask',
+  'VSTO':             'vsto',
 };
 
 // Layer 3 backend language files — trigger Layer 1 (backend-only) rule deployment
 const BACKEND_LAYER3_RULES = new Set([
   'csharp-dotnet-rules.md',
   'csharp-framework48-rules.md',
+  'csharp-vsto-rules.md',
   'nodejs-typescript-rules.md',
   'python-rules.md',
   'java-rules.md',
@@ -1256,6 +1467,7 @@ const BACKEND_LAYER3_RULES = new Set([
 const STACK_SIGNALS = {
   'csharp-dotnet-rules.md':     ['dotnet', 'csharp'],
   'csharp-framework48-rules.md':['dotnet', 'csharp'],
+  'csharp-vsto-rules.md':       ['vsto', 'dotnet', 'csharp'],
   'nodejs-typescript-rules.md': ['nodejs'],
   'java-rules.md':              ['java'],
   'python-rules.md':            ['python'],

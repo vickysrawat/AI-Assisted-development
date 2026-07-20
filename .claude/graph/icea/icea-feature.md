@@ -2,14 +2,16 @@
 paths: skills/icea-feature
 ---
 <!-- auto-generated — edit graph.json then run /graph-sync -->
-_Fingerprint: 3fe15c3d0ad9844caed828a488dafa165758e8ef | Updated: 2026-07-13_
+_Fingerprint: aeaf18a74eec718e733d430eb47855e020a11f0e | Updated: 2026-07-18_
 
 ## Bounded context
 The ICEA drafting gate — drafts Intent/Context/Examples/Acceptance documents before any
 feature code is written. The most upstream skill in the ICEA workflow.
 
 ## Key files
-- `SKILL.md` — full instruction set; 10+ steps including critic gates at Step 5 (icea mode) and Step 8 (tech mode)
+- `SKILL.md` — full instruction set; Step 8 overlay table now has `vsto` row (before `dotnet_framework`) that selects `techspec-vsto.md` instead of ASP.NET MVC template
+- `references/techspec-vsto.md` — VSTO tech spec overlay: Ribbon Changes, TaskPane Changes, Office Event Handlers, COM Interop Usage table, Files Changed, Test Plan (COM mock assertions), Deployment Impact (ClickOnce version bump), Reviewer Checklist
+- `references/examples.md` — includes VSTO Example 5 (Export to PDF Ribbon button) showing correct AC shape: COM lifecycle (AC-NF1), Office version matrix (AC-NF2), COMException handling (AC-NF3) — NOT HTTP status codes
 
 ## Dependencies
 - `skills/shared/write-gate-spec.md` — WRITE PENDING gate for all source/config writes
@@ -21,7 +23,6 @@ feature code is written. The most upstream skill in the ICEA workflow.
 ## Patterns
 - Blocks implementation until ICEA receives `Status: ✅ Approved`
 - Critic fires at two planning gates: ICEA draft (Step 5) and Tech Spec draft (Step 8)
-- Bounded auto-revise loop (max 2 retries) at each critic gate
-- Saves ICEA to `docs/Release{R}/Sprint{S}/UserStory{ID}/ADO-{ID}-*.icea.md`
+- VSTO tech spec overlay: `vsto` token in `detected_stacks` → `techspec-vsto.md` (takes priority over `dotnet_framework` row)
 
 **Depended on by:** icea-implement (reads the saved ICEA), icea-review.

@@ -90,6 +90,9 @@ find . -name "*.ts" -maxdepth 4 | head -1 && echo "TYPESCRIPT"
 find . -name "*.py" -maxdepth 4 | head -1 && echo "PYTHON"
 find . -name "*.java" -maxdepth 4 | head -1 && echo "JAVA"
 find . -name "*.go" -maxdepth 4 | head -1 && echo "GO"
+# VSTO: Office add-in or document-level customization
+find . \( -name "ThisAddIn.cs" -o -name "ThisWorkbook.cs" -o -name "ThisDocument.cs" \) \
+  -maxdepth 5 2>/dev/null | head -1 && echo "VSTO"
 ```
 
 Announce what will be loaded:
@@ -104,6 +107,9 @@ Only load the language-notes.md sections for detected languages. Do NOT load
 Python, Java, or Go notes for a pure .NET/TypeScript project. Do NOT load
 cloud-checks.md unless cloud infrastructure files are present. Load
 compliance-controls.md only if the user mentions a compliance framework.
+If VSTO detected, also load `$PLUGIN_DIR/skills/security/references/vsto-checks.md`
+— it contains VSTO-specific Pass 1 patterns (COM trust, ClickOnce MITM, code signing,
+macro security) that complement the standard pass1-patterns.md.
 
 ### Step 0c — Determine scope
 

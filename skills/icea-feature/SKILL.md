@@ -572,6 +572,7 @@ Select overlay based on all_stacks (primary ∪ external):
 
 | all_stacks contains | Overlay to use |
 |---|---|
+| `vsto` (regardless of other tokens) | `techspec-vsto.md` |
 | `dotnet` or `dotnet_framework`, no `angular`, no `nodejs` | `techspec-aspnet-mvc-jquery.md` |
 | `dotnet` or `dotnet_framework` + `angular`, no `nodejs` | `techspec-aspnet-api-angular.md` |
 | `angular` + `nodejs` (with or without `dotnet`/`dotnet_framework`) | `techspec-angular-nodejs.md` |

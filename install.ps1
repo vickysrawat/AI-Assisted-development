@@ -1,4 +1,4 @@
-# ai-assisted-development plugin — install / update / uninstall
+# ai-assisted-development plugin - install / update / uninstall
 # Run with: .\install.ps1
 # Update:   .\install.ps1 -Update
 # Uninstall: .\install.ps1 -Uninstall   (add -Yes to skip the confirmation prompt)
@@ -14,7 +14,7 @@ $PLUGIN_NAME      = "ai-assisted-development"
 # Identity: single source of truth is .claude-plugin/config.json (co-located with
 # this script). The plugin ships company-agnostic; on a fresh install the values
 # are prompted (Prompt-Identity) and written back to config.json. Never hardcode
-# org/project/company here — generic placeholders are the only fallback.
+# org/project/company here - generic placeholders are the only fallback.
 $CONFIG_JSON = Join-Path $PSScriptRoot ".claude-plugin\config.json"
 $COMPANY = "Your Company"; $ADO_ORG = "your-org"; $ADO_PROJECT = "your-project"
 $ADO_BASE = "https://dev.azure.com"; $ADO_PLUGIN_REPO = $PLUGIN_NAME
@@ -58,7 +58,7 @@ function Prompt-Identity {
   $i = Read-Host "  Company / team [$script:COMPANY]";   if ($i) { $script:COMPANY = $i }
   $i = Read-Host "  ADO base URL [$script:ADO_BASE]";    if ($i) { $script:ADO_BASE = $i }
   $script:ADO_REPO_URL = "$script:ADO_BASE/$script:ADO_ORG/$script:ADO_PROJECT/_git/$script:ADO_PLUGIN_REPO"
-  # Re-derive marketplace name/paths from the entered org — fresh install only.
+  # Re-derive marketplace name/paths from the entered org - fresh install only.
   if (-not $script:EXISTING_PLUGIN_DIR) {
     $script:MARKETPLACE_NAME = Derive-Marketplace $script:ADO_ORG
     $script:MARKETPLACE_DIR  = "$env:USERPROFILE\.claude\plugins\$script:MARKETPLACE_NAME"
@@ -88,10 +88,17 @@ function Write-Red($msg)    { Write-Host $msg -ForegroundColor Red }
 function Write-Cyan($msg)   { Write-Host $msg -ForegroundColor Cyan }
 function Write-Banner($msg) {
   Write-Host ""
-  Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  Write-Host "========================================"
   Write-Host "  $msg"
-  Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  Write-Host "========================================"
   Write-Host ""
+}
+
+function Safe-Copy($src, $dest) {
+  $exclude = @('.git', 'docs', '.vs', 'node_modules')
+  Get-ChildItem -Path $src |
+    Where-Object { $_.Name -notin $exclude } |
+    ForEach-Object { Copy-Item -Recurse -Force $_.FullName $dest }
 }
 
 function Run-NodeScript($script) {
@@ -100,7 +107,7 @@ function Run-NodeScript($script) {
   Remove-Item -Force $TEMP_JS -ErrorAction SilentlyContinue
 }
 
-# Read version from plugin.json — never hardcode it
+# Read version from plugin.json - never hardcode it
 function Get-PluginVersion($pluginDir) {
   $pjPath = "$pluginDir\.claude-plugin\plugin.json"
   if (Test-Path $pjPath) {
@@ -112,7 +119,7 @@ function Get-PluginVersion($pluginDir) {
   return "unknown"
 }
 
-# Ask install/update source — shared between fresh install and -Update
+# Ask install/update source - shared between fresh install and -Update
 function Select-Source($isUpdate) {
   $verb = if ($isUpdate) { "update" } else { "install" }
   Write-Cyan "How would you like to $verb the plugin?"
@@ -126,12 +133,12 @@ function Select-Source($isUpdate) {
   return Read-Host "Enter choice [1/2]"
 }
 
-# ── Banner ─────────────────────────────────────────────────────────────────────
+# -- Banner ---------------------------------------------------------------------
 $installedVersion = Get-PluginVersion $PLUGIN_DIR
 if ($installedVersion -eq "unknown") { $installedVersion = "not installed" }
 Write-Banner "ai-assisted-development  |  currently installed: v$installedVersion"
 
-# ── Uninstall mode ─────────────────────────────────────────────────────────────
+# -- Uninstall mode -------------------------------------------------------------
 if ($Uninstall) {
   Write-Yellow "Uninstalling $PLUGIN_NAME..."
   Write-Host ""
@@ -142,19 +149,19 @@ if ($Uninstall) {
     Write-Host "  Removing marketplace registration..."
     claude plugin marketplace remove $MARKETPLACE_NAME 2>$null
   } else {
-    Write-Yellow "  claude CLI not found — skipping plugin uninstall commands."
+    Write-Yellow "  claude CLI not found - skipping plugin uninstall commands."
   }
 
   # Clean up global plugin config: cache dirs (all versions), caches orphaned by a
   # marketplace rename/version bumps, and stale extraKnownMarketplaces entries.
   if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
-    Write-Yellow "  node not found — cannot clean plugin config files."
+    Write-Yellow "  node not found - cannot clean plugin config files."
     Write-Host  "  Install Node.js and re-run, or remove $MARKETPLACE_DIR manually."
     exit 1
   }
 
   $cleanupJs = Join-Path $PSScriptRoot "scripts\uninstall-cleanup.js"
-  # Dry-run first — show exactly what will be removed.
+  # Dry-run first - show exactly what will be removed.
   & node $cleanupJs --plugin $PLUGIN_NAME --marketplace $MARKETPLACE_NAME
 
   $doApply = $Yes
@@ -165,7 +172,7 @@ if ($Uninstall) {
 
   if (-not $doApply) {
     Write-Host ""
-    Write-Yellow "Aborted — nothing removed. Re-run with -Yes to remove without a prompt."
+    Write-Yellow "Aborted - nothing removed. Re-run with -Yes to remove without a prompt."
     Write-Host ""
     exit 0
   }
@@ -175,23 +182,23 @@ if ($Uninstall) {
   Write-Host ""
   Write-Green "Uninstalled successfully."
   Write-Host ""
-  Write-Yellow "Note: If you stored AZURE_DEVOPS_PAT in .claude/settings.json, remove it manually —"
+  Write-Yellow "Note: If you stored AZURE_DEVOPS_PAT in .claude/settings.json, remove it manually -"
   Write-Host  "  the uninstall does not clear credentials."
   Write-Host ""
   exit 0
 }
 
-# ── Update mode ────────────────────────────────────────────────────────────────
+# -- Update mode ----------------------------------------------------------------
 if ($Update) {
   if (-not (Test-Path $PLUGIN_DIR)) {
     Write-Red "Plugin not installed. Run .\install.ps1 first."
     exit 1
   }
 
-  Write-Cyan "Update mode — plugin found at $PLUGIN_DIR"
+  Write-Cyan "Update mode - plugin found at $PLUGIN_DIR"
   Write-Host ""
 
-  # Preserve the installed identity — an update copy/pull would otherwise revert
+  # Preserve the installed identity - an update copy/pull would otherwise revert
   # config.json to the shipped placeholders.
   $cfgBackup = $null
   $installedCfg = Join-Path $PLUGIN_DIR ".claude-plugin\config.json"
@@ -206,7 +213,7 @@ if ($Update) {
   switch ($choice) {
     "1" {
       if (-not (Test-Path "$PLUGIN_DIR\.git")) {
-        Write-Red "Plugin was not installed via git — cannot pull."
+        Write-Red "Plugin was not installed via git - cannot pull."
         Write-Yellow "Use option 2 (local folder) to update instead."
         exit 1
       }
@@ -218,7 +225,7 @@ if ($Update) {
     "2" {
       Write-Host "Enter the full path to the folder containing the new plugin version."
       Write-Host "  e.g. C:\Users\rawatv\Downloads\ai-assisted-development_V2_1_1"
-      Write-Yellow "  Do NOT press Enter to use the current folder — point to the extracted zip folder."
+      Write-Yellow "  Do NOT press Enter to use the current folder - point to the extracted zip folder."
       $localPath = Read-Host "Path"
 
       if ([string]::IsNullOrWhiteSpace($localPath)) {
@@ -237,7 +244,7 @@ if ($Update) {
       }
 
       Write-Host "Copying from $localPath ..."
-      Copy-Item -Recurse -Force "$localPath\*" $PLUGIN_DIR
+      Safe-Copy $localPath $PLUGIN_DIR
     }
     default {
       Write-Red "Invalid choice."
@@ -268,13 +275,13 @@ if ($Update) {
     {
       "name": "$PLUGIN_NAME",
       "source": "./plugins/$PLUGIN_NAME",
-      "description": "ICEA-driven development workflow — v$newVersion"
+      "description": "ICEA-driven development workflow - v$newVersion"
     }
   ]
 }
 "@
 
-  # Copying the source files alone does NOT change the version Claude loads — it serves
+  # Copying the source files alone does NOT change the version Claude loads - it serves
   # from a version-keyed cache dir recorded in installed_plugins.json. Re-read the source
   # marketplace, then update the plugin so the new version is copied into the cache.
   if (Get-Command claude -ErrorAction SilentlyContinue) {
@@ -283,13 +290,13 @@ if ($Update) {
     Write-Host "  -> Applying v$newVersion..."
     claude plugin update "$PLUGIN_NAME@$MARKETPLACE_NAME" 2>$null
   } else {
-    Write-Yellow "  claude CLI not found — run 'claude plugin update $PLUGIN_NAME@$MARKETPLACE_NAME' manually."
+    Write-Yellow "  claude CLI not found - run 'claude plugin update $PLUGIN_NAME@$MARKETPLACE_NAME' manually."
   }
 
   Write-Host ""
-  Write-Green "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  Write-Green "========================================"
   Write-Green "  Plugin updated: v$installedVersion → v$newVersion"
-  Write-Green "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  Write-Green "========================================"
   Write-Host ""
   Write-Host "Start a new Claude Code session to load the updated plugin."
   Write-Host "Then run /setup-sync in each project to update the plugin version."
@@ -297,7 +304,7 @@ if ($Update) {
   exit 0
 }
 
-# ── Preflight checks ───────────────────────────────────────────────────────────
+# -- Preflight checks -----------------------------------------------------------
 if (-not (Get-Command claude -ErrorAction SilentlyContinue)) {
   Write-Red "Claude Code CLI not found. Install it with: npm install -g @anthropic-ai/claude-code"
   exit 1
@@ -311,10 +318,10 @@ if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
   exit 1
 }
 
-# ── Configure identity (prompt on fresh install) ────────────────────────────────
+# -- Configure identity (prompt on fresh install) --------------------------------
 Prompt-Identity
 
-# ── Handle existing install ────────────────────────────────────────────────────
+# -- Handle existing install ----------------------------------------------------
 if (Test-Path $PLUGIN_DIR) {
   Write-Yellow "Existing install found at $PLUGIN_DIR (v$installedVersion)"
   Write-Yellow "To update an existing install use: .\install.ps1 -Update"
@@ -328,7 +335,7 @@ if (Test-Path $PLUGIN_DIR) {
 
 New-Item -ItemType Directory -Force -Path "$MARKETPLACE_DIR\plugins" | Out-Null
 
-# ── Source selection ───────────────────────────────────────────────────────────
+# -- Source selection -----------------------------------------------------------
 $choice = Select-Source $false
 Write-Host ""
 
@@ -357,7 +364,7 @@ switch ($choice) {
     }
 
     Write-Host "Copying from $localPath ..."
-    Copy-Item -Recurse -Force "$localPath\*" $PLUGIN_DIR
+    Safe-Copy $localPath $PLUGIN_DIR
   }
   default {
     Write-Red "Invalid choice. Run the script again and enter 1 or 2."
@@ -365,18 +372,18 @@ switch ($choice) {
   }
 }
 
-# ── Validate ───────────────────────────────────────────────────────────────────
+# -- Validate -------------------------------------------------------------------
 if (-not (Test-Path "$PLUGIN_DIR\.claude-plugin\plugin.json")) {
-  Write-Red "Install failed — plugin.json not found. Check the source and retry."
+  Write-Red "Install failed - plugin.json not found. Check the source and retry."
   exit 1
 }
 
 $newVersion = Get-PluginVersion $PLUGIN_DIR
 
-# ── Persist entered identity into the installed plugin's config.json ────────────
+# -- Persist entered identity into the installed plugin's config.json ------------
 Write-PluginConfig
 
-# ── Create marketplace wrapper ─────────────────────────────────────────────────
+# -- Create marketplace wrapper -------------------------------------------------
 New-Item -ItemType Directory -Force -Path "$MARKETPLACE_DIR\.claude-plugin" | Out-Null
 
 $winPath = $MARKETPLACE_DIR -replace '\\', '\\\\'
@@ -389,13 +396,13 @@ Set-Content -Path "$MARKETPLACE_DIR\.claude-plugin\marketplace.json" -Encoding U
     {
       "name": "$PLUGIN_NAME",
       "source": "./plugins/$PLUGIN_NAME",
-      "description": "ICEA-driven development workflow — v$newVersion"
+      "description": "ICEA-driven development workflow - v$newVersion"
     }
   ]
 }
 "@
 
-# ── Write extraKnownMarketplaces to settings.json ─────────────────────────────
+# -- Write extraKnownMarketplaces to settings.json -----------------------------
 if (-not (Test-Path $SETTINGS_FILE)) { Set-Content $SETTINGS_FILE "{}" -Encoding UTF8 }
 
 $jsInstall = @"
@@ -416,14 +423,14 @@ if (settings.extraKnownMarketplaces[marketplaceName]) {
 "@
 Run-NodeScript $jsInstall
 
-# ── Clear stale plugin cache ──────────────────────────────────────────────────
+# -- Clear stale plugin cache --------------------------------------------------
 $cacheDir = "$env:USERPROFILE\.claude\plugins\cache"
 if (Test-Path $cacheDir) {
   Write-Host "Clearing plugin cache..."
   Get-ChildItem $cacheDir -Filter "temp_local_*" | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-# ── Set up ado-helper .env ─────────────────────────────────────────────────────
+# -- Set up ado-helper .env -----------------------------------------------------
 $adoEnvFile     = "$PLUGIN_DIR\tools\ado-helper\.env"
 $adoEnvTemplate = "$PLUGIN_DIR\tools\ado-helper\.env.template"
 
@@ -436,13 +443,13 @@ if (-not (Test-Path $adoEnvFile)) {
   $envContent = Get-Content $adoEnvFile -Raw
   if ($envContent -notmatch '(?m)^ADO_PAT=') {
     Add-Content $adoEnvFile "`r`nADO_PAT=paste_your_pat_here"
-    Write-Yellow "ADO_PAT key added to existing tools\ado-helper\.env — fill in your token"
+    Write-Yellow "ADO_PAT key added to existing tools\ado-helper\.env - fill in your token"
   } else {
     Write-Green "tools\ado-helper\.env already configured"
   }
 }
 
-# ── Register marketplace and install ──────────────────────────────────────────
+# -- Register marketplace and install ------------------------------------------
 Write-Host ""
 Write-Host "Registering marketplace and installing plugin..."
 Write-Host ""
@@ -457,7 +464,7 @@ $installOutput | ForEach-Object { Write-Host $_ }
 
 if ($LASTEXITCODE -ne 0 -or ($installOutput -match "Failed to install")) {
   Write-Host ""
-  Write-Red "Installation failed — rolling back..."
+  Write-Red "Installation failed - rolling back..."
   Write-Host ""
   claude plugin uninstall "$PLUGIN_NAME@$MARKETPLACE_NAME" --scope user 2>$null
   claude plugin marketplace remove $MARKETPLACE_NAME 2>$null
@@ -467,51 +474,51 @@ if ($LASTEXITCODE -ne 0 -or ($installOutput -match "Failed to install")) {
   Write-Red "Rollback complete. Plugin has been fully removed."
   Write-Host ""
   Write-Yellow "To retry:"
-  Write-Host "  1. Re-run this script — the stale cache has been cleared."
+  Write-Host "  1. Re-run this script - the stale cache has been cleared."
   Write-Host "  2. If the error mentions 'author' or 'manifest': ensure you are"
   Write-Host "     using the latest zip from the release page."
   Write-Host "  3. If the error persists, run /doctor in Claude Code for details."
   exit 1
 }
 
-# ── Force the current version into Claude's cache ──────────────────────────────
+# -- Force the current version into Claude's cache ------------------------------
 # Claude serves the plugin from a version-keyed cache dir recorded in
-# installed_plugins.json — NOT from the marketplace source. When a prior version is
+# installed_plugins.json - NOT from the marketplace source. When a prior version is
 # already installed, the 'install' above is a no-op, so 'update' is what actually copies
 # the refreshed version into the cache and rewrites installed_plugins.json. Harmless
 # (no-op) on a genuinely fresh install.
 claude plugin update "$PLUGIN_NAME@$MARKETPLACE_NAME" 2>$null
 
-# ── Count commands dynamically ────────────────────────────────────────────────
+# -- Count commands dynamically ------------------------------------------------
 $commandCount = (Get-ChildItem "$PLUGIN_DIR\commands" -Filter "*.md" -ErrorAction SilentlyContinue | Measure-Object).Count
 
-# ── Success ────────────────────────────────────────────────────────────────────
+# -- Success --------------------------------------------------------------------
 Write-Host ""
-Write-Green "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-Write-Green "  Plugin installed successfully — v$newVersion"
-Write-Green "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+Write-Green "======================================================================="
+Write-Green "  Plugin installed successfully - v$newVersion"
+Write-Green "======================================================================="
 Write-Host ""
-Write-Host "┌─ Next steps ──────────────────────────────────────────────────────────┐"
-Write-Host "│                                                                        │"
-Write-Host "│  1. Open your project in VS Code                                       │"
-Write-Host "│  2. Open a terminal and run: claude                                    │"
-Write-Host "│  3. Inside the session, run: /setup-init (new project)                 │"
-Write-Host "│                          or: /setup-sync (existing project)            │"
-Write-Host "│     setup-sync updates the plugin version in your project files.       │"
-Write-Host "│  4. Set AZURE_DEVOPS_PAT as a Windows User Environment Variable        │"
-Write-Host "│     Required by: /pr-create  /sprint-metrics  /app-readiness           │"
-Write-Host "│     Win+S -> 'environment variables' -> User variables -> New          │"
-Write-Host "│  4a. If you store PAT in .claude/settings.json instead, add that       │"
-Write-Host "│     file to .gitignore immediately — /setup-status will flag it Red.   │"
-Write-Host "│  5. Run /setup-status to verify all infrastructure checks are green    │"
-Write-Host "│                                                                        │"
-Write-Host ("│  Available commands (type / in Claude Code to see all $commandCount):              │")
-Write-Host "│  SAVE ICEA  SAVE TECH  APPROVE  IMPLEMENT  REVISE  STATUS             │"
-Write-Host "│  dream  setup-status  session-start  icea-feature  code-review         │"
-Write-Host "│  checkin  bug  fix  explain  app-readiness  security-review            │"
-Write-Host "│                                                                        │"
-Write-Host "│  To update later:    .\install.ps1 -Update                            │"
-Write-Host "│  To uninstall later: .\install.ps1 -Uninstall                         │"
-Write-Host "└────────────────────────────────────────────────────────────────────────┘"
+Write-Host "+- Next steps ----------------------------------------------------------+"
+Write-Host "|                                                                        |"
+Write-Host "|  1. Open your project in VS Code                                       |"
+Write-Host "|  2. Open a terminal and run: claude                                    |"
+Write-Host "|  3. Inside the session, run: /setup-init (new project)                 |"
+Write-Host "|                          or: /setup-sync (existing project)            |"
+Write-Host "|     setup-sync updates the plugin version in your project files.       |"
+Write-Host "|  4. Set AZURE_DEVOPS_PAT as a Windows User Environment Variable        |"
+Write-Host "|     Required by: /pr-create  /sprint-metrics  /app-readiness           |"
+Write-Host "|     Win+S -> 'environment variables' -> User variables -> New          |"
+Write-Host "|  4a. If you store PAT in .claude/settings.json instead, add that       |"
+Write-Host "|     file to .gitignore immediately - /setup-status will flag it Red.   |"
+Write-Host "|  5. Run /setup-status to verify all infrastructure checks are green    |"
+Write-Host "|                                                                        |"
+Write-Host ("|  Available commands (type / in Claude Code to see all $commandCount):              |")
+Write-Host "|  SAVE ICEA  SAVE TECH  APPROVE  IMPLEMENT  REVISE  STATUS             |"
+Write-Host "|  dream  setup-status  session-start  icea-feature  code-review         |"
+Write-Host "|  checkin  bug  fix  explain  app-readiness  security-review            |"
+Write-Host "|                                                                        |"
+Write-Host "|  To update later:    .\install.ps1 -Update                            |"
+Write-Host "|  To uninstall later: .\install.ps1 -Uninstall                         |"
+Write-Host "+------------------------------------------------------------------------+"
 Write-Host ""
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+Write-Host "========================================"

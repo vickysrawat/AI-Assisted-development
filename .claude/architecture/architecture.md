@@ -74,6 +74,16 @@ flowchart LR
     CC -->|Docker| ZAP[OWASP ZAP]
     SK -->|runs| BOOT[setup-init-bootstrap.cjs]
     BOOT -->|deploys to| TARGET[target project .claude/]
+    style DEV fill:#7F8C8D,color:#ffffff,stroke:#616A6B,stroke-width:2px
+    style CC fill:#1F618D,color:#ffffff,stroke:#154360,stroke-width:2px
+    style SK fill:#1F618D,color:#ffffff,stroke:#154360,stroke-width:2px
+    style GRAPH fill:#2C3E50,color:#ffffff,stroke:#1a252f,stroke-width:2px
+    style ARCH fill:#2C3E50,color:#ffffff,stroke:#1a252f,stroke-width:2px
+    style MEMORY fill:#2C3E50,color:#ffffff,stroke:#1a252f,stroke-width:2px
+    style ADO fill:#1ABC9C,color:#ffffff,stroke:#0E8472,stroke-width:2px
+    style ZAP fill:#1ABC9C,color:#ffffff,stroke:#0E8472,stroke-width:2px
+    style BOOT fill:#1F618D,color:#ffffff,stroke:#154360,stroke-width:2px
+    style TARGET fill:#1F618D,color:#ffffff,stroke:#154360,stroke-width:2px
 
 ```
 
@@ -94,6 +104,16 @@ flowchart TB
     SHARED --> ARCHDOCS[.claude/architecture]
     SKILL --> ADO2[Azure DevOps REST API]
     SKILL --> ZAP2[OWASP ZAP Docker]
+    style CMD fill:#3498DB,color:#ffffff,stroke:#1a5276,stroke-width:2px
+    style SKILL fill:#1F618D,color:#ffffff,stroke:#154360,stroke-width:2px
+    style SCRIPTS fill:#1F618D,color:#ffffff,stroke:#154360,stroke-width:2px
+    style RULES fill:#2C3E50,color:#ffffff,stroke:#1a252f,stroke-width:2px
+    style SHARED fill:#1F618D,color:#ffffff,stroke:#154360,stroke-width:2px
+    style META fill:#2C3E50,color:#ffffff,stroke:#1a252f,stroke-width:2px
+    style GRAPH2 fill:#2C3E50,color:#ffffff,stroke:#1a252f,stroke-width:2px
+    style ARCHDOCS fill:#2C3E50,color:#ffffff,stroke:#1a252f,stroke-width:2px
+    style ADO2 fill:#1ABC9C,color:#ffffff,stroke:#0E8472,stroke-width:2px
+    style ZAP2 fill:#1ABC9C,color:#ffffff,stroke:#0E8472,stroke-width:2px
 
 ```
 </div>

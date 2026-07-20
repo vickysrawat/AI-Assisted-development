@@ -286,7 +286,94 @@ Q7. Entra ID (Azure AD) authentication — detected in this codebase
                 c) No logout implemented
 ```
 
-**Only show Q8 if `AUTH_NONE` is true:**
+**VSTO EXCEPTION — if `REPO_TYPE == VSTO` (detected in Step 1 or provided by developer):**
+Replace the entire Q1–Q9 questionnaire above with the following VSTO-specific questions.
+VSTO add-ins deploy to end-user machines, not servers — IIS, Docker, App Service, and
+database migrations do not apply.
+
+```
+Q1-VSTO. Deployment method
+    a) ClickOnce from a network share (UNC path)
+    b) ClickOnce from an HTTP/HTTPS server
+    c) MSI / Windows Installer (custom bootstrapper)
+    d) Admin install (registry-based, no ClickOnce)
+    e) Direct deployment (development / internal only)
+
+Q2-VSTO. Code signing certificate
+    a) Self-signed (development / internal trust only)
+    b) CA-issued (trusted by external machines without prompts)
+    c) EV (Extended Validation — highest trust, no prompt)
+    d) Not signed (trust via Inclusion List or GPO)
+
+Q3-VSTO. Target Office host and versions
+    (e.g. Excel 2019 + Microsoft 365 / Word 365 only)
+
+Q4-VSTO. Office bitness
+    a) 32-bit Office only
+    b) 64-bit Office only
+    c) Both 32-bit and 64-bit (AnyCPU build or separate targets)
+
+Q5-VSTO. Install scope
+    a) Per-user (HKCU — no admin rights required)
+    b) Machine-wide (HKLM — requires administrator)
+
+Q6-VSTO. Update mechanism
+    a) ClickOnce automatic (checks deployment URL on each startup)
+    b) ClickOnce on-demand (user triggers update check)
+    c) Manual redeploy (IT pushes new MSI or ClickOnce publish)
+    d) Not configured yet
+
+Q7-VSTO. CI/CD pipeline
+    Detected: {detected pipeline file(s) or "none found"}
+    - Does the pipeline build and code-sign the add-in?  (yes / no / not configured)
+    - Does the pipeline publish the ClickOnce manifest?   (yes / no / not configured)
+
+Q8-VSTO. Non-functional requirements
+    - Startup time target (time from Office launch to add-in ready)?  (value / "none defined")
+    - Compliance frameworks in scope (SOC 2 / GDPR / HIPAA / none)?
+    - Data residency constraints?                                      (value / "none")
+```
+
+For VSTO, skip the standard Phase 3 draft template and use this VSTO deployment draft instead:
+
+```
+## Deployment Model
+| Item | Value |
+|---|---|
+| Deployment method | {Q1-VSTO} |
+| Deployment provider URL | {from manifest or "⚠ not configured"} |
+| Install scope | {Q5-VSTO} |
+| Update mechanism | {Q6-VSTO} |
+| minimumRequiredVersion | {from manifest or "⚠ not set"} |
+
+## Trust & Code Signing
+| Item | Value |
+|---|---|
+| Certificate type | {Q2-VSTO} |
+| Certificate issuer | {from csproj ManifestKeyFile or "⚠ needs manual input"} |
+
+## Office Version and Bitness Matrix
+| Office version | 32-bit | 64-bit | Notes |
+|---|---|---|---|
+{Q3-VSTO + Q4-VSTO — one row per version}
+
+## CI/CD Pipeline
+| Item | Value |
+|---|---|
+| Tool | Azure DevOps Pipelines |
+| Pipeline file | {detected or provided} |
+| Builds with signing | {Q7-VSTO} |
+| Publishes ClickOnce manifest | {Q7-VSTO} |
+
+## Non-Functional Requirements & Constraints
+| Item | Value |
+|---|---|
+| Startup time target | {Q8-VSTO} |
+| Compliance frameworks | {Q8-VSTO} |
+| Data residency constraints | {Q8-VSTO} |
+```
+
+**Only show Q8 if `AUTH_NONE` is true (non-VSTO repos only):**
 ```
 Q8. No authentication signals detected
     Is this application intentionally unauthenticated (public API, static site)?
@@ -497,6 +584,10 @@ find . -name "manage.py" -maxdepth 2 2>/dev/null | head -1 | grep -q "." && echo
 { grep -rl "[Ff]lask" --include=requirements.txt --include=pyproject.toml . 2>/dev/null; } \
   | head -1 | grep -q "." && echo "PYTHON_FLASK"
 
+# VSTO add-in or document-level customization (check before ASPNET_FRAMEWORK)
+find . \( -name "ThisAddIn.cs" -o -name "ThisWorkbook.cs" -o -name "ThisDocument.cs" \) \
+  -maxdepth 5 2>/dev/null | head -1 | grep -q "." && echo "VSTO"
+
 # Legacy ASP.NET Framework (packages.config or web.config without SDK-style csproj)
 ls packages.config 2>/dev/null && echo "ASPNET_FRAMEWORK"
 find . -name "packages.config" -maxdepth 3 2>/dev/null | head -1 | grep -q "." && echo "ASPNET_FRAMEWORK"
@@ -515,7 +606,7 @@ signal matches, prefer the most specific in this order: `PYTHON_DJANGO` →
 ```
 ⚠ Could not detect repo type automatically.
 Please specify: dotnet-api | angular-nx | angular-standard | react | js-library
-              | aspnet-framework | aspnet-mvc | spring-boot
+              | aspnet-framework | aspnet-mvc | spring-boot | vsto
               | python-fastapi | python-django | python-flask
 ```
 And wait for input.
@@ -536,10 +627,44 @@ fs.writeFileSync(p,JSON.stringify(s,null,2));
 "
 ```
 
-**1b. Run Bootstrap Phase 2:**
-```bash
-PLUGIN_DIR="$(cat .claude/plugin-path.txt 2>/dev/null | tr -d '\n')"
-node "$PLUGIN_DIR/scripts/setup-init-bootstrap.cjs" --mode post-detect --repo-type REPLACE_WITH_REPO_TYPE
+**1b. Resolve PLUGIN_DIR (authoritative — reads registry, self-heals plugin-path.txt):**
+
+```javascript
+node -e "
+const fs=require('fs'),os=require('os'),path=require('path');
+const ptf = '.claude/plugin-path.txt';
+let cachedDir = '';
+try { cachedDir = fs.existsSync(ptf) ? fs.readFileSync(ptf,'utf8').trim() : ''; } catch(e) {}
+
+const base=path.join(os.homedir(),'.claude','plugins');
+let registeredDir='';
+try {
+  const reg=JSON.parse(fs.readFileSync(path.join(base,'installed_plugins.json'),'utf8'));
+  const key=Object.keys(reg.plugins||{}).find(k=>k.startsWith('ai-assisted-development@'));
+  if(key){ const a=reg.plugins[key]||[]; const e=a.find(x=>x.scope==='user')||a[0];
+    if(e) registeredDir=(e.installPath||'').split(path.sep).join('/'); }
+} catch(e) {}
+
+const pluginDir = (registeredDir && fs.existsSync(registeredDir)) ? registeredDir : cachedDir;
+if(!pluginDir || !fs.existsSync(pluginDir)) {
+  console.error('PLUGIN_DIR_NOT_FOUND — install the plugin first: node install.cjs');
+  process.exit(1);
+}
+if(pluginDir !== cachedDir) {
+  fs.writeFileSync(ptf, pluginDir+'\n');
+  console.log('plugin-path.txt self-healed: '+pluginDir);
+}
+console.log(pluginDir);
+"
+```
+
+**Stop if PLUGIN_DIR_NOT_FOUND** — do not proceed without a valid plugin directory.
+Use the output line as `PLUGIN_DIR` for all subsequent steps.
+
+**1c. Run Bootstrap Phase 2** — substitute the actual PLUGIN_DIR and REPO_TYPE values:
+
+```
+node {PLUGIN_DIR}/scripts/setup-init-bootstrap.cjs --mode post-detect --repo-type {REPO_TYPE}
 ```
 
 Wait for the script to print `✓ Bootstrap Phase 2 complete` before continuing.
@@ -600,6 +725,7 @@ stack file overriding the shared one. Every repo type still resolves to the same
 | `JS_LIBRARY` | `templates/js-library/` | `architecture-api.md` |
 | `ASPNET_FRAMEWORK` | `templates/aspnet-framework/` | `architecture-flows.md` |
 | `ASPNET_MVC` | `templates/aspnet-mvc/` | `architecture-flows.md` |
+| `VSTO` | `templates/vsto/` | `architecture-flows.md` |
 | `SPRING_BOOT` | `templates/spring-boot/` | `architecture-callchains.md` |
 | `PYTHON_FASTAPI` | `templates/python-fastapi/` | `architecture-flows.md` |
 | `PYTHON_DJANGO` | `templates/python-django/` | `architecture-flows.md` |
@@ -613,20 +739,43 @@ stack file overriding the shared one. Every repo type still resolves to the same
 
 ## Step 3 — Deploy templates to .claude/architecture/
 
-**Populated-files guard (run first):** Check whether all files for this repo type are
-already populated. Use the **two-signal detector** from `$PLUGIN_DIR/skills/shared/arch-populated-detect.md`
-(`arch_unfilled` = TEMPLATE marker on line 1 **or** a scaffold-only body token) — do NOT
-use a bare `grep TEMPLATE`, which mis-reads a marker-free-but-empty file as populated:
+**Populated-files guard (run first):** Three-signal detector — a file needs population if it
+has the `<!-- TEMPLATE -->` marker on line 1 (signal 1), scaffold-only placeholder tokens
+(signal 2), OR is `architecture.md` and is missing the `## End-to-End Architecture` /
+`## Layered View` headings (signal 3 — catches files generated before diagram standards were applied):
 
-```bash
-# arch_unfilled() is defined in ../shared/arch-populated-detect.md — source or inline it.
-for f in .claude/architecture/architecture.md .claude/architecture/architecture-*.md; do
-  [ -f "$f" ] && { arch_unfilled "$f" && echo "$f: NEEDS_POPULATION" || echo "$f: POPULATED"; } || echo "$f: MISSING"
-done
+```javascript
+node -e "
+const fs = require('fs');
+const SCAFFOLD_TOKENS = [
+  '[trust-zone diagram or list]', '[trace here]',
+  '[entry point → service → data access', '[per-unit injected/imported dependencies]',
+  '[middleware in order]', '[Journey Name]', '[solution name]/',
+  '[project root]/', '[package root]/', '[group/artifact root]/', '<!-- From code:'
+];
+if (!fs.existsSync('.claude/architecture')) { console.log('ARCHITECTURE_DIR: MISSING'); process.exit(0); }
+const files = fs.readdirSync('.claude/architecture')
+  .filter(f => f.endsWith('.md'))
+  .map(f => '.claude/architecture/' + f);
+if (!files.length) { console.log('ARCHITECTURE_DIR: EMPTY'); process.exit(0); }
+for (const f of files) {
+  const content = fs.readFileSync(f, 'utf8');
+  const hasMarker   = content.split('\n')[0].includes('<!-- TEMPLATE -->');
+  const hasScaffold = SCAFFOLD_TOKENS.some(t => content.includes(t));
+  const missingDiagrams = f.endsWith('architecture.md') &&
+    (!content.includes('## End-to-End Architecture') || !content.includes('## Layered View'));
+  const status = (hasMarker || hasScaffold || missingDiagrams) ? 'NEEDS_POPULATION' : 'POPULATED';
+  console.log(f + ': ' + status);
+}
+"
 ```
 
-If ALL expected files for this `REPO_TYPE` exist **and** none is `NEEDS_POPULATION`
+If ALL files report POPULATED (no MISSING, no NEEDS_POPULATION)
 → **skip Steps 3–6 entirely and proceed directly to Step 7.**
+
+> **Migration note:** if `architecture.md` reports `NEEDS_POPULATION` due to signal 3
+> (missing diagram headings) even though it has real content, Step 5 will regenerate it
+> with diagrams intact. This is intentional — the diagram sections are required content.
 
 ```bash
 mkdir -p .claude/architecture
@@ -671,6 +820,33 @@ And stop.
 
 ## Step 4 — Load the matching prompt file
 
+**Validate PLUGIN_DIR and prompt file exist before proceeding:**
+
+```javascript
+node -e "
+const fs=require('fs'),path=require('path');
+const pluginDir = fs.readFileSync('.claude/plugin-path.txt','utf8').trim();
+if(!pluginDir || !fs.existsSync(pluginDir)) {
+  console.error('PLUGIN_DIR invalid: ' + pluginDir + ' — re-run Step 1b');
+  process.exit(1);
+}
+const repoType = JSON.parse(fs.readFileSync('.claude/dream-init-state.json','utf8')).repo_type || '';
+if(!repoType) { console.error('repo_type not set in dream-init-state.json — re-run Step 1a'); process.exit(1); }
+const slug = repoType.toLowerCase().replace(/_/g,'-');
+const promptFile = path.join(pluginDir,'skills','architect','prompts', slug + '.md');
+if(!fs.existsSync(promptFile)) {
+  console.error('PROMPT_NOT_FOUND: ' + promptFile);
+  console.error('Available: ' + fs.readdirSync(path.join(pluginDir,'skills','architect','prompts')).join(', '));
+  process.exit(1);
+}
+console.log('PROMPT_OK: ' + promptFile);
+console.log('PLUGIN_DIR: ' + pluginDir);
+"
+```
+
+**Stop if any error is reported.** Do not generate `architecture.md` without the correct
+prompt — Claude will generate without diagram instructions and sections will be missing.
+
 Read the prompt file for this repo type:
 
 | REPO_TYPE | Prompt file |
@@ -686,6 +862,7 @@ Read the prompt file for this repo type:
 | `PYTHON_FASTAPI` | `prompts/python-fastapi.md` |
 | `PYTHON_DJANGO` | `prompts/python-django.md` |
 | `PYTHON_FLASK` | `prompts/python-flask.md` |
+| `VSTO` | `prompts/vsto.md` |
 
 The prompt file contains seven sections: `## File 1 Prompt` (architecture.md, incl. the two
 Mermaid diagrams) through `## File 7 Prompt` (architecture-decisions.md, seed-only). Run only
@@ -738,6 +915,114 @@ Repo type : {REPO_TYPE}
     [list any skipped files]
 
 Flagged sections need manual input — search for ⚠ in the files.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+---
+
+## Step 7 — Additional project architecture
+
+> Runs after Step 6, or directly from Step 3 when all primary project files are already
+> populated. Seeds architecture scaffolds for any projects listed under `additionalDirectories`
+> in `.claude/settings.local.json` so a single `/architect` pass covers all related projects.
+
+### 7a. Read additional directories
+
+```bash
+node -e "
+const fs = require('fs');
+try {
+  const s = JSON.parse(fs.readFileSync('.claude/settings.local.json', 'utf8'));
+  const dirs = (s.additionalDirectories || []).filter(function(d) {
+    try { fs.accessSync(d); return true; } catch(e) { return false; }
+  });
+  if (dirs.length) {
+    dirs.forEach(function(d) { console.log('DIR:' + d); });
+  } else {
+    console.log('NO_ADDITIONAL_DIRS');
+  }
+} catch(e) { console.log('NO_ADDITIONAL_DIRS'); }
+"
+```
+
+If the output is `NO_ADDITIONAL_DIRS` → skip this step entirely.
+
+### 7b. For each additional directory `DIR`
+
+**Check — skip if architecture already exists:**
+```bash
+ls "$DIR/.claude/architecture/" 2>/dev/null | wc -l
+```
+If the folder exists and is non-empty → output `Already has architecture scaffold — skipping {DIR}` and move to the next directory.
+
+**Detect repo type in `DIR`** (same priority order as Step 1):
+```bash
+ls "$DIR/nx.json"      2>/dev/null && echo "ANGULAR_NX"
+ls "$DIR/angular.json" 2>/dev/null && echo "ANGULAR_STANDARD"
+node -e "try{var p=require('$DIR/package.json'),d=Object.assign({},p.dependencies,p.devDependencies);if(d['react'])console.log('REACT')}catch(e){}" 2>/dev/null
+node -e "try{var p=require('$DIR/package.json'),d=Object.assign({},p.dependencies,p.devDependencies);if(!d['react']&&!d['@angular/core']&&(p.main||p.exports||p.module))console.log('JS_LIBRARY')}catch(e){}" 2>/dev/null
+{ find "$DIR" -name "pom.xml"      -maxdepth 4 2>/dev/null | xargs grep -l "spring-boot"              2>/dev/null; \
+  find "$DIR" -name "build.gradle" -maxdepth 4 2>/dev/null | xargs grep -l "org.springframework.boot" 2>/dev/null; } \
+  | head -1 | grep -q "." && echo "SPRING_BOOT"
+find "$DIR" -name "manage.py" -maxdepth 3 2>/dev/null | head -1 | grep -q "." && echo "PYTHON_DJANGO"
+grep -rl "fastapi" --include=requirements.txt --include=pyproject.toml "$DIR" 2>/dev/null | head -1 | grep -q "." && echo "PYTHON_FASTAPI"
+grep -rl "[Ff]lask" --include=requirements.txt --include=pyproject.toml "$DIR" 2>/dev/null | head -1 | grep -q "." && echo "PYTHON_FLASK"
+find "$DIR" \( -name "ThisAddIn.cs" -o -name "ThisWorkbook.cs" -o -name "ThisDocument.cs" \) \
+  -maxdepth 5 2>/dev/null | head -1 | grep -q "." && echo "VSTO"
+find "$DIR" -name "packages.config" -maxdepth 4 2>/dev/null | head -1 | grep -q "." && echo "ASPNET_FRAMEWORK"
+find "$DIR" -name "*.csproj" -maxdepth 4 2>/dev/null | xargs grep -l "Microsoft.NET.Sdk.Web" 2>/dev/null | head -1 | grep -q "." && \
+  ls -d "$DIR"/*/Views 2>/dev/null | grep -q "." && echo "ASPNET_MVC"
+find "$DIR" \( -name "*.csproj" -o -name "*.sln" \) -maxdepth 3 2>/dev/null | head -1 | grep -q "." && echo "DOTNET_API"
+```
+
+Take the first match as `EXT_REPO_TYPE`. If nothing matches, set `EXT_REPO_TYPE=UNKNOWN`.
+
+Map `EXT_REPO_TYPE` to template folder using the Step 2 table (e.g. `DOTNET_API` → `dotnet-api`, `VSTO` → `vsto`). Hold as `EXT_TEMPLATE`.
+
+**Deploy scaffold files:**
+```bash
+PLUGIN_DIR="$(cat .claude/plugin-path.txt 2>/dev/null | tr -d '\n')"
+EXT_ARCH="$DIR/.claude/architecture"
+mkdir -p "$EXT_ARCH"
+
+# Tier 1 — shared base (skip if destination file already exists)
+for f in "$PLUGIN_DIR/skills/architect/templates/_shared/"*.md; do
+  fname="$(basename "$f")"
+  [ ! -f "$EXT_ARCH/$fname" ] && cp "$f" "$EXT_ARCH/$fname"
+done
+
+# Tier 2 — stack overlay (overwrites same-named shared files)
+if [ "$EXT_REPO_TYPE" != "UNKNOWN" ]; then
+  for f in "$PLUGIN_DIR/skills/architect/templates/$EXT_TEMPLATE/"*.md; do
+    fname="$(basename "$f")"
+    cp "$f" "$EXT_ARCH/$fname"
+  done
+fi
+
+ls "$EXT_ARCH"
+```
+
+**Report for this directory:**
+```
+📁 Architecture scaffold created
+   Project : {DIR}
+   Stack   : {EXT_REPO_TYPE}
+   Location: {DIR}/.claude/architecture/
+   Files   : {list}
+
+   ⚠ These are scaffold templates — to populate with real architecture content,
+     open this project in Claude Code and run /architect.
+```
+
+### 7c. Summary
+
+After all additional directories are processed:
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Additional project architecture
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  {N} additional directories found
+  {DIR}  →  {EXT_REPO_TYPE}  →  {created / already done / unknown stack}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 

@@ -2,7 +2,7 @@
 paths: always
 ---
 <!-- Graph index — auto-generated from graph.json. Do not hand-edit. Run /graph-sync to refresh. -->
-_Generated: 2026-07-13 | Modules: 32 | Structure: domain_
+_Generated: 2026-07-18 | Modules: 32 | Structure: domain_
 
 | Module | Domain | Detail File | Entry Point |
 |---|---|---|---|
@@ -49,7 +49,7 @@ _Generated: 2026-07-13 | Modules: 32 | Structure: domain_
 **icea-status** — Shows current state of all ICEA files for an ADO ID: ICEA status, Tech Spec open questions, tracker progress, open bugs, and next action. Key files: `skills/icea-status/SKILL.md`
 **ado-tasks** — Generates a complete Azure DevOps task breakdown from an approved ICEA. Key files: `skills/ado-tasks/SKILL.md`
 **critic** — Second-pass critic that stress-tests a drafted ICEA before the approval gate. Key files: `skills/critic/SKILL.md`
-**architect** — Detects repo type, runs Bootstrap Phase 2, populates 8 architecture docs, generates the initial knowledge graph. Key files: `skills/architect/SKILL.md`, `skills/architect/prompts/`
+**architect** — Detects repo type (incl. VSTO), runs Bootstrap Phase 2, populates 8 architecture docs, generates knowledge graph; Step 7 seeds additionalDirectory scaffolds. Key files: `skills/architect/SKILL.md`, `skills/architect/prompts/`, `skills/architect/templates/vsto/`
 **setup-status** — Green/amber/red health check for all plugin infrastructure: CLAUDE.md, memory, rules, commands, hooks, architecture docs, knowledge graph, file-cache, token-graph, gitignore coverage, plugin version drift. Key files: `skills/setup-status/SKILL.md`
 **setup-sync** — Re-provisions a target project after a plugin upgrade. Key files: `skills/setup-sync/SKILL.md`
 **setup-teardown** — Removes plugin-managed content from a target project by scope (--full, --skills, --hooks, --rules, --commands, --state). Key files: `skills/setup-teardown/SKILL.md`

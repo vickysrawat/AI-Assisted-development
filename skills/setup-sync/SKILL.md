@@ -40,45 +40,60 @@ never assume, never attribute in output. See `$PLUGIN_DIR/skills/shared/personas
 ## Step 1 — Resolve plugin path and read versions
 
 > ⚠️ **HARD RULE — DO NOT IMPROVISE VERSION DETECTION.**
-> Run the bash command below exactly as written. The installed version comes ONLY from
-> `installed_plugins.json` (the registry). Never read `.claude-plugin/plugin.json` as a relative
-> path (it does not exist in target projects), never infer the installed version from `CLAUDE.md`,
-> and never construct a plugin path from the state's version field. Those approaches all produce
-> false "no drift" verdicts that silently skip upgrades. If the bash command returns
-> `INSTALLED_VERSION=unknown`, report that and stop — do not guess.
+> Run the node command below exactly. It reads `INSTALLED_VERSION` from the Claude plugin
+> registry (`installed_plugins.json`) — the authoritative source. It self-heals `plugin-path.txt`
+> if stale. Never infer the installed version from `CLAUDE.md` or construct it from the state field.
 
-```bash
-# Resolve the installed plugin dir + version from the registry (installed_plugins.json).
-# Fork-agnostic, prefers user scope, normalises \ -> /, falls back to the source glob.
-# Canonical resolver: see skills/shared/plugin-path-resolution.md §1a.
-IFS=$'\t' read -r PLUGIN_DIR INSTALLED_VERSION < <(node -e '
-const fs=require("fs"),os=require("os"),path=require("path");
-const base=path.join(os.homedir(),".claude","plugins");
-const norm=p=>p?p.split(String.fromCharCode(92)).join("/"):"";
-let dir="",ver="";
-try{
-  const reg=JSON.parse(fs.readFileSync(path.join(base,"installed_plugins.json"),"utf8"));
-  const key=Object.keys(reg.plugins||{}).find(k=>k.startsWith("ai-assisted-development@"));
-  if(key){const a=reg.plugins[key]||[];const e=a.find(x=>x.scope==="user")||a[0];
-    if(e&&e.installPath&&fs.existsSync(e.installPath)){dir=e.installPath;ver=e.version||"";}}
-}catch(e){}
-if(!dir){try{for(const m of fs.readdirSync(base)){const p=path.join(base,m,"plugins","ai-assisted-development");if(fs.existsSync(p)){dir=p;break;}}}catch(e){}}
-if(dir&&!ver){try{ver=JSON.parse(fs.readFileSync(path.join(dir,".claude-plugin","plugin.json"),"utf8")).version||"";}catch(e){}}
-process.stdout.write(norm(dir)+"\t"+(ver||"unknown"));
-')
-PLUGIN_HOOKS="$PLUGIN_DIR/_project-deploy/hooks"
-PLUGIN_STUBS="$PLUGIN_DIR/_project-deploy/commands"
-PLUGIN_RULES="$PLUGIN_DIR/_project-deploy/rules"
+```javascript
+node -e "
+const fs=require('fs'),os=require('os'),path=require('path');
+// Fast path: get PLUGIN_DIR from plugin-path.txt
+const ptf = '.claude/plugin-path.txt';
+let cachedDir = '';
+try { cachedDir = fs.existsSync(ptf) ? fs.readFileSync(ptf,'utf8').trim() : ''; } catch(e) {}
 
-# Read provisioned version
-PROVISIONED_VERSION=$(node -e "
-  const fs = require('fs');
-  try {
-    const s = JSON.parse(fs.readFileSync('.claude/dream-init-state.json', 'utf8'));
-    process.stdout.write(s.dream_init_plugin_version || 'unknown');
-  } catch(e) { process.stdout.write('unknown'); }
-")
+// Authoritative: installed version + registered path from Claude plugin registry
+const base=path.join(os.homedir(),'.claude','plugins');
+let registeredDir='', installedVersion='unknown';
+try {
+  const reg=JSON.parse(fs.readFileSync(path.join(base,'installed_plugins.json'),'utf8'));
+  const key=Object.keys(reg.plugins||{}).find(k=>k.startsWith('ai-assisted-development@'));
+  if(key){ const a=reg.plugins[key]||[]; const e=a.find(x=>x.scope==='user')||a[0];
+    if(e){ registeredDir=(e.installPath||'').split(path.sep).join('/'); installedVersion=e.version||'unknown'; }}
+} catch(e) {}
+
+// Use registered path if cache is stale or absent; self-heal plugin-path.txt
+const pluginDir = (registeredDir && fs.existsSync(registeredDir)) ? registeredDir : cachedDir;
+if(!pluginDir || !fs.existsSync(pluginDir)) {
+  console.error('PLUGIN_DIR_NOT_FOUND'); process.exit(1);
+}
+if(pluginDir !== cachedDir) {
+  fs.writeFileSync(ptf, pluginDir+'\n');
+  console.log('PLUGIN_PATH_UPDATED='+pluginDir);
+}
+
+// Provisioned version from state
+let provisionedVersion = 'unknown';
+try { provisionedVersion = JSON.parse(fs.readFileSync('.claude/dream-init-state.json','utf8')).dream_init_plugin_version || 'unknown'; } catch(e) {}
+
+console.log('PLUGIN_DIR='+pluginDir);
+console.log('INSTALLED_VERSION='+installedVersion);
+console.log('PROVISIONED_VERSION='+provisionedVersion);
+"
 ```
+
+If `PLUGIN_DIR_NOT_FOUND`:
+```
+⚠ Cannot locate installed plugin. Run /setup-init to restore plugin-path.txt, then re-run /setup-sync.
+```
+Stop here.
+
+If `INSTALLED_VERSION` is `unknown`:
+```
+⚠ Cannot read installed plugin version from registry.
+  Install the plugin first: node install.cjs  (or install.sh / install.ps1)
+```
+Stop here.
 
 Display:
 ```
@@ -88,7 +103,7 @@ Display:
 If `INSTALLED_VERSION` is `unknown`:
 ```
 ⚠ Cannot read installed plugin version.
-  Ensure the plugin is installed: bash install.sh
+  Install the plugin first: node install.cjs  (or install.sh / install.ps1)
 ```
 Stop here.
 
@@ -100,18 +115,26 @@ exact failure this guards against). The deployment steps are all idempotent, and
 independently verifies that rules/hooks/stubs are actually present — so the version field and the
 artifact-presence are checked separately.
 
-```bash
+Write `.claude/dream-init-state.json` using the Write tool — substitute the actual
+`INSTALLED_VERSION` value you read in step 3 above:
+
+```javascript
+// Read the current state first, then write back with updated version
 node -e "
   const fs = require('fs');
   const p = '.claude/dream-init-state.json';
   let s = {};
   try { s = JSON.parse(fs.readFileSync(p, 'utf8')); } catch(e) {}
-  s.dream_init_plugin_version = '$INSTALLED_VERSION';
+  s.dream_init_plugin_version = 'ACTUAL_VERSION_FROM_STEP_3';
   fs.mkdirSync('.claude', { recursive: true });
   fs.writeFileSync(p, JSON.stringify(s, null, 2));
-  console.log('  ✓ state stamped to v$INSTALLED_VERSION (early — survives a partial run)');
+  console.log('  ✓ state stamped to v' + s.dream_init_plugin_version + ' (early — survives a partial run)');
 "
 ```
+
+> Replace `ACTUAL_VERSION_FROM_STEP_3` with the exact version string read from
+> `{PLUGIN_DIR}/.claude-plugin/plugin.json` in Step 3. Do not use shell variable
+> interpolation — substitute the literal value directly into the script string.
 
 ---
 
@@ -127,9 +150,14 @@ created files with no `.hashes` entry are never touched),
 appends any new Dream sections to CLAUDE.md, and refreshes `.claude/hooks/.hashes`.
 Does NOT write `needsLLMPopulation` — sync is not an init operation.
 
-```bash
-node "$PLUGIN_DIR/scripts/setup-init-bootstrap.cjs" --mode sync
+Using the `PLUGIN_DIR` value read from `.claude/plugin-path.txt` in Step 1, run:
+
 ```
+node {PLUGIN_DIR}/scripts/setup-init-bootstrap.cjs --mode sync
+```
+
+> Substitute the actual PLUGIN_DIR path — do not use shell variable syntax.
+> `plugin-path.txt` is updated by the bootstrap itself so subsequent skill reads get the refreshed path.
 
 ---
 
@@ -195,45 +223,28 @@ For each migration file in range, display its content with a header:
 Check whether `./CLAUDE.md` still contains unresolved placeholders **or**
 a previously failed `⚠ NOT DETECTED` value that should be retried:
 
-```bash
-grep -qE "\{GIT_PATH\}|\{BASH_PATH\}|NOT DETECTED.*where\.exe" ./CLAUDE.md 2>/dev/null
+```javascript
+node -e "
+const fs = require('fs');
+const { execSync } = require('child_process');
+const content = fs.readFileSync('./CLAUDE.md', 'utf8');
+const hasPlaceholders = /\{GIT_PATH\}|\{BASH_PATH\}|NOT DETECTED.*where\.exe/.test(content);
+if (!hasPlaceholders) { console.log('  ✓ No unresolved placeholders'); process.exit(0); }
+const tryCmd = cmd => { try { return execSync(cmd,{encoding:'utf8',stdio:['pipe','pipe','ignore']}).split('\n')[0].trim(); } catch(e){ return ''; } };
+const gitPath  = tryCmd('where.exe git')  || tryCmd('which git')  || '';
+const bashPath = tryCmd('where.exe bash') || tryCmd('which bash') || '';
+const out = content
+  .replace(/\{GIT_PATH\}/g,  gitPath  || '⚠ NOT DETECTED — run where.exe git and update manually')
+  .replace(/\{BASH_PATH\}/g, bashPath || '⚠ NOT DETECTED — run where.exe bash and update manually')
+  .replace(/⚠ NOT DETECTED — run where\.exe git and update manually/g,  gitPath  || '⚠ NOT DETECTED — run where.exe git and update manually')
+  .replace(/⚠ NOT DETECTED — run where\.exe bash and update manually/g, bashPath || '⚠ NOT DETECTED — run where.exe bash and update manually');
+fs.writeFileSync('./CLAUDE.md', out);
+if (gitPath)  console.log('  ✅ Git path resolved: ' + gitPath);
+else          console.log('  ⚠ Git path not detected — placeholder left in CLAUDE.md');
+if (bashPath) console.log('  ✅ Bash path resolved: ' + bashPath);
+else          console.log('  ⚠ Bash path not detected — placeholder left in CLAUDE.md');
+"
 ```
-
-If placeholders or NOT DETECTED values found, resolve them:
-
-```bash
-# Strip any existing NOT DETECTED values back to placeholders so detection can overwrite them
-sed -i 's|⚠ NOT DETECTED — run where\.exe git and update manually|{GIT_PATH}|g' ./CLAUDE.md
-sed -i 's|⚠ NOT DETECTED — run where\.exe bash and update manually|{BASH_PATH}|g' ./CLAUDE.md
-
-# Git path — try where.exe, then which, then known locations
-GIT_PATH=$(where.exe git 2>/dev/null | head -1 | tr -d '\r\n')
-[ -z "$GIT_PATH" ] && GIT_PATH=$(which git 2>/dev/null | tr -d '\r\n')
-[ -z "$GIT_PATH" ] && GIT_PATH=$(ls "/mingw64/bin/git.exe" "/usr/bin/git" "C:/Program Files/Git/bin/git.exe" "C:/Program Files/Git/mingw64/bin/git.exe" 2>/dev/null | head -1)
-
-# Bash path — try where.exe, then which, then known locations
-BASH_PATH=$(where.exe bash 2>/dev/null | head -1 | tr -d '\r\n')
-[ -z "$BASH_PATH" ] && BASH_PATH=$(which bash 2>/dev/null | tr -d '\r\n')
-[ -z "$BASH_PATH" ] && BASH_PATH=$(ls "/usr/bin/bash" "/bin/bash" "C:/Program Files/Git/bin/bash.exe" "C:/Program Files/Git/usr/bin/bash.exe" 2>/dev/null | head -1)
-
-if [ -n "$GIT_PATH" ]; then
-  sed -i "s|{GIT_PATH}|$GIT_PATH|g" ./CLAUDE.md
-  echo "  ✅ Git path resolved: $GIT_PATH"
-else
-  sed -i 's|{GIT_PATH}|⚠ NOT DETECTED — run where.exe git and update manually|g' ./CLAUDE.md
-  echo "  ⚠ Git path not detected — placeholder left in CLAUDE.md"
-fi
-
-if [ -n "$BASH_PATH" ]; then
-  sed -i "s|{BASH_PATH}|$BASH_PATH|g" ./CLAUDE.md
-  echo "  ✅ Bash path resolved: $BASH_PATH"
-else
-  sed -i 's|{BASH_PATH}|⚠ NOT DETECTED — run where.exe bash and update manually|g' ./CLAUDE.md
-  echo "  ⚠ Bash path not detected — placeholder left in CLAUDE.md"
-fi
-```
-
-echo "  ✓ Shell & Git paths resolved in ./CLAUDE.md"
 
 Also check whether `## 0b. Shell & Git Configuration` section is missing
 entirely (projects provisioned before v2.2.0). If missing, add it from

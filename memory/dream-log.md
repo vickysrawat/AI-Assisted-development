@@ -40,3 +40,21 @@ Three entries referenced files in the old /src/api/v1 path which was deleted in 
 These were deleted. Watch for more stale v1 references in future sessions.
 
 -->
+
+### [capture] [2026-07-20] Architecture decision — clean three-path hook architecture (no dispatch)
+### [capture] [2026-07-20] Task completed — bash/PS1/Node three-path hook architecture implemented
+### [capture] [2026-07-13] Error resolved — node -e bash quote issue when writing JSON with backticks
+
+### [capture] [2026-07-20] Error resolved — 3-iteration adversarial review found 6 real bugs post-implementation
+### [capture] [2026-07-20] Architecture decision — clean three-path hook architecture (no dispatch)
+
+### [capture] [2026-07-20] Task completed — 4 remaining issues fixed (dream-sync, graph hooks, shell-type override, stale version)
+### [capture] [2026-07-20] Error resolved — 3-iteration adversarial review found 6 real bugs post-implementation
+
+### [capture] [2026-07-20] Error resolved — detectShell() missed Claude Code settings Bash denial
+### [capture] [2026-07-20] Task completed — 4 remaining issues fixed (dream-sync, graph hooks, shell-type override, stale version)
+
+### [capture] [2026-07-20] Error resolved — autoMemoryEnabled not added to settings.json on re-run
+
+### [capture] [2026-07-20] Error resolved — architect skill missing diagram sections in generated architecture.md
+### [capture] [2026-07-20] Error resolved — autoMemoryEnabled not added to settings.json on re-run

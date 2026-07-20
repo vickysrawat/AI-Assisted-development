@@ -1,13 +1,14 @@
 ---
 paths: skills/app-readiness
 ---
-_Fingerprint: cbe8aec1457cc02452111729089fe0b910fcaf29 | Updated: 2026-07-13_
+_Fingerprint: eba9e2240bc532d6a58421f255bf3591f4efd9aa | Updated: 2026-07-18_
 
 ## Bounded context
-Application production readiness assessment from Enterprise / Solution Architect perspective. Evaluates 8 domains: deployment pipeline, resilience, observability, security, scalability, data integrity, runbook, tests. Requires `architecture-deployment.md`.
+Application production readiness assessment from Enterprise / Solution Architect perspective. Evaluates domains per hosting model. VSTO add-ins use a separate 7-domain checklist (Signing & Trust, ClickOnce Manifest, Office Compatibility, Build Pipeline, Test Coverage, Secrets, Runbook). Requires `architecture-deployment.md`.
 
 ## Key files
-- `SKILL.md`
+- `SKILL.md` — detects HOSTING_MODEL=vsto from deployment doc; loads vsto-checklist.md and runs ClickOnce/signing evidence collection
+- `references/vsto-checklist.md` — VSTO-specific readiness checklist with Green/Yellow/Red thresholds for 7 domains
 
 ## Dependencies
 - `.claude/architecture/architecture-deployment.md` — blocks if missing
@@ -15,3 +16,4 @@ Application production readiness assessment from Enterprise / Solution Architect
 
 ## Patterns
 - Flags: --quick (~12K tokens) | --full (targeted source reads for Red domains, ~25K tokens)
+- VSTO branch replaces IIS/container domains with ClickOnce/signing/Office compatibility domains

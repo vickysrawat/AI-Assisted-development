@@ -5,7 +5,7 @@
   "mode": "init",
   "projectRoot": "C:\\Users\\rawatv\\OneDrive - Kirkland\\Desktop\\Vivek\\Learning\\AI Learning\\Plugin\\AI-Assisted-development",
   "startedAt": "2026-07-13T21:47:27.164Z",
-  "completedAt": "2026-07-13T21:56:12.405Z",
+  "completedAt": "2026-07-20T18:37:39.102Z",
   "status": "complete",
   "vcs": "git",
   "operations": {
@@ -47,7 +47,7 @@
     },
     "writePluginPath": {
       "status": "done",
-      "path": "C:/Users/rawatv/OneDrive - Kirkland/Desktop/Vivek/Learning/AI Learning/Plugin/AI-Assisted-development"
+      "path": "c:/Users/rawatv/OneDrive - Kirkland/Desktop/Vivek/Learning/AI Learning/Plugin/AI-Assisted-development"
     },
     "deployProjectSkills": {
       "status": "done",
@@ -127,6 +127,14 @@
       "bashPath": "C:\\Program Files\\Git\\usr\\bin\\bash.exe",
       "substituted": false,
       "unresolved": []
+    },
+    "gitPostMerge": {
+      "status": "done",
+      "installed": true,
+      "actions": {
+        "post-merge": "installed",
+        "post-checkout": "installed"
+      }
     }
   },
   "needsLLMPopulation": [

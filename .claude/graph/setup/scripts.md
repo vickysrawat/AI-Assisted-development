@@ -2,20 +2,17 @@
 paths: scripts
 ---
 <!-- auto-generated — edit graph.json then run /graph-sync -->
-_Fingerprint: c60fe5c6200e2fdf40cfd45fd50d2ed8eea2db07 | Updated: 2026-07-13_
+_Fingerprint: c176ca3c42a8c1f717b60e59f1d69a50c3d8ddbe | Updated: 2026-07-18_
 
 ## Bounded context
 Node.js CJS scripts that handle all mechanical plugin work. The central script is
 `setup-init-bootstrap.cjs` — the single deterministic pass that provisions a target project.
 
 ## Key files
-- `setup-init-bootstrap.cjs` — creates dirs, deploys stubs/hooks/rules, wires settings, seeds state files, writes manifest; supports `--mode init|sync|post-detect`
-- `graph-extract-edges.js` — deterministic EXTRACTED edge derivation from source imports (ADR 0041); never touches nodes/fingerprints
-- `plugin-state.cjs` — semver-aware plugin version drift detection (provisioned vs installed)
-- `bump-version.js` — bumps version across all plugin files
-- `check-version-consistency.js` — validates version is consistent
-- `setup-teardown.cjs` — removes plugin-managed content from a target project
-- `gen-story-pptx.cjs` — PowerPoint story slide generation (uses pptxgenjs)
+- `setup-init-bootstrap.cjs` — creates dirs, deploys stubs/hooks/rules, wires settings, seeds state files, writes manifest; VSTO entries added: `ARCH_TEMPLATE_FOLDER['VSTO']`, `BACKEND_LAYER3_RULES['csharp-vsto-rules.md']`, `STACK_SIGNALS['csharp-vsto-rules.md']`, `hasProjectContent` regex includes `VSTO|Office`
+- `external-stack-detection.cjs` — detects stacks in `additionalDirectories`; VSTO detection added BEFORE `isFramework` check (VSTO csproj contains `Microsoft.Office.Tools`/`Microsoft.Office.Interop`, not `System.Web`); forces `dotnet_framework=true` when VSTO detected
+- `graph-extract-edges.js` — deterministic EXTRACTED edge derivation (ADR 0041); never touches nodes/fingerprints
+- `plugin-state.cjs` — semver-aware plugin version drift detection
 
 ## Dependencies
 - Node.js built-ins: `fs`, `path`, `crypto`, `child_process`
@@ -24,7 +21,7 @@ Node.js CJS scripts that handle all mechanical plugin work. The central script i
 
 ## Patterns
 - All scripts use CJS (`require`) — no ES module syntax
-- `setup-init-bootstrap.cjs` is crash-safe: writes manifest after every step; re-run skips completed steps
-- Bootstrap Phase 2 (`--mode post-detect`) is triggered by the architect skill after repo type detection
+- GOTCHA: VSTO csproj lacks `System.Web`/`System.ServiceModel` — without the VSTO-first check, `external-stack-detection.cjs` would emit `dotnet` (modern .NET) instead of `dotnet_framework`
+- Bootstrap Phase 2 (`--mode post-detect`) triggered by architect after repo type detection
 
 **Depended on by:** architect (Phase 2), setup-sync, setup-teardown.

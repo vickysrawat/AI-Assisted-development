@@ -508,29 +508,61 @@ If 🔴 Red or ⚠️ Amber, include in recommended actions:
 ### 1p — Enforcement floor integrity (hooks)
 
 The mechanical floor (ADR 0005/0009) only governs if the hooks are present,
-executable, and current. Verify all three properties:
+executable, and wired. Verify using Node.js (works on all platforms):
 
-```bash
-# Present + executable
-for h in icea-floor.sh findings-gate-precommit.sh validate-ledgers.py validate-pr-compliance.py; do
-  [ -x ".claude/hooks/$h" ] && echo "$h: OK" || echo "$h: MISSING_OR_NOT_EXECUTABLE"
-done
-# git pre-commit installed — only meaningful on Git. TFVC has no client-side
-# commit hooks; the equivalent is a server-side check-in policy the plugin does
-# not install, so report n/a rather than a false NOT_INSTALLED.
-if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  [ -x .git/hooks/pre-commit ] && grep -q "findings-gate" .git/hooks/pre-commit && echo "pre-commit: OK" || echo "pre-commit: NOT_INSTALLED"
-else
-  echo "pre-commit: N/A_TFVC"
-fi
-# Content current vs recorded hashes
-sha256sum -c .claude/hooks/.hashes --quiet 2>/dev/null && echo "hashes: CURRENT" || echo "hashes: STALE_OR_MODIFIED"
-# PreToolUse wired
-grep -q "icea-floor.sh" .claude/settings.json 2>/dev/null && echo "PreToolUse: WIRED" || echo "PreToolUse: NOT_WIRED"
+```javascript
+node -e "
+const fs=require('fs'),path=require('path'),crypto=require('crypto');
+
+// 1. Detect shell_type from state (set by bootstrap on last setup-init/sync)
+let shellType = 'unknown';
+try { shellType = JSON.parse(fs.readFileSync('.claude/dream-init-state.json','utf8')).shell_type || 'unknown'; } catch(e) {}
+console.log('shell_type: ' + shellType);
+
+// 2. Check that the expected hook files are present
+const ext = shellType === 'bash' ? '.sh' : shellType === 'powershell' ? '.ps1' : '.cjs';
+const hookFiles = ['icea-floor','memory-capture','memory-log','findings-gate-precommit'];
+hookFiles.forEach(h => {
+  const f = path.join('.claude','hooks', h+ext);
+  console.log(h+ext+': '+(fs.existsSync(f) ? 'OK' : 'MISSING'));
+});
+console.log('check-settings-secrets.cjs: '+(fs.existsSync(path.join('.claude','hooks','check-settings-secrets.cjs')) ? 'OK' : 'MISSING'));
+
+// 3. Verify hook commands in settings.json match shell_type
+try {
+  const s=JSON.parse(fs.readFileSync('.claude/settings.json','utf8'));
+  const iceaCmd=((s.hooks||{}).PreToolUse||[]).flatMap(h=>(h.hooks||[])).find(x=>(x.command||'').includes('icea-floor'));
+  const memCmd=((s.hooks||{}).UserPromptSubmit||[]).flatMap(h=>(h.hooks||[])).find(x=>(x.command||'').includes('memory-capture'));
+  console.log('PreToolUse icea-floor: '+(iceaCmd ? iceaCmd.command : 'NOT_WIRED'));
+  console.log('UserPromptSubmit memory-capture: '+(memCmd ? memCmd.command : 'NOT_WIRED'));
+} catch(e) { console.log('settings.json: READ_ERROR'); }
+
+// 4. git pre-commit
+try {
+  const pc = path.join('.git','hooks','pre-commit');
+  const ok = fs.existsSync(pc) && fs.readFileSync(pc,'utf8').includes('findings-gate');
+  console.log('git pre-commit: '+(ok ? 'OK' : 'NOT_INSTALLED'));
+} catch(e) { console.log('git pre-commit: N/A'); }
+
+// 5. Hook hash integrity
+try {
+  const hashLines = fs.readFileSync(path.join('.claude','hooks','.hashes'),'utf8').trim().split('\n');
+  let stale=0;
+  hashLines.forEach(line => {
+    const [expected,,file] = line.split(/\s+/);
+    const fp = path.join('.claude','hooks',file);
+    if (!fs.existsSync(fp)) { stale++; return; }
+    const actual = crypto.createHash('sha256').update(fs.readFileSync(fp)).digest('hex');
+    if (actual !== expected) stale++;
+  });
+  console.log('hashes: '+(stale===0 ? 'CURRENT' : stale+' STALE'));
+} catch(e) { console.log('hashes: NO_HASHFILE'); }
+"
 ```
 
-- All OK → ✅ Green
-- Hashes stale (plugin upgraded, hooks not re-synced) → ⚠️ Amber: "run bump-version or re-copy hooks"
+- All OK + shell_type matches environment → ✅ Green
+- `shell_type` shows 'bash' but hooks fail — re-run `/setup-sync` with `--shell-type=node` override
+- Hashes stale (plugin upgraded, hooks not re-synced) → ⚠️ Amber: "run /setup-sync"
 - Any hook missing/not wired AND no `Enforcement floor: DECLINED` line in
   `architecture-deployment.md` → ❌ Red: "floor absent without recorded opt-out"
 - Declined with recorded opt-out → ℹ️ Blue: "floor declined on {date} by {user}"

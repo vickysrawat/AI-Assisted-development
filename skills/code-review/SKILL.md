@@ -95,6 +95,9 @@ find . -name "*.ts" -maxdepth 4 | head -1 && echo "TYPESCRIPT"
 find . -name "*.py" -maxdepth 4 | head -1 && echo "PYTHON"
 find . -name "*.java" -maxdepth 4 | head -1 && echo "JAVA"
 find . -name "*.go" -maxdepth 4 | head -1 && echo "GO"
+# VSTO: Office add-in or document-level customization
+find . \( -name "ThisAddIn.cs" -o -name "ThisWorkbook.cs" -o -name "ThisDocument.cs" \) \
+  -maxdepth 5 2>/dev/null | head -1 && echo "VSTO"
 ```
 
 Announce what will be loaded:
@@ -163,6 +166,7 @@ Load language-specific checkers for detected stack:
 | Extensions in scope | Also load |
 |---|---|
 | `*.cs` | `$PLUGIN_DIR/skills/code-review/references/checkers-dotnet.md` |
+| `*.cs` (and VSTO detected) | `$PLUGIN_DIR/skills/code-review/references/checkers-vsto.md` |
 | `*.ts`, `*.js`, `*.html` | `$PLUGIN_DIR/skills/code-review/references/checkers-typescript.md` |
 | `*.java` | `$PLUGIN_DIR/skills/code-review/references/checkers-java.md` |
 | `*.py` | `$PLUGIN_DIR/skills/code-review/references/checkers-python.md` |

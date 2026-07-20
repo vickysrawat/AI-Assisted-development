@@ -109,7 +109,98 @@ Generating in order:
 
 ---
 
-## Example 5 — Request that should NOT trigger the skill
+## Example 5 — VSTO feature request (Ribbon button)
+
+**Developer says:**
+> "Add an Export to PDF button in the Excel Ribbon that exports the active selection"
+
+**Skill intercepts and collects identifiers (ADO #2241, Release 4, Sprint 15).**
+
+**Skill drafts ICEA — key sections that differ from web projects:**
+
+```
+## Intent
+
+Problem Statement:
+  Analysts need to share specific data ranges from Excel with stakeholders who do not have
+  Excel access. Currently they take screenshots or manually copy data, which is error-prone
+  and loses formatting. A one-click PDF export of the selected range eliminates this step.
+
+Story:
+  As an analyst, I want to export my selected Excel range to a PDF with one Ribbon click,
+  so that I can share formatted data without requiring the recipient to have Excel.
+
+## Context
+
+Stack: Excel VSTO add-in (.NET Framework 4.8)
+Module: ExportFeature (to be created)
+Office host: Excel (Excel.Application, Workbook, Worksheet, Range)
+Ribbon: New "Export" button in the "Data Tools" custom Ribbon tab
+
+## Examples
+
+### Scenario 1 — Happy Path: valid rectangular range
+| | |
+|---|---|
+| Given  | User selects range A1:D10 on the active worksheet |
+| When   | User clicks "Export to PDF" in the Data Tools Ribbon tab |
+| Then   | Save dialog appears pre-populated with the workbook name |
+| And    | On confirm, a PDF is saved at the chosen path |
+| And    | The active workbook and selection are unchanged |
+
+### Scenario 2 — Non-contiguous selection
+| | |
+|---|---|
+| Given  | User selects a multi-area range (e.g. A1:B5, D1:E5) |
+| When   | User clicks "Export to PDF" |
+| Then   | Error message: "Please select a single contiguous range to export" |
+| And    | No file is created |
+
+### Scenario 3 — Empty selection
+| | |
+|---|---|
+| Given  | No cells are selected (or an empty range) |
+| When   | User clicks "Export to PDF" |
+| Then   | Error message: "Please select a range before exporting" |
+
+### Scenario 4 — Export cancelled by user
+| | |
+|---|---|
+| Given  | User clicks "Export to PDF" with a valid range |
+| When   | User clicks Cancel in the Save dialog |
+| Then   | No file is created; add-in returns to normal state with no error |
+
+## Acceptance Criteria
+
+AC-F1: Ribbon button "Export to PDF" appears in the "Data Tools" tab when any Excel workbook is open
+AC-F2: Clicking the button opens a SaveFileDialog pre-set to .pdf extension
+AC-F3: A valid contiguous range is exported to PDF preserving cell formatting
+AC-F4: Non-contiguous selection shows an informative error and creates no file
+AC-F5: Empty selection shows an informative error and creates no file
+AC-F6: Cancelling the dialog creates no file and leaves the workbook unchanged
+
+AC-NF1: All COM objects obtained during export are released via Marshal.ReleaseComObject
+         before the callback returns — verified by unit test mock assertions
+AC-NF2: Export works on both 32-bit and 64-bit Excel 2019 and Microsoft 365
+AC-NF3: COMException is caught and displayed as a user-friendly message (not a crash)
+AC-NF4: No credentials, file paths, or user data are logged
+
+Out of scope:
+- Exporting charts or pivot tables (addressed in ADO #2242)
+- Email integration (out of scope for this release)
+- Excel Online / web version
+```
+
+**Note on VSTO ICEA shape vs web ICEA shape:**
+- No HTTP status codes, no REST endpoints, no Angular components
+- Acceptance criteria reference COM lifecycle (AC-NF1), Office version matrix (AC-NF2),
+  and COMException handling (AC-NF3) — concepts specific to Office add-in development
+- "Out of scope" explicitly excludes other Excel object types to prevent scope creep
+  across COM object boundaries
+
+---
+
+## Example 6 — Request that should NOT trigger the skill
 
 **Developer says:** "why is the filter test failing on line 42?"
 

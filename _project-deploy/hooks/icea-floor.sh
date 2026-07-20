@@ -47,8 +47,12 @@ FILE_PATH="${FILE_PATH//\\//}"
 # Only guard source files. Docs, ICEA files, ledgers, memory, config are exempt.
 # The plugin's own published guides (plugin-guide.html, user-guide.html) are
 # plugin infrastructure, not application source — exempt like docs/.
+#
+# Review/analysis skill output directories are exempt — these commands (code-review,
+# security-review, dynamic-scan, app-readiness, token-analysis) write reports and
+# ledgers, not feature source code, and must never require an approved ICEA.
 case "$FILE_PATH" in
-  */docs/*|*.md|*.icea.md|*.techspec.md|*/memory/*|*/.claude/*|*.json|*.yaml|*.yml|*.gitignore|*/tests/*|*/plugin-guide.html|plugin-guide.html|*/user-guide.html|user-guide.html|*/prod-readiness/*|prod-readiness/*)
+  */docs/*|*.md|*.icea.md|*.techspec.md|*/memory/*|*/.claude/*|*.json|*.yaml|*.yml|*.gitignore|*/tests/*|*guide*|*/prod-readiness/*|prod-readiness/*|*/CodeReviews/*|CodeReviews/*|*/security/*|security/*|*/dynamic-scan/*|dynamic-scan/*|*/token-analysis/*|token-analysis/*)
     exit 0 ;;
 esac
 case "$FILE_PATH" in

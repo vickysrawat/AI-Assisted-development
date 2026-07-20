@@ -25,6 +25,20 @@ For everything else — just work normally. /dream will find it in sessions.
 
 ---
 
+### 2026-07-18 Task completed — Mermaid diagram standards applied across all plugin templates
+All 15 architecture template files with Mermaid diagrams now use `<div style="background-color: white; padding: 25px; border-radius: 8px;">` wrappers. All template `architecture-deployment.md` files have a CI/CD pipeline `flowchart LR` diagram; `_shared/architecture-integrations.md` has an integration map; all `architecture-security.md` files have trust-zone diagrams. Node color palette: User=`#7F8C8D`, Backend=`#1F618D`, Frontend=`#3498DB`, External=`#1ABC9C`, DataStore=`#2C3E50`, Proxy/Office=`#E67E22`, Auth=`#8E44AD`. Every `style` directive must include `color:`, `stroke:`, and `stroke-width:2px` (not just `fill:`).
+Trigger: Task completed  Confidence: 0.90  Source: auto-capture
+
+### 2026-07-18 Task completed — Architect skill Step 7 additionalDirectories scaffolding
+Added Step 7 to `skills/architect/SKILL.md`: reads `additionalDirectories` from `.claude/settings.local.json`, fingerprint-detects the stack for each path (same bash as Step 1 but using `$DIR/` prefix), deploys composed `_shared/` + stack-overlay templates to `<dir>/.claude/architecture/`. Skips directories that already have architecture files. Reports per-directory in Step 7c summary.
+Trigger: Task completed  Confidence: 0.85  Source: auto-capture
+
+### 2026-07-18 Task completed — Knowledge graph refreshed post-VSTO
+9 modules were stale after VSTO work: architect, code-review, security, app-readiness, dynamic-scan, icea-feature, project-deploy, rules, scripts. Fingerprints recomputed using SHA1 over sorted directory walk and written to `graph.json`. Detail files updated with VSTO-specific additions. `graph-index.md` date bumped to 2026-07-18. Run `/graph-sync` for future incremental updates.
+Trigger: Task completed  Confidence: 0.85  Source: auto-capture
+
+---
+
 ## Format for manual entries
 
 ```
@@ -46,6 +60,24 @@ Claude writes below automatically at trigger points.
 These are processed and removed by /dream each run.
 
 <!-- Auto-capture entries appear below this line -->
+
+### [2026-07-20] Error resolved — architect skill missing diagram sections in generated architecture.md
+Root cause: Step 1b used `cat .claude/plugin-path.txt 2>/dev/null` to resolve PLUGIN_DIR. If plugin-path.txt is absent/stale, PLUGIN_DIR is empty; `2>/dev/null` swallows the bootstrap failure silently; Step 5 then generates architecture.md without the File 1 prompt (no Mermaid diagram instructions) → End-to-End Architecture and Layered View sections missing entirely.
+Fix: Step 1b replaced with node-e registry cross-reference (same pattern as setup-sync/dream-sync Step 1) that reads installed_plugins.json authoritatively, self-heals plugin-path.txt, and fails loudly on error. Step 3 guard replaced with node-e three-signal detector (TEMPLATE marker + scaffold tokens + missing diagram headings). Step 4 adds PLUGIN_DIR + prompt file validation before Step 5 runs.
+Gotcha: `2>/dev/null` silently swallowing bootstrap failure is a class of bug to watch for in all skill files that call bootstrap — never suppress errors in critical path calls.
+Trigger: Error resolved  Confidence: 0.90  Source: auto-capture
+
+### [2026-07-20] Error resolved — autoMemoryEnabled not added to settings.json on re-run
+`stepWireSettings` had an `isDone` guard that caused the entire function to skip on setup-init resume. If `settings.json` was modified externally between runs (VS Code, Claude Code writing defaults, manual edit), `autoMemoryEnabled: false` would be missing from the output. Root cause: `isDone(manifest, 'wireSettings')` returned `true` on resume, skipping the check at `if (settings.autoMemoryEnabled === undefined)`. Fix: removed the `isDone` guard — function is fully idempotent (hooks use `some()` before adding, all other assignments check before setting) so it is safe to re-run every time. Gotcha: never guard idempotent settings steps with `isDone`; `isDone` is only appropriate for non-idempotent one-shot operations.
+Trigger: Error resolved  Confidence: 0.90  Source: auto-capture
+
+### [2026-07-17] Plan approved — VSTO stack support for AI-Assisted-Development plugin
+Adding VSTO (Visual Studio Tools for Office) as a supported stack: 12 files modified + 14 files created covering stack detection, architect templates, coding rules, code review, security, app readiness, dynamic scan graceful exit, and tech spec overlay. Key gotcha: VSTO csproj lacks System.Web/System.ServiceModel so external-stack-detection.cjs must explicitly force dotnet_framework when VSTO markers found; and csharp-dotnet-rules.md must exclude VSTO fingerprint files or modern .NET rules wrongly deploy. Tech spec overlay selection must check for vsto token BEFORE the generic dotnet_framework row or the wrong ASP.NET MVC overlay fires.
+Trigger: Plan approved  Confidence: 0.95  Source: auto-capture
+
+### [2026-07-17] Error resolved — install.ps1 parse failure from UTF-8 em dash encoding
+install.ps1 contained em dashes (`—`, U+2014) in double-quoted strings inside switch blocks. Windows PowerShell 5.x reads UTF-8-without-BOM scripts as the system code page (Windows-1252); the em dash bytes `E2 80 94` decode as `â€"`, where `0x94` = RIGHT DOUBLE QUOTATION MARK (`"`), which PowerShell 5.x treats as a valid string terminator — premature string close inside the switch case corrupts the block syntax. Fix: replace all `—` with `-` (plain ASCII) throughout the file. Gotcha: any non-ASCII punctuation in PS5 scripts saved without BOM (default for git/VS Code) can trigger the same class of parser error — use only ASCII in PowerShell strings on Windows.
+Trigger: Error resolved  Confidence: 0.90  Source: auto-capture
 
 ### [2026-07-17] Task completed — Multi-agent code review plan Rounds 5 & 6 critic (11 issues)
 Round 5 (8 issues): N4 fixed to merge-base diff (not HEAD); N11 excludes Candidates from ledger; N12 capped tracer confidence at 0.89 (later superseded by Round 6 N14); N13 fixed with file-existence check (later improved by N15 mtime comparison). Round 6 (3 issues): N14 replaced unconditional cap with _source:'tracer' tag in deduplicateBySinkLocation — collision-only fingerprint anchoring, full confidence preserved for non-colliding tracer findings. N15 replaced file-existence with pre/post mtime comparison. N16 added contentHash cache-buster to buildPass1Prompt — converts N9 staleness footgun into solved problem.
@@ -170,6 +202,44 @@ avoids all bash quote/backtick issues when embedding large JSON into HTML. The s
 graph.json via fs.readFileSync and interpolates it into the template string.
 Note: /c/tmp/ in Git-bash = C:\tmp (Write tool path). These scratch scripts are safe to
 leave there; they don't affect the project.
+
+### [2026-07-20] Error resolved — detectShell() missed Claude Code settings Bash denial
+detectShell() used spawnSync to test OS-level bash availability, but Claude Code has its own permission layer: if 'Bash' or 'Bash(*)' is in permissions.deny in ~/.claude/settings.json or .claude/settings.json, Claude Code's tool system blocks ALL shell commands even if bash.exe exists.
+Fix: added isToolDeniedInClaudeSettings() that reads all three settings locations (user, project, local) before the OS check. Broad denials ("Bash", "Bash(*)") return 'node' immediately; pattern-specific denials ("Bash(rm -rf *)") are ignored so node commands are still allowed.
+Gotcha: pattern-specific denials should NOT be treated as full Bash denial — only exact "Bash" or "Bash(*)" counts.
+Trigger: Error resolved  Confidence: 0.90  Source: auto-capture
+
+### [2026-07-20] Task completed — 4 remaining issues fixed (dream-sync, graph hooks, shell-type override, stale version)
+(1) dream-sync Steps 2-4 replaced with single bootstrap --mode sync call — no more bash sha256sum/cp/for loops.
+(2) stepGitPostMerge added to bootstrap — graph-stale-detect now auto-installed as post-merge/post-checkout git hooks.
+(3) --shell-type=bash|powershell|node override flag added to bootstrap — developers can force shell path when AppLocker context differs from terminal. shell_type persisted to dream-init-state.json; setup-status 1p check updated to node-e using shell_type.
+(4) setup-sync + dream-sync Step 1 now reads INSTALLED_VERSION from installed_plugins.json (registry, authoritative) while self-healing plugin-path.txt if stale — restores spirit of original HARD RULE without bash.
+Trigger: Task completed  Confidence: 0.90  Source: auto-capture
+
+### [2026-07-20] Error resolved — 3-iteration adversarial review found 6 real bugs post-implementation
+(1) findings-gate-precommit.cjs section overreach: split()[1] included Closed Findings — fixed with split-by-heading + line-end anchor to match .sh exactly.
+(2) detectShell() called twice in bootstrap (steps gitPreCommit + wireSettings) — inconsistency risk on flaky AppLocker; fixed by detecting once in main() and passing shellType as param.
+(3) setup-sync Step 1 version stamp used bash `'$INSTALLED_VERSION'` interpolation — writes literal string in node-only mode; fixed with direct substitution instruction.
+(4) setup-sync Step 2 `node "$PLUGIN_DIR/..."` used bash variable — fixed with explicit substitution note.
+(5) setup-sync/dream-sync warning said "bash install.sh" — fixed to "node install.cjs".
+(6) bootstrap error message said "Run bash install.sh" — fixed to include node install.cjs.
+Trigger: Error resolved  Confidence: 0.90  Source: auto-capture
+
+### [2026-07-20] Architecture decision — clean three-path hook architecture (no dispatch)
+Replaced dispatch.cjs/dispatch.ps1 (if/else chain at runtime) with detect-once-at-setup-time pattern.
+`detectShell()` runs in `setup-init-bootstrap.cjs` at provisioning time, stores `shell_type` in dream-init-state.json,
+and wires direct hook commands (bash→.sh, powershell→.ps1, node→.cjs). Five new standalone .cjs files created.
+Key insight: `plugin-path.txt` was already the canonical PLUGIN_DIR store; setup-sync and dream-sync were
+ignoring it and re-resolving from scratch with complex bash process substitution — fixed to use Read tool directly.
+Trigger: Architecture decision  Confidence: 0.90  Source: auto-capture
+
+### [2026-07-20] Task completed — bash/PS1/Node three-path hook architecture implemented
+Created: icea-floor.cjs, memory-capture.cjs, memory-log.cjs, findings-gate-precommit.cjs, graph-stale-detect.cjs
+(both in .claude/hooks/ and _project-deploy/hooks/). Deleted dispatch.cjs, dispatch.ps1, shim.sh.
+Updated: settings.json (direct .cjs commands), setup-init-bootstrap.cjs (detectShell+hookCmd),
+commands/setup-init.md (plugin-path.txt fast path), skills/setup-sync/SKILL.md (Read-tool Step 1, node Step 4b),
+skills/dream-sync/SKILL.md (Read-tool Step 1), scripts/sync-config.cjs (standalone node version).
+Trigger: Task completed  Confidence: 0.90  Source: auto-capture
 
 ### [2026-07-13] Error resolved — node -e bash quote issue when writing JSON with backticks
 `node -e "..."` in Bash tool fails with "unexpected EOF looking for matching quote" when the JS

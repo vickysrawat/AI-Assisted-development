@@ -24,6 +24,25 @@
 | Approval gate before production | |
 | Work item linking | |
 
+<!-- Deployment pipeline promotion flow — populate from CI/CD config; never invent stages -->
+
+<div style="background-color: white; padding: 25px; border-radius: 8px;">
+
+```mermaid
+flowchart LR
+    Dev["Developer"] -->|"push / PR"| CI["CI Pipeline"]
+    CI -->|"build + test"| Stage["Staging"]
+    Stage -->|"approval gate"| Prod["Production"]
+    style Dev fill:#7F8C8D,color:#ffffff,stroke:#616A6B,stroke-width:2px
+    style CI fill:#1F618D,color:#ffffff,stroke:#154360,stroke-width:2px
+    style Stage fill:#1ABC9C,color:#ffffff,stroke:#0E8472,stroke-width:2px
+    style Prod fill:#2C3E50,color:#ffffff,stroke:#1a252f,stroke-width:2px
+```
+
+</div>
+
+> ⚠ Could not determine — populate from actual pipeline config
+
 ## Environments
 
 | Environment | Purpose | Deployment trigger | Who approves |

@@ -2,7 +2,7 @@
 paths: ["**/*.cs", "**/Controllers/**", "**/Services/**", "**/Repositories/**"]
 detect:
   files: ["**/*.csproj", "**/*.sln"]
-  excludeIfFiles: ["**/net4*.csproj"]
+  excludeIfFiles: ["**/net4*.csproj", "**/ThisAddIn.cs", "**/ThisWorkbook.cs", "**/ThisDocument.cs"]
   excludeIfDependencies: ["System.Web"]
 ---
 

@@ -35,6 +35,33 @@ flags, model routing, consent rules, and business-context severity.
 
 ---
 
+## VSTO Guard
+
+Before any other step, check whether this is a VSTO add-in or document-level customization.
+VSTO add-ins run inside the Office process — they have no HTTP surface, no routes, and
+no web server for ZAP to target.
+
+```bash
+find . \( -name "ThisAddIn.cs" -o -name "ThisWorkbook.cs" -o -name "ThisDocument.cs" \) \
+  -maxdepth 5 2>/dev/null | head -1 | grep -q "." && echo "VSTO_DETECTED"
+```
+
+If `VSTO_DETECTED`, output the following and **stop immediately** — do not proceed with any
+ZAP setup, scanning, or baseline creation:
+
+```
+⛔ Dynamic scan does not apply to VSTO add-ins.
+
+   VSTO add-ins run inside the Office host process (Excel, Word, Outlook, etc.).
+   They have no HTTP surface, no routes, no web server, and no URL for ZAP to target.
+
+   For security coverage of your VSTO project, use instead:
+     /code-review --full     — static analysis with COM/Office-specific Coverity-style checkers
+     /security-review        — SAST with VSTO threat patterns (COM trust, ClickOnce, signing)
+```
+
+---
+
 ## Persona
 
 Execute as **[SEC] Dana Ito — Security Engineer** (12 yrs appsec). Optimizes for attacker's-eye,

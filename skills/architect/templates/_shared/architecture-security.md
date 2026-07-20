@@ -12,9 +12,25 @@
 > Where trust changes: client → server, server → DB, server → external service, internal → DMZ.
 > Note what is authenticated/validated at each crossing.
 
+<!-- Trust-zone map. Renders in VS Code (Mermaid preview extension), Azure DevOps, and GitHub.
+     Only include boundaries confirmed from the codebase — never invent. -->
+
+<div style="background-color: white; padding: 25px; border-radius: 8px;">
+
+```mermaid
+flowchart LR
+    Client["Client"] -->|"authenticated boundary"| App["Application"]
+    App -->|"internal"| DB[("Data Store")]
+    App -->|"TLS"| Ext[["External Service"]]
+    style Client fill:#7F8C8D,color:#ffffff,stroke:#616A6B,stroke-width:2px
+    style App fill:#1F618D,color:#ffffff,stroke:#154360,stroke-width:2px
+    style DB fill:#2C3E50,color:#ffffff,stroke:#1a252f,stroke-width:2px
+    style Ext fill:#1ABC9C,color:#ffffff,stroke:#0E8472,stroke-width:2px
 ```
-[trust-zone diagram or list]
-```
+
+</div>
+
+> ⚠ Could not determine — populate from actual auth/transport config
 
 ## Authorization Model
 

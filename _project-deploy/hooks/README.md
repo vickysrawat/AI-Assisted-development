@@ -31,13 +31,15 @@ them. Each hard rule lives at the lowest tier that can hold it:
   "hooks": {
     "PreToolUse": [
       { "matcher": "Write|Edit",
-        "hooks": [{ "type": "command", "command": "bash .claude/hooks/icea-floor.sh" }] }
+        "hooks": [{ "type": "command", "command": "powershell.exe -NonInteractive -File .claude/hooks/dispatch.ps1 icea-floor" }] }
     ]
   }
 }
+# dispatch.ps1 auto-detects bash availability and falls back to .ps1 equivalents
+# when bash is restricted. The .sh files are kept unchanged as the primary implementation.
 
-# (c) git pre-commit:
-cp .claude/hooks/findings-gate-precommit.sh .git/hooks/pre-commit
+# (c) git pre-commit (use the shim — routes to PS1 when bash is restricted):
+cp .claude/hooks/findings-gate-precommit-shim.sh .git/hooks/pre-commit
 chmod +x .git/hooks/pre-commit
 
 # (c) CI (Azure DevOps pipeline step):

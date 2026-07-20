@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/icea-floor.sh"
+            "command": "node .claude/hooks/icea-floor.cjs"
           }
         ]
       },
@@ -25,7 +25,18 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/memory-capture.sh"
+            "command": "node .claude/hooks/memory-capture.cjs"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/memory-log.cjs"
           }
         ]
       }

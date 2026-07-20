@@ -50,25 +50,36 @@ your-project/
 
 ### Step 0 — Resolve PLUGIN_DIR
 
-Use the resolver from `skills/shared/plugin-path-resolution.md §1a`:
+Run the resolver below (works on all platforms — bash, PowerShell, or Node.js only).
+This always reads from the authoritative registry (`installed_plugins.json`) to guarantee
+the CURRENT installed version is used, not a stale cached path.
 
-```bash
-PLUGIN_DIR="$(node -e '
-const fs=require("fs"),os=require("os"),path=require("path");
-const base=path.join(os.homedir(),".claude","plugins");
-const norm=p=>p?p.split(String.fromCharCode(92)).join("/"):"";
-let dir="";
+```javascript
+node -e "
+const fs=require('fs'),os=require('os'),path=require('path');
+const base=path.join(os.homedir(),'.claude','plugins');
+const norm=p=>p?p.split(String.fromCharCode(92)).join('/'):''
+let dir='';
 try{
-  const reg=JSON.parse(fs.readFileSync(path.join(base,"installed_plugins.json"),"utf8"));
-  const key=Object.keys(reg.plugins||{}).find(k=>k.startsWith("ai-assisted-development@"));
-  if(key){const a=reg.plugins[key]||[];const e=a.find(x=>x.scope==="user")||a[0];
+  const reg=JSON.parse(fs.readFileSync(path.join(base,'installed_plugins.json'),'utf8'));
+  const key=Object.keys(reg.plugins||{}).find(k=>k.startsWith('ai-assisted-development@'));
+  if(key){const a=reg.plugins[key]||[];const e=a.find(x=>x.scope==='user')||a[0];
     if(e&&e.installPath&&fs.existsSync(e.installPath))dir=e.installPath;}
 }catch(e){}
-if(!dir){try{for(const m of fs.readdirSync(base)){const p=path.join(base,m,"plugins","ai-assisted-development");if(fs.existsSync(p)){dir=p;break;}}}catch(e){}}
-process.stdout.write(norm(dir));
-')"
-[ -z "$PLUGIN_DIR" ] && echo "⚠ Cannot resolve plugin dir — is the plugin installed?" && exit 1
+if(!dir){try{for(const m of fs.readdirSync(base)){const p=path.join(base,m,'plugins','ai-assisted-development');if(fs.existsSync(p)){dir=p;break;}}}catch(e){}}
+if(!dir){console.error('Cannot resolve plugin dir — install the plugin first: node install.cjs');process.exit(1);}
+fs.mkdirSync('.claude',{recursive:true});
+fs.writeFileSync('.claude/plugin-path.txt',norm(dir)+'\n');
+console.log(norm(dir));
+"
 ```
+
+Read the output as `PLUGIN_DIR`. Bootstrap (Step 1) also writes `plugin-path.txt`, so all
+subsequent skills that read plugin reference files will find the correct path there.
+
+> Note: `plugin-path.txt` is the fast path for skills AFTER provisioning. For setup-init,
+> the resolver always runs to guarantee the current installed version — not a cached path
+> that may be stale after a plugin upgrade.
 
 ---
 
@@ -257,14 +268,17 @@ Mark `build_knowledge_graph` done in manifest.
 
 All `needsLLMPopulation` items are `done`. Delete the manifest and print the summary.
 
-```bash
-rm .claude/_bootstrap-manifest.json
-```
-
-Verify `architecture-deployment.md` exists and is answered:
-```bash
-ls .claude/architecture/architecture-deployment.md 2>/dev/null || echo "MISSING"
-grep -c "Not yet answered" .claude/architecture/architecture-deployment.md 2>/dev/null || echo "0"
+```javascript
+node -e "
+const fs = require('fs');
+const mf = '.claude/_bootstrap-manifest.json';
+if (fs.existsSync(mf)) fs.unlinkSync(mf);
+const af = '.claude/architecture/architecture-deployment.md';
+if (!fs.existsSync(af)) { console.log('MISSING'); console.log('0'); process.exit(0); }
+const content = fs.readFileSync(af, 'utf8');
+console.log('EXISTS');
+console.log((content.match(/Not yet answered/g) || []).length);
+"
 ```
 
 If MISSING or unanswered count > 0:
