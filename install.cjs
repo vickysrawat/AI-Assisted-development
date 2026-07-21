@@ -82,8 +82,10 @@ function warn(msg) { console.log(`⚠  ${msg}`); }
 function err(msg)  { console.error(`✗ ${msg}`); }
 
 function commandExists(cmd) {
-  const r = spawnSync(cmd, ['--version'], { stdio: 'ignore' });
-  return !r.error;
+  // execSync (not spawnSync) — uses cmd.exe on Windows, finding .cmd wrappers like
+  // claude.cmd and git.cmd without triggering DEP0190 (spawnSync args + shell: true).
+  try { execSync(`${cmd} --version`, { stdio: 'ignore' }); return true; }
+  catch(e) { return false; }
 }
 
 function run(cmd, opts) {

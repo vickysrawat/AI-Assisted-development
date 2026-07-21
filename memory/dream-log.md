@@ -58,3 +58,6 @@ These were deleted. Watch for more stale v1 references in future sessions.
 
 ### [capture] [2026-07-20] Error resolved — architect skill missing diagram sections in generated architecture.md
 ### [capture] [2026-07-20] Error resolved — autoMemoryEnabled not added to settings.json on re-run
+
+### [capture] 2026-07-20 Task completed — Developer guide restructured with 3 end-to-end shell paths
+### [capture] 2026-07-18 Task completed — Knowledge graph refreshed post-VSTO

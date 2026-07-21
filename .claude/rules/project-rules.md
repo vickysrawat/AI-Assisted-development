@@ -46,3 +46,15 @@ detect:
 - No hardcoded secrets, connection strings, or credentials anywhere in source
 - No `TODO` comments without a linked ADO item number
 - No `any` type in TypeScript — always type explicitly
+
+## Script execution transparency
+
+Whenever you write a script (`.cjs`, `.sh`, `.ps1`, or an inline `node -e` one-liner) that you ask the developer to run manually, display ALL of the following in the chat window alongside the script — never ask for execution without these five points:
+
+1. **What it does** — plain-English description of every action, in order.
+2. **What it touches** — exact files, folders, or system resources read or modified.
+3. **What it does NOT do** — explicit callout of side effects it avoids (no network calls, no git operations, no registry changes, etc.).
+4. **APIs / commands used** — the Node.js APIs, shell commands, or executables invoked, so the developer can independently verify the behaviour.
+5. **How to verify** — what to check after running to confirm it worked correctly.
+
+Never ask the developer to run a script without providing all five points.

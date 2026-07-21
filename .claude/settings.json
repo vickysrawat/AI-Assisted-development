@@ -18,6 +18,15 @@
             "command": "node .claude/hooks/check-settings-secrets.cjs --hook"
           }
         ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/script-review-gate.cjs"
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [

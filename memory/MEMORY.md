@@ -33,6 +33,10 @@ Trigger: Task completed  Confidence: 0.90  Source: auto-capture
 Added Step 7 to `skills/architect/SKILL.md`: reads `additionalDirectories` from `.claude/settings.local.json`, fingerprint-detects the stack for each path (same bash as Step 1 but using `$DIR/` prefix), deploys composed `_shared/` + stack-overlay templates to `<dir>/.claude/architecture/`. Skips directories that already have architecture files. Reports per-directory in Step 7c summary.
 Trigger: Task completed  Confidence: 0.85  Source: auto-capture
 
+### 2026-07-20 Task completed — Developer guide restructured with 3 end-to-end shell paths
+Replaced the fragmented install/integrate sections in `docs/workflow/developer-guide.html` with a single tabbed section (Bash → Node.js → PowerShell, each covering install + provision + verify). The Node.js tab has an Option A (plugin-path.txt) / Option B (absolute path) split for fresh projects where `.claude/plugin-path.txt` doesn't exist yet. The orphaned `#node-only-setup` section was removed; `#setup` is now labelled "provisioning reference".
+Trigger: Task completed  Confidence: 0.85  Source: auto-capture
+
 ### 2026-07-18 Task completed — Knowledge graph refreshed post-VSTO
 9 modules were stale after VSTO work: architect, code-review, security, app-readiness, dynamic-scan, icea-feature, project-deploy, rules, scripts. Fingerprints recomputed using SHA1 over sorted directory walk and written to `graph.json`. Detail files updated with VSTO-specific additions. `graph-index.md` date bumped to 2026-07-18. Run `/graph-sync` for future incremental updates.
 Trigger: Task completed  Confidence: 0.85  Source: auto-capture

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- documents-plugin-version: 3.9.0 -->
+<!-- documents-plugin-version: 3.13.0 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -480,6 +480,32 @@
     letter-spacing: 0.06em;
   }
 
+  /* ── TABS ── */
+  .tab-group { margin: var(--space-4) 0; }
+  .tab-bar {
+    display: flex;
+    gap: 2px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    margin-bottom: var(--space-4);
+  }
+  .tab-btn {
+    padding: var(--space-2) var(--space-5);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--ai-gray-500);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: color var(--duration-fast), border-color var(--duration-fast);
+    margin-bottom: -1px;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { color: var(--ai-gray-200); }
+  .tab-btn.active { color: var(--ai-accent); border-bottom-color: var(--ai-accent); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
   .cmd-copy {
     font-size: var(--text-xs);
     color: var(--ai-gray-600);
@@ -728,12 +754,15 @@
     <div class="nav-brand">
       <div class="nav-brand-label">Plugin Guide</div>
       <div class="nav-brand-title">AI-Assisted Dev</div>
-      <div class="nav-brand-version">Version 3.9.0</div>
+      <div class="nav-brand-version">Version 3.13.0</div>
     </div>
 
     <div class="nav-section-label">Getting Started</div>
-    <a class="nav-item active" href="#setup" onclick="setActive(this)">
-      <span class="nav-item-dot"></span> Integrate the plugin
+    <a class="nav-item active" href="#install" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Install &amp; integrate
+    </a>
+    <a class="nav-item" href="#setup" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Provisioning reference
     </a>
     <a class="nav-item" href="#sync" onclick="setActive(this)">
       <span class="nav-item-dot"></span> Keep in sync
@@ -827,7 +856,7 @@
 
     <!-- HERO -->
     <div class="hero">
-      <div class="hero-kicker">Developer guide · v3.9.0</div>
+      <div class="hero-kicker">Developer guide · v3.13.0</div>
       <h1 class="hero-title">From feature request<br>to working code.</h1>
       <p class="hero-sub">
         Everything the plugin does, in one place — integrate it into your project, drive the
@@ -838,12 +867,271 @@
 
     <div class="section-divider"></div>
 
+    <!-- ── INSTALL ── -->
+    <div class="milestone" id="install">
+      <div class="milestone-header">
+        <div class="milestone-number" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: var(--ai-gray-400);">I</div>
+        <div>
+          <div class="milestone-title">Install &amp; integrate the plugin</div>
+          <div class="milestone-desc">End-to-end guide — choose your shell. Each tab covers install, project provisioning, and verification in one place.</div>
+        </div>
+      </div>
+
+      <div id="install-tabs" class="tab-group">
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="bash" onclick="switchTab(this,'install-tabs')">Bash</button>
+          <button class="tab-btn" data-tab="node" onclick="switchTab(this,'install-tabs')">Node.js</button>
+          <button class="tab-btn" data-tab="ps1" onclick="switchTab(this,'install-tabs')">PowerShell</button>
+        </div>
+
+        <!-- BASH TAB -->
+        <div id="install-tabs-bash" class="tab-panel active">
+          <p style="margin-bottom:var(--space-4);color:var(--ai-gray-400);font-size:var(--text-sm);">Use in Git Bash or WSL. Requires <code>bash</code>, <code>git</code>, and the <code>claude</code> CLI in PATH.</p>
+          <div class="steps">
+
+            <div class="step">
+              <div class="step-header" onclick="toggleStep(this)">
+                <span class="step-num">1</span>
+                <span class="step-title">Install the plugin</span>
+                <span class="step-badge command">install.sh</span>
+                <span class="step-chevron">&#8250;</span>
+              </div>
+              <div class="step-body"><div class="step-body-inner">
+                <p>From the plugin repo root, run the bash installer. It prompts for your ADO organisation, project, and company name, then registers and installs the plugin.</p>
+                <div class="cmd-block">
+                  <div class="cmd-block-header"><span class="cmd-block-label">Install</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+                  <pre><span class="cmd-prompt">$</span> <span class="cmd-keyword">./install.sh</span></pre>
+                </div>
+                <div class="cmd-block">
+                  <div class="cmd-block-header"><span class="cmd-block-label">Validate</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+                  <pre><span class="cmd-prompt">$</span> claude plugin list | grep ai-assisted <span class="cmd-comment"># must appear</span></pre>
+                </div>
+                <div class="callout info"><span class="callout-icon">i</span><span>To update later: <code>./install.sh --update</code>. To uninstall: <code>./install.sh --uninstall</code>. To re-sync org/project identity: <code>bash scripts/sync-config.sh</code></span></div>
+              </div></div>
+            </div>
+
+            <div class="step">
+              <div class="step-header" onclick="toggleStep(this)">
+                <span class="step-num">2</span>
+                <span class="step-title">Provision the project</span>
+                <span class="step-badge command">/setup-init</span>
+                <span class="step-chevron">&#8250;</span>
+              </div>
+              <div class="step-body"><div class="step-body-inner">
+                <p>Open the target project in VS Code and start a Claude Code session. Run <code>/setup-init</code> — it handles the full provisioning sequence automatically: bootstrap → <code>/init</code> → <code>/architect</code> → <code>/graph-sync</code>.</p>
+                <div class="cmd-block">
+                  <div class="cmd-block-header"><span class="cmd-block-label">Claude Code session</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+                  <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/setup-init</span></pre>
+                </div>
+                <div class="callout info"><span class="callout-icon">i</span><span>It is idempotent and resume-safe — a manifest tracks progress so completed steps are skipped on re-run. Pass <code>--no-hooks</code> to skip wiring the enforcement floor.</span></div>
+              </div></div>
+            </div>
+
+            <div class="step">
+              <div class="step-header" onclick="toggleStep(this)">
+                <span class="step-num">3</span>
+                <span class="step-title">Verify the integration</span>
+                <span class="step-badge command">/setup-status</span>
+                <span class="step-chevron">&#8250;</span>
+              </div>
+              <div class="step-body"><div class="step-body-inner">
+                <p>Run <code>/setup-status</code> to confirm every artefact is green. Read-only — never modifies anything.</p>
+                <div class="cmd-block">
+                  <div class="cmd-block-header"><span class="cmd-block-label">Claude Code session</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+                  <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/setup-status</span></pre>
+                </div>
+                <div class="callout success"><span class="callout-icon">i</span><span>All green = enforcement floor, memory, architecture, knowledge graph, and rules are live. Start the first ICEA immediately.</span></div>
+              </div></div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- NODE TAB -->
+        <div id="install-tabs-node" class="tab-panel">
+          <p style="margin-bottom:var(--space-4);color:var(--ai-gray-400);font-size:var(--text-sm);">Use when both bash and PowerShell are blocked. Requires only <code>node</code>, <code>git</code>, and <code>claude</code> in PATH. The bootstrap must be run manually from a terminal before opening Claude Code.</p>
+          <div class="steps">
+
+            <div class="step">
+              <div class="step-header" onclick="toggleStep(this)">
+                <span class="step-num">1</span>
+                <span class="step-title">Install the plugin</span>
+                <span class="step-badge command">install.cjs</span>
+                <span class="step-chevron">&#8250;</span>
+              </div>
+              <div class="step-body"><div class="step-body-inner">
+                <p>From the plugin repo root, run the Node installer. It prompts for your ADO organisation, project, and company name, then registers and installs the plugin.</p>
+                <div class="cmd-block">
+                  <div class="cmd-block-header"><span class="cmd-block-label">Terminal (PowerShell, CMD, or Git Bash)</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+                  <pre><span class="cmd-prompt">&gt;</span> <span class="cmd-keyword">node install.cjs</span></pre>
+                </div>
+                <div class="cmd-block">
+                  <div class="cmd-block-header"><span class="cmd-block-label">Validate</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+                  <pre><span class="cmd-prompt">&gt;</span> claude plugin list <span class="cmd-comment"># ai-assisted-development must appear</span></pre>
+                </div>
+                <div class="callout info"><span class="callout-icon">i</span><span>To update later: <code>node install.cjs --update</code>. To uninstall: <code>node install.cjs --uninstall</code>. To re-sync org/project identity: <code>node scripts/sync-config.cjs</code></span></div>
+              </div></div>
+            </div>
+
+            <div class="step">
+              <div class="step-header" onclick="toggleStep(this)">
+                <span class="step-num">2</span>
+                <span class="step-title">Bootstrap the project (mechanical steps)</span>
+                <span class="step-badge command">setup-init-bootstrap.cjs</span>
+                <span class="step-chevron">&#8250;</span>
+              </div>
+              <div class="step-body"><div class="step-body-inner">
+                <p>Navigate to your target project root and run the bootstrap script directly. This handles all mechanical provisioning without needing Claude Code's Bash tool. Choose the option that applies:</p>
+
+                <p style="font-weight:500;color:var(--ai-gray-200);margin-top:var(--space-4);margin-bottom:var(--space-2);">Option A — via <code>plugin-path.txt</code> (exists after install writes it)</p>
+                <div class="cmd-block">
+                  <div class="cmd-block-header"><span class="cmd-block-label">PowerShell</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+                  <pre><span class="cmd-prompt">PS&gt;</span> <span class="cmd-keyword">$p = (Get-Content .claude\plugin-path.txt).Trim()</span>
+<span class="cmd-prompt">PS&gt;</span> <span class="cmd-keyword">node "$p\scripts\setup-init-bootstrap.cjs" --mode init</span></pre>
+                </div>
+                <div class="cmd-block">
+                  <div class="cmd-block-header"><span class="cmd-block-label">CMD / any shell</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+                  <pre><span class="cmd-prompt">&gt;</span> <span class="cmd-keyword">node -e "const{spawnSync}=require('child_process'),fs=require('fs');spawnSync(process.execPath,[fs.readFileSync('.claude/plugin-path.txt','utf8').trim()+'/scripts/setup-init-bootstrap.cjs','--mode','init'],{stdio:'inherit'})"</span></pre>
+                </div>
+
+                <p style="font-weight:500;color:var(--ai-gray-200);margin-top:var(--space-5);margin-bottom:var(--space-2);">Option B — absolute path (fresh project where <code>.claude/plugin-path.txt</code> does not yet exist)</p>
+                <p>The plugin installs under your home directory. Substitute <code>{org}</code> with your ADO organisation name (the marketplace folder name was printed during install).</p>
+                <div class="cmd-block">
+                  <div class="cmd-block-header"><span class="cmd-block-label">Windows — PowerShell</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+                  <pre><span class="cmd-prompt">PS&gt;</span> <span class="cmd-keyword">node "$env:USERPROFILE\.claude\plugins\{org}-marketplace\plugins\ai-assisted-development\scripts\setup-init-bootstrap.cjs" --mode init</span></pre>
+                </div>
+                <div class="cmd-block">
+                  <div class="cmd-block-header"><span class="cmd-block-label">Windows — CMD</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+                  <pre><span class="cmd-prompt">&gt;</span> <span class="cmd-keyword">node "%USERPROFILE%\.claude\plugins\{org}-marketplace\plugins\ai-assisted-development\scripts\setup-init-bootstrap.cjs" --mode init</span></pre>
+                </div>
+                <div class="cmd-block">
+                  <div class="cmd-block-header"><span class="cmd-block-label">macOS / Linux</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+                  <pre><span class="cmd-prompt">$</span> <span class="cmd-keyword">node ~/.claude/plugins/{org}-marketplace/plugins/ai-assisted-development/scripts/setup-init-bootstrap.cjs --mode init</span></pre>
+                </div>
+                <div class="callout info"><span class="callout-icon">i</span><span>Unsure of the marketplace folder name? List <code>~/.claude/plugins/</code> (Windows: <code>%USERPROFILE%\.claude\plugins\</code>) — the folder name was also printed during install.</span></div>
+                <div class="callout info" style="margin-top:var(--space-2);"><span class="callout-icon">i</span><span>If the detected shell type is wrong and hooks fail, append <code>--shell-type=node</code> to override.</span></div>
+              </div></div>
+            </div>
+
+            <div class="step">
+              <div class="step-header" onclick="toggleStep(this)">
+                <span class="step-num">3</span>
+                <span class="step-title">Complete LLM steps in Claude Code</span>
+                <span class="step-badge info">Claude Code</span>
+                <span class="step-chevron">&#8250;</span>
+              </div>
+              <div class="step-body"><div class="step-body-inner">
+                <p>Open the target project in VS Code and start a Claude Code session. Run these three commands in order — each must complete before the next.</p>
+                <div class="cmd-block">
+                  <div class="cmd-block-header"><span class="cmd-block-label">Step 3a — populate CLAUDE.md</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+                  <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/init</span></pre>
+                </div>
+                <div class="cmd-block">
+                  <div class="cmd-block-header"><span class="cmd-block-label">Step 3b — generate architecture docs + deploy stack rules</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+                  <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/architect</span></pre>
+                </div>
+                <div class="cmd-block">
+                  <div class="cmd-block-header"><span class="cmd-block-label">Step 3c — build knowledge graph</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+                  <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/graph-sync</span></pre>
+                </div>
+                <div class="callout info"><span class="callout-icon">i</span><span>If <code>/architect</code> fails to find the plugin directory, re-run Step 2 first so that <code>.claude/plugin-path.txt</code> is in place.</span></div>
+              </div></div>
+            </div>
+
+            <div class="step">
+              <div class="step-header" onclick="toggleStep(this)">
+                <span class="step-num">4</span>
+                <span class="step-title">Verify the integration</span>
+                <span class="step-badge command">/setup-status</span>
+                <span class="step-chevron">&#8250;</span>
+              </div>
+              <div class="step-body"><div class="step-body-inner">
+                <p>Run <code>/setup-status</code> inside the Claude Code session. Every check should be green.</p>
+                <div class="cmd-block">
+                  <div class="cmd-block-header"><span class="cmd-block-label">Claude Code session</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+                  <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/setup-status</span></pre>
+                </div>
+                <div class="callout success"><span class="callout-icon">i</span><span>All green = enforcement floor, memory, architecture, knowledge graph, and rules are live. Start the first ICEA immediately.</span></div>
+              </div></div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- POWERSHELL TAB -->
+        <div id="install-tabs-ps1" class="tab-panel">
+          <p style="margin-bottom:var(--space-4);color:var(--ai-gray-400);font-size:var(--text-sm);">Use on Windows with PowerShell. Requires PowerShell 5.1+, <code>git</code>, and the <code>claude</code> CLI in PATH.</p>
+          <div class="steps">
+
+            <div class="step">
+              <div class="step-header" onclick="toggleStep(this)">
+                <span class="step-num">1</span>
+                <span class="step-title">Install the plugin</span>
+                <span class="step-badge command">install.ps1</span>
+                <span class="step-chevron">&#8250;</span>
+              </div>
+              <div class="step-body"><div class="step-body-inner">
+                <p>From the plugin repo root in a PowerShell session, run the installer. It prompts for your ADO organisation, project, and company name, then registers and installs the plugin.</p>
+                <div class="cmd-block">
+                  <div class="cmd-block-header"><span class="cmd-block-label">Install</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+                  <pre><span class="cmd-prompt">PS&gt;</span> <span class="cmd-keyword">.\install.ps1</span></pre>
+                </div>
+                <div class="cmd-block">
+                  <div class="cmd-block-header"><span class="cmd-block-label">Validate</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+                  <pre><span class="cmd-prompt">PS&gt;</span> claude plugin list | Select-String ai-assisted <span class="cmd-comment"># must appear</span></pre>
+                </div>
+                <div class="callout warning"><span class="callout-icon">i</span><span>If execution policy blocks the script: <code>Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</code></span></div>
+                <div class="callout info" style="margin-top:var(--space-2);"><span class="callout-icon">i</span><span>To update later: <code>.\install.ps1 -Update</code>. To uninstall: <code>.\install.ps1 -Uninstall</code>. To re-sync org/project identity: <code>node scripts/sync-config.cjs</code> or <code>bash scripts/sync-config.sh</code></span></div>
+              </div></div>
+            </div>
+
+            <div class="step">
+              <div class="step-header" onclick="toggleStep(this)">
+                <span class="step-num">2</span>
+                <span class="step-title">Provision the project</span>
+                <span class="step-badge command">/setup-init</span>
+                <span class="step-chevron">&#8250;</span>
+              </div>
+              <div class="step-body"><div class="step-body-inner">
+                <p>Open the target project in VS Code and start a Claude Code session. Run <code>/setup-init</code> — it handles the full provisioning sequence automatically: bootstrap → <code>/init</code> → <code>/architect</code> → <code>/graph-sync</code>.</p>
+                <div class="cmd-block">
+                  <div class="cmd-block-header"><span class="cmd-block-label">Claude Code session</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+                  <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/setup-init</span></pre>
+                </div>
+                <div class="callout info"><span class="callout-icon">i</span><span>If the bootstrap step fails, run it manually: <code>$p = (Get-Content .claude\plugin-path.txt).Trim(); node "$p\scripts\setup-init-bootstrap.cjs" --mode init --shell-type=powershell</code></span></div>
+              </div></div>
+            </div>
+
+            <div class="step">
+              <div class="step-header" onclick="toggleStep(this)">
+                <span class="step-num">3</span>
+                <span class="step-title">Verify the integration</span>
+                <span class="step-badge command">/setup-status</span>
+                <span class="step-chevron">&#8250;</span>
+              </div>
+              <div class="step-body"><div class="step-body-inner">
+                <p>Run <code>/setup-status</code> to confirm every artefact is green. Read-only — never modifies anything.</p>
+                <div class="cmd-block">
+                  <div class="cmd-block-header"><span class="cmd-block-label">Claude Code session</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+                  <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/setup-status</span></pre>
+                </div>
+                <div class="callout success"><span class="callout-icon">i</span><span>All green = enforcement floor, memory, architecture, knowledge graph, and rules are live. Start the first ICEA immediately.</span></div>
+              </div></div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
     <div class="milestone" id="setup">
       <div class="milestone-header">
         <div class="milestone-number" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: var(--ai-gray-400);">A</div>
         <div>
-          <div class="milestone-title">Integrate the plugin into your project</div>
-          <div class="milestone-desc">Install once per machine, then provision each project idempotently — one command, resume-safe.</div>
+          <div class="milestone-title">Integrate the plugin — provisioning reference</div>
+          <div class="milestone-desc">Detailed reference for what provisioning does. The <strong>Install &amp; integrate</strong> tabs above contain the complete end-to-end flow for each shell type.</div>
         </div>
       </div>
       <div class="steps">
@@ -855,12 +1143,20 @@
             <span class="step-chevron">&#8250;</span>
           </div>
           <div class="step-body"><div class="step-body-inner">
-            <p>Run <code>install.ps1</code> (Windows PowerShell) or <code>install.sh</code> (Git Bash) from the plugin repo. The installer prompts for your organisation / project / company identity and writes them to <code>.claude-plugin/config.json</code> — the single source of truth for ADO URLs and branding.</p>
+            <p>Three installers are provided — use whichever shell your environment allows. All three prompt for the same identity fields and produce the same result.</p>
             <div class="cmd-block">
               <div class="cmd-block-header"><span class="cmd-block-label">Git Bash</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
               <pre><span class="cmd-prompt">$</span> <span class="cmd-keyword">./install.sh</span></pre>
             </div>
-            <div class="callout info"><span class="callout-icon">i</span><span>Edit <code>.claude-plugin/config.json</code> and run <code>scripts/sync-config.sh</code> later if org / project / company ever changes plugin-wide.</span></div>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">PowerShell</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">PS&gt;</span> <span class="cmd-keyword">.\install.ps1</span></pre>
+            </div>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">Node.js — bash &amp; PS1 both blocked</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">&gt;</span> <span class="cmd-keyword">node install.cjs</span></pre>
+            </div>
+            <div class="callout info"><span class="callout-icon">i</span><span>Edit <code>.claude-plugin/config.json</code> and run <code>node scripts/sync-config.cjs</code> (or <code>scripts/sync-config.sh</code>) later if org / project / company ever changes plugin-wide.</span></div>
           </div></div>
         </div>
         <div class="step">
@@ -881,10 +1177,10 @@
               <tbody>
                 <tr><td>memory/</td><td>Creates <code>MEMORY.md</code> and <code>dream-log.md</code></td></tr>
                 <tr><td>Commands</td><td>Deploys command stubs to <code>.claude/commands/</code></td></tr>
-                <tr><td>Hooks</td><td>Deploys enforcement hooks to <code>.claude/hooks/</code> and wires the PreToolUse/Stop hooks into <code>.claude/settings.json</code></td></tr>
-                <tr><td>State</td><td>Seeds <code>.claude/dream-init-state.json</code>, <code>.claude/file-cache.json</code>, and <code>token-graph.json</code></td></tr>
+                <tr><td>Hooks</td><td>Detects the available shell (bash → PowerShell → Node.js) and deploys the matching hook implementation (<code>.sh</code> / <code>.ps1</code> / <code>.cjs</code>) to <code>.claude/hooks/</code>. Wires PreToolUse, UserPromptSubmit, and PostToolUse hooks into <code>.claude/settings.json</code>. Also installs <code>pre-commit</code>, <code>post-merge</code>, and <code>post-checkout</code> git hooks.</td></tr>
+                <tr><td>State</td><td>Seeds <code>.claude/dream-init-state.json</code> (including detected <code>shell_type</code>), <code>.claude/file-cache.json</code>, and <code>token-graph.json</code></td></tr>
                 <tr><td>Ignore file</td><td>Writes the VCS-aware ignore file — <code>.gitignore</code> on Git or <code>.tfignore</code> on TFVC — with a managed block</td></tr>
-                <tr><td>Toolchain</td><td>Detects the git/bash paths on Windows</td></tr>
+                <tr><td>Toolchain</td><td>Detects the git/bash paths on Windows and the available shell type</td></tr>
               </tbody>
             </table>
             <p>It then runs the LLM steps in order: <code>/init</code> to populate <code>CLAUDE.md</code>, the architect skill to populate <code>.claude/architecture/</code> and deploy the stack-matched rule files to <code>.claude/rules/</code>, and <code>/graph-sync</code> to build the knowledge graph.</p>
@@ -1989,7 +2285,7 @@ To start implementation:
                 <tr><td><code>D</code> Findings gate</td><td>Blocks on open Critical/High findings across the code-review, security, and dynamic-scan ledgers.</td></tr>
               </tbody>
             </table>
-            <div class="callout info"><span class="callout-icon">i</span><span>The same gates are also enforced non-interactively by the <code>icea-floor.sh</code> and <code>findings-gate-precommit.sh</code> pre-commit hooks installed by <code>/setup-init</code>.</span></div>
+            <div class="callout info"><span class="callout-icon">i</span><span>The same gates are also enforced non-interactively by the <code>icea-floor</code> and <code>findings-gate-precommit</code> hooks installed by <code>/setup-init</code> (as <code>.sh</code>, <code>.ps1</code>, or <code>.cjs</code> depending on the detected shell environment).</span></div>
           </div></div>
         </div>
         <div class="step">
@@ -2638,6 +2934,15 @@ To start implementation:
 </div>
 
 <script>
+  function switchTab(btn, groupId) {
+    const group = document.getElementById(groupId);
+    group.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    group.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    const panel = group.querySelector('#' + groupId + '-' + btn.dataset.tab);
+    if (panel) panel.classList.add('active');
+  }
+
   function toggleStep(header) {
     const step = header.closest('.step');
     const isOpen = step.classList.contains('open');
