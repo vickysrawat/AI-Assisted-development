@@ -37,6 +37,75 @@ never assume, never attribute in output. See `$PLUGIN_DIR/skills/shared/personas
 
 ---
 
+## --commands flag (scoped deployment, deterministic)
+
+When invoked as `/setup-sync --commands`, skip Steps 1–7 entirely and run only this:
+
+**1. Read PLUGIN_DIR from `.claude/plugin-path.txt`:**
+
+```javascript
+node -e "
+const fs=require('fs');
+const p='.claude/plugin-path.txt';
+if(!fs.existsSync(p)){console.error('PLUGIN_DIR_NOT_FOUND');process.exit(1);}
+console.log('PLUGIN_DIR='+fs.readFileSync(p,'utf8').trim());
+"
+```
+
+If `PLUGIN_DIR_NOT_FOUND`:
+```
+⚠ .claude/plugin-path.txt not found. Run /setup-init first.
+```
+Stop here.
+
+**2. Run the deterministic deploy script** (substitute the actual PLUGIN_DIR value — no shell variables):
+
+```
+node {PLUGIN_DIR}/scripts/deploy-commands.cjs
+```
+
+**3. Display the script output verbatim. Stop — do not proceed to Steps 1–7.**
+
+The script copies every `.md` from the plugin's `.claude/commands/` to the current project's `.claude/commands/`. Files present in the target but absent from the plugin are never deleted (target-only files are reported as "Kept").
+
+---
+
+## --reinstall flag (push source to installed copy, deterministic)
+
+When invoked as `/setup-sync --reinstall`:
+
+**1. Verify this is the plugin source directory:**
+
+```javascript
+node -e "
+const fs=require('fs');
+if(!fs.existsSync('install.cjs')){
+  console.error('NOT_PLUGIN_SOURCE');process.exit(1);
+}
+console.log('OK');
+"
+```
+
+If `NOT_PLUGIN_SOURCE`:
+```
+⚠ Run /setup-sync --reinstall from the plugin source directory (where install.cjs lives).
+```
+Stop here.
+
+**2. Run the installer in update mode:**
+
+```
+node install.cjs --update
+```
+
+**3. Display output verbatim. Stop — do not proceed to Steps 1–7.**
+
+This copies all source files to the installed plugin location at
+`~/.claude/plugins/{marketplace}/plugins/ai-assisted-development/`.
+After this, run `/setup-sync --commands` in each target project to deploy the updated stubs.
+
+---
+
 ## Step 1 — Resolve plugin path and read versions
 
 > ⚠️ **HARD RULE — DO NOT IMPROVISE VERSION DETECTION.**

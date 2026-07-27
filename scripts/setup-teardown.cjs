@@ -223,14 +223,17 @@ function scopeFull() {
     const r = fn(); items.push(...r.items); warnings.push(...r.warnings);
   }
 
-  // Extra --full targets
-  for (const d of ['.claude/architecture', '.claude/graph', 'temp']) {
+  // temp is removed; architecture and graph are preserved (expensive to regenerate)
+  if (exists('temp')) {
+    const n = countFiles('temp');
+    items.push({ rel: 'temp', display: `temp/ (${n} files)`, type: 'dir' });
+  }
+  for (const d of ['.claude/architecture', '.claude/graph']) {
     if (exists(d)) {
       const n = countFiles(d);
-      if (n > 0 && d !== 'temp') {
-        warnings.push(`${d}/ is non-empty — may contain developer notes; will be removed`);
+      if (n > 0) {
+        warnings.push(`${d}/ preserved — not removed (run /graph-sync or /update-arch to regenerate)`);
       }
-      items.push({ rel: d, display: `${d}/ (${n} files)`, type: 'dir' });
     }
   }
 

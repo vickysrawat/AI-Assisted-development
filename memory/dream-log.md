@@ -61,3 +61,25 @@ These were deleted. Watch for more stale v1 references in future sessions.
 
 ### [capture] 2026-07-20 Task completed — Developer guide restructured with 3 end-to-end shell paths
 ### [capture] 2026-07-18 Task completed — Knowledge graph refreshed post-VSTO
+
+### [capture] 2026-07-23 Task completed — icea-feature Step 8 completeness self-check added
+### [capture] 2026-07-18 Task completed — Mermaid diagram standards applied across all plugin templates
+
+### [capture] 2026-07-23 Architecture decision — context budget enforcement: 3-layer hook + skill design
+### [capture] 2026-07-23 Task completed — icea-feature Step 8 completeness self-check added
+
+### [capture] 2026-07-23 Error resolved — context-budget-tech-write.cjs regex bug + scope expansion
+### [capture] 2026-07-23 Architecture decision — context budget enforcement: 3-layer hook + skill design
+
+### [capture] 2026-07-27 Task completed — command files: <command> → <skill> tag fix + examples + --help
+### [capture] 2026-07-27 Error resolved — <command> tag deprecated in .claude/commands/*.md
+### [capture] 2026-07-23 Error resolved — context-budget-tech-write.cjs regex bug + scope expansion
+
+### [capture] 2026-07-27 Architecture decision — command files must use fully-qualified skill names
+### [capture] 2026-07-27 Task completed — command files: <command> → <skill> tag fix + examples + --help
+
+### [capture] 2026-07-27 Task completed — setup-init-bootstrap.cjs: stepWireLocalSettings added as step 2
+### [capture] 2026-07-27 Architecture decision — setup-init auto-run: permissions in settings.local.json, scoped
+### [capture] 2026-07-27 Architecture decision — command files must use fully-qualified skill names
+
+### [capture] [2026-07-27] Task completed — setup-teardown preserves architecture and graph directories

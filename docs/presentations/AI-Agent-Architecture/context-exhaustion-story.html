@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The File That Looked Right</title>
+<style>
+  :root {
+    --navy: #1a3a5c;
+    --gold: #c8a951;
+    --ink: #2d3436;
+    --muted: #636e72;
+    --bg: #f8f9fa;
+    --card: #ffffff;
+    --line: #dfe6e9;
+    --red: #cc2222;
+    --green: #00b894;
+    --sans: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --mono: 'Cascadia Code', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.7;
+  }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, #0a1825, #1a3a5c 65%, #122d4a);
+    color: #fff;
+    padding: 72px 0 60px;
+    text-align: center;
+  }
+
+  header .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 18px;
+  }
+
+  header h1 {
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    font-weight: 800;
+    line-height: 1.12;
+    color: #fff;
+    max-width: 20ch;
+    margin: 0 auto 16px;
+  }
+
+  header .subtitle {
+    font-size: 1.1rem;
+    color: var(--gold);
+    font-style: italic;
+    margin-bottom: 20px;
+  }
+
+  header .lead {
+    font-size: 1.05rem;
+    color: #cdd9e6;
+    max-width: 54ch;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  /* ── Article body ── */
+  article {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 56px 24px 100px;
+  }
+
+  /* ── Act headings ── */
+  h2 {
+    font-size: 1.55rem;
+    font-weight: 800;
+    color: var(--navy);
+    margin: 56px 0 20px;
+    padding-bottom: 10px;
+    border-bottom: 3px solid var(--gold);
+  }
+
+  h2:first-of-type { margin-top: 0; }
+
+  h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin: 36px 0 14px;
+  }
+
+  h4 {
+    font-size: .97rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin: 28px 0 10px;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    font-family: var(--mono);
+  }
+
+  /* ── Prose ── */
+  p {
+    font-size: 1.05rem;
+    line-height: 1.75;
+    color: var(--ink);
+    margin-bottom: 18px;
+  }
+
+  em { font-style: italic; }
+
+  strong {
+    font-weight: 700;
+    color: var(--navy);
+  }
+
+  code {
+    font-family: var(--mono);
+    font-size: .88rem;
+    background: #eef2f7;
+    padding: 2px 7px;
+    border-radius: 4px;
+    color: var(--navy);
+  }
+
+  /* ── Opening pull quote ── */
+  .pull-quote {
+    background: linear-gradient(135deg, #0d1f35, #12283d);
+    color: #e8f0f8;
+    border-radius: 12px;
+    padding: 36px 40px;
+    margin: 32px 0 36px;
+    font-size: 1.25rem;
+    line-height: 1.7;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pull-quote .big-num {
+    font-family: var(--mono);
+    font-size: 5rem;
+    font-weight: 800;
+    color: rgba(200, 169, 81, .12);
+    line-height: 1;
+    position: absolute;
+    top: 16px;
+    left: 24px;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .pull-quote blockquote {
+    position: relative;
+    z-index: 1;
+  }
+
+  .pull-quote em {
+    color: #9db2c7;
+  }
+
+  /* ── Divider ── */
+  hr {
+    border: none;
+    border-top: 1px solid var(--line);
+    margin: 48px 0;
+  }
+
+  /* ── Mermaid diagrams ── */
+  .diagram-wrap {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 28px 20px;
+    margin: 28px 0;
+    overflow-x: auto;
+    box-shadow: 0 2px 12px rgba(0,0,0,.05);
+  }
+
+  .diagram-wrap .diagram-label {
+    font-family: var(--mono);
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  .diagram-wrap .mermaid {
+    display: flex;
+    justify-content: center;
+  }
+
+  /* ── Tables ── */
+  .table-wrap {
+    margin: 24px 0;
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .94rem;
+  }
+
+  thead tr {
+    background: var(--navy);
+  }
+
+  th {
+    padding: 11px 16px;
+    text-align: left;
+    font-weight: 600;
+    font-size: .82rem;
+    letter-spacing: .6px;
+    color: #e8f0f8;
+    text-transform: uppercase;
+  }
+
+  td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink);
+    vertical-align: top;
+    line-height: 1.55;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:nth-child(even) td { background: #f4f7fa; }
+  td strong { color: var(--navy); }
+  td code { font-size: .84rem; }
+
+  /* ── Q&A section ── */
+  .qa-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin: 20px 0 28px;
+  }
+
+  .qa-list li {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--gold);
+    border-radius: 0 10px 10px 0;
+    padding: 14px 18px;
+  }
+
+  .qa-list li strong {
+    display: block;
+    font-size: .95rem;
+    color: var(--navy);
+    margin-bottom: 5px;
+  }
+
+  .qa-list li span {
+    font-size: .93rem;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  /* ── Stats strip ── */
+  .stats {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin: 28px 0;
+  }
+
+  .stat {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--gold);
+    border-radius: 10px;
+    padding: 16px 20px;
+    flex: 1;
+    min-width: 130px;
+    text-align: center;
+  }
+
+  .stat .num {
+    font-family: var(--mono);
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--navy);
+    display: block;
+  }
+
+  .stat .lbl {
+    font-size: .82rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* ── Closing callout ── */
+  .closing {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 5px solid var(--gold);
+    border-radius: 0 12px 12px 0;
+    padding: 22px 26px;
+    margin: 36px 0 20px;
+  }
+
+  .closing p {
+    font-size: 1.08rem;
+    font-weight: 600;
+    color: var(--navy);
+    margin-bottom: 12px;
+    line-height: 1.6;
+  }
+
+  .closing p:last-child { margin-bottom: 0; }
+
+  .closing .final-q {
+    font-size: 1rem;
+    font-style: italic;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    padding: 32px 24px;
+    background: #0a1825;
+    color: #7a92a8;
+    font-size: .85rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">AI Agent Architecture · Context Exhaustion &amp; Artifact Corruption</div>
+  <h1>The File That Looked Right</h1>
+  <p class="subtitle">It compiled. It loaded. It passed a quick glance. The last third of it was wrong.</p>
+  <p class="lead">How context exhaustion produces artifacts that are structurally valid, syntactically correct, and quietly broken — and the design pattern that prevents corrupt output from ever reaching disk.</p>
+</header>
+
+<article>
+
+  <!-- ACT 1 -->
+  <h2>Act 1 — The Artifact That Lied With Its Whole Chest</h2>
+
+  <div class="pull-quote">
+    <div class="big-num">✅</div>
+    <blockquote>
+      The file was there. Correct name. Correct structure. Opened fine.<br>
+      The methods were all present. The class closed properly.<br>
+      I reviewed the top half, recognized the pattern, moved on.<br><br>
+      <em>The bottom third had been generated while the context was running out.<br>
+      The logic was hollow. The validations were wrong. It compiled anyway.</em>
+    </blockquote>
+  </div>
+
+  <p>This is the failure mode that doesn't announce itself.</p>
+
+  <p>When an AI agent runs out of context mid-task, there are two versions of what you get back. In the first version, the task simply stops — the output ends early, something is visibly missing, and you know to look again. That version is annoying. This is not that version.</p>
+
+  <p>In the second version — the dangerous one — the agent keeps generating. It fills in the remaining sections of the file from pattern and habit rather than actual context. The structure stays intact. The syntax stays valid. The methods have the right names. But the implementation inside them has quietly become approximate, and "approximate" in a validation method, a permission check, or a migration script is another word for wrong.</p>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">Context degradation during generation</div>
+    <div class="mermaid">
+graph LR
+    START["Generate artifact\nEstimated: 800 lines"] --> G1["Lines 1–300\nFull context available\nGenerated accurately ✅"]
+    G1 --> G2["Lines 301–550\nContext tightening\nStill coherent ✅"]
+    G2 --> G3["Lines 551–700\nContext critically low\nLogic starts simplifying ⚠️"]
+    G3 --> G4["Lines 701–800\nContext compacting / near-exhausted\nFills from pattern not from spec ❌"]
+    G4 --> FILE["File written to disk\nOpens fine · Compiles fine\nLast 30% silently wrong"]
+
+    style G3 fill:#ff8800,color:#fff
+    style G4 fill:#cc2222,color:#fff
+    style FILE fill:#cc2222,color:#fff
+    </div>
+  </div>
+
+  <p>The file was on disk. It looked right. And the only way to discover it wasn't was to run the thing in a scenario that exercised exactly the part that had quietly degraded — which, in my case, happened two weeks later in a production edge case.</p>
+
+  <hr>
+
+  <!-- ACT 2 -->
+  <h2>Act 2 — Why This Is Harder to Catch Than a Missing File</h2>
+
+  <p>A missing file is a loud failure. The build breaks. The import fails. Something throws an exception at startup and points you at line one of a stack trace. You fix it in an hour.</p>
+
+  <p>A corrupted artifact is a quiet failure. The build succeeds. The import works. The method exists and returns a value. It just returns the wrong value under conditions that don't come up in the happy path.</p>
+
+  <p>The insidious part is how the degradation looks from the outside. The AI doesn't generate garbage when context runs out. It generates <em>plausible</em> content — the kind of thing that looks correct at a glance, matches the surrounding pattern, and only reveals itself as wrong when you push on it in exactly the right way. A validation function that returns <code>true</code> for inputs it should reject. A mapping function that handles four of five cases explicitly and quietly falls through on the fifth. A migration that runs and reports success and leaves two columns in their original state.</p>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">Same file, different context — different result</div>
+    <div class="mermaid">
+graph TD
+    subgraph FULL["Generated with full context"]
+        F1["Method: ValidateAmount\nChecks: null · negative · exceeds limit\nThrows typed exception on failure\nLogs audit entry\n✅ Correct"]
+    end
+
+    subgraph DEGRADED["Generated with near-exhausted context"]
+        D1["Method: ValidateAmount\nChecks: null\nReturns false on failure\n⚠️ Misses negative · misses limit\n❌ Silent wrong result"]
+    end
+
+    FULL -.->|"same file, different section"| DEGRADED
+    DEGRADED --> SHIP["Ships · Tests pass on happy path\nFails on negative amount\nFails silently on exceeded limit"]
+
+    style F1 fill:#228833,color:#fff
+    style D1 fill:#cc2222,color:#fff
+    style SHIP fill:#884400,color:#fff
+    </div>
+  </div>
+
+  <p>You can't review your way out of this with a quick scan. The method is there. The name is right. The signature is right. The test for <code>null</code> passes. The problem is what the test for <code>null</code> doesn't cover — and the AI didn't cover it either, because by the time it reached that method, it had forgotten what the spec said those edge cases were.</p>
+
+  <hr>
+
+  <!-- ACT 3 -->
+  <h2>Act 3 — What Happens Inside the Window</h2>
+
+  <p>Context exhaustion during artifact generation has a specific shape. It's not a cliff — it's a slope. The model doesn't work perfectly and then suddenly produce garbage. It degrades gradually as the available context thins, and the degradation follows a predictable pattern.</p>
+
+  <p>Early in the file, the model has full access to the task specification, the existing code patterns, the architectural decisions, the edge cases documented in the requirements. The generated code reflects all of it.</p>
+
+  <p>As the context fills — with the system prompt, the conversation history, the code already generated — the model has progressively less room for the <em>specification</em> that motivated the generation. It knows what a method should look like from the patterns it's seen. It doesn't necessarily remember what <em>this</em> method was supposed to do differently.</p>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">How the specification fades as the window fills</div>
+    <div class="mermaid">
+graph TD
+    OPEN["Context window at start of generation\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nSpec + requirements: accessible ✅\nArchitecture decisions: accessible ✅\nEdge cases documented: accessible ✅\nPrior code patterns: accessible ✅\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"]
+
+    OPEN --> MID["Context mid-generation\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nSpec + requirements: compressed ⚠️\nArchitecture decisions: partial ⚠️\nEdge cases documented: fading ⚠️\nGenerated code so far: filling window\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"]
+
+    MID --> LATE["Context near exhaustion\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nSpec + requirements: not visible ❌\nArchitecture decisions: not visible ❌\nEdge cases documented: not visible ❌\nGenerated code: filling most of window\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"]
+
+    LATE --> RESULT["Remaining sections generated from:\npattern matching · syntax completion\nnot from the actual specification\n\nResult: structurally valid · semantically wrong"]
+
+    style OPEN fill:#228833,color:#fff
+    style MID fill:#ff8800,color:#fff
+    style LATE fill:#cc2222,color:#fff
+    style RESULT fill:#884400,color:#fff
+    </div>
+  </div>
+
+  <p>This is what context compaction makes worse. When the session compacts — summarizing earlier conversation to free up space — the specification details that were in those earlier messages get reduced to a summary. The model keeps generating, but now it's working from a compressed version of what the task actually required. The sections generated after compaction are coherent. They're just not necessarily correct for <em>this</em> task.</p>
+
+  <hr>
+
+  <!-- ACT 4 -->
+  <h2>Act 4 — The Design That Prevents Corrupt Output</h2>
+
+  <p>The solution is not "generate less." It's "never start generating what you can't finish accurately, and validate what you do generate before it touches disk."</p>
+
+  <p>Three things working together.</p>
+
+  <h3>Check the Budget Before You Begin</h3>
+
+  <p>Before generating any artifact of significant size, check how much context remains and whether it's enough to generate the artifact accurately — including keeping the full specification in context throughout. If it isn't enough, say so explicitly and stop. Don't start what you can't finish accurately.</p>
+
+  <p>An explicit refusal is not a failure. A corrupt file is a failure. The refusal is the system working correctly.</p>
+
+  <h4>What's available today: /context</h4>
+
+  <p>Claude Code's <code>/context</code> command shows the <em>composition</em> of what's consuming context — conversation history, loaded files, tool outputs, loaded skills, CLAUDE.md. It doesn't give token counts, but it gives you enough to make a manual judgment before starting large generation:</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Signal from /context</th><th>What it means before generating</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Conversation history: long</td><td>Spec details from earlier messages may already be compressed</td></tr>
+        <tr><td>Many files loaded</td><td>Significant token budget already consumed by file content</td></tr>
+        <tr><td>Large tool outputs in context</td><td>Consider <code>/compact</code> first to clear stale outputs</td></tr>
+        <tr><td>History is short, few files</td><td>Context is healthy — safe to proceed</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>This is a qualitative check. It tells you <em>what</em> is consuming space, not <em>how much</em>. Run it before any large generation task as a manual gate — if the picture looks heavy, compact or start a fresh session before generating.</p>
+
+  <h4>The design target: quantitative budget check</h4>
+
+  <p>The table below shows what the check <em>should</em> look like with full instrumentation — the numbers that make the go/no-go decision precise rather than approximate:</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Metric</th><th>Value</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Context window (total)</td><td>200,000 tokens</td><td>Model's hard ceiling</td></tr>
+        <tr><td>Tokens used so far</td><td>142,500 tokens</td><td>System prompt + conversation + files read</td></tr>
+        <tr><td><strong>Remaining context</strong></td><td><strong>57,500 tokens</strong></td><td>Available for new generation</td></tr>
+        <tr><td>Artifact size estimate</td><td>24,000 tokens</td><td>~800 lines of code</td></tr>
+        <tr><td>Spec references required</td><td>8,000 tokens</td><td>Must stay in context throughout generation</td></tr>
+        <tr><td><strong>Required budget</strong></td><td><strong>32,000 tokens</strong></td><td>Minimum to generate accurately</td></tr>
+        <tr><td><strong>Status</strong></td><td><strong>✅ Safe to generate</strong></td><td>Remaining (57,500) &gt; Required (32,000)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Today those numbers aren't directly surfaced in Claude Code. The closest you can get live is <code>/context</code> for composition and the Anthropic API's <code>usage</code> field in each response for exact counts — both useful signals, neither a ready-made dashboard. The live quantitative budget check is the design goal, not today's reality.</p>
+
+  <h4>What compaction changes — and what it doesn't</h4>
+
+  <p>When the session compacts — Claude summarizing earlier conversation to free space — the budget picture shifts:</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th></th><th>Before compact</th><th>After compact</th><th>Net</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Tokens used</td><td>142,500</td><td>71,000</td><td><strong>71,500 tokens recovered</strong></td></tr>
+        <tr><td>Remaining</td><td>57,500</td><td>129,000</td><td>Looks healthy again</td></tr>
+        <tr><td>Spec details</td><td>Fully in context</td><td><strong>Compressed to summary</strong></td><td>⚠️ Key edge cases may be lost</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>This is the compaction trap. The remaining context number improves — sometimes dramatically. But the tokens that were freed were the conversation history that carried the specification details, the edge cases, the architectural decisions discussed earlier in the session. The model now has more room and knows less precisely what it was supposed to build.</p>
+
+  <p>Running <code>/context</code> after compaction will show a lighter history. What it won't show is which specific requirements are now summarised rather than verbatim. Generation that proceeds after compaction is generation from a compressed map — more room to work, but working from a lossy copy of the original territory.</p>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">Budget check — and what happens when it fails</div>
+    <div class="mermaid">
+graph TD
+    REQUEST["Request: generate artifact\nestimated 800 lines"] --> ESTIMATE["Estimate token cost\n800 lines ≈ 24,000 tokens\n+ spec references: ~8,000 tokens\nTotal needed: ~32,000 tokens"]
+
+    ESTIMATE --> CHECK{Remaining context\nvs. required budget}
+
+    CHECK -->|"budget sufficient"| GENERATE["Proceed with generation\nSpec stays fully in context throughout"]
+    CHECK -->|"budget insufficient"| REFUSE["❌ Cannot generate accurately\nContext budget insufficient\n\nChoose how to proceed:"]
+
+    REFUSE --> OPT1["Option A — /compact\nFrees tokens by summarising\nolder conversation history"]
+    REFUSE --> OPT2["Option B — Fresh session\nStart new session with\nfull 200k context available"]
+    REFUSE --> OPT3["Option C — Split artifact\nGenerate section 1 of N now\nContinue in next session"]
+
+    OPT1 --> COMPACT_RISK["⚠️ Tokens freed: ~70k\nBut spec details from earlier\nmessages now compressed\nEdge cases may be lost"]
+    OPT2 --> FRESH_SAFE["✅ Full context restored\nSpec fully visible throughout\nSafest option for accuracy"]
+    OPT3 --> SPLIT_SAFE["✅ Bounded scope\nSection 1 fits in budget\nCheckpoint before next session"]
+
+    COMPACT_RISK -->|"developer accepts risk"| GENERATE
+    FRESH_SAFE --> GENERATE
+    SPLIT_SAFE --> GENERATE
+
+    GENERATE --> DONE["Artifact generated\nSpec was visible throughout\nOutput reflects full requirements ✅"]
+
+    style CHECK fill:#664499,color:#fff
+    style REFUSE fill:#cc2222,color:#fff
+    style OPT1 fill:#884400,color:#fff
+    style OPT2 fill:#2244bb,color:#fff
+    style OPT3 fill:#2244bb,color:#fff
+    style COMPACT_RISK fill:#ff8800,color:#fff
+    style FRESH_SAFE fill:#228833,color:#fff
+    style SPLIT_SAFE fill:#228833,color:#fff
+    style DONE fill:#228833,color:#fff
+    </div>
+  </div>
+
+  <p>When the budget check fails, the developer gets three choices — and the choice matters more than it looks. <strong>Option A — <code>/compact</code></strong> is the fastest path: it frees significant tokens immediately, sometimes 60–70k at once, and the session continues without interruption. But compact works by summarising the older conversation — and that older conversation is almost certainly where the specification, the edge cases, and the architectural decisions were discussed. Use it to clear stale tool outputs. Be cautious using it when the freed tokens were carrying the spec.</p>
+
+  <p><strong>Option B — Fresh session</strong> is the safest path for accuracy. The full 200k context is available from the first token, the specification can be stated clearly and completely before generation begins, and nothing has been compressed. The cost is continuity: the developer needs to re-establish context for the new session — which, with a proper checkpoint from the current session, is fast.</p>
+
+  <p><strong>Option C — Split the artifact</strong> keeps the session alive and generates what fits now, leaving the rest for the next session with a clear handoff. This is the right choice when the artifact is large but the current session still has the spec fully in context — generate what fits accurately, checkpoint, continue fresh rather than compact and risk losing the details that make the rest of it correct.</p>
+
+  <h3>Generate in Sections, Validate Between Them</h3>
+
+  <p>For artifacts too large to generate in one pass, the answer is not to generate them whole and hope. It's to generate section by section, with an explicit validation step between each section: does this section match the specification for this section? Does it make consistent decisions with the sections already generated? Are the edge cases present?</p>
+
+  <p>Each section is small enough that the full specification stays visible throughout its generation. The validation step catches drift before it accumulates. A section that fails validation gets regenerated — not patched, regenerated with the full specification in context — before the next section begins.</p>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">Section-by-section generation with validation between each</div>
+    <div class="mermaid">
+graph TD
+    SPEC["Specification\n+ architecture decisions\n+ edge case requirements"] --> S1
+
+    S1["Generate section 1\nSpec fully in context\n~200 lines"] --> V1{Validate section 1\nagainst spec}
+    V1 -->|"passes"| S2["Generate section 2\nSpec + section 1 in context\n~200 lines"]
+    V1 -->|"fails"| R1["Regenerate section 1\nwith explicit correction\nSpec still fully in context"]
+    R1 --> V1
+
+    S2 --> V2{Validate section 2\nagainst spec + section 1}
+    V2 -->|"passes"| S3["Generate section 3..."]
+    V2 -->|"fails"| R2["Regenerate section 2"]
+    R2 --> V2
+
+    S3 --> ASSEMBLE["Assemble validated sections\nFull artifact — every section\nchecked against spec ✅"]
+
+    style SPEC fill:#225533,color:#fff
+    style V1 fill:#664499,color:#fff
+    style V2 fill:#664499,color:#fff
+    style R1 fill:#884400,color:#fff
+    style R2 fill:#884400,color:#fff
+    style ASSEMBLE fill:#228833,color:#fff
+    </div>
+  </div>
+
+  <h3>Verify Completeness Before Writing to Disk</h3>
+
+  <p>The final gate is between the generated output and the filesystem. Before any artifact is written to disk, it is checked against the specification that defined it: are all required sections present? Do the edge cases specified appear in the implementation? Is the artifact structurally complete, or does it end in a way that suggests truncation?</p>
+
+  <p>This check is not a code review. It's a completeness audit — a fast structural pass that answers one question: does this output reflect what was asked for, or does it reflect what the model could produce before it ran out of context?</p>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">Completeness audit before write — the last line of defense</div>
+    <div class="mermaid">
+graph TD
+    ARTIFACT["Generated artifact"] --> AUDIT["Completeness audit\nbefore write"]
+
+    AUDIT --> C1{All required sections\npresent?}
+    AUDIT --> C2{Specified edge cases\nappear in implementation?}
+    AUDIT --> C3{No signs of truncation\nor pattern-fill at end?}
+
+    C1 & C2 & C3 -->|"all pass"| WRITE["Write to disk ✅\nArtifact is complete and verified"]
+
+    C1 -->|"fails"| BLOCK["Do not write\nReport: missing sections\nRegenerating with correction"]
+    C2 -->|"fails"| BLOCK
+    C3 -->|"fails"| BLOCK
+
+    BLOCK --> REGEN["Regenerate with\nfull context budget\nand specific correction"]
+
+    style AUDIT fill:#664499,color:#fff
+    style WRITE fill:#228833,color:#fff
+    style BLOCK fill:#cc2222,color:#fff
+    style REGEN fill:#2244bb,color:#fff
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ACT 5 -->
+  <h2>Act 5 — The Complete System</h2>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">Full pattern — budget check · section generation · completeness audit</div>
+    <div class="mermaid">
+graph TD
+    Dev([Developer]) --> REQ["Artifact generation request\n+ specification + edge cases"]
+
+    REQ --> BUDGET["Budget check\n/context — qualitative signal\nEstimate token cost vs. remaining"]
+
+    BUDGET -->|"sufficient"| GEN
+    BUDGET -->|"insufficient"| SPLIT["Options presented:\nA: /compact (risk: lossy spec)\nB: Fresh session (safest)\nC: Split artifact (balanced)"]
+
+    SPLIT --> GEN
+
+    subgraph GEN["Generation — section by section"]
+        G1["Section 1\nSpec fully in context"] --> VAL1{Validate}
+        VAL1 -->|"✅"| G2["Section 2\nSpec + prior sections in context"]
+        VAL1 -->|"❌"| REG1["Regenerate section 1"]
+        REG1 --> VAL1
+        G2 --> VAL2{Validate}
+        VAL2 -->|"✅"| GN["Section N..."]
+        VAL2 -->|"❌"| REG2["Regenerate section 2"]
+        REG2 --> VAL2
+    end
+
+    GN --> ASSEMBLE["Assemble complete artifact"]
+
+    ASSEMBLE --> COMPLETENESS["Completeness audit\nAll sections · All edge cases\nNo truncation signs"]
+
+    COMPLETENESS -->|"passes"| DISK["Write to disk ✅\nArtifact is verified complete"]
+    COMPLETENESS -->|"fails"| HALT["Halt · Do not write\nReport gap · Correct and re-audit"]
+
+    HALT --> GEN
+
+    style Dev fill:#228833,color:#fff
+    style SPLIT fill:#884400,color:#fff
+    style COMPLETENESS fill:#664499,color:#fff
+    style DISK fill:#228833,color:#fff
+    style HALT fill:#cc2222,color:#fff
+    </div>
+  </div>
+
+  <p>No artifact reaches the filesystem without passing through a budget check, a section-level validation, and a completeness audit. The system can still fail — but when it does, it fails loudly: a refused generation, a reported gap, a developer choice. Never a corrupt file that compiles and lies.</p>
+
+  <hr>
+
+  <!-- ACT 6 -->
+  <h2>Act 6 — The Objections I Couldn't Ignore</h2>
+
+  <p>Four objections. All of them real.</p>
+
+  <ul class="qa-list">
+    <li>
+      <strong>This adds overhead to every artifact generation. Most of the time the context isn't even close to full.</strong>
+      <span>The budget check is fast — a token count and a comparison. The section validation is cheap compared to finding a corrupted file two weeks later in a production edge case. The completeness audit is not a full code review; it's a structural check against a specification that already exists. The overhead is real. So is the cost of the alternative.</span>
+    </li>
+    <li>
+      <strong>What if the specification itself is incomplete? The audit only catches what the spec listed.</strong>
+      <span>Correct. A completeness audit against an incomplete specification will miss things the specification missed. This is not a flaw in the audit; it's a reminder that specification quality determines output quality. The audit catches what was specified and not implemented. It doesn't invent requirements that weren't written down. That's a different problem.</span>
+    </li>
+    <li>
+      <strong>What about small artifacts — a 50-line config file, a short utility function?</strong>
+      <span>Small artifacts don't need section-by-section generation. They need a budget check (trivially passes) and a completeness audit (fast and cheap). The full machinery applies to artifacts whose size approaches the point where context could degrade. Below that threshold, the system is lightweight.</span>
+    </li>
+    <li>
+      <strong>What if the model generates a section that passes validation but is subtly wrong in a way the validator doesn't catch?</strong>
+      <span>The validator catches structural completeness and edge case coverage against the specification. It doesn't substitute for testing. Code still gets tested. The design prevents the specific failure mode where the code is structurally present but logically hollow because the model ran out of context. Testing catches logical errors in correct implementations. Both are necessary. Neither replaces the other.</span>
+    </li>
+  </ul>
+
+  <hr>
+
+  <!-- ACT 7 -->
+  <h2>Act 7 — What the Compiled File Cost</h2>
+
+  <div class="stats">
+    <div class="stat"><span class="num">2 wks</span><div class="lbl">To discover the corrupted validation</div></div>
+    <div class="stat"><span class="num">1</span><div class="lbl">Method that looked right, wasn't</div></div>
+    <div class="stat"><span class="num">3</span><div class="lbl">Options when budget check fails</div></div>
+    <div class="stat"><span class="num">0</span><div class="lbl">Files reaching disk without audit</div></div>
+    <div class="stat"><span class="num">1</span><div class="lbl">Rule: refusal beats corrupt output</div></div>
+  </div>
+
+  <p>The file compiled. The import worked. The method existed and had a name that said exactly what it was supposed to do. None of that told me anything about whether it actually did it.</p>
+
+  <p>The pattern that replaced it doesn't make the AI more accurate. It makes the accuracy verifiable before the output leaves the system — when it's still possible to fix, before it's on disk, before it's been committed, before it's been relied on by code that assumes it works.</p>
+
+  <div class="closing">
+    <p>Every artifact now arrives with proof that it was generated with the specification in context throughout, validated section by section, and checked for completeness before it was written. Not because the AI is untrustworthy. Because trust without verification is just hope — and hope doesn't catch a validation function that compiles fine and quietly rejects the wrong inputs.</p>
+    <p class="final-q">What generated file in your codebase do you trust because it looks right — without knowing whether the last third of it was written while the context was running out?</p>
+  </div>
+
+</article>
+
+<footer>
+  AI Agent Architecture · Context Exhaustion &amp; Artifact Corruption · 2026
+</footer>
+
+<!-- ── Export toolbar ── -->
+<div id="export-bar" style="
+  position: fixed; bottom: 24px; right: 24px; z-index: 999;
+  display: flex; flex-direction: column; gap: 8px; align-items: flex-end;">
+  <button onclick="downloadAllDiagrams()" style="
+    background: #1a3a5c; color: #fff; border: none; border-radius: 8px;
+    padding: 10px 18px; font-size: .88rem; font-weight: 700; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0,0,0,.25); letter-spacing: .4px;">
+    ⬇ Download All Diagrams (PNG)
+  </button>
+  <div id="export-status" style="
+    font-size: .78rem; color: #1a3a5c; background: #fff;
+    padding: 4px 10px; border-radius: 6px; display: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,.12);"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    flowchart: { curve: 'basis', useMaxWidth: true },
+    themeVariables: {
+      primaryColor: '#e8f0ff',
+      primaryTextColor: '#1a3a5c',
+      primaryBorderColor: '#2244bb',
+      lineColor: '#636e72',
+      secondaryColor: '#f8f9fa',
+      tertiaryColor: '#fff4e8',
+    }
+  });
+
+  const DIAGRAM_NAMES = [
+    '01-context-degradation',
+    '02-same-file-different-context',
+    '03-specification-fades',
+    '04-budget-check-and-options',
+    '05-section-generation-validation',
+    '06-completeness-audit',
+    '07-complete-system',
+  ];
+
+  function svgToPng(svgEl) {
+    return new Promise((resolve, reject) => {
+      const SCALE  = 2;
+      const bbox   = svgEl.getBoundingClientRect();
+      const W      = Math.max(bbox.width,  400) * SCALE;
+      const H      = Math.max(bbox.height, 200) * SCALE;
+
+      const clone  = svgEl.cloneNode(true);
+      clone.setAttribute('width',  W);
+      clone.setAttribute('height', H);
+      clone.setAttribute('xmlns',  'http://www.w3.org/2000/svg');
+
+      // White background rect
+      const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      bg.setAttribute('width', '100%'); bg.setAttribute('height', '100%'); bg.setAttribute('fill', '#ffffff');
+      clone.insertBefore(bg, clone.firstChild);
+
+      // Strip @font-face rules — these taint the canvas when loaded cross-origin
+      clone.querySelectorAll('style').forEach(s => {
+        s.textContent = s.textContent.replace(/@font-face\s*\{[^}]*\}/g, '');
+      });
+      // Remove any external <image> elements
+      clone.querySelectorAll('image').forEach(el => el.remove());
+
+      // Use data URI (same-origin, no taint) instead of blob URL
+      const xml     = new XMLSerializer().serializeToString(clone);
+      const dataUri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
+
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width  = W;
+        canvas.height = H;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, W, H);
+        ctx.drawImage(img, 0, 0, W, H);
+        canvas.toBlob(resolve, 'image/png');
+      };
+      img.onerror = reject;
+      img.src = dataUri;
+    });
+  }
+
+  async function downloadAllDiagrams() {
+    const status = document.getElementById('export-status');
+    status.style.display = 'block';
+
+    const wraps = document.querySelectorAll('.diagram-wrap');
+    let exported = 0;
+
+    for (let i = 0; i < wraps.length; i++) {
+      const svg = wraps[i].querySelector('svg');
+      if (!svg) {
+        status.textContent = `Diagram ${i+1}: not rendered yet — wait a moment and try again`;
+        continue;
+      }
+
+      const name = DIAGRAM_NAMES[i] || `diagram-${String(i+1).padStart(2,'0')}`;
+      status.textContent = `Exporting ${i+1} of ${wraps.length}: ${name}.png…`;
+
+      try {
+        const blob = await svgToPng(svg);
+        const a    = document.createElement('a');
+        a.href     = URL.createObjectURL(blob);
+        a.download = name + '.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+        exported++;
+        await new Promise(r => setTimeout(r, 600));
+      } catch(e) {
+        status.textContent = `Error on diagram ${i+1}: ${e.message}`;
+      }
+    }
+
+    status.textContent = `✅ Done — ${exported} of ${wraps.length} PNGs downloaded`;
+    setTimeout(() => { status.style.display = 'none'; }, 5000);
+  }
+</script>
+</body>
+</html>

@@ -374,6 +374,7 @@ async function main() {
   console.log('  bootstrap v' + PLUGIN_VERSION + '  mode=' + MODE + (isResume ? '  [resuming]' : ''));
 
   stepCreateDirectories(manifest);
+  stepWireLocalSettings(manifest);  // step 2: pre-approve node scripts before any Bash-tool step
   stepDeployStubs(manifest);
   stepDeployHooks(manifest);
   stepWritePluginPath(manifest);
@@ -399,6 +400,48 @@ async function main() {
   saveManifest(manifest);
 
   printSummary(manifest);
+}
+
+// ── F0: stepWireLocalSettings ─────────────────────────────────────────────────────
+// Runs as step 2 (right after directories are created) so Claude Code's Bash tool
+// is pre-approved for plugin scripts BEFORE any skill step invokes it.
+// Scoped to {PLUGIN_DIR}/scripts/*.cjs only — not a blanket "node *" wildcard.
+// Written to settings.local.json (gitignored, machine-specific), never settings.json.
+
+function stepWireLocalSettings(manifest) {
+  if (isDone(manifest, 'wireLocalSettings')) { console.log('  — wireLocalSettings: done (skip)'); return; }
+  const settingsLocalPath = path.join(PROJECT_ROOT, '.claude', 'settings.local.json');
+  let local = {};
+  try { local = JSON.parse(fs.readFileSync(settingsLocalPath, 'utf8')); } catch(_) {}
+
+  if (!local.permissions) local.permissions = {};
+  if (!local.permissions.allow) local.permissions.allow = [];
+
+  // Build scoped allow rules: only node scripts inside THIS plugin's scripts/ directory.
+  const pluginDir = resolvePluginDir();
+  const scriptsDir = path.join(pluginDir, 'scripts');
+  // Escape backslashes so the pattern string is valid inside settings.local.json.
+  const escaped = scriptsDir.replace(/\\/g, '\\\\');
+  const needed = [
+    `Bash(node "${escaped}\\\\*.cjs"*)`,
+    `Bash(node.exe "${escaped}\\\\*.cjs"*)`,
+  ];
+
+  const added = [];
+  for (const rule of needed) {
+    if (!local.permissions.allow.includes(rule)) {
+      local.permissions.allow.push(rule);
+      added.push(rule);
+    }
+  }
+
+  if (added.length > 0) {
+    atomicWrite(settingsLocalPath, JSON.stringify(local, null, 2));
+    console.log('  ✓ local settings : permissions.allow scoped to plugin scripts/ — node auto-approved');
+  } else {
+    console.log('  — local settings : node permissions already configured');
+  }
+  markStep(manifest, 'wireLocalSettings', { added, scriptsDir });
 }
 
 // ── F: stepCreateDirectories ──────────────────────────────────────────────────────
@@ -1041,10 +1084,27 @@ function stepWriteNpmDeps(manifest) {
 // ── L: stepGitignoreSync ──────────────────────────────────────────────────────────
 
 function detectVcs(root) {
-  // Inline of gitignore-sync.md Step 0 .cjs script
+  // Walk up looking for .git — reliable on Windows where git may not be in PATH
+  let dir = root;
+  for (let i = 0; i < 8; i++) {
+    if (fs.existsSync(path.join(dir, '.git'))) return 'git';
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  // Walk up looking for TFVC workspace markers — $tf or .tf are workspace metadata folders
+  dir = root;
+  for (let i = 0; i < 8; i++) {
+    if (fs.existsSync(path.join(dir, '$tf')) ||
+        fs.existsSync(path.join(dir, '.tf'))  ||
+        fs.existsSync(path.join(dir, '.tfignore'))) return 'tfvc';
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  // Fallback: try CLI commands (work when tools are in PATH)
   try { execSync('git rev-parse --is-inside-work-tree', { cwd: root, stdio: 'ignore' }); return 'git'; } catch(e) {}
   try { execSync('tf vc status .', { cwd: root, stdio: 'ignore' }); return 'tfvc'; } catch(e) {}
-  if (fs.existsSync(path.join(root, '$tf')) || fs.existsSync(path.join(root, '.tf')) || fs.existsSync(path.join(root, '.tfignore'))) return 'tfvc';
   return 'none';
 }
 

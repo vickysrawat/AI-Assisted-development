@@ -550,8 +550,60 @@ Only proceed past this point when `ICEA_GATE_PASSED` is confirmed.
 
 ---
 
+**⚠ CONTEXT BUDGET CHECK — run immediately after gate passes:**
+
+> Skip if Step 8 was entered via the `TECH ADO-{ID}` cross-session recovery keyword.
+
+```bash
+ICEA_LINES=$(wc -l < "$ICEA_FILE" 2>/dev/null || echo 0)
+echo "ICEA_LINES=$ICEA_LINES"
+```
+
+Read $PLUGIN_DIR/skills/shared/context-budget-check.md and execute it with:
+  operation_name    = "Tech Spec generation"
+  size_signal       = $ICEA_LINES
+  size_label        = "ICEA: {ICEA_LINES} lines"
+  threshold_medium  = 150
+  threshold_high    = 350
+  recovery_command  = "TECH ADO-{ADO_ID}"
+  skip_keywords     = ["TECH ADO-"]
+  operation_needs   = [
+    "Read 2 template files (~400 lines of structure)",
+    "Derive AC Coverage Matrix, Files Changed, Test Cases from your full ICEA",
+    "Generate a complete Tech Spec (~300–500 lines)"
+  ]
+  risks_if_continue = [
+    "Generic structure instead of the {overlay} overlay",
+    "Unfilled placeholder sections",
+    "Missed AC coverage"
+  ]
+  saved_context = "ICEA at: docs/Release{R}/Sprint{S}/UserStory{ADO_ID}/ADO-{ADO_ID}-{feature}.icea.md"
+
+On `BUDGET_STOP` or `BUDGET_WARN`: ⛔ stop — wait for developer reply.
+On `BUDGET_OK` or `BUDGET_SKIPPED`: proceed to template selection.
+On `TECH ADO-{ADO_ID} CONTINUE` or `TECH ADO-{ADO_ID} FORCE`:
+  - If FORCE: write `temp/ADO-{ADO_ID}-tech-force.flag` (empty file) FIRST —
+    this signals the Write gate hook to allow the spec write once. Then proceed.
+  - If CONTINUE: proceed directly.
+
+---
+
 Draft the full Tech Spec by composing the base template with the
 appropriate framework overlay.
+
+**`BASE-ONLY` flag check — run before template selection:**
+
+If the developer's message contains `BASE-ONLY` (e.g. `TECH ADO-{ID} BASE-ONLY`):
+- Skip the `dream-init-state.json` read and the overlay existence check entirely
+- Set `overlay_selected = none`, `all_stacks = base-only`
+- Proceed directly to reading `techspec-base.md` only
+- Acknowledge in output:
+  ```
+  ℹ BASE-ONLY mode — generating tech spec using techspec-base.md only.
+    Framework-specific sections (API Changes, Auth & Security, Reviewer Checklist)
+    will contain placeholder content. All 15 universal sections will be present.
+  ```
+- Continue from "Read `.claude/plugin-path.txt` to get PLUGIN_DIR" below.
 
 **Template selection:**
 
@@ -561,12 +613,28 @@ Read the combined stack from `.claude/dream-init-state.json` (primary ∪ extern
 node -e "
   const fs = require('fs');
   try {
-    const s = JSON.parse(fs.readFileSync('.claude/dream-init-state.json', 'utf8'));
+    const raw = fs.readFileSync('.claude/dream-init-state.json', 'utf8');
+    let s;
+    try { s = JSON.parse(raw); }
+    catch(e) { process.stdout.write('err_malformed'); process.exit(0); }
     const all = [...new Set([...(s.detected_stacks||[]), ...(s.external_detected_stacks||[])])];
+    if (all.length === 0) { process.stdout.write('err_empty'); process.exit(0); }
     process.stdout.write(all.join(' '));
-  } catch(e) { process.stdout.write('unknown'); }
+  } catch(e) {
+    process.stdout.write(e.code === 'EACCES' ? 'err_permission' : 'err_missing');
+  }
 "
 ```
+
+If the output is an `err_*` token, **stop immediately** — do not proceed to template
+selection or tech spec generation:
+
+| Token | ⛔ Hard stop message |
+|---|---|
+| `err_missing` | "`.claude/dream-init-state.json` not found. Run `/dream-init` to initialise the project, then re-run `TECH ADO-{ID}`." |
+| `err_malformed` | "`.claude/dream-init-state.json` contains invalid JSON — do NOT run `/dream-init` (risks overwriting config). Open the file and fix the syntax error, then re-run `TECH ADO-{ID}`." |
+| `err_permission` | "`.claude/dream-init-state.json` exists but cannot be read. Check file permissions, then re-run `TECH ADO-{ID}`." |
+| `err_empty` | "`.claude/dream-init-state.json` has no detected stacks. Run `/graph-sync` to re-detect, or `/dream-init` if the project was never fully initialised." |
 
 Select overlay based on all_stacks (primary ∪ external):
 
@@ -585,8 +653,17 @@ Select overlay based on all_stacks (primary ∪ external):
 System.Web / WCF) are mutually exclusive — a project has one, not both.
 
 If the selected overlay file is missing at `$PLUGIN_DIR` (verify with `ls` before
-reading), fall back to base template only:
-`"⚠ Overlay file not found — using base template. Check .claude/dream-init-state.json."`
+reading), **stop immediately** — do not fall back to base template:
+```
+⛔ OVERLAY NOT FOUND — cannot generate tech spec.
+   Expected: skills/icea-feature/references/techspec-{overlay}.md
+   Stack:    {all_stacks}
+
+   This may indicate a plugin version mismatch or an unsupported stack configuration.
+   Verify that the plugin is up to date and that the detected stack is correct.
+
+   To generate using the base template only: TECH ADO-{ID} BASE-ONLY
+```
 
 For `techspec-angular-nodejs.md`: if `dotnet` OR `dotnet_framework` appears in
 all_stacks → populate the .NET API layer sections (mark as PRESENT). If neither
@@ -597,6 +674,27 @@ then read both files:
 ```
 $PLUGIN_DIR/skills/icea-feature/references/techspec-base.md
 $PLUGIN_DIR/skills/icea-feature/references/techspec-{overlay}.md
+```
+
+**⚠ TEMPLATE MANIFEST — extract immediately after reading the overlay, before drafting:**
+
+Scan the overlay file you just read. Extract every H2 heading (`## ` lines) and note
+them in context as the required overlay sections:
+
+```
+TEMPLATE MANIFEST (overlay: {techspec-name}):
+  - ## {Section 1}
+  - ## {Section 2}
+  ...
+```
+
+If no overlay (base-only stack): `TEMPLATE MANIFEST: [] — conformance check skipped.`
+
+**⛔ Do NOT begin drafting until this manifest is noted.** If you cannot extract it
+(file unreadable, context compressed), stop and emit:
+```
+⛔ TEMPLATE NOT LOADED — start a fresh session and run: TECH ADO-{ADO_ID}
+   ICEA is safe at: docs/Release{R}/Sprint{S}/UserStory{ADO_ID}/ADO-{ADO_ID}-{feature}.icea.md
 ```
 
 The base template defines the skeleton. The overlay replaces the
@@ -656,6 +754,63 @@ Child ADO numbers are recorded when you run IMPLEMENT ADO-{ID} Story-{N}.
 
 The Story Breakdown table in the ICEA is also updated with this information.
 
+**EPIC / STORY branch — immediately after sizing:**
+
+| Sizing result | Template to use | Flow |
+|---|---|---|
+| STORY (total SP ≤ 5) | `techspec-base.md` + overlay | Existing single-spec flow — continue below |
+| EPIC (total SP > 5) | `techspec-epic-level.md` | Epic-level spec flow — see below |
+
+**If EPIC — switch to epic-level spec generation:**
+
+Discard any partially-drafted full spec content. Read:
+```
+$PLUGIN_DIR/skills/icea-feature/references/techspec-epic-level.md
+```
+
+Generate the **epic-level spec** only, populating it from the ICEA:
+- Overview: one paragraph summary of the full epic scope
+- Story Breakdown table: one row per story from the sizing block above; Tech Spec column = ⏳ Pending for all
+- Auth & Security: cross-cutting concerns that apply to all stories
+- Overall Request Flow: end-to-end flow across the whole epic
+- Rollback: epic-level rollback plan (schema migrations if any)
+- Handover: QA, DevOps, Future Developer notes at epic scope
+- Definition of Done: epic-level completion criteria
+- Reviewer Checklist: cross-cutting review items
+- Open Questions: any epic-wide unknowns
+
+Do NOT generate AC Coverage Matrix, Files Changed, Error Handling, or Test Cases in the
+epic-level spec — those belong in per-story specs and will be generated in the chaining
+phase (after SAVE TECH).
+
+Run the critic gate and completeness self-check against the epic-level spec draft
+(mode = tech, same gates as the STORY path — section conformance against
+techspec-epic-level.md sections).
+
+Write epic-level draft to temp (same path):
+```bash
+temp/ADO-{ADO_ID}-tech.md
+```
+
+Tell the developer:
+```
+📄 Epic Tech Spec draft written to temp/ADO-{ADO_ID}-tech.md
+   Open it in VS Code preview (Ctrl+Shift+V).
+
+   This is the epic-level spec for QA, DevOps, and reviewers.
+   Individual story tech specs ({N} stories) will be generated automatically
+   after you save this document.
+
+   Answer open questions or make changes here in chat.
+
+   When satisfied: SAVE TECH ADO-{ADO_ID}
+```
+
+Then proceed to Step 9 (interactive review) — same flow as STORY.
+On SAVE TECH ADO-{ADO_ID} the epic chaining phase begins (see Step 10 Epic section).
+
+---
+
 **⛔ CRITIC GATE — run before writing the Tech Spec draft to temp:**
 
 With the Tech Spec draft still in context and the approved ICEA at `$ICEA_FILE`
@@ -675,6 +830,66 @@ tell the developer to run `REVISE ADO-{ADO_ID}` then re-run `TECH ADO-{ADO_ID}`.
 Only on `PASS` / `PASS WITH NOTES` proceed to write the temp file; carry residual
 notes into the Step 9 review.
 
+**⚠ COMPLETENESS SELF-CHECK — run after critic PASS, before writing to temp:**
+
+Scan the Tech Spec draft you just generated. Count occurrences of unfilled
+template placeholder tokens — lines that still contain literal `{…}` brace-text
+(e.g. `{description}`, `{File N}`, `{AC-Fx}`) in substantive sections. Exclude
+intentional `❓[N]` open-question markers — those are not placeholders.
+
+| Unfilled placeholder count | Verdict | Action |
+|---|---|---|
+| 0–5 | ✅ Full derivation | Proceed — normal flow |
+| 6–15 | ⚠ Partial derivation | Write to temp; include `CONTEXT NOTE` in developer message |
+| > 15 | ⛔ Scaffold only | Do NOT write to temp — tell developer to use `TECH ADO-{ADO_ID}` in a fresh session |
+
+**Also run: Template conformance check**
+
+Compare the TEMPLATE MANIFEST noted above against the headings present in the draft.
+
+| Required overlay sections missing from draft | Verdict |
+|---|---|
+| 0 missing (or MANIFEST is empty — base-only) | ✅ Conformant |
+| 1–2 missing | ⚠ Partial conformance |
+| 3+ missing, or TEMPLATE MANIFEST was never noted | ⛔ Template not applied |
+
+**Combined verdict — take the worse of the two checks:**
+
+| Placeholder check | Conformance check | Final verdict | Action |
+|---|---|---|---|
+| ✅ | ✅ | ✅ Full derivation | Proceed — normal flow |
+| ⚠ or ✅ | ⚠ | ⚠ Partial | Write to temp with `CONTEXT NOTE`; list missing sections |
+| ✅ | ⛔ | ⛔ Template not applied | Do NOT write to temp — emit `CONTEXT EXHAUSTED` |
+| ⚠ | ⛔ | ⛔ Template not applied | Do NOT write to temp — emit `CONTEXT EXHAUSTED` |
+| ⛔ | any | ⛔ Scaffold only | Do NOT write to temp — emit `CONTEXT EXHAUSTED` |
+
+When final verdict is ⛔ and cause is `Template not applied`, name the missing sections:
+```
+⛔ CONTEXT EXHAUSTED — Tech Spec does not follow the {overlay} template.
+   Missing sections: {## Section A}, {## Section B}, ...
+   Start a fresh session and run: TECH ADO-{ADO_ID}
+```
+
+When final verdict is ⚠ and missing sections exist, add to `CONTEXT NOTE`:
+```
+   Also missing overlay sections: {## Section A}, {## Section B}
+   Run TECH ADO-{ADO_ID} in a fresh session for the full structured spec.
+```
+
+**⛔ Scaffold-only path** — emit this and stop (do not write to temp):
+```
+⛔ CONTEXT EXHAUSTED — Tech Spec would be a scaffold only ({N} unfilled sections).
+   This happens when a long ICEA session leaves insufficient context for the Tech Spec.
+
+   Fix: start a fresh session (or /clear) and run:
+     TECH ADO-{ADO_ID}
+   The saved ICEA will be read from disk with a clean context budget and the full
+   Tech Spec will be derived in one step.
+
+   Your ICEA is safe — already saved to:
+     docs/Release{R}/Sprint{S}/UserStory{ADO_ID}/ADO-{ADO_ID}-{feature}.icea.md
+```
+
 Write the draft to the temp folder (TEMP_WRITE_EXEMPT — see below):
 ```bash
 mkdir -p temp
@@ -682,10 +897,18 @@ mkdir -p temp
 temp/ADO-{ADO_ID}-tech.md
 ```
 
-Then tell the developer:
+Then tell the developer (include `CONTEXT NOTE` block only when verdict is ⚠ Partial derivation):
 ```
 📄 Tech Spec draft written to temp/ADO-{ADO_ID}-tech.md
    Open it in VS Code preview (Ctrl+Shift+V).
+
+[CONTEXT NOTE — include only when verdict is ⚠ Partial derivation:]
+⚠ CONTEXT NOTE — {N} sections still contain template placeholder text.
+   Long ICEA sessions can exhaust context before the Tech Spec is fully derived.
+   Check the preview: if AC Coverage Matrix, Files Changed, or Test Cases have
+   `{…}` placeholder text, start a fresh session and run:
+     TECH ADO-{ADO_ID}
+   Your ICEA is already saved — TECH reads it from disk with a clean context budget.
 
 Mark uncertainty as ❓ blocks — open questions listed below:
   [1] {topic} — {one line}
@@ -806,8 +1029,7 @@ docs/Release{RELEASE_ID}/Sprint{SPRINT_ID}/UserStory{ADO_ID}/
    ```
    Child ADO numbers filled when IMPLEMENT ADO-{ADO_ID} Story-{N} is run.
 
-4. If EPIC: write Epic doc (QA/review guide — derived, no interaction):
-   `ADO-{ADO_ID}-{feature}.epic.md` (same UserStory folder)
+4. If EPIC: begin story chaining phase — see **Step 10 Epic Chaining** below.
 
 5. Append to AI audit trail:
    ```bash
@@ -847,6 +1069,147 @@ Share with your Tech Lead and Product team for review.
   STATUS ADO-{ADO_ID}    ← check state at any time
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
+
+---
+
+### Step 10 Epic Chaining — Auto-generate story specs after SAVE TECH (EPIC only)
+
+Runs immediately after the epic-level spec is saved (Step 10 items 1–3 complete).
+
+**1. Create the tracker document:**
+
+```bash
+TRACKER="$DEST_DIR/ADO-{ADO_ID}-{feature}.tracker.md"
+```
+
+Write tracker content (all stories start as ⏳ Pending):
+
+```markdown
+# Tracker — {Feature Name}
+ADO #{ADO_ID} · Type: EPIC · {N} SP total
+
+| Story | Title | Tech Spec File | Status |
+|---|---|---|---|
+| 1 | {Shared Components} | ADO-{ADO_ID}-Story-1-{name}.techspec.md | ⏳ Pending |
+| 2 | {Title} | ADO-{ADO_ID}-Story-2-{name}.techspec.md | ⏳ Pending |
+```
+
+**2. Chain through stories in order:**
+
+For each story listed in the Story Breakdown (in order, starting at Story 1):
+
+  a. **Announce the story:**
+     ```
+     ⚙ Generating Story {N} tech spec — {Story Title}...
+     ```
+
+  b. **Generate the story-level spec** using `techspec-base.md` + stack overlay, populated
+     from the ICEA and scoped to this story's ACs only:
+     - AC Coverage Matrix: only this story's ACs
+     - Files Changed: only this story's files
+     - Implementation sections: scoped to this story
+     - Error Handling: this story's scenarios
+     - Test Cases: positive + negative per this story's ACs
+     - Schema Changes section: Story 1 → full DDL; later stories → delta only with reference
+     - Rollback: story-level rollback
+     - DoD: story-level completion criteria
+
+  c. **Run critic gate** (mode = tech) against the story spec draft.
+     On REVISE: auto-revise once; if still REVISE, write to tracker as ❌ and continue to
+     next story (do not block the chain — developer can re-run `TECH ADO-{ID} RESUME` for
+     the failed story after fixing the underlying issue).
+
+  d. **Run completeness self-check** (placeholder count + conformance). If ⛔ scaffold-only:
+     mark story as ❌ in tracker, log which sections are missing, continue to next story.
+
+  e. **Auto-save** the story spec directly to the permanent location (no temp staging for
+     story specs — the epic spec already received developer review):
+     ```bash
+     STORY_FILE="$DEST_DIR/ADO-{ADO_ID}-Story-{N}-{name}.techspec.md"
+     # Write story spec content directly
+     ```
+
+  f. **Update tracker** — change this story's Status from ⏳ to ✅ (or ❌ on failure):
+     ```bash
+     # Rewrite tracker file with updated status for this story
+     ```
+
+  g. **Print one-line summary:**
+     ```
+     ✅ Story {N} saved — {Story Title} · {X} ACs · {Y} files · {Z} SP
+     ```
+     (or `❌ Story {N} failed — {reason} — re-run: TECH ADO-{ID} RESUME` on failure)
+
+  h. **Continue to next story** — no pause between stories unless context is exhausted.
+
+**3. Context exhaustion during chaining:**
+
+If context budget is running low mid-chain, stop after completing the current story and
+emit:
+
+```
+⚠ Context budget low — stopping chain after Story {N}.
+  Stories {N+1}–{last} are marked ⏳ in the tracker.
+  Resume: TECH ADO-{ADO_ID} RESUME
+  Tracker: {tracker file path}
+```
+
+**4. Chain complete:**
+
+When all stories are ✅ (or ❌ with notes), emit the full confirmation:
+
+```
+✅ Epic tech spec chain complete — ADO #{ADO_ID}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Epic spec   → ...ADO-{ADO_ID}-{feature}.techspec.md
+  Tracker     → ...ADO-{ADO_ID}-{feature}.tracker.md
+  Story specs →
+    Story 1 ✅ — ...ADO-{ADO_ID}-Story-1-{name}.techspec.md
+    Story 2 ✅ — ...ADO-{ADO_ID}-Story-2-{name}.techspec.md
+    ...
+  {If any ❌:}
+  ❌ Failed   →
+    Story {N} ❌ — {reason} — re-run: TECH ADO-{ID} RESUME
+
+  ⚠ Create child ADOs in Azure DevOps — one per story.
+  Child ADO numbers recorded when you implement each story:
+    IMPLEMENT ADO-{ADO_ID} Story-1
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+---
+
+### RESUME Command — `TECH ADO-{ID} RESUME` or `Resume Tech ADO-{ID}`
+
+Resumes story spec generation for an epic where the chain was interrupted (context
+exhaustion, failure, or fresh session after partial completion).
+
+**Trigger:** Developer sends `TECH ADO-{ID} RESUME` or `Resume Tech ADO-{ID}` (case-insensitive).
+
+**Execution:**
+
+1. Resolve `DEST_DIR` using `RELEASE_ID` and `SPRINT_ID` from context or ICEA file.
+
+2. Read the tracker file:
+   ```bash
+   TRACKER=$(find "$DEST_DIR" -name "ADO-{ADO_ID}-*.tracker.md" | head -1)
+   ```
+   If tracker not found:
+   ```
+   ⛔ Tracker not found at {DEST_DIR}.
+      If the epic spec was never saved, run: TECH ADO-{ID}
+      If the tracker was deleted, re-run: TECH ADO-{ID} (epic spec regenerated, chain restarts)
+   ```
+
+3. Read the epic-level spec to load the Story Breakdown and story titles.
+
+4. Find the first story with Status = ⏳ or ❌ in the tracker.
+
+5. Generate that story's spec (same process as Step 10 Epic Chaining step 2a–g).
+
+6. Continue to next ⏳ or ❌ story if context allows.
+
+7. If all stories are now ✅: emit the chain-complete confirmation from Step 10 item 4.
 
 ---
 
@@ -895,6 +1258,12 @@ transparency). Never name the persona in any artifact — note this is distinct 
 ## Hard Rules
 
 - NEVER write any file before SAVE PLAN ADO-{ID} is received
+- NEVER generate a full monolithic tech spec for an EPIC — always use the epic-level template for the main spec and generate per-story specs in the chaining phase
+- NEVER generate story specs before the epic-level spec is saved via SAVE TECH ADO-{ID}
+- NEVER pause between stories during epic chaining — auto-save each story spec and continue; stop only on context exhaustion
+- NEVER update the tracker before a story spec is successfully saved — tracker is updated after each save, not before
+- NEVER fall back to base template when dream-init-state.json is missing, malformed, or empty — hard stop and surface the specific error
+- NEVER fall back to base template when the selected overlay file is missing on disk — hard stop and instruct BASE-ONLY if intentional
 - NEVER write the plan file to temp/ — plans go directly to docs/Release{R}/Sprint{S}/UserStory{ID}/ in one step, no temp staging
 - NEVER draft ICEA before plan is saved to disk — Step 5 mechanical gate enforces this
 - NEVER advance from Step 2 or Step 3 to Step 5 proactively — wait for SAVE PLAN ADO-{ID}
@@ -912,7 +1281,10 @@ transparency). Never name the persona in any artifact — note this is distinct 
 - NEVER omit the AC Coverage Matrix — every Tech Spec must have bidirectional AC↔File traceability
 - NEVER omit the Test Cases section — every AC-F* must have at least one positive and one negative unit test row
 - NEVER use section numbers to reference Tech Spec content — always use heading text (e.g. `## Open Questions`, `## Sizing and Story Breakdown`, `## Test Cases`)
-- ALWAYS read techspec-base.md and the stack overlay before drafting the Tech Spec
+- ALWAYS read techspec-base.md and the stack overlay before drafting the Tech Spec (STORY path)
+- ALWAYS read techspec-epic-level.md before drafting the epic-level spec (EPIC path)
+- ALWAYS create the tracker document immediately after the epic-level spec is saved, before beginning story chaining
+- ALWAYS update the tracker after each story spec is saved (not before, not batched at end)
 - ALWAYS select the correct overlay from detected_stacks in dream-init-state.json
 - ALWAYS end every Step 3 response with: `Review the plan. When ready: SAVE PLAN ADO-{ADO_ID}`
 - ALWAYS end every Step 6 response with: `Review the ICEA in VS Code preview. When ready: SAVE ICEA ADO-{ADO_ID}`
@@ -930,6 +1302,8 @@ transparency). Never name the persona in any artifact — note this is distinct 
 - ALWAYS populate ICEA from plan — carry forward all answered items automatically
 - ALWAYS update Story Breakdown in ICEA when Tech Spec sizing is complete
 - ALWAYS clean up temp files on SAVE TECH (rm -f temp/ADO-{ID}-icea.md temp/ADO-{ID}-tech.md)
+- ALWAYS run the context budget check at the start of Step 8 before reading any template files
+- ALWAYS write temp/ADO-{ID}-tech-force.flag BEFORE the tech spec write when developer uses FORCE — the Write gate hook requires this sentinel file
 - If developer uses /skip-icea, warn once then proceed:
   "⚠ Skipping ICEA gate. This is not recommended. Proceeding without ICEA."
 
@@ -944,5 +1318,12 @@ This skill is permitted to write to `temp/ADO-{ID}-icea.md` and
 - **Short-lived** — deleted on `SAVE TECH ADO-{ID}`
 - **Overwritten freely** — each iterative change rewrites the file in place
 
+**Epic story specs** (generated during the chaining phase) are written **directly to the
+permanent location** (`docs/Release{R}/Sprint{S}/UserStory{ID}/`) without temp staging —
+the developer reviewed and approved the epic-level spec before chaining begins, and the
+critic gate serves as the quality gate for each story spec. This is also TEMP_WRITE_EXEMPT
+for the purposes of the write gate.
+
 The global write gate (`## 0. WRITE GATE`) is NOT relaxed — this exemption
-applies only to `temp/ADO-{ID}-*.md` files during an active icea-feature session.
+applies only to `temp/ADO-{ID}-*.md` files and epic story spec files written during an
+active icea-feature chaining session.

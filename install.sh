@@ -76,31 +76,26 @@ to_win_path() {
   echo "$1" | sed 's|^/\([a-zA-Z]\)/|\1:/|' | sed 's|/|\\\\|g'
 }
 
-# Copy plugin files from SRC to DEST, excluding .git/ and other dev-only artifacts.
-# Using rsync when available (ships with Git for Windows) — it skips .git automatically
-# and is tolerant of permission-protected objects. Falls back to cp + cleanup.
+# Copy plugin files from SRC to DEST using Node.js, excluding dev-only artifacts.
+# Node.js is required by the plugin and works reliably on Windows/OneDrive where
+# rsync can exit with partial-transfer warnings (codes 23/24) that confuse winpty.
 safe_copy() {
   local SRC="$1" DEST="$2"
-  if command -v rsync &>/dev/null; then
-    # Trailing slash on SRC = copy contents, not the dir itself. --delete removes stale files.
-    # Exclude dev-only and IDE artifacts that have no place in an installed plugin:
-    #   .git       — version-control history; read-only objects flood cp with "Permission denied"
-    #   docs/      — ADRs, proposals, migrations; not needed at runtime
-    #   .vs/       — Visual Studio IDE folder; machine-specific, not plugin files
-    #   node_modules/ — dev deps; not present in the plugin but excluded defensively
-    rsync -a \
-      --exclude='.git' \
-      --exclude='docs/' \
-      --exclude='.vs/' \
-      --exclude='node_modules' \
-      --delete "$SRC/" "$DEST/"
-  else
-    # cp -r fallback: remove excluded dirs first so read-only .git/objects don't cause errors.
-    rm -rf "$DEST/.git" "$DEST/docs" "$DEST/.vs" 2>/dev/null || true
-    cp -r "$SRC/." "$DEST"
-    # Clean up any excluded dirs that were just copied in.
-    rm -rf "$DEST/.git" "$DEST/docs" "$DEST/.vs" 2>/dev/null || true
-  fi
+  node -e "
+    const fs = require('fs'), path = require('path');
+    const exclude = new Set(['.git', 'docs', '.vs', 'node_modules']);
+    function copyDir(src, dst) {
+      fs.mkdirSync(dst, { recursive: true });
+      for (const e of fs.readdirSync(src, { withFileTypes: true })) {
+        if (exclude.has(e.name)) continue;
+        const s = path.join(src, e.name);
+        const d = path.join(dst, e.name);
+        if (e.isDirectory()) copyDir(s, d);
+        else fs.copyFileSync(s, d);
+      }
+    }
+    copyDir(process.argv[1], process.argv[2]);
+  " "$SRC" "$DEST"
 }
 
 # Normalise user-entered path (Windows backslashes → forward slashes)
@@ -211,58 +206,17 @@ write_plugin_config() {
   [ -f "$PLUGIN_DIR/scripts/sync-config.sh" ] && bash "$PLUGIN_DIR/scripts/sync-config.sh" >/dev/null 2>&1 || true
 }
 
-# Ask source — git or local folder. Sets SOURCE_CHOICE.
-select_source() {
-  local verb="$1"
-  echo -e "${CYAN}How would you like to $verb the plugin?${NC}"
-  echo ""
-  echo "  1) Clone/pull from Azure DevOps (git)"
-  echo "     $ADO_REPO_URL"
-  echo ""
-  echo "  2) Copy from a local folder"
-  echo "     (use this if you have the plugin files on your machine)"
-  echo ""
-  tty_read "Enter choice [1/2]: " SOURCE_CHOICE; SOURCE_CHOICE="${SOURCE_CHOICE:0:1}"
-  echo ""
-}
-
-# Validate a local path. Sets LOCAL_PATH and SOURCE_VERSION.
-resolve_local_path() {
-  local verb="$1"
-  local SCRIPT_DIR
-  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-  echo "Enter the full path to the folder containing the plugin to $verb."
-  echo "  e.g. /c/Users/rawatv/Downloads/ai-assisted-development_V2_1_1"
-
-  # Offer current folder as default if it contains a valid plugin.json
-  # and is NOT the already-installed plugin directory (avoid self-copy)
-  if [ -f "$SCRIPT_DIR/.claude-plugin/plugin.json" ] && \
-     [ "$SCRIPT_DIR" != "$PLUGIN_DIR" ]; then
-    echo -e "${YELLOW}  Press Enter to use the current folder: $SCRIPT_DIR${NC}"
-    tty_read "Path: " LOCAL_PATH
-    LOCAL_PATH="${LOCAL_PATH:-$SCRIPT_DIR}"
-  else
-    tty_read "Path: " LOCAL_PATH
-    if [ -z "$LOCAL_PATH" ]; then
-      echo -e "${RED}✗ No path provided. Please enter the full path to the extracted plugin folder.${NC}"
-      exit 1
-    fi
-  fi
-
-  LOCAL_PATH="$(normalise_path "$LOCAL_PATH")"
-
-  if [ ! -d "$LOCAL_PATH" ]; then
-    echo -e "${RED}✗ Folder not found: $LOCAL_PATH${NC}"
+# Auto-detect source as the script directory. Exits with an error if plugin.json
+# is not found there (i.e. the script is not being run from the plugin source).
+# Sets LOCAL_PATH and SOURCE_VERSION.
+validate_source() {
+  if [ ! -f "$SCRIPT_DIR/.claude-plugin/plugin.json" ]; then
+    echo -e "${RED}✗ This script must be run from the ai-assisted-development plugin source directory.${NC}"
+    echo "  Change to the folder containing install.sh and try again."
     exit 1
   fi
-  if [ ! -f "$LOCAL_PATH/.claude-plugin/plugin.json" ]; then
-    echo -e "${RED}✗ No plugin.json found in $LOCAL_PATH/.claude-plugin/${NC}"
-    echo "  Make sure you're pointing at the ai-assisted-development folder."
-    exit 1
-  fi
-
-  SOURCE_VERSION=$(get_plugin_version "$LOCAL_PATH")
+  LOCAL_PATH="$SCRIPT_DIR"
+  SOURCE_VERSION=$(get_plugin_version "$SCRIPT_DIR")
 }
 
 # ── Read currently installed version ──────────────────────────────────────────
@@ -345,34 +299,13 @@ if [[ "$1" == "--update" ]]; then
     cp "$PLUGIN_DIR/.claude-plugin/config.json" "$CFG_BACKUP"
   fi
 
-  select_source "update"
-
-  case "$SOURCE_CHOICE" in
-    1)
-      if [ ! -d "$PLUGIN_DIR/.git" ]; then
-        echo -e "${RED}✗ Plugin was not installed via git — cannot pull.${NC}"
-        echo -e "${YELLOW}  Use option 2 (local folder) to update instead.${NC}"
-        exit 1
-      fi
-      echo -e "  ${CYAN}⏳ Pulling latest files from Azure DevOps — please wait…${NC}"
-      cd "$PLUGIN_DIR" && git pull origin main && cd - > /dev/null
-      NEW_VERSION=$(get_plugin_version "$PLUGIN_DIR")
-      ;;
-    2)
-      resolve_local_path "install"
-      echo ""
-      echo -e "  → Source version:   ${CYAN}v$SOURCE_VERSION${NC}"
-      echo -e "  → Updating:         v$INSTALLED_VERSION → ${GREEN}v$SOURCE_VERSION${NC}"
-      echo ""
-      echo -e "  ${CYAN}⏳ Copying updated files — please wait…${NC}"
-      safe_copy "$LOCAL_PATH" "$PLUGIN_DIR"
-      NEW_VERSION=$(get_plugin_version "$PLUGIN_DIR")
-      ;;
-    *)
-      echo -e "${RED}✗ Invalid choice.${NC}"
-      exit 1
-      ;;
-  esac
+  validate_source
+  echo -e "  → Source version:   ${CYAN}v$SOURCE_VERSION${NC}"
+  echo -e "  → Updating:         v$INSTALLED_VERSION → ${GREEN}v$SOURCE_VERSION${NC}"
+  echo ""
+  echo -e "  ${CYAN}⏳ Copying updated files — please wait…${NC}"
+  safe_copy "$LOCAL_PATH" "$PLUGIN_DIR"
+  NEW_VERSION=$(get_plugin_version "$PLUGIN_DIR")
 
   # Restore the preserved identity and re-sync the manifests.
   if [ -n "$CFG_BACKUP" ] && [ -f "$CFG_BACKUP" ]; then
@@ -427,33 +360,14 @@ fi
 mkdir -p "$MARKETPLACE_DIR/plugins"
 
 # ── Source selection ───────────────────────────────────────────────────────────
-select_source "install"
-
-case "$SOURCE_CHOICE" in
-  1)
-    echo "Cloning from Azure DevOps..."
-    echo "You may be prompted for your ADO credentials."
-    echo ""
-    git clone "$ADO_REPO_URL" "$PLUGIN_DIR"
-    NEW_VERSION=$(get_plugin_version "$PLUGIN_DIR")
-    echo ""
-    echo -e "  → Installing: ${GREEN}v$NEW_VERSION${NC}"
-    ;;
-  2)
-    resolve_local_path "install"
-    echo ""
-    echo -e "  → Source version:   ${CYAN}v$SOURCE_VERSION${NC}"
-    echo -e "  → Installing:       ${GREEN}v$SOURCE_VERSION${NC}"
-    echo ""
-    echo -e "  ${CYAN}⏳ Copying plugin files — please wait…${NC}"
-    safe_copy "$LOCAL_PATH" "$PLUGIN_DIR"
-    NEW_VERSION=$(get_plugin_version "$PLUGIN_DIR")
-    ;;
-  *)
-    echo -e "${RED}✗ Invalid choice. Run the script again and enter 1 or 2.${NC}"
-    exit 1
-    ;;
-esac
+validate_source
+echo ""
+echo -e "  → Source version:   ${CYAN}v$SOURCE_VERSION${NC}"
+echo -e "  → Installing:       ${GREEN}v$SOURCE_VERSION${NC}"
+echo ""
+echo -e "  ${CYAN}⏳ Copying plugin files — please wait…${NC}"
+safe_copy "$LOCAL_PATH" "$PLUGIN_DIR"
+NEW_VERSION=$(get_plugin_version "$PLUGIN_DIR")
 
 # ── Validate ───────────────────────────────────────────────────────────────────
 [ ! -f "$PLUGIN_DIR/.claude-plugin/plugin.json" ] && \

@@ -119,18 +119,18 @@ function Get-PluginVersion($pluginDir) {
   return "unknown"
 }
 
-# Ask install/update source - shared between fresh install and -Update
-function Select-Source($isUpdate) {
-  $verb = if ($isUpdate) { "update" } else { "install" }
-  Write-Cyan "How would you like to $verb the plugin?"
-  Write-Host ""
-  Write-Host "  1) Pull from Azure DevOps (git)"
-  Write-Host "     $ADO_REPO_URL"
-  Write-Host ""
-  Write-Host "  2) Copy from a local folder"
-  Write-Host "     (use this if you have the plugin files on your machine)"
-  Write-Host ""
-  return Read-Host "Enter choice [1/2]"
+# Auto-detect source as PSScriptRoot. Exits with an error if plugin.json is not
+# found there (i.e. the script is not being run from the plugin source).
+# Sets $script:LOCAL_PATH and $script:SOURCE_VERSION.
+function Validate-Source {
+  $pluginJson = Join-Path $PSScriptRoot ".claude-plugin\plugin.json"
+  if (-not (Test-Path $pluginJson)) {
+    Write-Red "This script must be run from the ai-assisted-development plugin source directory."
+    Write-Host "  Change to the folder containing install.ps1 and try again."
+    exit 1
+  }
+  $script:LOCAL_PATH = $PSScriptRoot
+  $script:SOURCE_VERSION = Get-PluginVersion $PSScriptRoot
 }
 
 # -- Banner ---------------------------------------------------------------------
@@ -207,50 +207,12 @@ if ($Update) {
     Copy-Item $installedCfg $cfgBackup -Force
   }
 
-  $choice = Select-Source $true
+  Validate-Source
+  Write-Host "  -> Source version: v$SOURCE_VERSION"
+  Write-Host "  -> Updating: v$installedVersion -> v$SOURCE_VERSION"
   Write-Host ""
-
-  switch ($choice) {
-    "1" {
-      if (-not (Test-Path "$PLUGIN_DIR\.git")) {
-        Write-Red "Plugin was not installed via git - cannot pull."
-        Write-Yellow "Use option 2 (local folder) to update instead."
-        exit 1
-      }
-      Write-Host "Pulling latest from Azure DevOps..."
-      Push-Location $PLUGIN_DIR
-      git pull origin main
-      Pop-Location
-    }
-    "2" {
-      Write-Host "Enter the full path to the folder containing the new plugin version."
-      Write-Host "  e.g. C:\Users\rawatv\Downloads\ai-assisted-development_V2_1_1"
-      Write-Yellow "  Do NOT press Enter to use the current folder - point to the extracted zip folder."
-      $localPath = Read-Host "Path"
-
-      if ([string]::IsNullOrWhiteSpace($localPath)) {
-        Write-Red "No path provided. Please enter the full path to the extracted plugin folder."
-        exit 1
-      }
-
-      if (-not (Test-Path $localPath)) {
-        Write-Red "Folder not found: $localPath"
-        exit 1
-      }
-      if (-not (Test-Path "$localPath\.claude-plugin\plugin.json")) {
-        Write-Red "No plugin.json found in $localPath\.claude-plugin\"
-        Write-Host "  Make sure you're pointing at the ai-assisted-development folder."
-        exit 1
-      }
-
-      Write-Host "Copying from $localPath ..."
-      Safe-Copy $localPath $PLUGIN_DIR
-    }
-    default {
-      Write-Red "Invalid choice."
-      exit 1
-    }
-  }
+  Write-Cyan "  Copying updated files - please wait..."
+  Safe-Copy $LOCAL_PATH $PLUGIN_DIR
 
   $newVersion = Get-PluginVersion $PLUGIN_DIR
 
@@ -336,41 +298,12 @@ if (Test-Path $PLUGIN_DIR) {
 New-Item -ItemType Directory -Force -Path "$MARKETPLACE_DIR\plugins" | Out-Null
 
 # -- Source selection -----------------------------------------------------------
-$choice = Select-Source $false
+Validate-Source
+Write-Host "  -> Source version: v$SOURCE_VERSION"
+Write-Host "  -> Installing: v$SOURCE_VERSION"
 Write-Host ""
-
-switch ($choice) {
-  "1" {
-    Write-Host "Cloning from Azure DevOps..."
-    Write-Host "You may be prompted for your ADO credentials."
-    Write-Host ""
-    git clone $ADO_REPO_URL $PLUGIN_DIR
-  }
-  "2" {
-    $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-    Write-Host "Enter the full path to the plugin folder."
-    Write-Yellow "Press Enter to use the current folder: $scriptDir"
-    $localPath = Read-Host "Path"
-    if ([string]::IsNullOrWhiteSpace($localPath)) { $localPath = $scriptDir }
-
-    if (-not (Test-Path $localPath)) {
-      Write-Red "Folder not found: $localPath"
-      exit 1
-    }
-    if (-not (Test-Path "$localPath\.claude-plugin\plugin.json")) {
-      Write-Red "No plugin.json found in $localPath\.claude-plugin\"
-      Write-Host "  Make sure you're pointing at the ai-assisted-development folder."
-      exit 1
-    }
-
-    Write-Host "Copying from $localPath ..."
-    Safe-Copy $localPath $PLUGIN_DIR
-  }
-  default {
-    Write-Red "Invalid choice. Run the script again and enter 1 or 2."
-    exit 1
-  }
-}
+Write-Cyan "  Copying plugin files - please wait..."
+Safe-Copy $LOCAL_PATH $PLUGIN_DIR
 
 # -- Validate -------------------------------------------------------------------
 if (-not (Test-Path "$PLUGIN_DIR\.claude-plugin\plugin.json")) {

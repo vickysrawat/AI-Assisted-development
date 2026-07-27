@@ -258,12 +258,14 @@ async function promptIdentity() {
   console.log('');
 }
 
-async function selectSource(isUpdate) {
-  const verb = isUpdate ? 'update' : 'install';
-  console.log(`\nHow would you like to ${verb} the plugin?\n`);
-  console.log(`  1) Pull from Azure DevOps (git)\n     ${ADO_REPO_URL}\n`);
-  console.log('  2) Copy from a local folder\n     (use this if you have the plugin files on your machine)\n');
-  return await ask('Enter choice [1/2]: ');
+function validateSource() {
+  const pluginJson = path.join(__dirname, '.claude-plugin', 'plugin.json');
+  if (!fs.existsSync(pluginJson)) {
+    err('This script must be run from the ai-assisted-development plugin source directory.');
+    err('Change to the folder containing install.cjs and try again.');
+    process.exit(1);
+  }
+  return __dirname;
 }
 
 // ── Preflight ──────────────────────────────────────────────────────────────────
@@ -294,26 +296,9 @@ async function doInstall() {
 
   fs.mkdirSync(path.join(MARKETPLACE_DIR, 'plugins'), { recursive: true });
 
-  const choice = await selectSource(false);
-  if (choice === '1') {
-    console.log('Cloning from Azure DevOps...');
-    run(`git clone "${ADO_REPO_URL}" "${PLUGIN_DIR}"`);
-  } else if (choice === '2') {
-    const defaultPath = __dirname;
-    console.log('Enter the full path to the plugin folder.');
-    console.log(`Press Enter to use the current folder: ${defaultPath}`);
-    const rawPath = await ask('Path: ');
-    const localPath = rawPath || defaultPath;
-    if (!fs.existsSync(localPath)) { err(`Folder not found: ${localPath}`); process.exit(1); }
-    if (!fs.existsSync(path.join(localPath, '.claude-plugin', 'plugin.json'))) {
-      err("No plugin.json found. Make sure you're pointing at the ai-assisted-development folder.");
-      process.exit(1);
-    }
-    console.log(`Copying from ${localPath} ...`);
-    safeCopy(localPath, PLUGIN_DIR);
-  } else {
-    err('Invalid choice. Run again and enter 1 or 2.'); process.exit(1);
-  }
+  const localPath = validateSource();
+  console.log(`Copying from ${localPath} ...`);
+  safeCopy(localPath, PLUGIN_DIR);
 
   if (!fs.existsSync(path.join(PLUGIN_DIR, '.claude-plugin', 'plugin.json'))) {
     err('Install failed - plugin.json not found. Check the source and retry.');
@@ -374,23 +359,9 @@ async function doUpdate() {
   const installedCfg = path.join(PLUGIN_DIR, '.claude-plugin', 'config.json');
   const cfgBackup    = fs.existsSync(installedCfg) ? fs.readFileSync(installedCfg, 'utf8') : null;
 
-  const choice = await selectSource(true);
-  if (choice === '1') {
-    if (!fs.existsSync(path.join(PLUGIN_DIR, '.git'))) {
-      err('Plugin was not installed via git - use option 2 (local folder) instead.'); process.exit(1);
-    }
-    console.log('Pulling latest from Azure DevOps...');
-    run(`git -C "${PLUGIN_DIR}" pull origin main`);
-  } else if (choice === '2') {
-    console.log('Enter the full path to the folder containing the new plugin version.');
-    const localPath = await ask('Path: ');
-    if (!localPath || !fs.existsSync(localPath)) { err('Folder not found.'); process.exit(1); }
-    if (!fs.existsSync(path.join(localPath, '.claude-plugin', 'plugin.json'))) {
-      err('No plugin.json found.'); process.exit(1);
-    }
-    console.log(`Copying from ${localPath} ...`);
-    safeCopy(localPath, PLUGIN_DIR);
-  } else { err('Invalid choice.'); process.exit(1); }
+  const localPath = validateSource();
+  console.log(`Copying from ${localPath} ...`);
+  safeCopy(localPath, PLUGIN_DIR);
 
   const newVersion = getPluginVersion(PLUGIN_DIR);
   if (cfgBackup) {

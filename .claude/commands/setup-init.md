@@ -1,6 +1,24 @@
 ---
-description: One-time project setup — creates memory/, deploys .claude/rules/, seeds file-cache.json and token-graph.json, populates architecture docs via the architect skill, and ensures CLAUDE.md has the Dream infrastructure sections. Detects the VCS and creates/populates the correct ignore file — .gitignore on Git, .tfignore on TFVC (TFS) — with the managed plugin entries plus a repo walk for build artifacts. Safe to re-run.
-argument-hint: (no arguments needed)
+description: "One-time project setup — creates memory/, deploys rules/, seeds state files, populates architecture docs, and writes the VCS ignore file. Auto-detects Git vs TFVC. Safe to re-run.  Example: /setup-init"
+argument-hint: "(no arguments) | --help"
 ---
 
-<skill>setup-init</skill>
+If the argument is `--help` or `?help`, output the following block verbatim and stop — do not invoke the skill:
+
+```
+/setup-init — One-time project setup for the AI Architect plugin.
+
+Creates: memory/, .claude/rules/, file-cache.json, token-graph.json.
+Populates architecture docs via the architect skill.
+Writes the VCS ignore file (.gitignore on Git, .tfignore on TFVC) with managed entries.
+Safe to re-run — never overwrites developer content.
+
+Arguments:
+  (no arguments)   Run the full setup.
+  --help, ?help    Show this help.
+
+Example:
+  /setup-init
+```
+
+<skill>ai-assisted-development:setup-init</skill>

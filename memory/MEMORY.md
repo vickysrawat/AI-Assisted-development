@@ -25,6 +25,38 @@ For everything else — just work normally. /dream will find it in sessions.
 
 ---
 
+### 2026-07-27 Task completed — setup-init-bootstrap.cjs: stepWireLocalSettings added as step 2
+Added `stepWireLocalSettings()` to `scripts/setup-init-bootstrap.cjs` that writes scoped `permissions.allow` rules to `.claude/settings.local.json` early in setup-init (step 2, right after directory creation). Permissions are scoped to `{PLUGIN_DIR}/scripts/*.cjs` only — not a blanket `node *` wildcard — to prevent prompt-injection risk. This allows Claude's Bash tool to auto-run plugin scripts without per-call permission prompts during the rest of setup-init.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### 2026-07-27 Architecture decision — setup-init auto-run: permissions in settings.local.json, scoped
+The fix for setup-init asking users to manually run scripts is writing `permissions.allow` to `settings.local.json` (not settings.json — machine-specific, gitignored) early in the bootstrap. `BASH_PATH` env var approach abandoned — not a recognized Claude Code key. `Bash(node *)` wildcard abandoned — too broad, prompt-injection risk. Correct approach: scope to `Bash(node "{PLUGIN_DIR}/scripts/*.cjs"*)`.
+Trigger: Architecture decision  Confidence: 0.95  Source: auto-capture
+
+### 2026-07-27 Architecture decision — command files must use fully-qualified skill names
+`<skill>` tags in `.claude/commands/*.md` must use `<skill>ai-assisted-development:skill-name</skill>` (not `<skill>skill-name</skill>`). In the plugin's own project session, unqualified names resolve because the plugin registers both forms. In target project sessions (e.g. RealEstateTracker), only the `ai-assisted-development:` prefixed names are registered — unqualified names silently fail with "Unknown skill". The correct reference pattern is confirmed in `sync-dirs.md` in RealEstateTracker which already uses the qualified form.
+Trigger: Architecture decision  Confidence: 0.95  Source: auto-capture
+
+### 2026-07-27 Task completed — command files: <command> → <skill> tag fix + examples + --help
+All 37 `.claude/commands/*.md` files updated: (1) 17 files using deprecated `<command>X</command>` body tag changed to `<skill>X</skill>` — this fixes "Unknown skill" errors when running standalone `/critic`, `/code-review`, `/bug`, etc.; (2) all descriptions now end with `  Example: /command args`; (3) all files now include a `--help`/`?help` conditional block that prints arguments and usage. Root cause of flickering: `<command>` tag not recognized by Claude Code command processor for skill dispatch; skills called internally via Skill tool (by icea-feature etc.) worked fine. Deployed to RealEstateTracker (24 files); KE.KMS.Trackers.Phase12 has no `.claude/commands/` dir.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### 2026-07-27 Error resolved — <command> tag deprecated in .claude/commands/*.md
+17 command files in this plugin used `<command>skill-name</command>` instead of `<skill>skill-name</skill>`. Claude Code's command processor only recognizes the `<skill>` tag for skill dispatch — the `<command>` tag silently fails with "Unknown skill: X". Pattern for future reference: command body must use `<skill>skill-name</skill>` to invoke a skill. The `<command>` tag is NOT equivalent.
+Trigger: Error resolved  Confidence: 0.95  Source: auto-capture
+
+### 2026-07-23 Error resolved — context-budget-tech-write.cjs regex bug + scope expansion
+The hook had a critical regex bug (`ADO-\d+-.*-tech\.md` — extra literal `-` prevented match of `temp/ADO-54050-tech.md`; hook was completely inert). Fix: `ADO-\d+.*-tech\.md`. Hook expanded from 1 rule to 6-rule dispatch table covering: temp tech spec, docs tech spec, temp ICEA, docs ICEA, architecture files, graph markdown files. Code block detection (```` ``` ```` fence tracking) added to `countPlaceholders` to prevent false positives from TypeScript/C# code examples. Batch writers (architect=8 files, graph-sync=N files) use time-bounded force flags (10 min TTL, not deleted on read) instead of single-use flags to avoid requiring one developer action per file. `context-budget-icea-save.cjs` expanded to cover `SAVE TECH` (placeholder count, not line count) and `REVISE` (recursive `docs/` search for permanent ICEA) in addition to `SAVE ICEA`.
+Trigger: Error resolved  Confidence: 0.95  Source: auto-capture
+
+### 2026-07-23 Architecture decision — context budget enforcement: 3-layer hook + skill design
+Context exhaustion during Tech Spec generation is enforced by three non-overlapping layers: (1) `UserPromptSubmit` hook `context-budget-icea-save.cjs` injects an early warning before Claude starts Step 8; (2) shared skill `context-budget-check.md` provides mid-generation guidance with /compact and new-session options; (3) `PreToolUse` Write hook `context-budget-tech-write.cjs` blocks the actual Write call if content has >15 unfilled `{…}` placeholders — this layer runs at OS level and cannot be bypassed by skill instructions. Force escape hatch: write `temp/ADO-{ID}-tech-force.flag` sentinel first; hook sees it, allows one write, deletes flag. The shared skill is parameterized for reuse in icea-implement, code-review, and other large-output skills.
+Trigger: Architecture decision  Confidence: 0.95  Source: auto-capture
+
+### 2026-07-23 Task completed — icea-feature Step 8 completeness self-check added
+Added a completeness self-check to Step 8 of `skills/icea-feature/SKILL.md` (ADO-PLUGIN-1). After the critic gate passes, the model counts unfilled `{…}` placeholder tokens: >15 = scaffold-only (do not write to temp, emit "CONTEXT EXHAUSTED" message with `TECH ADO-{ID}` recovery command); 6–15 = partial derivation (write to temp with a `CONTEXT NOTE` warning); 0–5 = normal flow. Root cause being fixed: long ICEA sessions exhaust context before Step 8 can fully derive the Tech Spec, resulting in a stub with unfilled template sections — developer must use `TECH ADO-{ID}` in a fresh session as the recovery path.
+Trigger: Task completed  Confidence: 0.90  Source: auto-capture
+
 ### 2026-07-18 Task completed — Mermaid diagram standards applied across all plugin templates
 All 15 architecture template files with Mermaid diagrams now use `<div style="background-color: white; padding: 25px; border-radius: 8px;">` wrappers. All template `architecture-deployment.md` files have a CI/CD pipeline `flowchart LR` diagram; `_shared/architecture-integrations.md` has an integration map; all `architecture-security.md` files have trust-zone diagrams. Node color palette: User=`#7F8C8D`, Backend=`#1F618D`, Frontend=`#3498DB`, External=`#1ABC9C`, DataStore=`#2C3E50`, Proxy/Office=`#E67E22`, Auth=`#8E44AD`. Every `style` directive must include `color:`, `stroke:`, and `stroke-width:2px` (not just `fill:`).
 Trigger: Task completed  Confidence: 0.90  Source: auto-capture
@@ -64,6 +96,10 @@ Claude writes below automatically at trigger points.
 These are processed and removed by /dream each run.
 
 <!-- Auto-capture entries appear below this line -->
+
+### [2026-07-27] Task completed — setup-teardown preserves architecture and graph directories
+Removed `.claude/architecture/` and `.claude/graph/` from the `--full` scope in `scripts/setup-teardown.cjs`. These directories are now emitted as "preserved" warnings instead of removal items — they are never deleted during any teardown scope. Only `temp/` is removed in the extra-full-targets block. Updated descriptions in `commands/setup-teardown.md` and `_project-deploy/commands/setup-teardown.md` to document this invariant.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
 
 ### [2026-07-20] Error resolved — architect skill missing diagram sections in generated architecture.md
 Root cause: Step 1b used `cat .claude/plugin-path.txt 2>/dev/null` to resolve PLUGIN_DIR. If plugin-path.txt is absent/stale, PLUGIN_DIR is empty; `2>/dev/null` swallows the bootstrap failure silently; Step 5 then generates architecture.md without the File 1 prompt (no Mermaid diagram instructions) → End-to-End Architecture and Layered View sections missing entirely.

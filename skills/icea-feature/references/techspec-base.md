@@ -52,6 +52,23 @@ Every file change must satisfy at least one AC. Gaps are flagged ⚠.
 
 ---
 
+## Schema Changes
+
+{Include this section ONLY for story-level specs that extend Story 1's schema.
+Omit entirely for Story 1 (which owns the full schema DDL in its Files Changed
+section) and for stories with no schema changes.}
+
+> Extends Story 1 schema — see ADO-{ID}-Story-1-{name}.techspec.md for the full DDL.
+
+| Table | Change | Column / Constraint |
+|---|---|---|
+| {TableName} | ADD COLUMN | `{column_name} {type} NOT NULL DEFAULT {value}` |
+| {TableName} | ADD INDEX | `IX_{TableName}_{Column}` on `{column}` |
+
+{If no schema changes: omit this section entirely — do not write "N/A" or leave it empty.}
+
+---
+
 ## Files Changed
 
 {Populate from the framework overlay template — each stack has a

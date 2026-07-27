@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Control Plane You Never Built</title>
+<style>
+  :root {
+    --navy: #1a3a5c;
+    --gold: #c8a951;
+    --ink: #2d3436;
+    --muted: #636e72;
+    --bg: #f8f9fa;
+    --card: #ffffff;
+    --line: #dfe6e9;
+    --red: #cc2222;
+    --green: #00b894;
+    --sans: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --mono: 'Cascadia Code', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.7;
+  }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, #0a1825, #1a3a5c 65%, #122d4a);
+    color: #fff;
+    padding: 72px 0 60px;
+    text-align: center;
+  }
+  header .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 18px;
+  }
+  header h1 {
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    font-weight: 800;
+    line-height: 1.12;
+    color: #fff;
+    max-width: 22ch;
+    margin: 0 auto 16px;
+  }
+  header .subtitle {
+    font-size: 1.1rem;
+    color: var(--gold);
+    font-style: italic;
+    margin-bottom: 20px;
+  }
+  header .lead {
+    font-size: 1.05rem;
+    color: #cdd9e6;
+    max-width: 58ch;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  /* ── Article ── */
+  article {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 56px 24px 100px;
+  }
+
+  /* ── Headings ── */
+  h2 {
+    font-size: 1.55rem;
+    font-weight: 800;
+    color: var(--navy);
+    margin: 56px 0 20px;
+    padding-bottom: 10px;
+    border-bottom: 3px solid var(--gold);
+  }
+  h2:first-of-type { margin-top: 0; }
+
+  h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin: 40px 0 14px;
+    padding-left: 14px;
+    border-left: 4px solid var(--gold);
+  }
+
+  /* ── Prose ── */
+  p {
+    font-size: 1.05rem;
+    line-height: 1.75;
+    color: var(--ink);
+    margin-bottom: 18px;
+  }
+  em { font-style: italic; }
+  strong { font-weight: 700; color: var(--navy); }
+  code {
+    font-family: var(--mono);
+    font-size: .88rem;
+    background: #eef2f7;
+    padding: 2px 7px;
+    border-radius: 4px;
+    color: var(--navy);
+  }
+
+  /* ── Bullet list for control plane components ── */
+  .control-bullets {
+    list-style: none;
+    margin: 16px 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .control-bullets li {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--navy);
+    border-radius: 0 8px 8px 0;
+    padding: 10px 16px;
+    font-size: 1rem;
+    color: var(--ink);
+    line-height: 1.6;
+  }
+
+  /* ── Pull quote ── */
+  .pull-quote {
+    background: linear-gradient(135deg, #0d1f35, #12283d);
+    color: #e8f0f8;
+    border-radius: 12px;
+    padding: 36px 40px;
+    margin: 32px 0 36px;
+    font-size: 1.15rem;
+    line-height: 1.8;
+    position: relative;
+    overflow: hidden;
+  }
+  .pull-quote .big-num {
+    font-family: var(--mono);
+    font-size: 6rem;
+    font-weight: 800;
+    color: rgba(200,169,81,.12);
+    line-height: 1;
+    position: absolute;
+    top: 16px; left: 24px;
+    pointer-events: none;
+    user-select: none;
+  }
+  .pull-quote blockquote { position: relative; z-index: 1; }
+  .pull-quote em { color: #9db2c7; }
+  .pull-quote strong { color: #e8f0f8; }
+
+  /* ── Divider ── */
+  hr {
+    border: none;
+    border-top: 1px solid var(--line);
+    margin: 52px 0;
+  }
+
+  /* ── Diagrams ── */
+  .diagram-wrap {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 28px 20px;
+    margin: 28px 0;
+    overflow-x: auto;
+    box-shadow: 0 2px 12px rgba(0,0,0,.05);
+  }
+  .diagram-wrap .diagram-label {
+    font-family: var(--mono);
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+  }
+  .diagram-wrap .mermaid { display: flex; justify-content: center; }
+
+  /* ── Q&A list ── */
+  .qa-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin: 24px 0 32px;
+  }
+  .qa-list li {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--gold);
+    border-radius: 0 10px 10px 0;
+    padding: 16px 20px;
+  }
+  .qa-list li strong {
+    display: block;
+    font-size: .97rem;
+    color: var(--navy);
+    margin-bottom: 8px;
+  }
+  .qa-list li span {
+    font-size: .95rem;
+    color: var(--ink);
+    line-height: 1.65;
+  }
+
+  /* ── Stats ── */
+  .stats {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin: 32px 0;
+  }
+  .stat {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--gold);
+    border-radius: 10px;
+    padding: 16px 20px;
+    flex: 1;
+    min-width: 130px;
+    text-align: center;
+  }
+  .stat .num {
+    font-family: var(--mono);
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--navy);
+    display: block;
+  }
+  .stat .lbl {
+    font-size: .82rem;
+    color: var(--muted);
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+
+  /* ── Closing callout ── */
+  .closing {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 5px solid var(--gold);
+    border-radius: 0 12px 12px 0;
+    padding: 24px 28px;
+    margin: 36px 0 20px;
+  }
+  .closing p {
+    font-size: 1.08rem;
+    font-weight: 600;
+    color: var(--navy);
+    margin-bottom: 14px;
+    line-height: 1.65;
+  }
+  .closing p:last-child { margin-bottom: 0; }
+  .closing .final-q {
+    font-size: 1rem;
+    font-style: italic;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    padding: 32px 24px;
+    background: #0a1825;
+    color: #7a92a8;
+    font-size: .85rem;
+  }
+
+  /* ── Export toolbar ── */
+  #export-bar {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  #export-bar .fmt-toggle {
+    display: flex;
+    gap: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,.25);
+  }
+  #export-bar .fmt-toggle button {
+    background: #263f5a;
+    color: #8cb8d8;
+    border: none;
+    padding: 7px 14px;
+    font-size: .82rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: .4px;
+    transition: background .15s, color .15s;
+  }
+  #export-bar .fmt-toggle button.active {
+    background: #1a3a5c;
+    color: #fff;
+  }
+  #export-bar .fmt-toggle button:first-child { border-right: 1px solid #1a3a5c; }
+  #download-btn {
+    background: #1a3a5c;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: .88rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0,0,0,.25);
+    letter-spacing: .4px;
+  }
+  #export-status {
+    font-size: .78rem;
+    color: #1a3a5c;
+    background: #fff;
+    padding: 4px 10px;
+    border-radius: 6px;
+    display: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,.12);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">AI Agent Architecture &middot; Observability &middot; Control &middot; Governance &middot; Recovery</div>
+  <h1>The Control Plane You Never Built</h1>
+  <p class="subtitle">You deployed the AI. You trusted the output. You had no idea what was happening between those two events.</p>
+  <p class="lead">How the artifact that compiled fine and failed silently was not a bug in the AI — it was a missing layer in the architecture. And what it looks like to build it.</p>
+</header>
+
+<article>
+
+  <!-- THE BLACK BOX -->
+  <h2>The Black Box</h2>
+
+  <div class="pull-quote">
+    <div class="big-num">?</div>
+    <blockquote>
+      The agent was running. That's all I actually knew. Input went in, output came out, and somewhere in the middle the context quietly ran out, the spec faded from view, and the validation logic got&hellip; <em>improvised</em>.<br><br>
+      <em>I had no visibility into anything between <strong>send</strong> and <strong>receive</strong>.</em>
+    </blockquote>
+  </div>
+
+  <p>The artifact looked fine. It compiled. The method was there, right name, right signature. So I trusted it and moved on, the way anyone busy would.</p>
+
+  <p>What I couldn't see was everything it wasn't doing. No check for negative amounts. No upper bound enforced. No audit log entry. None of that was missing from the file's structure — the structure was perfect. It was missing from the logic inside it, written from pattern instead of spec. Invisible, until a production edge case two weeks later made it very visible.</p>
+
+  <p>I checked the logs afterward. Agent completed. Output returned. File on disk, right where it should be. Not one of those facts told me what happened during generation — when the spec started slipping out of frame, when the model was writing the last sections off whatever scraps it could still see. The logs told me the job finished. They didn't tell me it worked. Those turned out to be two different sentences.</p>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">The developer's view versus what was actually happening</div>
+    <div class="mermaid">
+graph LR
+    Dev([Developer]) -->|"Prompt + spec"| BOX
+    subgraph BOX["AI Agent — No External Visibility"]
+      SPACER["<p style='margin-top: 5px; margin-bottom: 0;'></p>"]
+      direction TB
+      A1["Context fills with history"]
+      A2["Spec details fade"]
+      A3["Generation degrades"]
+      A4["Artifact written"]
+      SPACER~~~A1
+      A1 --> A2 --> A3 --> A4
+    end
+
+    BOX -->|"Output returned"| DEV2([Developer sees])
+    DEV2 --> TRUST["✅ Looks right\nCompiles fine\nMethod is present"]
+    TRUST --> SHIP["Ships to production\nTwo weeks later: silent wrong behavior"]
+
+    style BOX fill:#1a3a5c,color:#cdd9e6
+    style A2 fill:#ff8800,color:#111111
+    style A3 fill:#cc2222,color:#fff
+    style SHIP fill:#884400,color:#fff
+    </div>
+  </div>
+
+  <p>In any other system, we'd call this a monitoring gap. In AI workflows, we call it Tuesday.</p>
+
+  <p>The artifact wasn't the problem. Nothing was watching — that was the problem. I'd deployed a data plane and called it a system.</p>
+
+  <hr>
+
+  <!-- WHAT A CONTROL PLANE IS -->
+  <h2>What a Control Plane Actually Is</h2>
+
+  <p>We've solved this before. Just not for AI.</p>
+
+  <p>Modern software runs on two planes. The <strong>data plane</strong> is where the work happens — requests served, queries run. The <strong>control plane</strong> sits above it, mostly invisible, watching and governing without being part of the work itself.</p>
+
+  <ul class="control-bullets">
+    <li>The <strong>load balancer</strong> doesn't know what your users want. It just knows server 3 is limping and quietly routes around it.</li>
+    <li>The <strong>circuit breaker</strong> doesn't understand your business logic — it knows the downstream service is failing and stops the bleeding before it cascades.</li>
+    <li>The <strong>gateway</strong> doesn't care what your service does; it knows this request has a bad token and rejects it before anything else sees it.</li>
+  </ul>
+
+  <p>None of these care about the content of the work. They govern the conditions it happens under.</p>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">The gap: traditional software has a control plane — AI workflows don't</div>
+    <div class="mermaid">
+      graph TD
+        subgraph AI["AI Workflow"]
+            direction LR
+            ADP["Data Plane\n────────────────\nPrompts\nAgent sessions\nArtifact generation\nSession handoffs"]
+            ACP["Control Plane\n────────────────\n???"]
+            ACP -.->|"missing"| ADP
+        end
+        subgraph TRAD["Traditional Software"]
+            direction LR
+            TCP["Control Plane\n────────────────\nLoad balancer\nCircuit breaker\nAPI gateway\nRate limiter\nHealth checks"]
+            TDP["Data Plane\n────────────────\nRequests\nResponses\nQueries\nMessages"]
+            TCP -->|"governs"| TDP
+        end
+        style TCP fill:#228833,color:#fff
+        style ACP fill:#cc2222,color:#fff
+        style ADP fill:#2244bb,color:#fff
+        style TDP fill:#2244bb,color:#fff
+    </div>
+  </div>
+
+  <p>Every item in that control-plane column exists because something broke catastrophically without it. We took those lessons seriously and built the missing layer, then called the result production-ready.</p>
+
+  <p>Then we handed the AI a task and a context window and said: good luck out there. No circuit breaker. Nothing watching, nothing able to step in.</p>
+
+  <p>That's not a workflow. That's a hope wearing a progress bar.</p>
+
+  <p>So I built the missing layer — <strong>four pillars</strong>, in the order I discovered I was missing them, which was usually right after something broke.</p>
+
+  <hr>
+
+  <!-- PILLAR 1 -->
+  <h2>Pillar 1: Observability</h2>
+
+  <p>I'd love to say I had a dashboard, watching the token budget creep up, catching compaction before it ate my spec. Better lighting, that version.</p>
+
+  <p>The truth: <code>/context</code>, which tells you roughly what's in the window — qualitative, no hard numbers — and a <code>usage</code> field buried in the API response, if you remember to look. That was the whole layer. One fuzzy snapshot, one number you had to go dig for.</p>
+
+  <p>What I didn't have, and this is the part that actually bit me: any sense of how much of my spec was still <em>visible</em> to the model by the time it wrote the validation layer. No signal the task was drifting. No way to tell "generated" apart from "generated after compaction already ate half the instructions."</p>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">The four signals an observability layer needs to surface continuously</div>
+    <div class="mermaid">
+graph TD
+    OBS["Observability Layer"] --> T1 & T2 & T3 & T4
+
+    T1["<b>Token Budget</b>\n────────────────\nUsed: 142,500\nRemaining: 57,500\nThreshold: 160,000 (80%)\nStatus: ⚠️ Approaching ceiling"]
+    T2["<b>Task Progress</b>\n────────────────\n[12/17] units complete\nCurrent: UserRepository\nLast completed: AuthHandler\nStalled: No (active)"]
+    T3["<b>Artifact State</b>\n────────────────\nStatus: IN-PROGRESS\nSections: 2 of 4 validated\nPending: validation layer\nNext boundary: disk write"]
+    T4["<b>Session Health</b>\n────────────────\nLast activity: 45s ago\nCompaction events: 1\nSpec visibility: PARTIAL\nRecommendation: ⚠️ Review before continuing"]
+
+    OBS --> SURFACE["Signals surfaced to developer\nNot buried in agent logs\nVisible before the boundary is crossed"]
+    
+    %% 1. DEFINE CLASSES WITH COLORS AND FONT SIZE
+    classDef obsStyle font-size:28px;
+    classDef alertStyle font-size:30px;
+
+    %% 2. APPLY CLASSES TO THE NODES
+    class OBS obsStyle;
+    class SURFACE alertStyle;
+    class T1 alertStyle;
+    class T2 alertStyle;
+    class T3 alertStyle;
+    class T4 alertStyle;  
+    style OBS fill:#664499,color:#fff
+    style T1 fill:#ff8800,color:#111111
+    style T4 fill:#ff8800,color:#111111
+    style SURFACE fill:#228833,color:#fff
+    </div>
+  </div>
+
+  <p>All four signals here — budget, progress, artifact state, session health — are knowable. None were surfaced to me when it mattered. Observability was never about knowing what went wrong. It's about knowing it's <em>about</em> to, while there's still a window to act.</p>
+
+  <hr>
+
+  <!-- PILLAR 2 -->
+  <h2>Pillar 2: Control</h2>
+
+  <p>Knowing the budget just crossed 80% is useful. It's a lot less useful if the only thing you can do about it is worry.</p>
+
+  <p>A real circuit breaker doesn't log the failure and call it a day — it stops sending requests. An observability layer with no lever attached is just an expensive, well-lit way to watch a fire, fully informed and completely useless.</p>
+
+  <p>So when the control plane flags a problem, the answer can't be "log it." It has to put a real choice in front of the developer, with the tradeoffs, before anything gets written that can't be unwritten.</p>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">Control: threshold detected → intervention surfaced → informed developer choice</div>
+    <div class="mermaid">
+graph TD
+    DETECT["Control Plane detects threshold breach\nToken budget: 57,500 remaining\nRequired for artifact: 32,000 tokens\nSpec visibility: PARTIAL after compaction\nRecommendation: intervene before continuing"]
+
+    DETECT --> SURFACE["Intervention surface\nPresented before generation proceeds"]
+
+    SURFACE --> OPT1["Option A — /compact\nFrees ~70k tokens\n⚠️ Risk: spec details now summarised\nEdge cases from earlier messages may be lost\nUse for: stale tool outputs, not live spec"]
+    SURFACE --> OPT2["Option B — Fresh session\nFull 200k context restored\nSpec stated completely before generation\n✅ Safest path for artifact accuracy\nCost: re-establish context from checkpoint"]
+    SURFACE --> OPT3["Option C — Split artifact\nGenerate section 1 of N now\nCheckpoint before next session\n✅ Keeps spec in context for today's work\nContinues accurately in next session"]
+
+    OPT1 -->|"developer accepts risk"| GEN["Proceed — developer has made an informed choice"]
+    OPT2 --> GEN
+    OPT3 --> GEN
+
+    style DETECT fill:#664499,color:#fff
+    style OPT1 fill:#884400,color:#fff
+    style OPT2 fill:#228833,color:#fff
+    style OPT3 fill:#228833,color:#fff
+    style GEN fill:#2244bb,color:#fff
+    </div>
+  </div>
+
+  <p>The word doing all the work there is <em>informed</em>. The control plane can't make the call for you — it depends on things only you know. What it kills off is the option currently winning by default: no choice at all, generation just keeps going, and you find out it was wrong later, from someone else, at a worse time.</p>
+
+  <p>A circuit breaker that only logs the failure isn't a circuit breaker. It's a diary entry.</p>
+
+  <hr>
+
+  <!-- PILLARS 3 & 4 -->
+  <h2>Pillars 3 &amp; 4: Governance and Recovery</h2>
+
+  <h3>Governance — Nothing Crosses a Boundary Unverified</h3>
+
+  <p>Here's what it feels like to cross a boundary unverified.</p>
+
+  <p>The artifact's on disk, it compiles, tests pass on the happy path — you ship it. Two weeks later, a production edge case reveals the validation logic never existed. Not deleted. Never written. The spec had been compacted out of context before the model reached that section, and it filled the gap with pattern instead of your actual requirements. The artifact <em>looked</em> complete. It just wasn't.</p>
+
+  <p>Governance exists to stop that story. Not a courtesy check — a hard gate.</p>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">Governance: completeness audit at every boundary — artifact to disk, session to session</div>
+    <div class="mermaid">
+graph TD
+    GEN["Agent output\n(generated artifact)"] --> B1
+
+    subgraph B1["Boundary 1 — Artifact to Disk"]
+        CHK1["Completeness audit\n────────────────────\nAll required sections present?\nSpecified edge cases implemented?\nNo truncation or pattern-fill at end?\nSpec was in context throughout?"]
+    end
+
+    CHK1 -->|"PASS"| DISK["✅ Write to disk\nArtifact verified complete\nProvenance logged"]
+    CHK1 -->|"FAIL"| HALT["❌ Do not write\nReport: which check failed\nRegenerate with correction\nRe-audit before next attempt"]
+
+    DISK --> B2
+
+    subgraph B2["Boundary 2 — Session to Session"]
+        CHK2["Checkpoint written\n────────────────────\nCompleted: files 1–8 ✅\nDecisions: eager validation, ErrorResponse type\nRemaining: files 9–17\nNext session starts at: UserRepository"]
+    end
+
+    CHK2 --> NEXT["Next session reads checkpoint\nResumes — does not restart\nSpec re-stated in full before continuing"]
+
+    style CHK1 fill:#664499,color:#fff
+    style CHK2 fill:#664499,color:#fff
+    style DISK fill:#228833,color:#fff
+    style HALT fill:#cc2222,color:#fff
+    style NEXT fill:#228833,color:#fff
+    </div>
+  </div>
+
+  <p>"It compiled" is not a governance check. "It was generated with the full spec still in context, and validated before anything got written" — that is. They sound close enough to fool you for two weeks.</p>
+
+  <h3>Recovery — Plan for Failure, Not Just Success</h3>
+
+  <p>Most architectures are designed for success, because success is what you plan for — the artifact generates cleanly, the session ends without issue, the handoff is smooth. The recovery path is the one you skip because you genuinely don't expect to need it, right up until the moment you do.</p>
+
+  <p>And then you need it — because context exhausts mid-artifact, or compaction runs and compresses the spec detail that the next section depends on, or a section fails the governance gate and the question isn't whether to fix it but where to pick back up from. None of these are system crashes; they're just points where the session stopped, and the only question is whether you can continue from where it stopped or whether you're explaining everything from the beginning again.</p>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">Recovery: checkpoint written before budget exhausts — next session resumes, not restarts</div>
+    <div class="mermaid">
+graph LR
+    S1["Session 1\nFiles 1–8\nBudget healthy"] -->|"approaching 80% threshold"| CP1
+
+    CP1["Checkpoint\n────────────────────\nCompleted: auth layer\nDecisions: eager validation\nRemaining: core domain, data layer\nNext: UserRepository line 1"]
+
+    CP1 --> S2["Session 2\nReads checkpoint\nContinues from UserRepository\nFull context for remaining scope"]
+
+    S2 -->|"approaching threshold"| CP2["Checkpoint\nCompleted: auth + core\nRemaining: data layer"]
+
+    CP2 --> S3["Session 3\nCompletes data layer\nAll 17 files done\n✅ No restarts · No re-explanations"]
+
+    style CP1 fill:#664499,color:#fff
+    style CP2 fill:#664499,color:#fff
+    style S3 fill:#228833,color:#fff
+    </div>
+  </div>
+
+  <p>The checkpoint gets written before the context fills up, not after — after is a nice idea and also useless — structured so a fresh session can read it cold and know what was decided, what's done, and where to pick the thread back up.</p>
+
+  <hr>
+
+  <!-- THE COMPLETE CONTROL PLANE -->
+  <h2>The Complete Control Plane</h2>
+
+  <p>All four pillars together — one layer, sitting above every AI agent session, governing everything that crosses a boundary.</p>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">The AI control plane: four pillars composing into one governance layer</div>
+    <div class="mermaid">
+graph TD
+    Dev([Developer]) --> CP
+
+    subgraph CP["AI Control Plane"]
+        OBS["<b>Observability</b>\n────────────────────\nToken budget · Task progress\nArtifact state · Session health\nSurfaces signals continuously"]
+
+        CTRL["<b>Control</b>\n────────────────────\nThreshold detection\nIntervention surface\nInformed developer choice\nCompact · Fresh · Split"]
+
+        GOV["<b>Governance</b>\n────────────────────\nCompleteness audit\nBoundary enforcement\nNo unverified artifact reaches disk\nNo unverified session crosses over"]
+
+        REC["<b>Recovery</b>\n────────────────────\nCheckpoint writer\nSession reader\nResume not restart\nExplicit handoff at every boundary"]
+
+        OBS --> CTRL --> GOV --> REC
+    end
+
+    CP --> S1 & S2 & SN
+
+    S1["Agent Session 1\nBounded scope\nMonitored throughout"]
+    S2["Agent Session 2\nResumes from checkpoint\nFull context for its scope"]
+    SN["Agent Session N\nCompletes remaining scope\nVerified before write"]
+
+    S1 & S2 & SN --> AUDIT["Completeness audit\nbefore every boundary crossing"]
+    AUDIT -->|"PASS"| OUT["Output\nVerified · Provenance tracked\nArtifact on disk or handed off"]
+    AUDIT -->|"FAIL"| RECOVERY["Recovery path\nCheckpoint read · Corrected · Re-audited"]
+    RECOVERY --> CP
+
+    style CP fill:#0d1f35,color:#cdd9e6
+    style OBS fill:#664499,color:#fff
+    style CTRL fill:#884400,color:#fff
+    style GOV fill:#225533,color:#fff
+    style REC fill:#2244bb,color:#fff
+    style AUDIT fill:#664499,color:#fff
+    style OUT fill:#228833,color:#fff
+    style RECOVERY fill:#cc2222,color:#fff
+    </div>
+  </div>
+
+  <p>Nothing reaches the output without passing through all four layers, which means the system can still fail — but when it does, it fails with a recovery path rather than a silent artifact. The developer always knows where things stand because the observability layer is always running, always has a choice when things go sideways because the control layer surfaces one, and never has to discover a broken artifact in production because the governance layer won't let an unverified one reach disk. And when a session ends before the work is done, the next one picks up exactly where it left off because the recovery layer wrote it down.</p>
+
+  <p>I showed an early version of this to a colleague. He looked at it for a moment and said: "This is just software engineering." He was right. We'd just never thought to apply it to AI.</p>
+
+  <hr>
+
+  <!-- ARGUING WITH MYSELF -->
+  <h2>Arguing With Myself</h2>
+
+  <p>Five objections — all of them ones I raised myself before building this.</p>
+
+  <ul class="qa-list">
+    <li>
+      <strong>This feels like a lot of infrastructure for a workflow that mostly works fine.</strong>
+      <span>That was my reaction too — until I remembered the artifact that failed also "mostly worked fine," right up until it didn't. The control plane isn't for the sessions where nothing goes wrong. It's for the one where something does.</span>
+    </li>
+    <li>
+      <strong>Doesn't putting the choice on the developer just add friction?</strong>
+      <span>The friction already existed. It just showed up two weeks later, in production, with none of the context you'd need to fix it fast. This just moves it earlier, when it's cheap, and gives you something to work with.</span>
+    </li>
+    <li>
+      <strong>What about small tasks where context exhaustion will never happen?</strong>
+      <span>For small tasks, the control plane is lightweight by design — the budget check passes trivially, the completeness audit takes seconds, the checkpoint is a paragraph — because the overhead scales with risk, not with task size, and the system is built to get out of your way when it doesn't need to be in it.</span>
+    </li>
+    <li>
+      <strong>Checkpointing adds state to manage across sessions. That's complexity.</strong>
+      <span>Here's the thing: you already have state across sessions — it's just implicit right now, living in the conversation history the model compressed, in the decisions you vaguely remember making, in the context you'll need to re-explain when you start again tomorrow. The checkpoint makes that implicit state explicit, and explicit state is manageable while implicit state is why the validation layer got approximated and nobody noticed for two weeks.</span>
+    </li>
+    <li>
+      <strong>Isn't this just "be more careful," dressed up with diagrams?</strong>
+      <span>I wish. Being careful is a habit, and habits are the first thing to go when you're tired or three context switches into a Tuesday. A system doesn't skip the audit because it's 6pm. That's the whole difference.</span>
+    </li>
+  </ul>
+
+  <hr>
+
+  <!-- WHAT THE LAYER CHANGES -->
+  <h2>What the Layer Changes</h2>
+
+  <div class="stats">
+    <div class="stat"><span class="num">4</span><div class="lbl">Pillars: Observability · Control · Governance · Recovery</div></div>
+    <div class="stat"><span class="num">0</span><div class="lbl">Artifacts reaching disk without a completeness audit</div></div>
+    <div class="stat"><span class="num">0</span><div class="lbl">Sessions resuming without reading a checkpoint</div></div>
+    <div class="stat"><span class="num">1</span><div class="lbl">Question before every generation: what does the observability layer say?</div></div>
+    <div class="stat"><span class="num">∞</span><div class="lbl">Gap between "it compiled" and "it was verified"</div></div>
+  </div>
+
+  <p>None of this makes the AI smarter. It makes the AI's work checkable — before it crosses a boundary, before it lands on disk, before something else quietly assumes it's correct and builds on top of it.</p>
+
+  <p>The corrupt artifact was not a bug in the model, which did exactly what it was trained to do: produce a coherent response from the context it had. The failure was in the layer above it — or rather, in the absence of that layer — because there was no observability to surface the degrading context, no control to offer an intervention before the boundary, no governance to catch the incomplete output before it was written, and no recovery to resume from a known-good state. The model was blameless. The architecture wasn't.</p>
+
+  <div class="closing">
+    <p>Every AI workflow has a data plane. The work happens somewhere. What most AI workflows don't have is the layer that watches, intervenes, validates, and recovers. Without it, you're trusting the output because it looks right — not because anything verified it was.</p>
+    <p class="final-q">What does your AI control plane look like — and if you don't have one, what are you trusting instead?</p>
+  </div>
+
+</article>
+
+<footer>
+  AI Agent Architecture &middot; Observability &middot; Control &middot; Governance &middot; Recovery &middot; 2026
+</footer>
+
+<!-- ── Export toolbar ── -->
+<div id="export-bar">
+  <div class="fmt-toggle">
+    <button id="btn-png" class="active" onclick="setFmt('png')">PNG</button>
+    <button id="btn-jpg" onclick="setFmt('jpg')">JPG</button>
+  </div>
+  <button id="download-btn" onclick="downloadAllDiagrams()">⬇ Download All Diagrams</button>
+  <div id="export-status"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    flowchart: { curve: 'basis', useMaxWidth: true },
+    themeVariables: {
+      primaryColor: '#e8f0ff',
+      primaryTextColor: '#1a3a5c',
+      primaryBorderColor: '#2244bb',
+      lineColor: '#636e72',
+      secondaryColor: '#f8f9fa',
+      tertiaryColor: '#fff4e8',
+      edgeLabelBackground: '#ffffff',
+      fontSize: '20px',
+    }
+  });
+
+  const DIAGRAM_NAMES = [
+    '01-black-box',
+    '02-control-plane-gap',
+    '03-observability-layer',
+    '04-control-intervention',
+    '05-governance-boundaries',
+    '06-recovery-checkpoint',
+    '07-complete-control-plane',
+  ];
+
+  let currentFmt = 'png';
+
+  function setFmt(fmt) {
+    currentFmt = fmt;
+    document.getElementById('btn-png').classList.toggle('active', fmt === 'png');
+    document.getElementById('btn-jpg').classList.toggle('active', fmt === 'jpg');
+  }
+
+  function svgToPng(svgEl, fmt) {
+    return new Promise((resolve, reject) => {
+      const SCALE  = 2;
+      const bbox   = svgEl.getBoundingClientRect();
+      const W      = Math.max(bbox.width,  400) * SCALE;
+      const H      = Math.max(bbox.height, 200) * SCALE;
+
+      const clone  = svgEl.cloneNode(true);
+      clone.setAttribute('width',  W);
+      clone.setAttribute('height', H);
+      clone.setAttribute('xmlns',  'http://www.w3.org/2000/svg');
+
+      const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      bg.setAttribute('width', '100%');
+      bg.setAttribute('height', '100%');
+      bg.setAttribute('fill', '#ffffff');
+      clone.insertBefore(bg, clone.firstChild);
+
+      clone.querySelectorAll('style').forEach(s => {
+        s.textContent = s.textContent.replace(/@font-face\s*\{[^}]*\}/g, '');
+      });
+      clone.querySelectorAll('image').forEach(el => el.remove());
+
+      const xml     = new XMLSerializer().serializeToString(clone);
+      const dataUri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
+
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width  = W;
+        canvas.height = H;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, W, H);
+        ctx.drawImage(img, 0, 0, W, H);
+        const mimeType = fmt === 'jpg' ? 'image/jpeg' : 'image/png';
+        const quality  = fmt === 'jpg' ? 0.92 : undefined;
+        canvas.toBlob(resolve, mimeType, quality);
+      };
+      img.onerror = reject;
+      img.src = dataUri;
+    });
+  }
+
+  async function downloadAllDiagrams() {
+    const status = document.getElementById('export-status');
+    status.style.display = 'block';
+
+    const wraps = document.querySelectorAll('.diagram-wrap');
+    let exported = 0;
+    const ext = currentFmt;
+
+    for (let i = 0; i < wraps.length; i++) {
+      const svg = wraps[i].querySelector('svg');
+      if (!svg) {
+        status.textContent = `Diagram ${i+1}: not rendered yet — wait a moment and try again`;
+        continue;
+      }
+
+      const name = DIAGRAM_NAMES[i] || `diagram-${String(i+1).padStart(2,'0')}`;
+      status.textContent = `Exporting ${i+1} of ${wraps.length}: ${name}.${ext}…`;
+
+      try {
+        const blob = await svgToPng(svg, ext);
+        const a    = document.createElement('a');
+        a.href     = URL.createObjectURL(blob);
+        a.download = `${name}.${ext}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+        exported++;
+        await new Promise(r => setTimeout(r, 600));
+      } catch(e) {
+        status.textContent = `Error on diagram ${i+1}: ${e.message}`;
+      }
+    }
+
+    status.textContent = `✅ Done — ${exported} of ${wraps.length} ${ext.toUpperCase()}s downloaded`;
+    setTimeout(() => { status.style.display = 'none'; }, 5000);
+  }
+</script>
+</body>
+</html>

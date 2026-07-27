@@ -27,6 +27,15 @@
             "command": "node .claude/hooks/script-review-gate.cjs"
           }
         ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/context-budget-tech-write.cjs"
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
@@ -35,6 +44,14 @@
           {
             "type": "command",
             "command": "node .claude/hooks/memory-capture.cjs"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/context-budget-icea-save.cjs"
           }
         ]
       }
