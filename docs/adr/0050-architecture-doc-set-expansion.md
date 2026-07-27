@@ -83,6 +83,9 @@ Population follows the existing copy-then-populate path (File 4–7 prompts, sam
 - Mermaid rendering in plain VS Code requires the Markdown Preview Mermaid extension; the prompts
   constrain diagrams to valid, simple syntax and keep the `⚠` marker when a graph isn't derivable.
 
+- `setup-teardown --full` **preserves** `.claude/architecture/` — the 8-doc set is committed
+  developer content, not plugin scaffolding, and is expensive to regenerate via `/architect`.
+
 ## Revisit when
 
 The knowledge graph (`graph.json`) gains typed data/authorization/dependency edges rich enough

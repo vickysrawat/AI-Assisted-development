@@ -54,6 +54,9 @@ The **knowledge graph is the single orientation layer**; `domain-map.md` is reti
   `architecture-deployment.md` refresh triggers moved into `/update-arch --deployment`.
 - `validate.py` check 9 now asserts the graph schemas exist and domain-map-spec is gone.
 
+- `setup-teardown --full` **preserves** `.claude/graph/` — the graph is committed developer
+  content, not plugin scaffolding, and is expensive to regenerate via `/graph-sync`.
+
 ## Revisit when
 The graph index itself grows unwieldy (rare — it is one row per module), or Claude
 Code gains a native codebase-index that the plugin could consume instead.
