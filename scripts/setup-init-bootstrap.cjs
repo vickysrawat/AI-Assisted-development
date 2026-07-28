@@ -183,6 +183,7 @@ const HOOK_FILES = [
   'memory-log.cjs',
   // Always-node (not shell-dependent)
   'check-settings-secrets.cjs',
+  'context-budget-tech-write.cjs',
   'validate-ledgers.py',
   'validate-pr-compliance.py',
 ];
@@ -853,6 +854,18 @@ function stepWireSettings(manifest, shellType) {
       wired = true;
     }
 
+    // ── PreToolUse: context-budget-tech-write (always node — not shell-dependent) ───
+    const budgetGateWired = settings.hooks.PreToolUse.some(
+      h => h.hooks && h.hooks.some(x => x.command && x.command.includes('context-budget-tech-write.cjs'))
+    );
+    if (!budgetGateWired) {
+      settings.hooks.PreToolUse.push({
+        matcher: 'Write',
+        hooks: [{ type: 'command', command: 'node .claude/hooks/context-budget-tech-write.cjs' }],
+      });
+      wired = true;
+    }
+
     // ── UserPromptSubmit: memory-capture ─────────────────────────────────────────
     // additionalContext is only valid on UserPromptSubmit and PostToolUse — not Stop.
     if (!settings.hooks.UserPromptSubmit) settings.hooks.UserPromptSubmit = [];
@@ -898,7 +911,7 @@ function stepWireSettings(manifest, shellType) {
     settings.customInstructions = 'Response style: suppress preambles and plan-restatement before tool calls. When writing to existing files, show only a unified diff (changed lines + 3 lines of context) rather than the full file content. When writing new files, show the full content. Never echo generated file content to chat if the content is also being written to disk.';
   }
   atomicWrite(settingsPath, JSON.stringify(settings, null, 2));
-  console.log('  ✓ settings.json: PreToolUse (icea-floor + secret-guard + script-review-gate) + UserPromptSubmit (memory-capture) + PostToolUse (memory-log) hooks '
+  console.log('  ✓ settings.json: PreToolUse (icea-floor + secret-guard + script-review-gate + context-budget-tech-write) + UserPromptSubmit (memory-capture) + PostToolUse (memory-log) hooks '
     + (NO_HOOKS ? 'skipped (--no-hooks)' : (wired ? 'added' : 'already present')));
   console.log('  ✓ settings.json: autoMemoryEnabled '
     + (autoMemSet ? 'set to false (Dream owns repo memory/)' : 'left as-is (developer override)'));
