@@ -97,6 +97,10 @@ These are processed and removed by /dream each run.
 
 <!-- Auto-capture entries appear below this line -->
 
+### [2026-07-27] Error resolved — icea-feature Step 8 PLUGIN_DIR resolved too late
+`$PLUGIN_DIR` was used at line 562 (context budget check) and line 655 (overlay `ls` verification) but only resolved at line 672. The `ls` check ran with an empty `$PLUGIN_DIR`, looking in the target project directory instead of the plugin — causing the OVERLAY NOT FOUND error with a bare relative path. Fix: moved PLUGIN_DIR resolution (read `plugin-path.txt` + §1a resolver fallback) to immediately after the ICEA gate passes, before any `$PLUGIN_DIR` reference. Also fixed error message to show `$PLUGIN_DIR/skills/...` path. Skills load from plugin dir at runtime — no setup-sync needed for existing projects.
+Trigger: Error resolved  Confidence: 0.95  Source: auto-capture
+
 ### [2026-07-27] Error resolved — context-budget-tech-write hook not deployed to target projects
 The hook existed only in the plugin repo's `.claude/hooks/` — never in `_project-deploy/hooks/` or wired by `setup-init-bootstrap.cjs`. Claude Code only loads hooks from the CURRENT project, so all three gates (placeholder count, minLines, required sections) were dead for real user workflows. Fix: added hook to `HOOK_FILES`, wired as `PreToolUse Write` in `stepWireSettings()`, copied to `_project-deploy/hooks/`, stamped `.hashes`. Existing target projects need `/setup-sync`.
 Trigger: Error resolved  Confidence: 0.95  Source: auto-capture

@@ -85,3 +85,5 @@ These were deleted. Watch for more stale v1 references in future sessions.
 ### [capture] [2026-07-27] Task completed — setup-teardown preserves architecture and graph directories
 
 ### [capture] [2026-07-27] Error resolved — context-budget-tech-write.cjs sparse-stub bypass
+
+### [capture] [2026-07-27] Error resolved — icea-feature Step 8 PLUGIN_DIR resolved too late

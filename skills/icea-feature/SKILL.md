@@ -550,6 +550,35 @@ Only proceed past this point when `ICEA_GATE_PASSED` is confirmed.
 
 ---
 
+**Resolve PLUGIN_DIR — do this before any template reads:**
+
+Read `.claude/plugin-path.txt` to get PLUGIN_DIR. If the file is absent or empty, use the §1a resolver:
+
+```bash
+node -e "
+const fs=require('fs'),os=require('os'),path=require('path');
+const base=path.join(os.homedir(),'.claude','plugins');
+const norm=p=>p?p.split(String.fromCharCode(92)).join('/'):''
+let dir='';
+try{
+  const reg=JSON.parse(fs.readFileSync(path.join(base,'installed_plugins.json'),'utf8'));
+  const key=Object.keys(reg.plugins||{}).find(k=>k.startsWith('ai-assisted-development@'));
+  if(key){const a=reg.plugins[key]||[];const e=a.find(x=>x.scope==='user')||a[0];
+    if(e&&e.installPath&&fs.existsSync(e.installPath))dir=e.installPath;}
+}catch(e){}
+if(!dir){try{for(const m of fs.readdirSync(base)){const p=path.join(base,m,'plugins','ai-assisted-development');if(fs.existsSync(p)){dir=p;break;}}}catch(e){}}
+process.stdout.write(norm(dir));
+"
+```
+
+If resolution produces an empty string, stop immediately:
+```
+⛔ Cannot resolve plugin directory — plugin-path.txt is missing or empty and the
+   registry lookup failed. Run /setup-sync to repair, then retry.
+```
+
+---
+
 **⚠ CONTEXT BUDGET CHECK — run immediately after gate passes:**
 
 > Skip if Step 8 was entered via the `TECH ADO-{ID}` cross-session recovery keyword.
@@ -656,7 +685,7 @@ If the selected overlay file is missing at `$PLUGIN_DIR` (verify with `ls` befor
 reading), **stop immediately** — do not fall back to base template:
 ```
 ⛔ OVERLAY NOT FOUND — cannot generate tech spec.
-   Expected: skills/icea-feature/references/techspec-{overlay}.md
+   Expected: $PLUGIN_DIR/skills/icea-feature/references/techspec-{overlay}.md
    Stack:    {all_stacks}
 
    This may indicate a plugin version mismatch or an unsupported stack configuration.
@@ -669,8 +698,7 @@ For `techspec-angular-nodejs.md`: if `dotnet` OR `dotnet_framework` appears in
 all_stacks → populate the .NET API layer sections (mark as PRESENT). If neither
 appears → omit those sections entirely.
 
-Read `.claude/plugin-path.txt` to get PLUGIN_DIR (if absent, use §1a resolver),
-then read both files:
+Read both template files:
 ```
 $PLUGIN_DIR/skills/icea-feature/references/techspec-base.md
 $PLUGIN_DIR/skills/icea-feature/references/techspec-{overlay}.md
