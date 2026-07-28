@@ -97,6 +97,14 @@ These are processed and removed by /dream each run.
 
 <!-- Auto-capture entries appear below this line -->
 
+### [2026-07-27] Error resolved — context-budget-tech-write hook not deployed to target projects
+The hook existed only in the plugin repo's `.claude/hooks/` — never in `_project-deploy/hooks/` or wired by `setup-init-bootstrap.cjs`. Claude Code only loads hooks from the CURRENT project, so all three gates (placeholder count, minLines, required sections) were dead for real user workflows. Fix: added hook to `HOOK_FILES`, wired as `PreToolUse Write` in `stepWireSettings()`, copied to `_project-deploy/hooks/`, stamped `.hashes`. Existing target projects need `/setup-sync`.
+Trigger: Error resolved  Confidence: 0.95  Source: auto-capture
+
+### [2026-07-27] Error resolved — context-budget-tech-write.cjs sparse-stub bypass
+When context exhausts before the model reads the tech spec template, it generates a one-line summary with 0 unfilled `{…}` placeholders — `0 ≤ threshold (15)` passed Gate 1 and the stub was written to disk. Fix: added Gate 2 (`minLines`) — blocks writes where non-empty line count is below threshold (50 for tech specs, 30 for ICEA, 20 for arch docs). Force flag still bypasses both gates. `context-budget-tech-write.cjs` is a plugin-internal hook only (not in `_project-deploy/hooks/`, not tracked in `.hashes`) — only one copy to update.
+Trigger: Error resolved  Confidence: 0.95  Source: auto-capture
+
 ### [2026-07-27] Task completed — setup-teardown preserves architecture and graph directories
 Removed `.claude/architecture/` and `.claude/graph/` from the `--full` scope in `scripts/setup-teardown.cjs`. These directories are now emitted as "preserved" warnings instead of removal items — they are never deleted during any teardown scope. Only `temp/` is removed in the extra-full-targets block. Updated descriptions in `commands/setup-teardown.md` and `_project-deploy/commands/setup-teardown.md` to document this invariant.
 Trigger: Task completed  Confidence: 0.95  Source: auto-capture
