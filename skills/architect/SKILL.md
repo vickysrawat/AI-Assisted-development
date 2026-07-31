@@ -557,6 +557,27 @@ these questions again unless you run /update-arch --deployment.
 
 ## Step 1 — Detect repo type
 
+> **Phase C note (ADR 0056):** `/setup-init` now runs `repo-detect.cjs` (Step 0.5) before
+> architect, so `repo_type` may already be set in `.claude/dream-init-state.json`. Check
+> first and skip the file-scan if already set — avoids double detection:
+
+```bash
+node -e "
+try {
+  const s = JSON.parse(require('fs').readFileSync('.claude/dream-init-state.json','utf8'));
+  if (s.repo_type) { console.log('REPO_TYPE=' + s.repo_type + ' (from repo-detect)'); process.exit(0); }
+} catch(_) {}
+console.log('NEEDS_DETECTION');
+"
+```
+
+If `REPO_TYPE=...` is printed → use that value as `REPO_TYPE`, skip the file-scan below,
+and jump directly to **Step 1 post-detection** (Bootstrap Phase 2 trigger). This is the
+normal path when called from `/setup-init`.
+
+If `NEEDS_DETECTION` → run the file-scan below (covers direct invocations of `/architect`
+outside of `/setup-init`):
+
 Run these checks in order. Stop at the first match.
 
 ```bash
@@ -1032,9 +1053,6 @@ Additional project architecture
 
 | File | Purpose |
 |---|---|
-| `$PLUGIN_DIR/skills/shared/graph-json-schema.md` | Schema for `.claude/graph/graph.json` (authoritative structure — typed nodes/edges, fingerprints) |
-| `$PLUGIN_DIR/skills/shared/graph-index-schema.md` | Schema for `.claude/graph/graph-index.md` (breadth index projection) |
-| `$PLUGIN_DIR/skills/shared/graph-module-schema.md` | Schema for `.claude/graph/<module>.md` (per-module depth projection) |
 | `$PLUGIN_DIR/skills/shared/scope-flags-spec.md` | Scope flag definitions (informational) |
 
 ## Model routing
@@ -1090,142 +1108,26 @@ identifiers, or other B1–B7 categories without acknowledgement.
 
 ---
 
-## Step 7 — Generate the codebase knowledge graph
+## Step 7 — Knowledge graph (delegated to graph-create)
 
-After populating architecture docs, generate the **codebase knowledge graph** in
-`.claude/graph/`. The graph is the single orientation layer for the plugin
-(ADR 0038): every skill that
-needs codebase orientation — `icea-feature`, `icea-review`, `code-review`,
-`security`, and others — reads it instead of scanning raw source. It replaces the
-former `domain-map.md` (retired in v3.0.0, ADR 0017 superseded).
+> **ADR 0056:** graph generation is now owned by the `graph-create` skill, not architect.
+> Architect's job ends at Step 6 (architecture docs only).
+>
+> When invoked via `/setup-init`, the orchestrator runs graph-create as a separate
+> Step 3c after architect completes. If architect is invoked **standalone** (outside
+> `/setup-init`), the caller is responsible for running `/graph-sync` afterward to
+> ensure the graph reflects the updated architecture docs.
 
-The graph has three parts:
-- **`graph.json`** — the **authoritative structure**: typed nodes, typed edges with
-  confidence, module-wide fingerprints, hub flags. See `$PLUGIN_DIR/skills/shared/graph-json-schema.md`.
-  Never auto-loaded (no `paths:`).
-- **`graph-index.md`** — an always-loaded breadth index (module → entry point), *projected
-  from* `graph.json`. See `$PLUGIN_DIR/skills/shared/graph-index-schema.md`.
-- **`graph/<module>.md`** — one on-demand depth file per module (bounded context, key files,
-  dependencies, patterns; ≤400 tokens; auto-loads via `paths:` frontmatter), *projected from*
-  `graph.json`. See `$PLUGIN_DIR/skills/shared/graph-module-schema.md`.
-
-The graph is **committed and PR-reviewed** — it is *not* gitignored (v3.0.0).
-
-### Step 7-1 — Determine structure
-
-Identify modules from the directory tree (one module per bounded context / top-level
-source folder — the same derivation used for architecture docs). Count them:
-
-| Module count | Structure |
-|---|---|
-| ≤ 30 | `flat` — detail files at `.claude/graph/<module>.md` |
-| > 30 | `domain` — grouped: `.claude/graph/<domain>/<module>.md` |
-
-```bash
-mkdir -p .claude/graph
-TODAY=$(date +%Y-%m-%d)
+When called from `/setup-init`:
+```
+✓ Architect complete. Graph generation will proceed in setup-init Step 3c (graph-create).
 ```
 
-### Step 7-2 — Build `graph.json` (authoritative structure — do this first)
-
-For each module, assemble a node per `$PLUGIN_DIR/skills/shared/graph-json-schema.md`: `id`, `module`,
-`domain`, `type` (classify: `service`/`repository`/`ui`/`datastore`/`external-api`/
-`shared-lib`/`domain`), `detailFile`, `entryPoint`, `paths` (source-root glob(s) — an
-array; multi-root modules list each), and the **module-wide** `fingerprint` computed
-over all files under `paths` (use the `graph_module_fingerprint` helper in
-`graph-json-schema.md` — *not* a single-file sha1). Add any `edges` you can see that a
-parser cannot (`INFERRED`/`AMBIGUOUS`: DI, dynamic/config wiring, prose-only), and set
-`hub: true` on the most-connected nodes.
-
-**Before writing, build `directoryCatalog` in memory** (same as graph-sync Step 8d):
-
-```bash
-# Requires GNU grep for -oP.
-# Build output directories (Angular outputPath, Next.js distDir) are intentionally excluded —
-# build output is out of scope by nature; the risk is source files committed and served directly.
-
-# Static-serving — name-based
-find . -not -path "./.git/*" -not -path "./node_modules/*" \
-  -not -path "./dist/*" -not -path "./bin/*" -not -path "./obj/*" \
-  -type d \( -name "public" -o -name "wwwroot" -o -name "assets" \
-    -o -name "static" -o -name "StaticFiles" -o -name "Content" \) \
-  | sed 's|^\./||' | sort
-
-# Static-serving — config-based (custom source paths from app code)
-# .NET: UseStaticFiles with PhysicalFileProvider
-grep -rn --include="*.cs" "UseStaticFiles" . 2>/dev/null \
-  | grep -v "node_modules\|\.git\|bin\|obj" \
-  | grep -oP '(?<=PhysicalFileProvider\()[^)]+' \
-  | grep -oP '"[^"]*"' | tr -d '"' | sort -u
-# Express: express.static('path')
-grep -rn --include="*.js" --include="*.ts" --include="*.mjs" \
-  'express\.static(' . 2>/dev/null \
-  | grep -v "node_modules\|\.git\|dist" \
-  | grep -oP "express\.static\(\s*['\"]([^'\"]+)['\"]" \
-  | grep -oP "['\"][^'\"]+['\"]" | tr -d "'\"" | sort -u
-# Nginx: root directive — relative paths only (absolute paths are deployment-time)
-find . \( -name "*.conf" -o -name "*.nginx" \) 2>/dev/null \
-  | grep -v "\.git\|node_modules" \
-  | xargs grep -h "^\s*root " 2>/dev/null \
-  | grep -oP "root\s+\K[^;]+" | grep -v '^/' | sort -u
-
-# Config directories
-find . -not -path "./.git/*" -not -path "./node_modules/*" \
-  -maxdepth 3 -type d \( -name "environments" -o -name "env" \
-    -o -name ".github" -o -name "infra" -o -name "terraform" \
-    -o -name "k8s" -o -name "helm" \) \
-  | sed 's|^\./||' | sort
-
-# Test directories
-find . -not -path "./.git/*" -not -path "./node_modules/*" \
-  -not -path "./dist/*" -maxdepth 4 \
-  -type d \( -name "test" -o -name "tests" -o -name "__tests__" \
-    -o -name "spec" -o -name "e2e" -o -name "cypress" \) \
-  | sed 's|^\./||' | sort
+When called standalone:
+```
+✓ Architecture docs populated. Run /graph-sync to refresh the knowledge graph.
+  (The graph is now generated by the graph-create skill — see ADR 0056.)
 ```
 
-Add to the in-memory graph object before the write:
-```javascript
-// reviewed defaults false on initial generation — developer validates via security skill §0.5
-g.directoryCatalog = { generatedAt: TODAY, reviewed: false, staticServing: [...], config: [...], test: [...] };
-```
+**Do not run graph-extract-edges.js, write graph.json, or project graph-index.md here.**
 
-Now write `.claude/graph/graph.json` deterministically (sorted, stable key order, includes
-`directoryCatalog`). Then populate the source-visible `EXTRACTED` edges **deterministically**
-— resolve `$PLUGIN_DIR` (`$PLUGIN_DIR/skills/shared/plugin-path-resolution.md` §1a) and run
-`node "$PLUGIN_DIR/scripts/graph-extract-edges.js"` (parses imports locally, offline;
-rewrites only `EXTRACTED` edges; never touches `nodes`/`fingerprint`s/`directoryCatalog`;
-ADR 0041). **Never hand-write an `EXTRACTED` edge.**
-Confirm: `✓ Written: .claude/graph/graph.json (~N tokens)`.
-
-### Step 7-3 — Project one detail file per module
-
-For each node, write a detail file following `$PLUGIN_DIR/skills/shared/graph-module-schema.md` exactly:
-`paths:` frontmatter (first root), the ambient-context comment,
-`_Fingerprint: {node.fingerprint} | Updated: {TODAY}_`, the four sections (Bounded
-context, Key files ≤5, Dependencies with types, Patterns), and — when it fits under 400
-tokens — a `**Depended on by:**` line. Write silently — confirm each with
-`✓ Written: .claude/graph/<module>.md (~N tokens)`.
-
-### Step 7-4 — Project graph-index.md
-
-Build the index following `$PLUGIN_DIR/skills/shared/graph-index-schema.md` — `paths: always`
-frontmatter, header line (`Generated | Modules: N | Structure`), and one table row
-per node (`Module | Domain | Detail File | Entry Point`), matching `graph.json` exactly.
-
-### Rules
-- Do NOT invent modules — only map what exists in the directory tree
-- Omit test files, migrations, and auto-generated files
-- If a folder has only 1–2 files, merge it into the closest parent module
-- Overwrite existing graph files — they are generated, not human-maintained
-- `graph.json` is authoritative; the index and detail files are projected from it
-- Every node carries a **module-wide** `fingerprint` (per-module staleness over all its
-  files); there is no separate whole-repo fingerprint
-
-### Confirm to developer
-After writing:
-```
-✓ .claude/graph/ written — <N> modules mapped (graph.json + index + detail files)
-  Used by: icea-feature · icea-review · code-review · security · …
-  Refresh incrementally with /graph-sync
-```

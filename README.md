@@ -14,7 +14,7 @@ ICEA-driven development workflow for distributed teams using **Azure DevOps**. L
 |---|---|
 | `/ai-assisted-development:setup-init` | One-time project setup. Runs the architect deployment questionnaire, seeds `file-cache.json` and `token-graph.json`, deploys command stubs, `.claude/rules/`, populates `.claude/architecture/` and generates the knowledge graph `.claude/graph/`, ensures `CLAUDE.md` has Dream sections. **New in 3.13.0:** Step 2d asks whether the project depends on services in separate repositories (e.g. a .NET API in its own repo); paths provided are added to `additionalDirectories` and immediately scanned for stack detection — `external_detected_stacks` is populated so `icea-feature` can select the correct multi-layer Tech Spec overlay from the first session. Creates and populates `.gitignore` automatically. Safe to re-run. |
 | `/ai-assisted-development:setup-status` | Read-only health check. Reports green/amber/red on all **20** infrastructure items including `architecture-deployment.md` status and knowledge graph checks. |
-| `/ai-assisted-development:setup-sync` | Re-provision an existing project after a plugin upgrade. Compares the version that provisioned the project against the installed version and applies only the version-sensitive changes (hooks, shared specs, ignore-file managed block, new state/rule files) per `docs/migrations/`, then re-stamps the version. Idempotent; never overwrites your own content. Run when `setup-status` reports **UPGRADE PENDING**. Alias: `setup-init --upgrade`. |
+| `/ai-assisted-development:setup-sync` | Re-provision an existing project after a plugin upgrade. Compares the version that provisioned the project against the installed version and applies only the version-sensitive changes (hooks, shared specs, ignore-file managed block, new state/rule files) per `docs/migrations/`, then re-stamps the version. Idempotent; never overwrites your own content. Run when `setup-status` reports **UPGRADE PENDING**. Flags: `--commands` (deploy command stubs only, deterministic), `--reinstall` (push plugin source changes to the installed copy — run from the plugin source directory). Alias: `setup-init --upgrade`. |
 | `/ai-assisted-development:dream` | 6-phase memory consolidation — reads sessions, scores entries, proposes ADD/UPDATE/DELETE with full justification, waits for tiered approval before writing. Includes token-budget guard. |
 | `/ai-assisted-development:dream-health` | Generates `memory/health.html` — browser dashboard with confidence scores, decay curve, promote candidates, and clickable justification panels. |
 | `/ai-assisted-development:dream-rollback` | Reverses a specific `/dream` run using the audit trail in `memory/dream-log.md`. Auditable and itself reversible. |
@@ -282,16 +282,40 @@ Win + S → `environment variables` → User variables → New → `AZURE_DEVOPS
 
 ## Installation
 
-### PowerShell (Windows — recommended)
+### Quick start — one command per platform
+
+| Platform | Command | Notes |
+|----------|---------|-------|
+| Windows (CMD / PowerShell / Explorer) | `install.cmd` | Auto-selects a runtime: **Git Bash → Node.js → PowerShell** |
+| Windows (Git Bash terminal) | `bash install.sh` | Uses bash directly (auto re-execs under `winpty`) |
+| macOS / Linux | `bash install.sh` | Uses bash directly |
+
+`install.cmd` is the simplest entry point on Windows — it finds whichever runtime you have
+and forwards your arguments (`--update`, `--uninstall`, `--yes`). All three underlying
+installers remain fully usable on their own:
 
 ```powershell
-.\install.ps1
+.\install.ps1          # PowerShell (switches: -Update / -Uninstall / -Yes)
+```
+```bash
+bash install.sh        # Git Bash / macOS / Linux (flags: --update / --uninstall / --yes)
+```
+```
+node install.cjs       # Universal fallback (flags: --update / --uninstall / --yes)
 ```
 
-### Git Bash (no admin rights needed)
+> **Flag note:** `install.ps1` uses PowerShell switches (`-Update`), while `install.sh`
+> and `install.cjs` use `--update`-style flags. `install.cmd` translates automatically when
+> it delegates to PowerShell, so you can always pass the `--update`/`--uninstall`/`--yes`
+> form regardless of which runtime ends up running.
 
-```bash
-bash install.sh
+The install scripts auto-detect the plugin source from the directory they are run from — no ADO clone option and no path prompt. Run from the plugin source directory. Identity (org/project/company) is still prompted on a fresh install and saved to `.claude-plugin/config.json`.
+
+To update the installed copy after modifying plugin source:
+
+```
+/setup-sync --reinstall      # from the plugin source project
+/setup-sync --commands       # from each target project (deploys command stubs)
 ```
 
 > **Windows Git Bash note:** mintty (Git Bash's terminal) doesn't give a child process a
@@ -314,7 +338,7 @@ Open the project in Claude Code and run:
 This seeds all infrastructure in order:
 
 1. Creates `memory/MEMORY.md` and `dream-log.md`
-2. Deploys **36** command stubs to `.claude/commands/`
+2. Deploys **38** command stubs to `.claude/commands/` (all commands include `--help`/`?help` flag for usage discovery)
 3. Deploys scoped rule files to `.claude/rules/`
 4. Appends Dream sections to `CLAUDE.md` (or creates it via `/init`)
 5. Seeds `.claude/file-cache.json`
@@ -355,7 +379,7 @@ Reports green/amber/red on all 20 infrastructure items:
 1. `CLAUDE.md` — exists and has Dream section
 2. `memory/` — both files present
 3. `.claude/rules/` — all rule files deployed
-4. `.claude/commands/` — all 37 command stubs deployed
+4. `.claude/commands/` — all 38 command stubs deployed (all have `--help`/`?help` flag)
 5. `.claude/architecture/` — templates populated by architect skill
 6. `.claude/graph/graph-index.md` — exists and not stale (`.claude/graph/.stale` flag)
 7. `architecture-deployment.md` — exists and fully answered

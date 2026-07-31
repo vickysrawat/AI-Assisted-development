@@ -897,7 +897,7 @@
                 <span class="step-chevron">&#8250;</span>
               </div>
               <div class="step-body"><div class="step-body-inner">
-                <p>From the plugin repo root, run the bash installer. It prompts for your ADO organisation, project, and company name, then registers and installs the plugin.</p>
+                <p>From the plugin repo root, run the bash installer. It auto-detects the plugin source from the current directory. On a fresh install it prompts for ADO organisation, project, and company name; on updates it copies silently from the current folder.</p>
                 <div class="cmd-block">
                   <div class="cmd-block-header"><span class="cmd-block-label">Install</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
                   <pre><span class="cmd-prompt">$</span> <span class="cmd-keyword">./install.sh</span></pre>
@@ -960,7 +960,7 @@
                 <span class="step-chevron">&#8250;</span>
               </div>
               <div class="step-body"><div class="step-body-inner">
-                <p>From the plugin repo root, run the Node installer. It prompts for your ADO organisation, project, and company name, then registers and installs the plugin.</p>
+                <p>From the plugin repo root, run the Node installer. It auto-detects the plugin source from the current directory. On a fresh install it prompts for ADO organisation, project, and company name; on updates (<code>--update</code>) it copies silently.</p>
                 <div class="cmd-block">
                   <div class="cmd-block-header"><span class="cmd-block-label">Terminal (PowerShell, CMD, or Git Bash)</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
                   <pre><span class="cmd-prompt">&gt;</span> <span class="cmd-keyword">node install.cjs</span></pre>
@@ -1071,7 +1071,7 @@
                 <span class="step-chevron">&#8250;</span>
               </div>
               <div class="step-body"><div class="step-body-inner">
-                <p>From the plugin repo root in a PowerShell session, run the installer. It prompts for your ADO organisation, project, and company name, then registers and installs the plugin.</p>
+                <p>From the plugin repo root in a PowerShell session, run the installer. It auto-detects the plugin source from the current directory. On a fresh install it prompts for ADO organisation, project, and company name; on updates (<code>-Update</code>) it copies silently.</p>
                 <div class="cmd-block">
                   <div class="cmd-block-header"><span class="cmd-block-label">Install</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
                   <pre><span class="cmd-prompt">PS&gt;</span> <span class="cmd-keyword">.\install.ps1</span></pre>
@@ -1143,7 +1143,7 @@
             <span class="step-chevron">&#8250;</span>
           </div>
           <div class="step-body"><div class="step-body-inner">
-            <p>Three installers are provided — use whichever shell your environment allows. All three prompt for the same identity fields and produce the same result.</p>
+            <p>Three installers are provided — use whichever shell your environment allows. All three auto-detect the plugin source from the current directory. On a fresh install they prompt for ADO organisation, project, and company name; on <code>--update</code> / <code>-Update</code> they copy silently without prompts.</p>
             <div class="cmd-block">
               <div class="cmd-block-header"><span class="cmd-block-label">Git Bash</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
               <pre><span class="cmd-prompt">$</span> <span class="cmd-keyword">./install.sh</span></pre>
@@ -1262,10 +1262,19 @@
               </tbody>
             </table>
             <div class="cmd-block">
-              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <div class="cmd-block-header"><span class="cmd-block-label">Full re-provision</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
               <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/setup-sync</span></pre>
             </div>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">Deploy command stubs only (deterministic)</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/setup-sync</span> <span class="cmd-value">--commands</span></pre>
+            </div>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">Push plugin source changes to installed copy (run from plugin source project)</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/setup-sync</span> <span class="cmd-value">--reinstall</span></pre>
+            </div>
             <div class="callout success"><span class="callout-icon">i</span><span>Idempotent and safe to re-run &mdash; it never overwrites developer content, only managed blocks and generated artifacts.</span></div>
+            <div class="callout info"><span class="callout-icon">i</span><span>All slash commands include a <code>--help</code> / <code>?help</code> flag that prints arguments and usage examples without invoking the skill.</span></div>
           </div></div>
         </div>
         <div class="step">

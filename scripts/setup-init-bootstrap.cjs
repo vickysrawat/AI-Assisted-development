@@ -215,6 +215,9 @@ const GITIGNORE_BASE = [
   'prod-readiness/',                    // regenerable point-in-time reports
   'temp/',
   '.claude/plugin-path.txt',
+  // S14: the module skeleton is a transient build artifact — .claude/graph/ is otherwise
+  // committed, so this dotfile must be explicitly excluded.
+  '.claude/graph/.module-skeleton.json',
 ];
 
 // Required Dream sections in CLAUDE.md — checked by regex, sourced from plugin template
@@ -410,22 +413,66 @@ async function main() {
 // Written to settings.local.json (gitignored, machine-specific), never settings.json.
 
 function stepWireLocalSettings(manifest) {
-  if (isDone(manifest, 'wireLocalSettings')) { console.log('  — wireLocalSettings: done (skip)'); return; }
+  // Resolve the plugin scripts dir up front — the skip guard is path-aware (see below).
+  const pluginDir = resolvePluginDir();
+  const scriptsDir = path.join(pluginDir, 'scripts');
+
+  // Path-aware skip guard: skip only if already done AND the plugin path is unchanged.
+  // If the plugin was reinstalled to a new cache path (version upgrade), fall through so
+  // the new path's node rules get appended. (Sync mode: manifest is null → never skips.)
+  const prevOp = manifest && manifest.operations && manifest.operations.wireLocalSettings;
+  if (isDone(manifest, 'wireLocalSettings') && prevOp && prevOp.scriptsDir === scriptsDir) {
+    console.log('  — wireLocalSettings: done (skip)');
+    return;
+  }
+
   const settingsLocalPath = path.join(PROJECT_ROOT, '.claude', 'settings.local.json');
+
+  // S18: distinguish "file absent" (fine) from "file present but malformed" (must NOT
+  // silently reset — that would drop the developer's additionalDirectories / phaseD / custom
+  // allows). On a parse error of an existing file, warn and abort the settings write.
   let local = {};
-  try { local = JSON.parse(fs.readFileSync(settingsLocalPath, 'utf8')); } catch(_) {}
+  if (fs.existsSync(settingsLocalPath)) {
+    try {
+      local = JSON.parse(fs.readFileSync(settingsLocalPath, 'utf8'));
+    } catch (e) {
+      const msg = 'settings.local.json is present but not valid JSON (' + e.message +
+        ') — skipping permission wiring to avoid discarding your settings. Fix the file and re-run.';
+      console.log('  ⚠ local settings : ' + msg);
+      warn(manifest, msg);
+      markStep(manifest, 'wireLocalSettings', { added: [], scriptsDir, skipped: 'malformed-json' });
+      return;
+    }
+  }
 
   if (!local.permissions) local.permissions = {};
   if (!local.permissions.allow) local.permissions.allow = [];
 
-  // Build scoped allow rules: only node scripts inside THIS plugin's scripts/ directory.
-  const pluginDir = resolvePluginDir();
-  const scriptsDir = path.join(pluginDir, 'scripts');
   // Escape backslashes so the pattern string is valid inside settings.local.json.
   const escaped = scriptsDir.replace(/\\/g, '\\\\');
+
+  // DECISION: how to keep the managed allow-list in sync without harming user edits
+  // Options considered:
+  //   A) Re-stamp: remove entries matching a broad "managed" prefix, then re-add — rejected:
+  //      the prefix (e.g. "Bash(node ") also matches a developer's own custom node allow, so
+  //      a re-run would silently delete their entry (plan S17).
+  //   B) Append-only: only ever ADD entries that are not already present — chosen: never
+  //      removes anything, so user entries are safe and a stale old-plugin-path rule is left
+  //      behind but inert (it simply never matches). Idempotent by the includes() check.
   const needed = [
+    // Plugin scripts (scoped to THIS plugin's scripts/ dir — not a blanket "node *").
     `Bash(node "${escaped}\\\\*.cjs"*)`,
     `Bash(node.exe "${escaped}\\\\*.cjs"*)`,
+    // Common read-only / setup utilities skills invoke via the Bash tool (plan Part 2, Change B).
+    // NOTE: `find` is intentionally NOT allowlisted (ADR 0054) — those prompts persist by design.
+    // NOTE (plan S1): hook commands are NOT listed — hooks run via the hook runner, not the Bash
+    //   tool, so they never trigger a Bash permission prompt.
+    // NOTE (plan S9): do NOT add broad Write(.claude/**)/Edit(.claude/**) — that would silently
+    //   un-gate the enforcement hooks + settings.json. Keep Read broad, Edit narrow.
+    'Bash(ls:*)', 'Bash(grep:*)', 'Bash(cp:*)', 'Bash(mkdir:*)',
+    'Bash(chmod:*)', 'Bash(sha256sum:*)', 'Bash(sed:*)',
+    'Bash(which:*)', 'Bash(where.exe:*)',
+    'Read(.claude/**)', 'Edit(CLAUDE.md)', 'Edit(memory/*.md)',
   ];
 
   const added = [];
@@ -438,9 +485,9 @@ function stepWireLocalSettings(manifest) {
 
   if (added.length > 0) {
     atomicWrite(settingsLocalPath, JSON.stringify(local, null, 2));
-    console.log('  ✓ local settings : permissions.allow scoped to plugin scripts/ — node auto-approved');
+    console.log('  ✓ local settings : permissions.allow scoped to plugin scripts/ + safe utilities');
   } else {
-    console.log('  — local settings : node permissions already configured');
+    console.log('  — local settings : permissions already configured');
   }
   markStep(manifest, 'wireLocalSettings', { added, scriptsDir });
 }
@@ -718,7 +765,23 @@ function stepGitPreCommit(manifest, shellType) {
       action = 'already current';
     } else {
       const backup = dest + '.backup';
-      if (!fs.existsSync(backup)) fs.copyFileSync(dest, backup);  // preserve developer's hook once
+      if (!fs.existsSync(backup)) {
+        fs.copyFileSync(dest, backup);  // preserve developer's hook once
+      } else {
+        // Issue 10: a .backup already exists (from a prior install). The current hook is
+        // NOT ours (we're in the "differs" branch). If it also differs from the existing
+        // backup, it is a NEW developer hook (e.g. added after a teardown) that the
+        // once-only backup would clobber silently. Preserve it to a distinct slot + warn.
+        try {
+          if (!fs.readFileSync(backup).equals(fs.readFileSync(dest))) {
+            const alt = dest + '.local.bak';
+            fs.copyFileSync(dest, alt);
+            warn(manifest, 'pre-commit: pre-commit.backup already existed; your current hook ' +
+              'was preserved to pre-commit.local.bak before installing the plugin hook — ' +
+              'reconcile manually if it was intentional.');
+          }
+        } catch(_) { /* best-effort preservation; never block install */ }
+      }
       fs.copyFileSync(srcHook, dest);
       action = 'installed (existing backed up to pre-commit.backup)';
     }
@@ -1502,6 +1565,10 @@ function printSummary(manifest) {
     console.log('  LLM work remaining (handle in order):');
     pending.forEach(t => console.log('    [' + t.order + '] ' + t.id));
     pending.forEach(t => console.log('        → ' + t.description));
+    // Resume hint (plan Part 3, Issue 1): the manifest is the resume checkpoint. If this
+    // session is interrupted before the LLM steps finish, re-running /setup-init picks up
+    // where it left off — say so, so the developer doesn't try to piece it together manually.
+    console.log('  ℹ If this session is interrupted, just re-run /setup-init — it resumes from here.');
   } else if (MODE === 'init') {
     console.log('  ✓ All LLM tasks already complete.');
   }

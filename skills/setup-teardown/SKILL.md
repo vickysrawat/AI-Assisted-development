@@ -106,12 +106,14 @@ warnings (e.g. customised pre-commit hook skipped), and a count.
 
 Display:
 ```
-⚠ This will permanently remove the items listed above. Type CONFIRM to proceed,
+⚠ This will permanently remove the items listed above. Type "confirm" to proceed,
   or anything else to cancel:
 ```
 
-If the developer types anything other than exactly `CONFIRM` (case-sensitive): print
-`Cancelled — nothing removed.` and stop.
+Accept the confirmation **case-insensitively** — `confirm`, `Confirm`, and `CONFIRM` all
+proceed (Issue 7: case-sensitivity only caused silent "nothing happened" cancels). If the
+developer types anything else (after trimming/lowercasing), print `Cancelled — nothing
+removed.` and stop.
 
 ---
 

@@ -83,6 +83,67 @@ subsequent skills that read plugin reference files will find the correct path th
 
 ---
 
+### Step 0.5 — Repo-type detection (HARD PREREQUISITE — gate before all other steps)
+
+**Why here:** if the codebase is unrecognisable, architect fails 10 minutes later with a
+cryptic error. Detecting early fails fast and clearly, before any bootstrap work is done.
+
+**Check if already detected (resume path):**
+
+```bash
+node -e "
+try {
+  const s = JSON.parse(require('fs').readFileSync('.claude/dream-init-state.json','utf8'));
+  if (s.repo_type) { console.log('ALREADY_SET=' + s.repo_type); process.exit(0); }
+} catch(_) {}
+console.log('NEEDS_DETECTION');
+"
+```
+
+If `ALREADY_SET=...` → print the detected type and **skip to Step 1** (this is a resume).
+
+**Run deterministic detection:**
+
+```bash
+node "$PLUGIN_DIR/scripts/repo-detect.cjs"
+```
+
+| Exit code | Meaning | Action |
+|-----------|---------|--------|
+| `0` | Detected — `repo_type` written to state | Print the result and continue to Step 1 |
+| `1` | Already set (state had `repo_type`) — skip | Continue to Step 1 |
+| `2` | AMBIGUOUS — multiple conflicting signals | Run LLM fallback below |
+| `3` | UNKNOWN — no recognisable project structure | **Hard-fail** (see below) |
+
+**LLM fallback (exit code 2 only):**
+Ask Claude to analyse the project root and identify the repo type from the list:
+`dotnet-api | angular-nx | angular-standard | react | js-library | aspnet-framework |
+aspnet-mvc | spring-boot | vsto | python-fastapi | python-django | python-flask`
+
+Once determined, write it to state with:
+```bash
+node "$PLUGIN_DIR/scripts/repo-detect.cjs" --force
+```
+
+If Claude cannot determine the type either → **hard-fail** (same as exit 3).
+
+**Hard-fail (exit code 3 or LLM also failed):**
+```
+❌ Cannot detect project type — no recognisable source files found.
+   Run /setup-init after adding source files to the repository, or tell Claude
+   the project type explicitly (e.g. "this is a .NET API") and re-run.
+   Do NOT proceed with setup-init on an empty or unrecognised repository.
+```
+Stop here. Do not run Step 1.
+
+**Confirmation print on success:**
+```
+✓ Repo type: {REPO_TYPE}   Initial stacks: {DETECTED_STACKS}
+  (Bootstrap Phase 2, triggered by architect Step 1c, will refine detected_stacks[].)
+```
+
+---
+
 ### Step 1 — Bootstrap (all mechanical work)
 
 Bootstrap handles: directories, 37 command stubs, 5 hooks + `.hashes`,
@@ -141,6 +202,26 @@ console.log('LLM work :');
 ```
 
 If status is not `complete`, re-run bootstrap before proceeding.
+
+---
+
+### Step 1.5 — Module skeleton derivation (deterministic — no LLM)
+
+Run after bootstrap (which creates `.claude/graph/`). Produces the shared module list
+consumed by both architect (for doc section headings) and graph-create (for graph nodes).
+Fast and crash-safe — atomic write, resume-safe.
+
+```bash
+node "$PLUGIN_DIR/scripts/module-derive.cjs"
+```
+
+| Exit code | Meaning | Action |
+|-----------|---------|--------|
+| `0` | Skeleton written to `.claude/graph/.module-skeleton.json` | Print `MODULES=N STRUCTURE=flat|domain`, continue |
+| `1` | Skeleton already exists (resume path) | Continue |
+| `2` | Write failed | Warn and continue (graph-create will fail later with a clear error) |
+
+The skeleton is a private build artifact — gitignored, never committed.
 
 ---
 
@@ -253,13 +334,29 @@ Step 7-2 writes graph.json then calls graph-extract-edges.js for EXTRACTED edges
 Wait for architect to complete. Mark `generate_architecture` done in manifest.
 
 **3b — `build_knowledge_graph`** (if pending):
+
+> **ADR 0056 (v3.14+):** graph generation is now split into two sequential steps:
+> graph-create (initial build from the module skeleton) then graph-sync (LLM refinement).
+
+**Step 3c — graph-create (initial graph generation):**
+```
+Read .claude/plugin-path.txt to get PLUGIN_DIR (if absent, use §1a resolver), then
+Read $PLUGIN_DIR/skills/graph-create/SKILL.md and execute it in full.
+graph-create reads .claude/graph/.module-skeleton.json, classifies each module (LLM),
+computes fingerprints via the bash helper, runs graph-extract-edges.js, and projects
+graph-index.md + per-module detail files.
+```
+Wait for graph-create to complete. Confirm `.claude/graph/graph.json` and
+`.claude/graph/graph-index.md` exist.
+
+**Step 3b — graph-sync (LLM refinement, authoritative final pass):**
 ```
 Read .claude/plugin-path.txt to get PLUGIN_DIR (if absent, use §1a resolver), then
 Read $PLUGIN_DIR/skills/graph-sync/SKILL.md and execute it in full.
-Graph-sync Step 8a also calls graph-extract-edges.js after updating graph.json —
-this refines EXTRACTED edges and is the authoritative final pass.
+Graph-sync Step 8a calls graph-extract-edges.js after updating graph.json —
+this refines EXTRACTED edges with any changes since graph-create ran.
 ```
-Wait for graph-sync to complete. Confirm `.claude/graph/graph-index.md` exists.
+Wait for graph-sync to complete. Confirm `.claude/graph/graph-index.md` is up to date.
 Mark `build_knowledge_graph` done in manifest.
 
 ---

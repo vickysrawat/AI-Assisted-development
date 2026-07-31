@@ -42,6 +42,23 @@ to eliminate.
 
 ---
 
+## Resolve PLUGIN_DIR — do this first, before any step
+
+Read `.claude/plugin-path.txt` to get PLUGIN_DIR. If absent or empty, use the §1a resolver:
+
+```bash
+node -e "const fs=require('fs'),os=require('os'),path=require('path');const base=path.join(os.homedir(),'.claude','plugins');const norm=p=>p?p.split(String.fromCharCode(92)).join('/'):'' ;let dir='';try{const reg=JSON.parse(fs.readFileSync(path.join(base,'installed_plugins.json'),'utf8'));const key=Object.keys(reg.plugins||{}).find(k=>k.startsWith('ai-assisted-development@'));if(key){const a=reg.plugins[key]||[];const e=a.find(x=>x.scope==='user')||a[0];if(e&&e.installPath&&fs.existsSync(e.installPath))dir=e.installPath;}}catch(e){}if(!dir){try{for(const m of fs.readdirSync(base)){const p=path.join(base,m,'plugins','ai-assisted-development');if(fs.existsSync(p)){dir=p;break;}}}catch(e){}}process.stdout.write(norm(dir));"
+```
+
+If resolution produces an empty string, stop immediately:
+```
+⛔ Cannot resolve plugin directory — plugin-path.txt is missing or empty and the
+   registry lookup failed. Run /setup-sync to repair, then retry.
+```
+Store as PLUGIN_DIR. All `$PLUGIN_DIR` references in this skill use this value.
+
+---
+
 ## Persona
 
 Execute as **[SA] Rafael Mendes — Solution Architect** (16 yrs). The judgment steps — classifying
@@ -146,6 +163,13 @@ find . -mindepth 2 -maxdepth 3 -type d \
   -not -path "./bin/*" -not -path "./obj/*" -not -path "./.angular/*" \
   | sort
 ```
+
+> **S6 / ADR 0056:** `scripts/module-derive.cjs` uses the same bounded-context heuristic
+> and the same exclusion list as this `find` command to derive the initial module skeleton
+> during setup-init. Keeping both in sync ensures the FIRST `/graph-sync` after setup does
+> not detect spurious renames. If you update the exclusion list here, update
+> `module-derive.cjs`'s `EXCLUDE_DIRS` set and vice versa.
+
 Cross-reference with `.claude/architecture/architecture.md` when a new module's
 purpose is unclear. Directories matched by no node become `NEW_MODULES` (Step 7b).
 

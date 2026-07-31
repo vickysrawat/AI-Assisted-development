@@ -17,6 +17,23 @@ loads only matching reference files.
 
 ---
 
+## Resolve PLUGIN_DIR — do this first, before any step
+
+Read `.claude/plugin-path.txt` to get PLUGIN_DIR. If absent or empty, use the §1a resolver:
+
+```bash
+node -e "const fs=require('fs'),os=require('os'),path=require('path');const base=path.join(os.homedir(),'.claude','plugins');const norm=p=>p?p.split(String.fromCharCode(92)).join('/'):'' ;let dir='';try{const reg=JSON.parse(fs.readFileSync(path.join(base,'installed_plugins.json'),'utf8'));const key=Object.keys(reg.plugins||{}).find(k=>k.startsWith('ai-assisted-development@'));if(key){const a=reg.plugins[key]||[];const e=a.find(x=>x.scope==='user')||a[0];if(e&&e.installPath&&fs.existsSync(e.installPath))dir=e.installPath;}}catch(e){}if(!dir){try{for(const m of fs.readdirSync(base)){const p=path.join(base,m,'plugins','ai-assisted-development');if(fs.existsSync(p)){dir=p;break;}}}catch(e){}}process.stdout.write(norm(dir));"
+```
+
+If resolution produces an empty string, stop immediately:
+```
+⛔ Cannot resolve plugin directory — plugin-path.txt is missing or empty and the
+   registry lookup failed. Run /setup-sync to repair, then retry.
+```
+Store as PLUGIN_DIR. All `$PLUGIN_DIR` references in this skill use this value.
+
+---
+
 > **Single-writer assumption**: This skill writes to a persistent cache file. See `$PLUGIN_DIR/skills/shared/single-writer-assumption.md` for concurrency constraints and CI guidance.
 
 ## Model routing

@@ -189,7 +189,17 @@ function scopeRules() {
     }
   }
   if (deployed.length === 0) {
-    warnings.push('deployed_rules[] is empty — no rule files tracked; nothing to remove');
+    // Issue 8: an empty record is NOT the same as "no rules on disk". If rule files exist
+    // but were never tracked (e.g. architect/Phase-2 skipped), --rules removes nothing while
+    // reporting success — the developer wrongly believes rules are gone. Say so explicitly.
+    const rulesOnDisk = exists('.claude/rules') ? countFiles('.claude/rules') : 0;
+    if (rulesOnDisk > 0) {
+      warnings.push('deployed_rules[] is empty but .claude/rules/ still has ' + rulesOnDisk +
+        ' file(s) — no deployment record, so NOTHING will be removed by --rules. ' +
+        'Use --full to remove all plugin content, or run /setup-status to inspect.');
+    } else {
+      warnings.push('deployed_rules[] is empty and .claude/rules/ has no files — nothing to remove.');
+    }
   }
   for (const f of deployed) {
     const rel = path.join('.claude', 'rules', f).replace(/\\/g, '/');
@@ -211,6 +221,12 @@ function scopeState() {
   const items = [], warnings = [];
   for (const f of ['.claude/dream-init-state.json', '.claude/plugin-path.txt']) {
     if (exists(f)) items.push({ rel: f, display: f, type: 'file' });
+  }
+  // Issue 9: removing state while hooks remain wired leaves settings.json pointing at
+  // hooks whose enabling state (shell_type, etc.) just vanished. Flag the cross-scope gap.
+  if (exists('.claude/hooks') && countFiles('.claude/hooks') > 0) {
+    warnings.push('.claude/hooks/ still contains hook files and .claude/settings.json still ' +
+      'wires them; removing only --state leaves them orphaned. Consider --full for a clean removal.');
   }
   return { items, warnings };
 }
@@ -417,8 +433,10 @@ async function main() {
     if (!INTERACTIVE) {
       usageError('refusing to --execute without confirmation in a non-interactive shell; pass --yes');
     }
-    const ans = await prompt('\n⚠ Type CONFIRM to permanently remove the items above (anything else cancels): ');
-    if (ans.trim() !== 'CONFIRM') {
+    // Case-insensitive (plan Issue 7): accept confirm / Confirm / CONFIRM — the intent is
+    // unambiguous and case-sensitivity only causes silent "nothing happened" cancels.
+    const ans = await prompt('\n⚠ Type "confirm" to permanently remove the items above (anything else cancels): ');
+    if (ans.trim().toLowerCase() !== 'confirm') {
       console.log('Cancelled — nothing removed.');
       process.exit(0);
     }

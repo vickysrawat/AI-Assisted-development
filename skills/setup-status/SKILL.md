@@ -43,6 +43,32 @@ Status:
 
 ---
 
+### 1a-ii — CLAUDE.md identity placeholders (§2 Azure DevOps)
+
+Detect an incomplete `/init` / setup where the §2 identity values were never filled in and
+still hold their template tokens (`{ADO_ORG}`, `{ADO_PROJECT}`, `{ADO_URL}`, `{COMPANY}`,
+repo placeholder). Skills that read these values would silently get the wrong org/project.
+
+```bash
+# S13: scope the scan to the §2 identity VALUE lines only — never a whole-file grep.
+# CLAUDE.md legitimately contains {ADO_ORG} etc. in template/prose; only an unresolved
+# value on an actual field line (Organization / Project / ADO URL / Repository) is a defect.
+grep -nE '^[[:space:]]*-?[[:space:]]*(Organization|Project|ADO URL|Repository)[[:space:]]*:[[:space:]]*.*\{(ADO_|COMPANY|REPO)' CLAUDE.md 2>/dev/null \
+  && echo "UNRESOLVED_PLACEHOLDERS" || echo "IDENTITY_OK"
+```
+
+Status:
+- `IDENTITY_OK` → ✅ Green — §2 identity values are filled in
+- `UNRESOLVED_PLACEHOLDERS` → ⚠️ Amber — CLAUDE.md §2 still has template tokens; run `/init`
+  (or edit §2 Azure DevOps) so org/project/repo are real. List the offending field lines.
+
+Include in output report line:
+```
+  CLAUDE.md identity                 {✅ / ⚠️}       {§2 values filled | unresolved: Organization, Project, …}
+```
+
+---
+
 ### 1b — memory/
 
 ```bash
@@ -168,7 +194,7 @@ ls .claude/graph/.stale 2>/dev/null && echo "STALE" || echo "FRESH"
 Status:
 - EXISTS and no `.stale` flag → ✅ Green
 - EXISTS but `.stale` flag present → ⚠️ Amber — run /graph-sync
-- MISSING → ❌ Red — run /setup-init (the architect skill generates the graph; icea-feature and icea-review cannot orient without it)
+- MISSING → ❌ Red — run /setup-init (graph-create generates the graph during setup-init; icea-feature and icea-review cannot orient without it; see ADR 0056)
 
 > The former `domain-map.md` was retired in v3.0.0 — the knowledge graph is the single orientation layer (ADR 0038).
 
@@ -737,6 +763,7 @@ Include in output report line:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   CLAUDE.md                          {✅ / ⚠️ / ❌}  {detail}
+  CLAUDE.md identity                 {✅ / ⚠️}       {§2 values filled | unresolved: Organization, Project, …}
   memory/                            {✅ / ❌}       {detail}
   .claude/rules/                     {✅ / ⚠️}       {N/4 files present}
   .claude/commands/                  {✅ / ⚠️}       {N/37 stubs deployed}

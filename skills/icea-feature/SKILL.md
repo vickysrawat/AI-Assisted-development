@@ -55,6 +55,23 @@ Do NOT trigger for:
 
 ---
 
+## Resolve PLUGIN_DIR — do this first, before any step
+
+Read `.claude/plugin-path.txt` to get PLUGIN_DIR. If absent or empty, use the §1a resolver:
+
+```bash
+node -e "const fs=require('fs'),os=require('os'),path=require('path');const base=path.join(os.homedir(),'.claude','plugins');const norm=p=>p?p.split(String.fromCharCode(92)).join('/'):'' ;let dir='';try{const reg=JSON.parse(fs.readFileSync(path.join(base,'installed_plugins.json'),'utf8'));const key=Object.keys(reg.plugins||{}).find(k=>k.startsWith('ai-assisted-development@'));if(key){const a=reg.plugins[key]||[];const e=a.find(x=>x.scope==='user')||a[0];if(e&&e.installPath&&fs.existsSync(e.installPath))dir=e.installPath;}}catch(e){}if(!dir){try{for(const m of fs.readdirSync(base)){const p=path.join(base,m,'plugins','ai-assisted-development');if(fs.existsSync(p)){dir=p;break;}}}catch(e){}}process.stdout.write(norm(dir));"
+```
+
+If resolution produces an empty string, stop immediately:
+```
+⛔ Cannot resolve plugin directory — plugin-path.txt is missing or empty and the
+   registry lookup failed. Run /setup-sync to repair, then retry.
+```
+Store as PLUGIN_DIR. All `$PLUGIN_DIR` references in this skill use this value.
+
+---
+
 
 ## Codebase Orientation (run before Step 1)
 
@@ -550,35 +567,6 @@ Only proceed past this point when `ICEA_GATE_PASSED` is confirmed.
 
 ---
 
-**Resolve PLUGIN_DIR — do this before any template reads:**
-
-Read `.claude/plugin-path.txt` to get PLUGIN_DIR. If the file is absent or empty, use the §1a resolver:
-
-```bash
-node -e "
-const fs=require('fs'),os=require('os'),path=require('path');
-const base=path.join(os.homedir(),'.claude','plugins');
-const norm=p=>p?p.split(String.fromCharCode(92)).join('/'):''
-let dir='';
-try{
-  const reg=JSON.parse(fs.readFileSync(path.join(base,'installed_plugins.json'),'utf8'));
-  const key=Object.keys(reg.plugins||{}).find(k=>k.startsWith('ai-assisted-development@'));
-  if(key){const a=reg.plugins[key]||[];const e=a.find(x=>x.scope==='user')||a[0];
-    if(e&&e.installPath&&fs.existsSync(e.installPath))dir=e.installPath;}
-}catch(e){}
-if(!dir){try{for(const m of fs.readdirSync(base)){const p=path.join(base,m,'plugins','ai-assisted-development');if(fs.existsSync(p)){dir=p;break;}}}catch(e){}}
-process.stdout.write(norm(dir));
-"
-```
-
-If resolution produces an empty string, stop immediately:
-```
-⛔ Cannot resolve plugin directory — plugin-path.txt is missing or empty and the
-   registry lookup failed. Run /setup-sync to repair, then retry.
-```
-
----
-
 **⚠ CONTEXT BUDGET CHECK — run immediately after gate passes:**
 
 > Skip if Step 8 was entered via the `TECH ADO-{ID}` cross-session recovery keyword.
@@ -808,8 +796,8 @@ Generate the **epic-level spec** only, populating it from the ICEA:
 - Open Questions: any epic-wide unknowns
 
 Do NOT generate AC Coverage Matrix, Files Changed, Error Handling, or Test Cases in the
-epic-level spec — those belong in per-story specs and will be generated in the chaining
-phase (after SAVE TECH).
+epic-level spec — those belong in per-story specs and are generated individually in the
+blocks below (before SAVE TECH — not after).
 
 Run the critic gate and completeness self-check against the epic-level spec draft
 (mode = tech, same gates as the STORY path — section conformance against
@@ -820,22 +808,67 @@ Write epic-level draft to temp (same path):
 temp/ADO-{ADO_ID}-tech.md
 ```
 
+**Immediately generate all story specs and write them to temp/ (developer reviews everything before SAVE TECH):**
+
+For each story in the Story Breakdown (in order, starting at Story 1):
+
+  a. Announce: `⚙ Drafting Story {N} spec — {Story Title}...`
+
+  b. Generate the story-level spec using `techspec-base.md` + stack overlay, scoped to this
+     story's ACs only:
+     - AC Coverage Matrix: only this story's ACs
+     - Files Changed: only this story's files
+     - Implementation sections: scoped to this story
+     - Error Handling: this story's scenarios
+     - Test Cases: positive + negative per this story's ACs
+     - Schema Changes: Story 1 → full DDL; later stories → delta only with reference to Story 1
+     - Rollback: story-level rollback
+     - DoD: story-level completion criteria
+
+  c. Run critic gate (mode = tech). On REVISE: auto-revise once; if still REVISE, prepend a
+     `⚠ CRITIC: REVISE — {findings summary}` note to the spec draft. Do NOT stop — continue.
+
+  d. Run completeness self-check. If ⛔ scaffold-only: prepend `⚠ COMPLETENESS: SCAFFOLD` and continue.
+
+  e. Write to temp/:
+     ```bash
+     temp/ADO-{ADO_ID}-Story-{N}-tech.md
+     ```
+     Print summary: `✅ Story {N} drafted — {Story Title} · {X} ACs · {Y} SP`
+     (or: `⚠ Story {N} drafted with flags — review temp/ADO-{ADO_ID}-Story-{N}-tech.md`)
+
+Write tracker draft to temp/ (Status reflects actual generation result: ✅ clean, ⚠ flagged, ⏳ not yet generated):
+```bash
+temp/ADO-{ADO_ID}-tracker.md
+```
+
+**Context budget guard:** If context budget runs low after completing Story {N} of {total},
+stop after writing that story to temp/ and emit:
+```
+⚠ Context budget low — drafted Stories 1–{N} of {total}.
+  Stories {N+1}–{last} were not generated.
+  SAVE TECH ADO-{ADO_ID} saves what is in temp/ now.
+  Then run TECH ADO-{ADO_ID} RESUME to draft remaining stories.
+```
+
 Tell the developer:
 ```
-📄 Epic Tech Spec draft written to temp/ADO-{ADO_ID}-tech.md
-   Open it in VS Code preview (Ctrl+Shift+V).
+📄 Epic package drafted — review ALL files before saving:
 
-   This is the epic-level spec for QA, DevOps, and reviewers.
-   Individual story tech specs ({N} stories) will be generated automatically
-   after you save this document.
+   Epic spec  → temp/ADO-{ADO_ID}-tech.md             (Ctrl+Shift+V)
+   Story 1    → temp/ADO-{ADO_ID}-Story-1-tech.md     {⚠ if flagged}
+   Story 2    → temp/ADO-{ADO_ID}-Story-2-tech.md
+   ...
+   Tracker    → temp/ADO-{ADO_ID}-tracker.md
 
-   Answer open questions or make changes here in chat.
+   Open each file in VS Code preview and review.
+   Request changes to any spec in chat — I will update the temp file.
 
-   When satisfied: SAVE TECH ADO-{ADO_ID}
+   SAVE TECH ADO-{ADO_ID}  ← moves ALL temp files to permanent location at once
 ```
 
-Then proceed to Step 9 (interactive review) — same flow as STORY.
-On SAVE TECH ADO-{ADO_ID} the epic chaining phase begins (see Step 10 Epic section).
+Then proceed to Step 9 (interactive review) — same flow as STORY but developer reviews multiple temp files.
+On SAVE TECH ADO-{ADO_ID}: all temp files are moved to permanent (see Step 10 Epic Save).
 
 ---
 
@@ -1057,7 +1090,7 @@ docs/Release{RELEASE_ID}/Sprint{SPRINT_ID}/UserStory{ADO_ID}/
    ```
    Child ADO numbers filled when IMPLEMENT ADO-{ADO_ID} Story-{N} is run.
 
-4. If EPIC: begin story chaining phase — see **Step 10 Epic Chaining** below.
+4. If EPIC: move all story specs from temp/ to permanent — see **Step 10 Epic Save** below.
 
 5. Append to AI audit trail:
    ```bash
@@ -1100,117 +1133,53 @@ Share with your Tech Lead and Product team for review.
 
 ---
 
-### Step 10 Epic Chaining — Auto-generate story specs after SAVE TECH (EPIC only)
+### Step 10 Epic Save — move all temp files to permanent (EPIC only)
 
-Runs immediately after the epic-level spec is saved (Step 10 items 1–3 complete).
+Runs immediately after the SAVE TECH open-questions check and critic gate pass (items 1–3 complete).
+All specs were written to `temp/` during Step 8 — move them all to permanent now.
 
-**1. Create the tracker document:**
+**1. Move epic spec** (already done in item 1 above — same as STORY path).
 
+**2. Move each story spec from temp to permanent:**
 ```bash
-TRACKER="$DEST_DIR/ADO-{ADO_ID}-{feature}.tracker.md"
+# For each N in Story Breakdown where temp file exists:
+cp temp/ADO-{ADO_ID}-Story-{N}-tech.md \
+   "$DEST_DIR/ADO-{ADO_ID}-Story-{N}-{name}.techspec.md"
+rm temp/ADO-{ADO_ID}-Story-{N}-tech.md
 ```
 
-Write tracker content (all stories start as ⏳ Pending):
-
-```markdown
-# Tracker — {Feature Name}
-ADO #{ADO_ID} · Type: EPIC · {N} SP total
-
-| Story | Title | Tech Spec File | Status |
-|---|---|---|---|
-| 1 | {Shared Components} | ADO-{ADO_ID}-Story-1-{name}.techspec.md | ⏳ Pending |
-| 2 | {Title} | ADO-{ADO_ID}-Story-2-{name}.techspec.md | ⏳ Pending |
+**3. Move tracker draft from temp to permanent:**
+```bash
+cp temp/ADO-{ADO_ID}-tracker.md \
+   "$DEST_DIR/ADO-{ADO_ID}-{feature}.tracker.md"
+rm temp/ADO-{ADO_ID}-tracker.md
 ```
 
-**2. Chain through stories in order:**
-
-For each story listed in the Story Breakdown (in order, starting at Story 1):
-
-  a. **Announce the story:**
-     ```
-     ⚙ Generating Story {N} tech spec — {Story Title}...
-     ```
-
-  b. **Generate the story-level spec** using `techspec-base.md` + stack overlay, populated
-     from the ICEA and scoped to this story's ACs only:
-     - AC Coverage Matrix: only this story's ACs
-     - Files Changed: only this story's files
-     - Implementation sections: scoped to this story
-     - Error Handling: this story's scenarios
-     - Test Cases: positive + negative per this story's ACs
-     - Schema Changes section: Story 1 → full DDL; later stories → delta only with reference
-     - Rollback: story-level rollback
-     - DoD: story-level completion criteria
-
-  c. **Run critic gate** (mode = tech) against the story spec draft.
-     On REVISE: auto-revise once; if still REVISE, write to tracker as ❌ and continue to
-     next story (do not block the chain — developer can re-run `TECH ADO-{ID} RESUME` for
-     the failed story after fixing the underlying issue).
-
-  d. **Run completeness self-check** (placeholder count + conformance). If ⛔ scaffold-only:
-     mark story as ❌ in tracker, log which sections are missing, continue to next story.
-
-  e. **Auto-save** the story spec directly to the permanent location (no temp staging for
-     story specs — the epic spec already received developer review):
-     ```bash
-     STORY_FILE="$DEST_DIR/ADO-{ADO_ID}-Story-{N}-{name}.techspec.md"
-     # Write story spec content directly
-     ```
-
-  f. **Update tracker** — change this story's Status from ⏳ to ✅ (or ❌ on failure):
-     ```bash
-     # Rewrite tracker file with updated status for this story
-     ```
-
-  g. **Print one-line summary:**
-     ```
-     ✅ Story {N} saved — {Story Title} · {X} ACs · {Y} files · {Z} SP
-     ```
-     (or `❌ Story {N} failed — {reason} — re-run: TECH ADO-{ID} RESUME` on failure)
-
-  h. **Continue to next story** — no pause between stories unless context is exhausted.
-
-**3. Context exhaustion during chaining:**
-
-If context budget is running low mid-chain, stop after completing the current story and
-emit:
-
+**4. Emit save confirmation:**
 ```
-⚠ Context budget low — stopping chain after Story {N}.
-  Stories {N+1}–{last} are marked ⏳ in the tracker.
-  Resume: TECH ADO-{ADO_ID} RESUME
-  Tracker: {tracker file path}
-```
-
-**4. Chain complete:**
-
-When all stories are ✅ (or ❌ with notes), emit the full confirmation:
-
-```
-✅ Epic tech spec chain complete — ADO #{ADO_ID}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Epic tech specs saved — ADO #{ADO_ID}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Epic spec   → ...ADO-{ADO_ID}-{feature}.techspec.md
   Tracker     → ...ADO-{ADO_ID}-{feature}.tracker.md
   Story specs →
     Story 1 ✅ — ...ADO-{ADO_ID}-Story-1-{name}.techspec.md
     Story 2 ✅ — ...ADO-{ADO_ID}-Story-2-{name}.techspec.md
     ...
-  {If any ❌:}
-  ❌ Failed   →
-    Story {N} ❌ — {reason} — re-run: TECH ADO-{ID} RESUME
+  {If any ⚠:}  Story {N} ⚠ — critic/completeness flagged — review the saved file
+  {If any ⏳:}  Stories {N}–{last} ⏳ — not yet drafted — run: TECH ADO-{ADO_ID} RESUME
 
   ⚠ Create child ADOs in Azure DevOps — one per story.
   Child ADO numbers recorded when you implement each story:
     IMPLEMENT ADO-{ADO_ID} Story-1
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ---
 
 ### RESUME Command — `TECH ADO-{ID} RESUME` or `Resume Tech ADO-{ID}`
 
-Resumes story spec generation for an epic where the chain was interrupted (context
-exhaustion, failure, or fresh session after partial completion).
+Handles stories with Status ⏳ or ❌ in the tracker (context exhaustion during Step 8, or
+draft failures). Developer can also re-run this after manually fixing a flagged story spec.
 
 **Trigger:** Developer sends `TECH ADO-{ID} RESUME` or `Resume Tech ADO-{ID}` (case-insensitive).
 
@@ -1218,26 +1187,44 @@ exhaustion, failure, or fresh session after partial completion).
 
 1. Resolve `DEST_DIR` using `RELEASE_ID` and `SPRINT_ID` from context or ICEA file.
 
-2. Read the tracker file:
+2. Read the permanent tracker file:
    ```bash
    TRACKER=$(find "$DEST_DIR" -name "ADO-{ADO_ID}-*.tracker.md" | head -1)
    ```
    If tracker not found:
    ```
    ⛔ Tracker not found at {DEST_DIR}.
-      If the epic spec was never saved, run: TECH ADO-{ID}
-      If the tracker was deleted, re-run: TECH ADO-{ID} (epic spec regenerated, chain restarts)
+      If SAVE TECH was never run, start from: TECH ADO-{ID}
+      If the tracker was deleted, re-run: TECH ADO-{ID} (epic spec regenerated, all stories re-drafted)
    ```
 
-3. Read the epic-level spec to load the Story Breakdown and story titles.
+3. Read the permanent epic-level spec to load the Story Breakdown and story titles.
 
-4. Find the first story with Status = ⏳ or ❌ in the tracker.
+4. Find all stories with Status ⏳ or ❌ in the tracker.
 
-5. Generate that story's spec (same process as Step 10 Epic Chaining step 2a–g).
+5. For each such story: generate the story spec (same process as Step 8 story generation
+   steps a–e) and write to:
+   ```bash
+   temp/ADO-{ADO_ID}-Story-{N}-tech.md
+   ```
 
-6. Continue to next ⏳ or ❌ story if context allows.
+6. Write updated tracker draft to `temp/ADO-{ADO_ID}-tracker.md` (unchanged rows stay as-is;
+   newly drafted rows show ✅ or ⚠).
 
-7. If all stories are now ✅: emit the chain-complete confirmation from Step 10 item 4.
+7. Tell developer:
+   ```
+   📄 Remaining story specs drafted:
+      Story {N} → temp/ADO-{ADO_ID}-Story-{N}-tech.md  {⚠ if flagged}
+      ...
+      Tracker   → temp/ADO-{ADO_ID}-tracker.md
+
+   Review and then: SAVE TECH ADO-{ADO_ID}
+   ```
+
+8. On `SAVE TECH ADO-{ADO_ID}`: move newly drafted temp files to permanent (same as
+   Step 10 items 2–4); update the permanent tracker rows ⏳/❌ → ✅.
+
+9. If all stories are now ✅: emit the save confirmation from Step 10 item 4.
 
 ---
 

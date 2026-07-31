@@ -48,7 +48,7 @@ Rules:
 | 0035 | Plan phase integrated into icea-feature — plan feeds ICEA | Accepted |
 | 0036 | temp/ rendering aid pattern and TEMP_WRITE_EXEMPT convention | Accepted |
 | 0037 | Roadmap proposals live in docs/proposals/, outside shared specs and the manifest | Accepted |
-| 0038 | Knowledge graph is the single codebase-orientation layer (supersedes 0017; domain-map retired) | Accepted |
+| 0038 | Knowledge graph is the single codebase-orientation layer (supersedes 0017; domain-map retired) — orientation-layer decision unchanged; graph *generation ownership* moved to graph-create skill per 0056 | Accepted |
 | 0039 | graph.json sidecar — machine-readable structure of record; markdown is its projection (typed edges, confidence, module-wide fingerprints) | Accepted |
 | 0040 | CLAUDE.md context budget — ≤ ~200 lines, set by instruction adherence not context-window capacity | Accepted |
 | 0041 | EXTRACTED graph edges derived deterministically by a script (import parsing), not by the model | Accepted |
@@ -64,3 +64,6 @@ Rules:
 | 0051 | Architect templates deduplicated — shared base (`_shared/`) + per-stack overrides, composed by the bootstrap (supersedes 0050's "no bootstrap change needed") | Accepted |
 | 0052 | Critic wired into icea-feature at two planning-time gates (ICEA draft Step 5, Tech Spec draft Step 8) with bounded auto-revise; new `tech` mode; extends 0012 | Accepted |
 | 0053 | Architecture-doc population uses a two-signal detector (retained `<!-- TEMPLATE -->` marker + scaffold-only body tokens); bootstrap no longer strips the marker; corrects the strip introduced with 0051 | Accepted |
+| 0054 | ADR 0054 (find prohibition — not listed here; see separate ADR file) | Accepted |
+| 0055 | External detected-stacks separation | Accepted |
+| 0056 | graph-create skill owns initial graph generation (module-derive.cjs shared skeleton; architect writes docs only; graph-create writes graph; disjoint outputs enable future parallelisation per parallel-execution-primitive proposal) | Accepted |

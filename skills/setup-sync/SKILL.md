@@ -205,6 +205,30 @@ node -e "
 > `{PLUGIN_DIR}/.claude-plugin/plugin.json` in Step 3. Do not use shell variable
 > interpolation — substitute the literal value directly into the script string.
 
+### Step 1c — Prerequisite check: did setup-init ever complete?
+
+setup-sync restores rules from `deployed_rules[]` and refreshes what `setup-init` created.
+If `setup-init` never ran to completion (e.g. stopped after the mechanical bootstrap), the
+state has no `detected_stacks`/`deployed_rules`, so Step 3 has nothing to restore — silently.
+Warn clearly, but do NOT block: re-copying hooks/stubs is still useful.
+
+```bash
+node -e "
+const fs=require('fs');
+let s={}; try{ s=JSON.parse(fs.readFileSync('.claude/dream-init-state.json','utf8')); }catch(e){}
+const stacks = Array.isArray(s.detected_stacks) ? s.detected_stacks : [];
+console.log(stacks.length ? 'INIT_COMPLETE' : 'INIT_INCOMPLETE');
+"
+```
+
+If `INIT_INCOMPLETE`:
+```
+⚠ setup-init may not have completed — detected_stacks is empty in dream-init-state.json.
+  Rules cannot be restored (no deployment record). Hooks/stubs will still be refreshed.
+  Run /setup-init to finish initial setup, or /setup-status to diagnose.
+```
+Continue with the remaining steps regardless.
+
 ---
 
 ## Step 2 — Bootstrap (re-provision hooks, stubs, and skill files)
@@ -279,11 +303,19 @@ review what changed. Do not auto-apply code changes — migrations are informati
 ls "$PLUGIN_DIR/docs/migrations/"*.md 2>/dev/null | sort
 ```
 
-For each migration file in range, display its content with a header:
+For each migration file in range, display its content with a header that makes the
+informational-only nature explicit (Issue 5 — developers otherwise assume it auto-applied):
 ```
-📋 Migration {version}:
+📋 Migration {version} (informational — review and apply any manual steps yourself):
 {content}
 ```
+
+After displaying all in-range migrations, close with:
+```
+If any migration above lists a manual action, complete it before running /setup-status.
+(Migrations are notes, not auto-applied changes.)
+```
+If no migration files are in range, say so: `No migration notes between v{prov} and v{inst}.`
 
 ---
 
@@ -430,7 +462,13 @@ node -e "
                   plugin-path.txt updated, .claude/skills/ .hashes refreshed
   Rules:          {N} restored, {N} already present
   Migrations:     {list of versions applied}
+
+  ⚠ NEXT STEP — the knowledge graph is likely STALE after a version upgrade.
+    Run /graph-sync now to refresh it, or code-review/graph-viz/icea-review
+    will orient off out-of-date module data.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Run /setup-status to verify all checks are green.
-Knowledge graph may be stale after an upgrade — run /graph-sync to refresh.
+Then run /setup-status to verify all checks are green.
 ```
+
+> Issue 6: the graph-sync reminder is intentionally a prominent `⚠` line in the summary box,
+> not a trailing note, because a stale graph silently degrades downstream skills.

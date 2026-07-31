@@ -87,3 +87,46 @@ These were deleted. Watch for more stale v1 references in future sessions.
 ### [capture] [2026-07-27] Error resolved — context-budget-tech-write.cjs sparse-stub bypass
 
 ### [capture] [2026-07-27] Error resolved — icea-feature Step 8 PLUGIN_DIR resolved too late
+
+### [capture] 2026-07-27 Architecture decision — PLUGIN_DIR resolution must be the first step in every skill
+### [capture] 2026-07-27 Task completed — setup-init-bootstrap.cjs: stepWireLocalSettings added as step 2
+
+### [capture] [2026-07-29] Architecture decision — Epic story spec generation moved to pre-SAVE (temp/ staging)
+
+### [capture] 2026-07-27 Architecture decision — setup-init auto-run: permissions in settings.local.json, scoped
+### [capture] 2026-07-30 Approach abandoned — parallel sub-agents for setup-init (architect ∥ graph ∥ rules)
+### [capture] 2026-07-30 Architecture decision — setup-init refactor: extract repo-detection as sequential prerequisite only
+### [capture] 2026-07-30 Architecture decision — unified install via install.sh dispatcher + install.cmd
+### [capture] 2026-07-30 Task completed — stepWireLocalSettings gaps: hooks + utilities + stale-path missing
+
+### [capture] 2026-07-30 Architecture decision — graph pipeline is architect-doc-independent; deterministic module-derive is the right decomposition
+### [capture] 2026-07-30 Task completed — stepWireLocalSettings gaps: hooks + utilities + stale-path missing
+
+### [capture] 2026-07-30 Architecture decision — decouple-before-parallelising: decoupling IN the install/setup plan, parallelising → proposal doc
+### [capture] 2026-07-30 Task completed — stepWireLocalSettings gaps: hooks + utilities + stale-path missing
+
+### [capture] 2026-07-30 Plan approved — install/setup ease + path-scoped permissions + graph decoupling persisted to docs/plans
+### [capture] 2026-07-30 Architecture decision — decouple-before-parallelising: decoupling IN the install/setup plan, parallelising → proposal doc
+
+### [capture] 2026-07-30 Error resolved — installer flag styles differ: ps1 uses PowerShell switches, sh/cjs use --flags
+### [capture] 2026-07-30 Error resolved — graph.json node `type` is a required enum; skeleton "unclassified" violates schema
+### [capture] 2026-07-30 Error resolved — fingerprints are bash-helper-owned; a Node re-hash diverges (marks everything stale)
+### [capture] 2026-07-30 Plan approved — install/setup ease + path-scoped permissions + graph decoupling persisted to docs/plans
+
+### [capture] 2026-07-30 Error resolved — hooks run via the hook runner, NOT the Bash tool (no Bash permission needed)
+### [capture] 2026-07-30 Architecture decision — decoupling graph-create requires ADR-0038 supersede + graph-sync shared derivation (churn risk)
+### [capture] 2026-07-30 Plan approved — install/setup ease + path-scoped permissions + graph decoupling persisted to docs/plans
+
+### [capture] 2026-07-30 Error resolved — auto-allowing Write(.claude/**) un-gates the enforcement hooks (security regression)
+### [capture] 2026-07-30 Approach abandoned (pending verify) — install.sh→PowerShell/Node delegation may NOT fix the mintty hang
+### [capture] 2026-07-30 Architecture decision — ADR 0038 only PARTIALLY superseded by graph-create move; do not modify 0038 file
+### [capture] 2026-07-30 Error resolved — hooks run via the hook runner, NOT the Bash tool (no Bash permission needed)
+
+### [capture] 2026-07-30 Task completed — Phase A of the install/setup plan implemented (dispatcher deferred)
+### [capture] 2026-07-30 Error resolved — auto-allowing Write(.claude/**) un-gates the enforcement hooks (security regression)
+
+### [capture] 2026-07-30 Task completed — Phase B: repo-detect.cjs + setup-init Step 0.5 gate
+### [capture] 2026-07-30 Task completed — Phase A of the install/setup plan implemented (dispatcher deferred)
+
+### [capture] 2026-07-31 Task completed — Phase C: graph-create skill extracted from architect; module-derive.cjs shared skeleton
+### [capture] 2026-07-30 Task completed — Phase B: repo-detect.cjs + setup-init Step 0.5 gate

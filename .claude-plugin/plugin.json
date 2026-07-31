@@ -67,6 +67,7 @@
       "setup-teardown",
       "dynamic-scan",
       "external-dir-map",
+      "graph-create",
       "graph-sync",
       "graph-viz",
       "icea-approve",
