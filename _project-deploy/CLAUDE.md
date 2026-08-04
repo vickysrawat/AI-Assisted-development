@@ -8,7 +8,7 @@
 #
 # Stack: <set per repo — e.g. ".NET 8+ / C# · Angular 17+ · Node.js · Azure DevOps">
 #        setup-init / architect populate this from the detected repo type.
-#        Supported backends: .NET Core · ASP.NET Framework 4.x · Java/Spring Boot · Python (FastAPI/Django/Flask) · Node.js
+#        Supported backends: .NET Core · ASP.NET Framework 4.x · VSTO · Java/Spring Boot · Python (FastAPI/Django/Flask) · Node.js
 #        Supported frontends: Angular · React. Tracking: Azure DevOps.
 # Last updated: keep this file updated when conventions change
 # Plugin version: 3.13.0

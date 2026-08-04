@@ -174,6 +174,14 @@ These are processed and removed by /dream each run.
 
 <!-- Auto-capture entries appear below this line -->
 
+### [2026-08-04] Task completed — _project-deploy/CLAUDE.md split implemented (bootstrap + validate.js)
+Created _project-deploy/CLAUDE.md as explicit deployment template source (copied from root CLAUDE.md, added header). Updated setup-init-bootstrap.cjs to read _project-deploy/CLAUDE.md first (falls back to root CLAUDE.md for older installs). Updated tests/validate.js with 6 new checks for the deployment template. bump-version.js and check-version-consistency.js blocked by icea-floor hook — diffs provided for manual apply. Gotcha: changes to dev source SKILL.md do NOT auto-propagate to installed plugin cache — always patch the installed path too.
+Trigger: Task completed  Confidence: 0.90  Source: auto-capture
+
+### [2026-08-04] Error resolved — VSTO architect templates missing 3 files from v3.8.0 doc-set expansion
+VSTO template dir has 5 files; 3 added in the 4→8 expansion (2026-07-10) are missing: architecture-data.md, architecture-integrations.md, architecture-decisions.md. Root cause: VSTO was added on 2026-07-17 AFTER the expansion, so new shared files were never given VSTO-specific overrides. _shared/ fallbacks are web/DB-centric (wrong for VSTO's Office COM model). Fix: create vsto-specific overrides for data and integrations; decisions can inherit from _shared unchanged. Also: _project-deploy/CLAUDE.md supported stacks comment was missing VSTO.
+Trigger: Error resolved  Confidence: 0.90  Source: auto-capture
+
 ### [2026-08-04] Plan approved — _project-deploy/CLAUDE.md as explicit deployment template
 Split root CLAUDE.md (plugin dev-session config) from _project-deploy/CLAUDE.md (pure template for target projects). Only one code change required: setup-init-bootstrap.cjs line 1404 reads `_project-deploy/CLAUDE.md` instead of root CLAUDE.md. bump-version.js and check-version-consistency.js must also stamp/check both files. validate.js gets a _project-deploy/CLAUDE.md check. Root CLAUDE.md stays intact for tests, bump-version, and plugin dev sessions.
 Trigger: Plan approved  Confidence: 0.90  Source: auto-capture

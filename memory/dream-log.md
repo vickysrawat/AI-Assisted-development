@@ -139,3 +139,6 @@ These were deleted. Watch for more stale v1 references in future sessions.
 ### [capture] [2026-08-04] Architecture decision — _project-deploy/CLAUDE.md proposal: separate deployment template from plugin project config
 
 ### [capture] [2026-08-04] Plan approved — _project-deploy/CLAUDE.md as explicit deployment template
+
+### [capture] [2026-08-04] Task completed — _project-deploy/CLAUDE.md split implemented (bootstrap + validate.js)
+### [capture] [2026-08-04] Error resolved — VSTO architect templates missing 3 files from v3.8.0 doc-set expansion
