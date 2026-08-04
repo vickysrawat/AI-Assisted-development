@@ -1274,7 +1274,7 @@ transparency). Never name the persona in any artifact — note this is distinct 
 
 - NEVER write any file before SAVE PLAN ADO-{ID} is received
 - NEVER generate a full monolithic tech spec for an EPIC — always use the epic-level template for the main spec and generate per-story specs in the chaining phase
-- NEVER generate story specs before the epic-level spec is saved via SAVE TECH ADO-{ID}
+- NEVER generate story specs before the epic-level spec DRAFT is complete and written to temp/ in Step 8
 - NEVER pause between stories during epic chaining — auto-save each story spec and continue; stop only on context exhaustion
 - NEVER update the tracker before a story spec is successfully saved — tracker is updated after each save, not before
 - NEVER fall back to base template when dream-init-state.json is missing, malformed, or empty — hard stop and surface the specific error
@@ -1298,7 +1298,7 @@ transparency). Never name the persona in any artifact — note this is distinct 
 - NEVER use section numbers to reference Tech Spec content — always use heading text (e.g. `## Open Questions`, `## Sizing and Story Breakdown`, `## Test Cases`)
 - ALWAYS read techspec-base.md and the stack overlay before drafting the Tech Spec (STORY path)
 - ALWAYS read techspec-epic-level.md before drafting the epic-level spec (EPIC path)
-- ALWAYS create the tracker document immediately after the epic-level spec is saved, before beginning story chaining
+- ALWAYS write the tracker draft to temp/ during Step 8 story chaining, and move it to permanent on SAVE TECH (same atomic move as all story specs)
 - ALWAYS update the tracker after each story spec is saved (not before, not batched at end)
 - ALWAYS select the correct overlay from detected_stacks in dream-init-state.json
 - ALWAYS end every Step 3 response with: `Review the plan. When ready: SAVE PLAN ADO-{ADO_ID}`
@@ -1333,11 +1333,11 @@ This skill is permitted to write to `temp/ADO-{ID}-icea.md` and
 - **Short-lived** — deleted on `SAVE TECH ADO-{ID}`
 - **Overwritten freely** — each iterative change rewrites the file in place
 
-**Epic story specs** (generated during the chaining phase) are written **directly to the
-permanent location** (`docs/Release{R}/Sprint{S}/UserStory{ID}/`) without temp staging —
-the developer reviewed and approved the epic-level spec before chaining begins, and the
-critic gate serves as the quality gate for each story spec. This is also TEMP_WRITE_EXEMPT
-for the purposes of the write gate.
+**Epic story specs** (generated during the chaining phase) are written to `temp/ADO-{ID}-Story-{N}-tech.md`
+alongside the epic spec and tracker draft. On `SAVE TECH ADO-{ID}`, Step 10 Epic Save moves all temp
+files atomically to the permanent UserStory folder. The developer reviews the full package (epic spec +
+all story specs) in VS Code preview before anything is saved permanently. This temp/ staging is
+TEMP_WRITE_EXEMPT for the purposes of the write gate — story spec temp files are never committed.
 
 The global write gate (`## 0. WRITE GATE`) is NOT relaxed — this exemption
 applies only to `temp/ADO-{ID}-*.md` files and epic story spec files written during an

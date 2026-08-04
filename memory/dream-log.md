@@ -130,3 +130,5 @@ These were deleted. Watch for more stale v1 references in future sessions.
 
 ### [capture] 2026-07-31 Task completed — Phase C: graph-create skill extracted from architect; module-derive.cjs shared skeleton
 ### [capture] 2026-07-30 Task completed — Phase B: repo-detect.cjs + setup-init Step 0.5 gate
+
+### [capture] [2026-08-03] Error resolved — Three bugs in icea-feature EPIC flow: CLAUDE.md §0a + TEMP_WRITE_EXEMPT + Hard Rule

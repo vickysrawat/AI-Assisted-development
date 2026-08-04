@@ -174,6 +174,10 @@ These are processed and removed by /dream each run.
 
 <!-- Auto-capture entries appear below this line -->
 
+### [2026-08-03] Error resolved — Three bugs in icea-feature EPIC flow: CLAUDE.md §0a + TEMP_WRITE_EXEMPT + Hard Rule
+Bug 1 (Critical/root cause): CLAUDE.md §0a keyword handlers for `PLAN/ICEA/TECH ADO-{ID}` only said "Draft…cross-session recovery" — unlike APPROVE/IMPLEMENT which say "Run icea-X skill", these handlers didn't invoke the icea-feature skill or read its SKILL.md, so the EPIC branch sizing check was never executed inline. Fix: change Action column to "Invoke icea-feature skill — cross-session recovery entry at Step 5/8". Bug 2 (High): SKILL.md TEMP_WRITE_EXEMPT section (lines 1336-1340) said story specs go "directly to permanent location without temp staging" — contradicting Step 8 (writes to temp/) and Step 10 Epic Save (cp from temp/ to permanent). Fix: remove incorrect claim, correctly describe temp/ → permanent flow. Bug 3 (Medium): Hard Rule "NEVER generate story specs before the epic-level spec is saved via SAVE TECH" conflicts with Step 8 which generates stories to temp/ BEFORE SAVE TECH. Fix: reword to "before the epic-level spec DRAFT is complete and written to temp/ in Step 8". All three fixes applied to CLAUDE.md §0a and skills/icea-feature/SKILL.md.
+Trigger: Error resolved  Confidence: 0.95  Source: auto-capture
+
 ### [2026-07-29] Architecture decision — Epic story spec generation moved to pre-SAVE (temp/ staging)
 The previous Epic flow generated story specs AFTER SAVE TECH (auto-chaining), meaning the developer approved a thin epic-level spec and stories materialized on disk without review. Fixed: Step 8 now generates ALL story specs and a tracker draft and writes them to `temp/ADO-{ID}-Story-{N}-tech.md` + `temp/ADO-{ID}-tracker.md`. SAVE TECH performs one atomic move of all temp files to permanent. The developer reviews the complete package (epic spec + all story specs) in VS Code before committing anything. Step 10 "Epic Chaining" section replaced by "Epic Save" (atomic move) + RESUME-only recovery path.
 Trigger: Architecture decision  Confidence: 0.95  Source: auto-capture

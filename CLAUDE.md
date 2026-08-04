@@ -71,9 +71,9 @@ Recognised globally, no /command needed. ADO ID is case-insensitive (`ADO-1847`,
 | `SAVE ICEA ADO-{ID} ACCEPT` | Override critic REVISE verdict and save ICEA anyway (with audit note) |
 | `SAVE TECH ADO-{ID}` | Write Tech Spec to disk — hard blocks if open questions remain (no bypass) |
 | `SAVE TECH ADO-{ID} ACCEPT` | Save Tech Spec despite critic REVISE verdict (override with audit note) |
-| `PLAN ADO-{ID}` | Draft ICEA from saved plan — cross-session recovery |
-| `ICEA ADO-{ID}` | Draft Tech Spec from saved ICEA — cross-session recovery |
-| `TECH ADO-{ID}` | Draft Tech Spec from saved ICEA — cross-session recovery |
+| `PLAN ADO-{ID}` | Invoke icea-feature skill — cross-session recovery entry at Step 5 (draft ICEA from saved plan on disk; reads icea-feature SKILL.md before proceeding) |
+| `ICEA ADO-{ID}` | Invoke icea-feature skill — cross-session recovery entry at Step 8 (draft Tech Spec from saved ICEA on disk; skip context budget check; reads icea-feature SKILL.md including EPIC branch before proceeding) |
+| `TECH ADO-{ID}` | Invoke icea-feature skill — cross-session recovery entry at Step 8 (draft Tech Spec from saved ICEA on disk; skip context budget check; reads icea-feature SKILL.md including EPIC branch before proceeding) |
 | `APPROVE ADO-{ID}` | Run icea-approve skill for that ADO ID |
 | `APPROVE ADO-{ID} Story-{N}` | Run icea-approve skill for that story |
 | `IMPLEMENT ADO-{ID}` | Run icea-implement skill for that ADO ID |
