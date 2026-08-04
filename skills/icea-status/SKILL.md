@@ -104,8 +104,8 @@ Next action:
 | Files on disk | Status | Next action to show |
 |---|---|---|
 | No files at all | — | `/icea-feature ADO-{ID}` — start fresh |
-| Plan only | — | `PLAN ADO-{ID}` — draft ICEA from saved plan |
-| Plan + ICEA only | DRAFT | `TECH ADO-{ID}` — draft Tech Spec from saved ICEA |
+| Plan only | — | `PLAN ADO-{ID}` — invoke icea-feature skill at Step 5 |
+| Plan + ICEA only | DRAFT | `TECH ADO-{ID}` — invoke icea-feature skill at Step 8 |
 | Plan + ICEA + Tech Spec | DRAFT | `APPROVE ADO-{ID}` — when reviewed by Tech Lead + Product |
 | Plan + ICEA + Tech Spec | DRAFT (open questions > 0) | `REVISE ADO-{ID}` — {N} open questions need resolution |
 | All docs | ✅ Approved (STORY) | `IMPLEMENT ADO-{ID}` — ready to implement |

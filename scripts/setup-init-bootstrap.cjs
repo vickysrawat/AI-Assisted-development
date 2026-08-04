@@ -1399,11 +1399,17 @@ function stepClaudeMd(manifest) {
   // Clean up any leftover tmp from a prior failed write
   try { if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath); } catch(e) {}
 
-  // Read the plugin CLAUDE.md template
+  // Read the deployment template — _project-deploy/CLAUDE.md is the explicit source for target projects.
+  // Falls back to root CLAUDE.md for older plugin installs that pre-date the split.
   let pluginContent = '';
-  try { pluginContent = fs.readFileSync(path.join(PLUGIN_DIR, 'CLAUDE.md'), 'utf8'); }
+  const templatePaths = [
+    path.join(PLUGIN_DIR, '_project-deploy', 'CLAUDE.md'),
+    path.join(PLUGIN_DIR, 'CLAUDE.md'),
+  ];
+  const templatePath = templatePaths.find(p => fs.existsSync(p));
+  try { pluginContent = fs.readFileSync(templatePath, 'utf8'); }
   catch(e) {
-    warn(manifest, 'Could not read plugin CLAUDE.md template — skipping CLAUDE.md management');
+    warn(manifest, 'Could not read CLAUDE.md deployment template — skipping CLAUDE.md management');
     markStep(manifest, 'claudeMd', { claudeMdState: 'skipped', reason: 'plugin template unreadable' });
     return;
   }
@@ -1449,8 +1455,9 @@ function stepClaudeMd(manifest) {
   const missing = CLAUDE_MD_SECTIONS.filter(s => !s.detectRe.test(existing));
 
   if (missing.length === 0) {
-    // ── Case C: all sections present — stamp plugin version line only ─────────
+    // ── Case C: all sections present — stamp plugin version + repair stale rows ─
     existing = existing.replace(/^# Plugin version:.*$/m, '# Plugin version: ' + PLUGIN_VERSION);
+    existing = repairRecoveryHandlers(existing);
     fs.writeFileSync(tmpPath, existing, 'utf8');
     fs.renameSync(tmpPath, targetPath);
     console.log('  ✓ CLAUDE.md    : all sections present, version stamped');
@@ -1471,12 +1478,29 @@ function stepClaudeMd(manifest) {
   }
   let newContent = existing.trimEnd() + additions + '\n';
   newContent = applyAdoSeed(newContent);
+  newContent = repairRecoveryHandlers(newContent);
   fs.writeFileSync(tmpPath, newContent, 'utf8');
   fs.renameSync(tmpPath, targetPath);
   console.log('  ✓ CLAUDE.md    : ' + added.length + ' section(s) appended');
   const needsInit = !hasProjectContent(existing);
   if (!needsInit) markLLMItemDone(manifest, 'init_claude_md', 'CLAUDE.md had project content before section append');
   markStep(manifest, 'claudeMd', { claudeMdState: 'sections_appended', sectionsAdded: added, needsInit });
+}
+
+// Repairs stale §0a cross-session recovery handlers shipped before v3.13.x.
+// Old rows said "Draft ICEA/Tech Spec from saved…"; new rows say "Invoke icea-feature skill".
+// Uses replaceAll via regex 'g' flag to handle projects with duplicate §0a sections.
+function repairRecoveryHandlers(content) {
+  const repairs = [
+    [/\| `PLAN ADO-\{ID\}` \| Draft ICEA from saved plan — cross-session recovery \|/g,
+     '| `PLAN ADO-{ID}` | Invoke icea-feature skill — cross-session recovery entry at Step 5 (draft ICEA from saved plan on disk; reads icea-feature SKILL.md before proceeding) |'],
+    [/\| `ICEA ADO-\{ID\}` \| Draft Tech Spec from saved ICEA — cross-session recovery \|/g,
+     '| `ICEA ADO-{ID}` | Invoke icea-feature skill — cross-session recovery entry at Step 8 (draft Tech Spec from saved ICEA on disk; skip context budget check; reads icea-feature SKILL.md including EPIC branch before proceeding) |'],
+    [/\| `TECH ADO-\{ID\}` \| Draft Tech Spec from saved ICEA — cross-session recovery \|/g,
+     '| `TECH ADO-{ID}` | Invoke icea-feature skill — cross-session recovery entry at Step 8 (draft Tech Spec from saved ICEA on disk; skip context budget check; reads icea-feature SKILL.md including EPIC branch before proceeding) |'],
+  ];
+  for (const [pattern, replacement] of repairs) content = content.replace(pattern, replacement);
+  return content;
 }
 
 function hasProjectContent(claudeMdText) {

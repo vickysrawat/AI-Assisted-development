@@ -1,7 +1,10 @@
-# CLAUDE.md — Project Intelligence File (plugin dev sessions)
-# Deployment template for target projects: _project-deploy/CLAUDE.md
-# This file governs the plugin's OWN development session. When updating deployable sections
-# (Write Gate, §0a, §0b, etc.) update _project-deploy/CLAUDE.md — that is the bootstrap source.
+# CLAUDE.md — Deployment Template
+# Source: _project-deploy/CLAUDE.md  |  Read by: scripts/setup-init-bootstrap.cjs (stepClaudeMd)
+# This file is the ONLY source for target project CLAUDE.md files.
+# Keep it as a pure template — {ADO_ORG}/{STACK} placeholders only, no plugin-internal values.
+# Plugin dev-session config and plugin-project-specific ADO coordinates live in the root CLAUDE.md.
+# When changing a deployable section (Write Gate, §0a, §0b, etc.), update THIS file.
+# The root CLAUDE.md copy of that section is for plugin dev sessions only.
 #
 # Stack: <set per repo — e.g. ".NET 8+ / C# · Angular 17+ · Node.js · Azure DevOps">
 #        setup-init / architect populate this from the detected repo type.

@@ -132,3 +132,10 @@ These were deleted. Watch for more stale v1 references in future sessions.
 ### [capture] 2026-07-30 Task completed — Phase B: repo-detect.cjs + setup-init Step 0.5 gate
 
 ### [capture] [2026-08-03] Error resolved — Three bugs in icea-feature EPIC flow: CLAUDE.md §0a + TEMP_WRITE_EXEMPT + Hard Rule
+
+### [capture] [2026-08-03] Task completed — icea-feature EPIC flow bugs fixed across plugin source + installed copy + KE.Web
+
+### [capture] [2026-08-04] Task completed — §0a cross-session recovery handler bug fixed across all target projects + bootstrap self-heal
+### [capture] [2026-08-04] Architecture decision — _project-deploy/CLAUDE.md proposal: separate deployment template from plugin project config
+
+### [capture] [2026-08-04] Plan approved — _project-deploy/CLAUDE.md as explicit deployment template

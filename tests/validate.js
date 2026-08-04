@@ -319,6 +319,20 @@ if (exists('CLAUDE.md')) {
     ? ok('CLAUDE.md: PAT stored in Windows env var') : bad('CLAUDE.md: PAT Windows env var guidance missing');
 }
 
+// ── 9b. _project-deploy/CLAUDE.md deployment template ────────────────────────
+console.log('\n▶ _project-deploy/CLAUDE.md deployment template');
+if (exists('_project-deploy/CLAUDE.md')) {
+  const dp = read('_project-deploy/CLAUDE.md');
+  dp.includes('# Dream')                    ? ok('deploy CLAUDE.md: Dream section present')           : bad('deploy CLAUDE.md: Dream section missing');
+  dp.includes('## 0a. Keyword Handlers')    ? ok('deploy CLAUDE.md: §0a Keyword Handlers present')   : bad('deploy CLAUDE.md: §0a Keyword Handlers missing');
+  dp.includes('## 0. WRITE GATE')           ? ok('deploy CLAUDE.md: Write Gate section present')      : bad('deploy CLAUDE.md: Write Gate section missing');
+  dp.includes('{ADO_ORG}')                  ? ok('deploy CLAUDE.md: ADO_ORG placeholder present')    : bad('deploy CLAUDE.md: {ADO_ORG} placeholder missing — template must not have hardcoded values');
+  dp.includes('Invoke icea-feature skill')  ? ok('deploy CLAUDE.md: §0a recovery handlers updated')  : bad('deploy CLAUDE.md: §0a still has old "Draft…cross-session recovery" handlers');
+  dp.includes('INFRA_MODEL')                ? ok('deploy CLAUDE.md: MODEL ROUTING present')           : bad('deploy CLAUDE.md: MODEL ROUTING section missing');
+} else {
+  bad('_project-deploy/CLAUDE.md missing — create it as the deployment template source');
+}
+
 // ── 10. install.sh syntax ─────────────────────────────────────────────────────
 console.log('\n▶ install.sh syntax');
 if (exists('install.sh')) {

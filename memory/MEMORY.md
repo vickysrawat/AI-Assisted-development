@@ -174,6 +174,22 @@ These are processed and removed by /dream each run.
 
 <!-- Auto-capture entries appear below this line -->
 
+### [2026-08-04] Plan approved — _project-deploy/CLAUDE.md as explicit deployment template
+Split root CLAUDE.md (plugin dev-session config) from _project-deploy/CLAUDE.md (pure template for target projects). Only one code change required: setup-init-bootstrap.cjs line 1404 reads `_project-deploy/CLAUDE.md` instead of root CLAUDE.md. bump-version.js and check-version-consistency.js must also stamp/check both files. validate.js gets a _project-deploy/CLAUDE.md check. Root CLAUDE.md stays intact for tests, bump-version, and plugin dev sessions.
+Trigger: Plan approved  Confidence: 0.90  Source: auto-capture
+
+### [2026-08-04] Task completed — §0a cross-session recovery handler bug fixed across all target projects + bootstrap self-heal
+Fixed PLAN/ICEA/TECH §0a handlers in all 7 discovered target project CLAUDE.md files (ERISATracker, KE.KirklandData, TIPTTSATracker, KE.Web, installed plugin cache). KE.KirklandData had oldest SAVE ICEA/TECH format — those were also updated to current. Added `repairRecoveryHandlers()` to setup-init-bootstrap.cjs so future `/setup-sync` runs auto-fix any remaining old handlers. Also fixed icea-status SKILL.md display text lines 107-108. setup-sync does NOT update existing CLAUDE.md sections — only appends missing ones; the repair function is needed to override this limitation.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-08-04] Architecture decision — _project-deploy/CLAUDE.md proposal: separate deployment template from plugin project config
+Current root CLAUDE.md serves dual purpose: plugin dev session config AND deployment template. Proposed split: _project-deploy/CLAUDE.md = pure template with all {ADO_ORG}/{STACK} placeholders (bootstrap reads from here), root CLAUDE.md = plugin project config only. Complication: plugin dev sessions also need Write Gate/§0a/§0b which are in both files. Main trade-off: dual-maintenance when changing deployable sections vs clarity gain (explicit contract of what target projects receive). Decision: implement after full audit of all files referencing root CLAUDE.md.
+Trigger: Architecture decision  Confidence: 0.85  Source: auto-capture
+
+### [2026-08-03] Task completed — icea-feature EPIC flow bugs fixed across plugin source + installed copy + KE.Web
+Fixed four locations: (1) plugin source CLAUDE.md §0a + SKILL.md (Hard Rule 1277, Hard Rule 1301, TEMP_WRITE_EXEMPT); (2) installed plugin cache at 3.13.0 (same three SKILL.md fixes — the copy all target projects actually read); (3) KE.Web CLAUDE.md §0a + updated SAVE ICEA/TECH rows to current plugin version. Gotcha: fixes to the dev source repo do NOT automatically propagate to the installed plugin cache — changes must be applied to BOTH the source AND the installed path at `C:\Users\rawatv\.claude\plugins\cache\KirklandAndEllis-marketplace\ai-assisted-development\{version}\`. Always check the installed copy after fixing plugin source files.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
 ### [2026-08-03] Error resolved — Three bugs in icea-feature EPIC flow: CLAUDE.md §0a + TEMP_WRITE_EXEMPT + Hard Rule
 Bug 1 (Critical/root cause): CLAUDE.md §0a keyword handlers for `PLAN/ICEA/TECH ADO-{ID}` only said "Draft…cross-session recovery" — unlike APPROVE/IMPLEMENT which say "Run icea-X skill", these handlers didn't invoke the icea-feature skill or read its SKILL.md, so the EPIC branch sizing check was never executed inline. Fix: change Action column to "Invoke icea-feature skill — cross-session recovery entry at Step 5/8". Bug 2 (High): SKILL.md TEMP_WRITE_EXEMPT section (lines 1336-1340) said story specs go "directly to permanent location without temp staging" — contradicting Step 8 (writes to temp/) and Step 10 Epic Save (cp from temp/ to permanent). Fix: remove incorrect claim, correctly describe temp/ → permanent flow. Bug 3 (Medium): Hard Rule "NEVER generate story specs before the epic-level spec is saved via SAVE TECH" conflicts with Step 8 which generates stories to temp/ BEFORE SAVE TECH. Fix: reword to "before the epic-level spec DRAFT is complete and written to temp/ in Step 8". All three fixes applied to CLAUDE.md §0a and skills/icea-feature/SKILL.md.
 Trigger: Error resolved  Confidence: 0.95  Source: auto-capture
