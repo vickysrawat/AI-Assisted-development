@@ -61,3 +61,17 @@ detect:
 - Use `userEvent` over `fireEvent` for realistic user interaction simulation
 - Await async renders with `await screen.findByX` — do not manually call `tick()` + `detectChanges()`
 - Wrap component renders with the full module under test to surface injection errors early
+
+## Change detection (OnPush)
+With `OnPush`, a component re-checks only when: a bound `@Input()` reference changes (new reference, not
+mutation), an event fires inside the component, a template Signal emits, an `async`-piped Observable
+emits, or `markForCheck()` is called. Replace objects immutably (`this.user = { ...this.user, name }`) —
+mutating `this.user.name` will not trigger a re-render.
+
+## Anti-patterns (never generate)
+- `BehaviorSubject` + manual `getValue()` for component state — bypasses reactivity, stale reads; use `signal()` (local) or a service + signal (shared)
+- Mutating a signal value directly — no re-render; use `.set(newValue)` or `.update(fn)`
+- HTTP call inside `effect()` — runs outside Angular scheduling; use `rxResource()` or a service method
+- `providers: [MyService]` on sibling components — creates two instances; use `providedIn: 'root'` or provide at the correct shared scope
+- Nesting `.subscribe()` calls — callback hell; use `switchMap`/`concatMap`/`mergeMap`
+- `switchMap` for a form save — cancels an in-flight save on the next click; use `concatMap` (queue) or `exhaustMap` (ignore until done)

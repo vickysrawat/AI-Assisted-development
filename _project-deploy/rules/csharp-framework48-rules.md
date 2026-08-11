@@ -59,3 +59,6 @@ detect:
 - No `HttpContext.Current` outside controllers and thin infrastructure helpers
 - No connection strings or secrets in `web.config` committed to the repo
 - No `Response.Write` or direct `HttpResponse` manipulation outside action results
+- No `BinaryFormatter` — insecure and removed in .NET 8+; use `System.Text.Json` or a binary serializer
+- No `Thread.Sleep` or synchronous blocking in web request handlers — use `async`/`await`
+- No static shared mutable state — refactor to scoped DI services

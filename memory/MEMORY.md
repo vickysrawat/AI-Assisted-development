@@ -1,5 +1,105 @@
 # MEMORY.md — manual override inbox
 
+### [2026-08-11] Plan approved — migration skill context-budget-aware + resumable (Option 1)
+Decision: add a context-budget check (reusing skills/shared/context-budget-check.md, in-skill, NO new hook) at the START of the document-heavy stages 1/2/3 (Stage 4.0 already had the only one), write .claude/migration-checkpoint.json EARLY (end of Stage 0, not Stage 3) and update phase+stage_gates at every gate, and add stage-level recovery keywords MIGRATE ARCH / MIGRATE FEAS / MIGRATE CLUSTERS ADO-{ID} that re-enter each stage reading prior approved docs from disk (gated by prior-stage approval flags; each doubles as its check's skip_keyword). Checkpoint schema bumped 1.5→1.6 (adds stage_gates{}, mode{graph,track,source_token,target_token}, decision_log.source_module_count). Root cause = cross-stage accumulation, NOT single-stage size — the fix breaks accumulation via /compact + resume-from-disk. Also backfilling the 3 existing MIGRATE rows into root CLAUDE.md §0a (drift: they were only in _project-deploy/CLAUDE.md). REJECTED heavier sub-agent doc-offload (parallel or single): only helps a narrow edge case the budget warning already guards, degrades everyday revision UX, and adds machinery against "simplicity first". Stage 1 authoring stays inline. Register keywords in SKILL.md trigger list + both CLAUDE.md §0a (byte-identical patterns).
+Trigger: Plan approved  Confidence: 0.85  Source: auto-capture
+
+### [2026-08-11] Plan approved — lift always-true guardrails from migration stacks/ refs into rule files
+Decision: the `skills/migration/references/stacks/*.md` "Anti-Patterns (never generate these)" tables + .NET middleware-pipeline ordering are always-true coding guardrails → lift the net-new ones into the matching `_project-deploy/rules/*.md` (rules are the single source; they load on every matching edit). Migration-only content (coming-FROM gotchas, NuGet/npm catalogs, mapping/RxJS tables, WCF matrices) stays in the references. Trim the lifted tables from references → replace with a pointer to the authoritative rule; add a note in migration SKILL.md to also load the matching rule file (rule wins on conflict) so guardrails survive when a target-stack rule isn't deployed yet. Found + fixing live drift: rule says Moq, stacks/dotnet.md said NSubstitute. Stack rule files live ONLY in `_project-deploy/rules/` (`.claude/rules/` has no stack files). Rejected alternatives: full copy (context bloat + drift), pointers-only (no enrichment).
+Trigger: Plan approved  Confidence: 0.80  Source: auto-capture
+
+### [2026-08-07] Architecture decision — PLUGIN_DIR resolution via UserPromptSubmit hook (plugin-dir-context.cjs)
+PLUGIN_DIR is resolved once per session via a UserPromptSubmit hook that reads `.claude/plugin-path.txt` and injects `PLUGIN_DIR: /path/to/plugin` into every message's context. Claude substitutes the literal value wherever `$PLUGIN_DIR` appears in skill instructions — no bash variable scope issues, no re-resolution in each bash block. Fallback: if plugin-path.txt absent, hook runs the Node.js scanner and writes the result. This replaces the Step 0.1 resolution bash block and fixes the circular reference in Codebase Orientation (B-04). All three skills that use PLUGIN_DIR benefit — not migration-specific.
+Trigger: Architecture decision  Confidence: 0.95  Source: auto-capture
+
+### [2026-08-07] Task completed — confirmed UserPromptSubmit hook receives user message in `prompt` field
+Claude Code's UserPromptSubmit hook stdin JSON payload includes: `session_id`, `transcript_path`, `cwd`, `permission_mode`, `hook_event_name`, and crucially `prompt` (the exact text the user typed). This makes deterministic keyword detection in hooks fully viable — a hook can read `input.prompt`, regex-match against migration keywords, resolve PLUGIN_DIR via file I/O, and inject skill content + checkpoint state before Claude responds. Hook output format: `hookSpecificOutput.hookEventName + additionalContext`. Test hook written at `.claude/hooks/test-prompt-hook.cjs`.
+Trigger: Task completed  Confidence: 1.00  Source: auto-capture
+
+### [2026-08-07] Architecture decision — migration keyword routing via UserPromptSubmit hook (deterministic layer)
+Decision: use a UserPromptSubmit hook for migration keyword detection instead of relying solely on §0a text instructions. Hook reads `input.prompt`, matches MIGRATE RESUME/STATUS/RETRY CLUSTER patterns, resolves PLUGIN_DIR from `.claude/plugin-path.txt`, injects relevant SKILL.md section + checkpoint JSON into context before Claude responds. This is deterministic (shell execution, not AI inference) unlike §0a keyword matching which Claude can skip. §0a keeps one-line dispatch entries as fallback; hook is the authoritative trigger.
+Trigger: Architecture decision  Confidence: 0.90  Source: auto-capture
+
+### [2026-08-05] Task completed — 3-iteration review of SKILL.md v1.5, 42 findings identified
+Workflow ran 3 parallel review agents (plugin integration, spec completeness, execution correctness) + synthesis agent. 7 BLOCKERs: B-01 (not in consent/personas tables), B-02 (wrong Write Gate keyword APPROVE MIGRATION instead of APPROVE), B-03 (stage gate keywords not in CLAUDE.md 0a), B-04 (PLUGIN_DIR circular bootstrap), B-05 ({port} never defined), B-06 ({Name} never defined), B-07 (Python silently fails). 18 HIGH, 13 MEDIUM, 4 LOW. Three unconditional runtime failures: B-02, B-05, B-06. User will discuss each finding before approving fixes.
+Trigger: Task completed  Confidence: 0.90  Source: auto-capture
+
+### [2026-08-05] Task completed — all 5 specs/ reference files created + tracker fully updated
+Created: target-app-architecture-spec.md (compact standards reference for cluster agents), feasibility-spec.md (GREEN/YELLOW/RED format + architecture alignment section), phase1-architecture-spec.md (docs 6-10: Component/Data/Security/Infrastructure/Decisions with Mermaid + ADR format), integration-contract-spec.md (API endpoint format, breaking-change table), migration-report-spec.md (clusters migrated, E2E results, coverage, residual risks). All 10 docs now ✅ in tracker. SKILL.md v1.5 loads each spec only at its phase; Stage 4 agents don't load any specs.
+Trigger: Task completed  Confidence: 0.85  Source: auto-capture
+
+### [2026-08-05] Plan approved — docs 6-10 content specs agreed for phase1-architecture-spec.md
+Doc 6 COMPONENT-ARCHITECTURE: system overview, tech stack, C4 context (Mermaid), C4 component map (Mermaid), layer architecture (Mermaid), external deps table, ADR per component. Doc 7 DATA-ARCHITECTURE: data strategy ADR, entity inventory, ER diagram (Mermaid), data flow sequence (Mermaid), PII inventory, schema migration approach. Doc 8 SECURITY-ARCHITECTURE: auth strategy ADR, auth flow sequence (Mermaid), authorization model, secrets management, data protection, threat model brief. Doc 9 INFRASTRUCTURE-ARCHITECTURE: environment map, hosting topology (Mermaid), CI/CD flow (Mermaid), external services, observability, hosting ADR. Doc 10 ARCHITECTURE-DECISIONS: running ADR log, initial ADRs from docs 6-9 (architecture pattern, auth, data access, hosting, bounded context boundaries).
+Trigger: Plan approved  Confidence: 0.85  Source: auto-capture
+
+### [2026-08-05] Task completed — SKILL.md v1.5 rewritten with revised stage structure
+SKILL.md rewritten from scratch as v1.5 with: Stage 0 (show source first, 3 questions only), Stage 1 (AI proposes all 5 architecture docs with Mermaid + ADR per component, gates on APPROVE ARCHITECTURE), Stage 2 (feasibility after architecture approval), Stage 3 (cluster plan + specs), Stage 4+ (parallel cluster migration with branch-per-cluster), Stage 5 (test coverage + Playwright E2E), Stage 6 (verification + visual checklist). Phase -1 eliminated. 6-question Q&A bloc gone — AI infers and proposes, asks only on genuine ambiguity.
+Trigger: Task completed  Confidence: 0.85  Source: auto-capture
+
+### [2026-08-05] Plan approved — migration skill: revised stage structure + minimal Q&A principle
+Revised skill flow: Stage 0 (show source first, ask only 3 questions: target platform, cloud/hosting, hard constraints), Stage 1 (AI proposes full architecture with Mermaid diagrams + ADR per component, asks only on genuine ambiguity — never assumes), Stage 2 (feasibility after architecture approval), Stage 3 (cluster plan + specs), Stage 4+ (parallel migration). Previous Phase -1 6-question bloc eliminated — AI infers standards from source analysis and proposes them, user reviews. Principle: minimal questions upfront, ask targeted questions at the exact decision point.
+Trigger: Plan approved  Confidence: 0.90  Source: auto-capture
+
+### [2026-08-05] Plan approved — migration skill: document specs moved to references/specs/ folder
+Architecture document specifications (what each doc contains, format, sections) extracted from SKILL.md into separate reference files under skills/migration/references/specs/. Five spec files: target-app-architecture-spec.md (Phase -1), feasibility-spec.md (Phase 0.5), phase1-architecture-spec.md (Phase 1 — 8 docs), integration-contract-spec.md (Phase 1 two-track), migration-report-spec.md (Phase 4). SKILL.md becomes lean — just loads spec file at phase entry, generates doc from spec. Phase 2 agents don't load any specs (work from generated docs on disk).
+Trigger: Plan approved  Confidence: 0.85  Source: auto-capture
+
+### [2026-08-05] Task completed — Phase 3/4 updated with full Playwright E2E spec
+Phase 3 Step 3.5 now generates 5 test files from migration knowledge (health, auth, api-contract, navigation, forms). data-testid convention added to cluster spec template. Phase 4 Step 4.2 added: pre-flight placeholder check, app startup sequence, token acquisition per auth strategy, npx playwright test headless, app teardown. Visual Verification Checklist generated for developer. Remaining TARGET_PATH refs cleaned to relative paths.
+Trigger: Task completed  Confidence: 0.80  Source: auto-capture
+
+### [2026-08-05] Plan approved — Phase 3/4 Playwright: generated from migration knowledge, executed via Bash (no LLM)
+Phase 3 Step 3.5 generates Playwright tests from: integration contract (API tests), Phase -1 auth (auth tests), Angular routing module (navigation tests), cluster specs with data-testid convention (form tests), Phase -1 A4 health check (health test). Phase 4 checks placeholder connection strings first, then: start app via Bash, wait for health, acquire test token per Phase -1 A1, run npx playwright test headless, read stdout result. LLM only writes tests (Phase 3) and reads output summary (Phase 4) — execution is 100% OS process, zero LLM tokens during test run.
+Trigger: Plan approved  Confidence: 0.85  Source: auto-capture
+
+### [2026-08-05] Architecture decision — Phase 4 browser verification: headless Playwright + visual checklist
+Three-layer verification: (1) Agent runs headless Playwright E2E tests automatically in Phase 4 — app started in background, Playwright tests pre-generated in Phase 3 exercise all API endpoints + Angular routes + auth flows; (2) Developer completes Visual Verification Checklist for CSS/UX; (3) /verify skill for interactive testing. Angular must use Jest preset (not Karma) for headless unit tests — no display server needed. Playwright tests generated from integration contract + routing module + Phase -1 auth strategy.
+Trigger: Plan approved  Confidence: 0.80  Source: auto-capture
+
+### [2026-08-05] Architecture decision — migration skill runs IN target project, reads from SOURCE_PATH
+CRITICAL INVERSION: migration skill runs in the TARGET project (developer cd's into new empty repo, runs /migration). SOURCE_PATH is collected in Step 0 and registered as additionalDirectories in .claude/settings.local.json. All source reads use SOURCE_PATH prefix. isolation:"worktree" now correctly creates branches of the TARGET repo. Planning docs go into TARGET's docs/. This makes the Workflow tool's worktree isolation work as designed.
+Trigger: Architecture decision  Confidence: 0.90  Source: auto-capture
+
+### [2026-08-05] Task completed — SKILL.md v1.3: Phase -1 target architecture + graph cluster plan + parallel Phase 2
+SKILL.md updated to v1.3 with: Phase -1 (6 Q&A questions for auth/infra/security/observability/API/code standards producing TARGET-APP-ARCHITECTURE.md), graph-reading step with graph-absent /graph-sync prompt, cluster derivation via BFS connected components + hub detection, per-cluster executable specs in TARGET-ARCHITECTURE.md (self-contained for Phase 2 agents), parallel cluster agents with isolation:worktree, checkpoint v1.3 with decision_log (compact JSON replacing full doc re-reads on resume).
+Trigger: Task completed  Confidence: 0.85  Source: auto-capture
+
+### [2026-08-05] Plan approved — migration skill: graph-sync prompt + worktree isolation for Phase 2 agents
+If graph absent at Phase 0: prompt developer to run /graph-sync before continuing (user confirmed "Yes"). Phase 2 parallel cluster agents use isolation: "worktree" — each agent reads source files from its own isolated worktree branch, writes generated code to TARGET_PATH/{cluster}/ (filesystem write persists outside worktree lifecycle). Orchestrator handles tracker updates after all agents complete (not individual agents, since they're in isolated branches).
+Trigger: Plan approved  Confidence: 0.85  Source: auto-capture
+
+### [2026-08-05] Architecture decision — migration skill: two separate docs (human reference + AI spec)
+docs/migration-architecture.md stays as human-readable reference (keep as-is). A separate AI-executable spec needs to be created where reference file sections are restructured into RULE blocks with Trigger/Phase/Action. Context budget strategy: (1) slice-scoped source reading via source file manifest in Phase 1, (2) phase-isolated sessions, (3) reference file summary sections, (4) checkpoint decision log as compact JSON replacing full planning doc re-reads on resume.
+Trigger: Plan approved  Confidence: 0.80  Source: auto-capture
+
+### [2026-08-05] Task completed — added dotnet-upgrade.md + dotnet-framework-to-dotnet.md mapping files
+Two missing .NET migration mapping files created. dotnet-upgrade.md covers .NET Core/5-8 → .NET 10 (in-place TFM bump, 4 slices, package audit procedure, version-specific breaking changes). dotnet-framework-to-dotnet.md covers .NET Fx 4.x → .NET 10 (8 slices, Strangler Fig + YARP pattern, WebForms/WCF RED items, EF6 references shared ef6-to-efcore.md). SKILL.md mapping pair list updated to include both.
+Trigger: Task completed  Confidence: 0.80  Source: auto-capture
+
+### [2026-08-05] Task completed — migration skill full refactor into SKILL.md + 13 reference files
+Refactored monolithic SKILL.md into lean orchestrator + references/stacks/ (6 files: dotnet, dotnet-framework, java-spring, nodejs-express, react, angular) + references/mappings/ (3 files: java-dotnet bidirectional, nodejs-dotnet, react-angular) + references/shared/ (3 files: ef6-to-efcore, clean-architecture, fullstack-integration). Added command stub at _project-deploy/commands/migration.md and MIGRATE RESUME/MIGRATE STATUS to _project-deploy/CLAUDE.md §0a. Key pattern: source stack file loaded after Q1, target + mapping files loaded after Q2 — timing matters for Q3/Q4 warnings.
+Trigger: Task completed  Confidence: 0.85  Source: auto-capture
+
+### [2026-08-05] Architecture decision — migration skill: runs IN source project, writes to separate target path
+Migration skill runs in the SOURCE application (setup-init already done, stack already known). Target application is a new/empty folder — its path is collected in Step 0 Q&A. All planning docs (feasibility, architecture, tracker) stay in SOURCE project's docs/. All generated code writes go to TARGET_PATH. Build/test commands run inside TARGET_PATH. Checkpoint lives in SOURCE project's .claude/. This means SOURCE_PATH = current directory (no collection needed); TARGET_PATH is the only new variable.
+Trigger: Architecture decision  Confidence: 0.90  Source: auto-capture
+
+### [2026-08-05] Plan approved — migration skill refactor: single-stack reference files + mappings layer
+Agreed approach: split monolithic SKILL.md into orchestrator + `references/stacks/{stack}.md` (per-stack idioms/patterns) + `references/mappings/{pair}.md` (parity GREEN/YELLOW/RED tables) + `references/shared/` (cross-cutting: EF6, clean-architecture, fullstack-integration). Single-stack files scale O(n); mapping files are optional thin overlays. If no mapping file exists for a pair, LLM derives parity from the two stack files with explicit UNKNOWN disclaimer. Rejected source→target pair files (O(n²) duplication).
+Trigger: Plan approved  Confidence: 0.80  Source: auto-capture
+
+### [2026-08-05] Task completed — skills/migration/SKILL.md v1.1 with research findings
+Migration skill updated to v1.1 incorporating: 4 BLOCKER fixes (contract hash sync, RETRY/RESET/SKIP slice recovery, Q8 monorepo detection, Step 0.6 proportionality validation), EF6 silent bug table (9 items), Strangler Fig + YARP guidance, @Transactional→SaveChanges as #1 Java→.NET correctness bug (in Hard Rules), Angular Signals migration mapping, JWT RS256+JWKS hybrid pattern, CORS AllowAnyOrigin prohibition, app model alignment check Phase 4. Three parallel research agents + one critical analysis agent run concurrently.
+Trigger: Task completed  Confidence: 0.80  Source: auto-capture
+
+### [2026-08-05] Task completed — skills/migration/SKILL.md created
+New migration skill created at `skills/migration/SKILL.md` covering open-matrix migrations (.NET Fx→.NET 10, Java↔.NET, React+Express→Angular+.NET, Node.js→.NET). Key patterns: interactive Q&A replaces Decision Tree; two-track BACKEND/FRONTEND model for full-stack; `APPROVE MIGRATION ADO-{ID}` as Write Gate keyword; characterization tests before Phase 2; per-slice checkpoint + resume.
+Trigger: Task completed  Confidence: 0.80  Source: auto-capture
+
+### [2026-08-05] Architecture decision — migrate skill: interactive Q&A over Decision Tree
+Replaced the original Decision Tree (auto-defaults, .NET-only) with an interactive Q&A sequence (Q1–Q7) following `interactive-menu-spec.md`. Rejected fallback/manual-plan mode for unsupported stacks — skill stops with an error instead. Two-track model (combined-but-separable BACKEND + FRONTEND tracks) chosen over separate invocations for full-stack migrations.
+Trigger: Architecture decision  Confidence: 0.80  Source: auto-capture
+
 > Sessions are now the primary memory source.
 > /dream reads your Claude Code conversations directly via conversation_search.
 > You do not need to write here manually.

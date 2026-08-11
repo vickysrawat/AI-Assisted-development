@@ -7,7 +7,6 @@
 'use strict';
 const fs   = require('fs');
 const path = require('path');
-
 if (!fs.existsSync('.claude/dream-init-state.json')) process.exit(0);
 
 const LINE_THRESHOLD_MEDIUM = 150;

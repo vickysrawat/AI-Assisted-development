@@ -142,3 +142,72 @@ These were deleted. Watch for more stale v1 references in future sessions.
 
 ### [capture] [2026-08-04] Task completed — _project-deploy/CLAUDE.md split implemented (bootstrap + validate.js)
 ### [capture] [2026-08-04] Error resolved — VSTO architect templates missing 3 files from v3.8.0 doc-set expansion
+
+### [capture] [2026-08-05] Task completed — skills/migration/SKILL.md created
+### [capture] [2026-08-05] Architecture decision — migrate skill: interactive Q&A over Decision Tree
+
+### [capture] [2026-08-05] Task completed — skills/migration/SKILL.md v1.1 with research findings
+### [capture] [2026-08-05] Task completed — skills/migration/SKILL.md created
+
+### [capture] [2026-08-05] Plan approved — migration skill refactor: single-stack reference files + mappings layer
+### [capture] [2026-08-05] Task completed — skills/migration/SKILL.md v1.1 with research findings
+
+### [capture] [2026-08-05] Architecture decision — migration skill: runs IN source project, writes to separate target path
+### [capture] [2026-08-05] Plan approved — migration skill refactor: single-stack reference files + mappings layer
+
+### [capture] [2026-08-05] Task completed — migration skill full refactor into SKILL.md + 13 reference files
+### [capture] [2026-08-05] Architecture decision — migration skill: runs IN source project, writes to separate target path
+
+### [capture] [2026-08-05] Task completed — added dotnet-upgrade.md + dotnet-framework-to-dotnet.md mapping files
+### [capture] [2026-08-05] Task completed — migration skill full refactor into SKILL.md + 13 reference files
+
+### [capture] [2026-08-05] Architecture decision — migration skill: two separate docs (human reference + AI spec)
+### [capture] [2026-08-05] Task completed — added dotnet-upgrade.md + dotnet-framework-to-dotnet.md mapping files
+
+### [capture] [2026-08-05] Plan approved — migration skill: graph-sync prompt + worktree isolation for Phase 2 agents
+### [capture] [2026-08-05] Architecture decision — migration skill: two separate docs (human reference + AI spec)
+
+### [capture] [2026-08-05] Task completed — SKILL.md v1.3: Phase -1 target architecture + graph cluster plan + parallel Phase 2
+### [capture] [2026-08-05] Plan approved — migration skill: graph-sync prompt + worktree isolation for Phase 2 agents
+
+### [capture] [2026-08-05] Architecture decision — migration skill runs IN target project, reads from SOURCE_PATH
+### [capture] [2026-08-05] Task completed — SKILL.md v1.3: Phase -1 target architecture + graph cluster plan + parallel Phase 2
+
+### [capture] [2026-08-05] Architecture decision — Phase 4 browser verification: headless Playwright + visual checklist
+### [capture] [2026-08-05] Architecture decision — migration skill runs IN target project, reads from SOURCE_PATH
+
+### [capture] [2026-08-05] Plan approved — Phase 3/4 Playwright: generated from migration knowledge, executed via Bash (no LLM)
+### [capture] [2026-08-05] Architecture decision — Phase 4 browser verification: headless Playwright + visual checklist
+
+### [capture] [2026-08-05] Task completed — Phase 3/4 updated with full Playwright E2E spec
+### [capture] [2026-08-05] Plan approved — Phase 3/4 Playwright: generated from migration knowledge, executed via Bash (no LLM)
+
+### [capture] [2026-08-05] Plan approved — migration skill: document specs moved to references/specs/ folder
+### [capture] [2026-08-05] Task completed — Phase 3/4 updated with full Playwright E2E spec
+
+### [capture] [2026-08-05] Plan approved — migration skill: revised stage structure + minimal Q&A principle
+### [capture] [2026-08-05] Plan approved — migration skill: document specs moved to references/specs/ folder
+
+### [capture] [2026-08-05] Task completed — SKILL.md v1.5 rewritten with revised stage structure
+### [capture] [2026-08-05] Plan approved — migration skill: revised stage structure + minimal Q&A principle
+
+### [capture] [2026-08-05] Plan approved — docs 6-10 content specs agreed for phase1-architecture-spec.md
+### [capture] [2026-08-05] Task completed — SKILL.md v1.5 rewritten with revised stage structure
+
+### [capture] [2026-08-05] Task completed — all 5 specs/ reference files created + tracker fully updated
+### [capture] [2026-08-05] Plan approved — docs 6-10 content specs agreed for phase1-architecture-spec.md
+
+### [capture] [2026-08-05] Task completed — 3-iteration review of SKILL.md v1.5, 42 findings identified
+### [capture] [2026-08-05] Task completed — all 5 specs/ reference files created + tracker fully updated
+
+### [capture] [2026-08-07] Task completed — confirmed UserPromptSubmit hook receives user message in `prompt` field
+### [capture] [2026-08-07] Architecture decision — migration keyword routing via UserPromptSubmit hook (deterministic layer)
+### [capture] [2026-08-05] Task completed — 3-iteration review of SKILL.md v1.5, 42 findings identified
+
+### [capture] [2026-08-07] Architecture decision — PLUGIN_DIR resolution via UserPromptSubmit hook (plugin-dir-context.cjs)
+### [capture] [2026-08-07] Task completed — confirmed UserPromptSubmit hook receives user message in `prompt` field
+
+### [capture] [2026-08-11] Plan approved — lift always-true guardrails from migration stacks/ refs into rule files
+
+### [capture] [2026-08-11] Plan approved — migration skill context-budget-aware + resumable (Option 1)
+### [capture] [2026-08-11] Plan approved — lift always-true guardrails from migration stacks/ refs into rule files

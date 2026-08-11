@@ -63,6 +63,20 @@ Modern .NET (6, 7, 8, 9+). For legacy ASP.NET Framework 4.8 see `csharp-framewor
 - Test method: `MethodName_WhenCondition_ThenExpectedBehavior`
 - Always test: happy path, validation error, not-found, and permission boundary from ICEA
 
+## Middleware pipeline order (ASP.NET Core)
+Ordering is significant — wrong order causes silent auth/CORS/routing failures:
+`UseExceptionHandler`/`UseHsts` → `UseHttpsRedirection` → `UseStaticFiles` → `UseRouting` →
+`UseCors` → `UseAuthentication` → `UseAuthorization` → endpoint mapping.
+`UseCors` must come AFTER `UseRouting` and BEFORE `UseAuthentication`.
+
+## Anti-patterns (never generate)
+- `new HttpClient()` per request — socket exhaustion; use `IHttpClientFactory` or a singleton `HttpClient`
+- `JsonSerializerOptions` constructed per request — expensive; register once as a singleton
+- `DbContext` registered as a singleton — `DbContext` is not thread-safe; use `AddDbContext` (scoped)
+- `AllowAnyOrigin()` combined with `AllowCredentials()` — framework throws + security risk; use `WithOrigins(explicitOrigins)`
+- Raw `IConfiguration["key"]` lookups — case-sensitive on Linux, silent null on typo; bind `IOptions<T>`
+- Silent `catch (Exception)` — swallows errors; catch specific exceptions, log and rethrow
+
 ## See also
 - `backend-base-rules.md` — universal backend guardrails
 - `rest-api-rules.md` — HTTP design conventions

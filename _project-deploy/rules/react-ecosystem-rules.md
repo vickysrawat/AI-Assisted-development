@@ -86,3 +86,5 @@ Covers React + state management (RTK / Zustand / TanStack Query) + unit testing
 - No direct DOM manipulation via `document.querySelector` — use refs
 - No data fetching in `useEffect` — use TanStack Query
 - No array index as list key for dynamic data
+- No Context for high-frequency updates — re-renders the entire consumer tree; use Zustand/Jotai
+- No prop drilling beyond 3 levels — use Context or a state store

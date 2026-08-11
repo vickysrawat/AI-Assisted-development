@@ -49,6 +49,17 @@ detect:
 - One assertion concept per test; prefer AssertJ fluent assertions
 - Always test the error state and the authorization boundary from the ICEA
 
+## Anti-patterns (never generate)
+- Missing `@Transactional` on a write service method — silent data loss; annotate every write path
+- `@Transactional` on a controller method — transaction too broad (includes HTTP serialization); annotate the service method
+- `Optional.get()` without a presence check — `NoSuchElementException`; use `.orElseThrow()` / `.orElse()` / `.ifPresent()`
+- Accessing a JPA lazy collection outside `@Transactional` — `LazyInitializationException`; keep the access inside the service, map to DTOs at the boundary
+- `new ObjectMapper()` per request — expensive; inject the singleton `ObjectMapper` bean
+- `WebSecurityConfigurerAdapter` — removed in Spring 6; use a `SecurityFilterChain` bean
+- Mutable instance state in a singleton `@Service` — shared across all requests; use method-local state or `@RequestScope`
+- Discarding the `em.merge()` return value — the original stays detached; use the returned managed instance
+- Empty `catch (Exception e) {}` — swallows errors; log and rethrow, or handle specifically
+
 ## Out of bounds
 - No business logic in controllers or repositories
 - No `System.out.println` — use the logger

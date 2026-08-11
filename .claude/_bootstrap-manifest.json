@@ -1,11 +1,11 @@
 {
   "schemaVersion": "1",
-  "pluginVersion": "3.12.0",
-  "pluginDir": "C:\\Users\\rawatv\\OneDrive - Kirkland\\Desktop\\Vivek\\Learning\\AI Learning\\Plugin\\AI-Assisted-development",
-  "mode": "init",
-  "projectRoot": "C:\\Users\\rawatv\\OneDrive - Kirkland\\Desktop\\Vivek\\Learning\\AI Learning\\Plugin\\AI-Assisted-development",
-  "startedAt": "2026-07-13T21:47:27.164Z",
-  "completedAt": "2026-07-20T18:37:39.102Z",
+  "pluginVersion": "3.13.0",
+  "pluginDir": "C:\\Users\\rawatv\\.claude\\plugins\\cache\\KirklandAndEllis-marketplace\\ai-assisted-development\\3.13.0",
+  "mode": "sync",
+  "projectRoot": "C:\\Users\\rawatv\\OneDrive - Kirkland\\Desktop\\Vivek\\Learning\\AI Learning\\Agentic Engineering\\Plugin\\AI-Assisted-development",
+  "startedAt": "2026-08-11T18:26:53.520Z",
+  "completedAt": "2026-08-11T18:27:38.870Z",
   "status": "complete",
   "vcs": "git",
   "operations": {
@@ -25,20 +25,42 @@
         "token-analysis"
       ]
     },
+    "wireLocalSettings": {
+      "status": "done",
+      "added": [
+        "Bash(node \"C:\\\\Users\\\\rawatv\\\\.claude\\\\plugins\\\\cache\\\\KirklandAndEllis-marketplace\\\\ai-assisted-development\\\\3.13.0\\\\scripts\\\\*.cjs\"*)",
+        "Bash(node.exe \"C:\\\\Users\\\\rawatv\\\\.claude\\\\plugins\\\\cache\\\\KirklandAndEllis-marketplace\\\\ai-assisted-development\\\\3.13.0\\\\scripts\\\\*.cjs\"*)",
+        "Bash(grep:*)",
+        "Edit(memory/*.md)"
+      ],
+      "scriptsDir": "C:\\Users\\rawatv\\.claude\\plugins\\cache\\KirklandAndEllis-marketplace\\ai-assisted-development\\3.13.0\\scripts"
+    },
     "deployStubs": {
       "status": "done",
-      "deployed": 0,
-      "skipped": 38,
+      "deployed": 38,
+      "skipped": 0,
       "failed": []
     },
     "deployHooks": {
       "status": "done",
       "deployed": [
         "findings-gate-precommit.sh",
-        "check-settings-secrets.cjs",
         "graph-stale-detect.sh",
         "icea-floor.sh",
         "memory-capture.sh",
+        "memory-log.sh",
+        "findings-gate-precommit.ps1",
+        "graph-stale-detect.ps1",
+        "icea-floor.ps1",
+        "memory-capture.ps1",
+        "memory-log.ps1",
+        "findings-gate-precommit.cjs",
+        "graph-stale-detect.cjs",
+        "icea-floor.cjs",
+        "memory-capture.cjs",
+        "memory-log.cjs",
+        "check-settings-secrets.cjs",
+        "context-budget-tech-write.cjs",
         "validate-ledgers.py",
         "validate-pr-compliance.py"
       ],
@@ -47,7 +69,7 @@
     },
     "writePluginPath": {
       "status": "done",
-      "path": "c:/Users/rawatv/OneDrive - Kirkland/Desktop/Vivek/Learning/AI Learning/Plugin/AI-Assisted-development"
+      "path": "C:/Users/rawatv/.claude/plugins/cache/KirklandAndEllis-marketplace/ai-assisted-development/3.13.0"
     },
     "deployProjectSkills": {
       "status": "done",
@@ -58,13 +80,22 @@
     "gitPreCommit": {
       "status": "done",
       "installed": true,
-      "action": "installed"
+      "action": "installed (existing backed up to pre-commit.backup)"
+    },
+    "gitPostMerge": {
+      "status": "done",
+      "installed": true,
+      "actions": {
+        "post-merge": "installed",
+        "post-checkout": "installed"
+      }
     },
     "wireSettings": {
       "status": "done",
       "alreadyWired": true,
       "noHooks": false,
-      "autoMemSet": false
+      "autoMemSet": false,
+      "shellType": "node"
     },
     "wireUserSettings": {
       "status": "done",
@@ -106,7 +137,7 @@
       "vcs": "git",
       "file": ".gitignore",
       "result": "updated",
-      "entriesWritten": 16,
+      "entriesWritten": 17,
       "tfvcDetected": false
     },
     "externalDirScan": {
@@ -127,59 +158,8 @@
       "bashPath": "C:\\Program Files\\Git\\usr\\bin\\bash.exe",
       "substituted": false,
       "unresolved": []
-    },
-    "gitPostMerge": {
-      "status": "done",
-      "installed": true,
-      "actions": {
-        "post-merge": "installed",
-        "post-checkout": "installed"
-      }
     }
   },
-  "needsLLMPopulation": [
-    {
-      "id": "init_claude_md",
-      "order": 1,
-      "skill": "/init",
-      "status": "done",
-      "description": "CLAUDE.md existed with project content"
-    },
-    {
-      "id": "resolve_git_bash_paths",
-      "order": 2,
-      "skill": "interactive",
-      "status": "done",
-      "description": "no unresolved git/bash placeholders remain in CLAUDE.md"
-    },
-    {
-      "id": "verify_external_dirs",
-      "order": 3,
-      "skill": "interactive",
-      "status": "done",
-      "description": "no external directories found — nothing to verify"
-    },
-    {
-      "id": "generate_architecture",
-      "order": 4,
-      "skill": "architect",
-      "status": "pending",
-      "description": "Run architect skill — generates architecture docs; Step 7-2 calls graph-extract-edges.js"
-    },
-    {
-      "id": "build_knowledge_graph",
-      "order": 5,
-      "skill": "graph-sync",
-      "status": "pending",
-      "description": "Run graph-sync — refines graph.json, re-runs graph-extract-edges.js for EXTRACTED edges"
-    },
-    {
-      "id": "deploy_rules",
-      "order": 6,
-      "skill": "bootstrap-phase-2",
-      "status": "pending",
-      "description": "Deployed by bootstrap Phase 2 (called from architect Step 1 after repo type detection)"
-    }
-  ],
+  "needsLLMPopulation": [],
   "warnings": []
 }

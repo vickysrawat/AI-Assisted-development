@@ -70,6 +70,12 @@ sections below. Universal patterns apply regardless of framework choice.
 - Test ICEA scenarios: happy path, validation error, not-found, permission boundary
 - No secrets in test configuration — environment-specific test `.env.test`
 
+## Anti-patterns (never generate)
+- A new `axios.create()` / HTTP client per request — high overhead; reuse a shared instance (or `got` with keep-alive)
+- `app.listen(...)` inside a module — blocks testability; export `app` and call `listen` only in the entry point
+- pm2 cluster mode with an in-memory `express-session` store — sessions lost across processes; use a Redis-backed store
+- `socket.io` events for critical operations without an acknowledgment callback — no delivery guarantee; use acks
+
 ## See also
 - `backend-base-rules.md` — universal backend guardrails
 - `rest-api-rules.md` — HTTP design conventions

@@ -54,6 +54,7 @@ tests/results/
 # both write-time (PreToolUse) and commit-time (pre-commit).
 
 
+
 # === ai-assisted-development (managed) ===
 .claude/settings.local.json
 .claude/security-checkpoint.json
@@ -71,4 +72,5 @@ token-analysis/
 prod-readiness/
 temp/
 .claude/plugin-path.txt
+.claude/graph/.module-skeleton.json
 # === end ai-assisted-development ===

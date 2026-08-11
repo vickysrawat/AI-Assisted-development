@@ -85,6 +85,12 @@ Recognised globally, no /command needed. ADO ID is case-insensitive (`ADO-1847`,
 | `REVISE ADO-{ID}` | Run icea-revise skill for that ADO ID |
 | `STATUS ADO-{ID}` | Run icea-status skill for that ADO ID |
 | `BUG ADO-{ID} — {description}` | Log bug entry to tracker for that ADO ID |
+| `MIGRATE ADO-{ID}` | Run migration skill for that ADO ID |
+| `MIGRATE RESUME ADO-{ID} [BACKEND\|FRONTEND]` | Resume migration from checkpoint (Stage 4 cluster resume) |
+| `MIGRATE STATUS ADO-{ID}` | Show current migration phase and checkpoint for that ADO ID |
+| `MIGRATE ARCH ADO-{ID}` | Resume/regenerate Stage 1 architecture docs — re-enters migration at Step 1.2; skip context budget check |
+| `MIGRATE FEAS ADO-{ID}` | Resume/regenerate Stage 2 feasibility — requires architecture_approved; skip context budget check |
+| `MIGRATE CLUSTERS ADO-{ID}` | Resume/regenerate Stage 3 cluster specs — re-enters at Step 3.2, requires feasibility_approved; skip context budget check |
 
 ---
 

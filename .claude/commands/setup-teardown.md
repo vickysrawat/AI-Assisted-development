@@ -1,5 +1,5 @@
 ---
-description: "Remove plugin-managed content from a target project by scope. Always dry-runs first and requires CONFIRM before removing anything. memory/ is never removed.  Example: /setup-teardown --commands"
+description: "Remove plugin-managed content from a target project by scope. Always dry-runs first and requires CONFIRM before removing anything. memory/, .claude/architecture/, and .claude/graph/ are never removed.  Example: /setup-teardown --commands"
 argument-hint: "[--full | --skills | --hooks | --rules | --commands | --state | --help]"
 ---
 
