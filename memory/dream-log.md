@@ -211,3 +211,9 @@ These were deleted. Watch for more stale v1 references in future sessions.
 
 ### [capture] [2026-08-11] Plan approved — migration skill context-budget-aware + resumable (Option 1)
 ### [capture] [2026-08-11] Plan approved — lift always-true guardrails from migration stacks/ refs into rule files
+
+### [capture] [2026-08-12] Plan approved — LLM-agnostic multi-harness (Claude Code + GitHub Copilot) convergence
+### [capture] [2026-08-12] Architecture decision — scoped Shared/Claude/Copilot source + per-harness projection
+### [capture] [2026-08-12] Architecture decision — eliminate runtime $PLUGIN_DIR (self-contained project-deployed skills)
+### [capture] [2026-08-12] Approach abandoned — greenfield Copilot plugin AND bespoke adapter/transform layer
+### [capture] [2026-08-12] Architecture decision — 3-tier enforcement + SEV-1 AI-safety hardening as first-class
