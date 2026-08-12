@@ -217,3 +217,6 @@ These were deleted. Watch for more stale v1 references in future sessions.
 ### [capture] [2026-08-12] Architecture decision — eliminate runtime $PLUGIN_DIR (self-contained project-deployed skills)
 ### [capture] [2026-08-12] Approach abandoned — greenfield Copilot plugin AND bespoke adapter/transform layer
 ### [capture] [2026-08-12] Architecture decision — 3-tier enforcement + SEV-1 AI-safety hardening as first-class
+
+### [capture] [2026-08-12] Architecture decision — v3.13 = frozen git tag, 4.0 convergence on a branch (NOT a 2nd project, NOT a versions/ folder)
+### [capture] [2026-08-12] Architecture decision — eliminate runtime $PLUGIN_DIR
