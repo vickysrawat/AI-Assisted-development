@@ -1,0 +1,12 @@
+{
+  "_comment": "AC-F9 prompt-artifact version manifest for the L1 content core. One entry per authored L1 artifact. sha256 is of the on-disk file; version mirrors the artifact's frontmatter/`version:`. Rebuild + bump version on any content change (scripts/check-prompt-versions.cjs enforces).",
+  "l1_version": "0.1.0",
+  "artifacts": [
+    {
+      "path": "Shared/skills/icea-status/SKILL.md",
+      "version": "1.0",
+      "sha256": "24009fa54cff3328b921c69f316acecf631ede0ec25b66b4332bec4bb581ce03",
+      "consumes": []
+    }
+  ]
+}

@@ -220,3 +220,55 @@ These were deleted. Watch for more stale v1 references in future sessions.
 
 ### [capture] [2026-08-12] Architecture decision — v3.13 = frozen git tag, 4.0 convergence on a branch (NOT a 2nd project, NOT a versions/ folder)
 ### [capture] [2026-08-12] Architecture decision — eliminate runtime $PLUGIN_DIR
+
+### [capture] [2026-08-13] Approach agreed — implementation guardrails for the multi-harness build
+
+### [capture] [2026-08-13] Task completed — Phase 0 VERIFIED: Copilot `.claude/` discovery IS disableable (separation confirmed)
+
+### [capture] [2026-08-13] Approach agreed — dogfood full ICEA/ADO governance on the plugin's own multi-harness build
+
+### [capture] [2026-08-13] Approach agreed — dogfood parameters locked (synthetic ID · arch-docs-first · Epic ADO-4000/R4/S1)
+
+### [capture] [2026-08-13] Error resolved — arch docs AND graph already existed (I wrongly claimed absent, drove a decision on it)
+
+### [capture] [2026-08-13] Task completed — Epic ICEA ADO-4000 drafted to temp/ (awaiting SAVE ICEA)
+
+### [capture] [2026-08-13] Approach agreed — no client/company name in authored documents
+
+### [capture] [2026-08-13] Task completed — Epic ICEA ADO-4000 saved (critic PASS WITH NOTES); Tech Spec next
+
+### [capture] [2026-08-13] Task completed — Epic Tech Spec ADO-4000 drafted to temp/; 2 dogfood tooling bugs found
+
+### [capture] [2026-08-13] Error resolved — EPIC Tech Spec MUST include the chaining phase (per-story specs + tracker), not just the epic-level spec
+
+### [capture] [2026-08-13] Task completed — full epic Tech Spec package drafted via 9 parallel subagents (verified)
+
+### [capture] [2026-08-13] Architecture decision — Story specs NEED REVISION before APPROVE; several ICEA assumptions fail against real code
+
+### [capture] [2026-08-13] Task completed — ICEA ADO-4000 REVISED (post-review); story-spec re-revision next
+
+### [capture] [2026-08-13] Task completed — 9 story specs re-revised + epic spec synced; cross-story contracts consistent
+
+### [capture] [2026-08-14] Error resolved — verify-the-fix caught 2 dependency cycles the revision introduced; broke them
+
+### [capture] [2026-08-14] Architecture decision — ASYMMETRIC enforcement: Claude=prevention (write-time), Copilot=detection+merge-gate (shift-right); play to each harness's strengths
+
+### [capture] [2026-08-14] Architecture decision — CI required-check is the KNOWN-GOOD hard gate; Copilot client-side is best-effort on top
+
+### [capture] [2026-08-14] Task completed — asymmetric model cascaded into ICEA + 9 story specs + epic spec + tracker
+
+### [capture] [2026-08-14] Architecture decision (proposed, pending user choice) — separate Copilot ENGAGEMENT+ENFORCEMENT natively, but keep ONE shared CONTENT/STANDARDS core
+
+### [capture] [2026-08-14] Architecture decision — LOCKED: shared content core (L1) + NATIVE per-harness (L2/L3); projection machinery RETIRED
+
+### [capture] [2026-08-14] Approach agreed — prompt-artifact VERSIONING scheme (folded into Story 2 + Story 7 as AC-F9)
+
+### [capture] [2026-08-14] Plan approved — formal APPROVE ADO-4000 chosen; "update all the docs" to current design FIRST
+
+### [capture] [2026-08-14] Task completed — ADO-4000 SAVED + formally APPROVED; all docs updated & consistent
+
+### [capture] [2026-08-17] Risk / partial — Story-1 H1: Claude PASS + mechanical PASS, but Copilot UNVERIFIABLE (no Copilot access on this machine)
+
+### [capture] [2026-08-17] Approach agreed — Story-2 implemented incrementally: governance-rails first, fleet $PLUGIN_DIR retirement DEFERRED
+
+### [capture] [2026-08-17] Task completed — Story-2 governance-rails increment (2a+2b+2c-seed) implemented & VERIFIED

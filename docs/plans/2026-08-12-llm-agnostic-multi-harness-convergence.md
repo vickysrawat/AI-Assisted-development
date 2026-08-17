@@ -1,6 +1,6 @@
 # Final Design — LLM-agnostic plugin (Claude Code + GitHub Copilot)
 
-> **Status:** 📋 Planned · **Created:** 2026-08-12 · **Source:** planning session (plan mode)
+> **Status:** ⚠ SUPERSEDED (2026-08-14) — this original *convergence-via-projection* plan was superseded by the **APPROVED Epic ADO-4000** (asymmetric enforcement + shared content core L1/L2/L3, **no mechanical projection**). Authoritative design: `docs/Release4/Sprint1/UserStory4000/ADO-4000-llm-agnostic-multi-harness.icea.md` (Revision Logs #6/#7/#8). Kept for history. · **Created:** 2026-08-12 · **Source:** planning session (plan mode)
 > Lifecycle: 📋 Planned → 🚧 In progress → ✅ Implemented
 >
 > **Phase tracker:**

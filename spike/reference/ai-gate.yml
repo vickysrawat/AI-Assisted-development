@@ -1,0 +1,23 @@
+# Spike reference — harness-independent Tier-C gate as a GitHub required status check.
+# Make this a REQUIRED check on a protected branch → it becomes the un-bypassable merge gate
+# that carries Copilot's hard governance guarantee (H3, accepted known-good).
+name: ai-gate
+on:
+  pull_request:
+    branches: [main, dev]
+jobs:
+  ai-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # need full history for the base..head diff
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run ai-gate (approval + AC-traceability)
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          # Spike stub for approval; real impl binds to ADO/PR system-of-record (AC-NF1).
+          APPROVAL_TOKEN: ${{ secrets.ICEA_APPROVAL_TOKEN }}
+        run: node spike/ai-gate.mjs   # exit 1 fails the check → blocks merge on a protected branch

@@ -1,0 +1,21 @@
+{
+  "_comment": "Spike reference — copy to a scratch repo's .vscode/settings.json. Scopes Copilot to .github/ only and suppresses .claude/* skills+rules+hooks so a both-harness repo does not double-register. NOTE: workspace-trust-gated (restricted:true) — applies only after Workspace Trust. Known suppression bugs: microsoft/vscode#297538, #299820 — verify actual load via /skills + the Hooks output channel, do not trust the flags alone.",
+
+  "chat.agentSkillsLocations": {
+    ".github/skills": true,
+    ".claude/skills": false,
+    "~/.claude/skills": false
+  },
+  "chat.instructionsFilesLocations": {
+    ".github/instructions": true,
+    ".claude/rules": false,
+    "~/.claude/rules": false
+  },
+  "chat.hookFilesLocations": {
+    ".github/hooks": true,
+    ".claude/settings.json": false,
+    ".claude/settings.local.json": false,
+    "~/.claude/settings.json": false
+  },
+  "chat.useClaudeMdFile": true
+}
