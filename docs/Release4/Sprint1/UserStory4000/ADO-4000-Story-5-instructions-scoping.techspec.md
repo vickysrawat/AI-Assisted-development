@@ -1,7 +1,6 @@
 # Tech Spec — Story 5: CLAUDE.md per-harness note + Copilot `.vscode` scoping
 
-ADO #4000 · Release 4 · Sprint 1 · Story 5
-Status: DRAFT (revised for ASYMMETRIC model) · STORY · 3 SP
+ADO #4000 · Release 4 · Sprint 1 · Story 5 Status: DRAFT (revised for ASYMMETRIC model) · STORY · 3 SP
 
 > Per-story implementation spec for the multi-harness epic (ADO-4000). This is a plugin/tooling
 > story — Node.js CJS provisioner + markdown config, NOT a web app. Standard web-app template
@@ -24,135 +23,52 @@ Status: DRAFT (revised for ASYMMETRIC model) · STORY · 3 SP
 
 ## Overview
 
-This story closes the double-registration hole for repos provisioned with **both** harnesses, and
-adds a per-harness model-routing note to the DEPLOYED instructions file. When
-`provision --harness=claude,copilot` runs, each harness's engagement layer is emitted **natively**
-from the single shared L1 content core — Claude-native config into `.claude/` (Claude Code) and
-Copilot-native config into `.github/` (Copilot). This is native per-harness config emission, NOT a
-mechanical projection of a Claude shape onto Copilot (Revision Log #7). Under VS Code >=1.109 Copilot Claude-compat,
-Copilot would otherwise ALSO discover `.claude/skills`, `.claude/rules`, and `.claude/settings.json`
-hooks — loading every skill, rule, and hook twice. This story makes the provisioner
-**emit `.vscode/settings.json`** that scopes Copilot to `.github/` only (explicitly excluding both
-project-level `.claude/` and user-level `~/.claude/` skill, instruction, AND hook locations) while
-keeping `chat.useClaudeMdFile:true` so the single shared `CLAUDE.md` is still read by Copilot.
+This story closes the double-registration hole for repos provisioned with **both** harnesses, and adds a per-harness model-routing note to the DEPLOYED instructions file. When `provision --harness=claude,copilot` runs, each harness's engagement layer is emitted **natively** from the single shared L1 content core — Claude-native config into `.claude/` (Claude Code) and Copilot-native config into `.github/` (Copilot). This is native per-harness config emission, NOT a mechanical projection of a Claude shape onto Copilot (Revision Log #7). Under VS Code >=1.109 Copilot Claude-compat, Copilot would otherwise ALSO discover `.claude/skills`, `.claude/rules`, and `.claude/settings.json` hooks — loading every skill, rule, and hook twice. This story makes the provisioner **emit `.vscode/settings.json`** that scopes Copilot to `.github/` only (explicitly excluding both project-level `.claude/` and user-level `~/.claude/` skill, instruction, AND hook locations) while keeping `chat.useClaudeMdFile:true` so the single shared `CLAUDE.md` is still read by Copilot.
 
-**Asymmetric-model alignment (Revision Log #6).** Under the asymmetric enforcement model, Claude is
-the write-time prevention harness (unchanged) and Copilot is detection + merge-gate (CI required
-status check is the hard line; the `review-icea` code-review skill is best-effort review-time
-assistance). This story's job is discovery *scoping* — making `.github/` the sole Copilot source so
-the best-effort client layer is not silently doubled by leaked `.claude/` registrations. Closing the
-hook double-registration here (via `chat.hookFilesLocations`) directly serves that model: a Copilot
-PreToolUse hook must fire at most once, from `.github/hooks`, never also from `.claude/settings.json`.
+**Asymmetric-model alignment (Revision Log #6).** Under the asymmetric enforcement model, Claude is the write-time prevention harness (unchanged) and Copilot is detection + merge-gate (CI required status check is the hard line; the `review-icea` code-review skill is best-effort review-time assistance). This story's job is discovery *scoping* — making `.github/` the sole Copilot source so the best-effort client layer is not silently doubled by leaked `.claude/` registrations. Closing the hook double-registration here (via `chat.hookFilesLocations`) directly serves that model: a Copilot PreToolUse hook must fire at most once, from `.github/hooks`, never also from `.claude/settings.json`.
 
-**L1/L2/L3 placement of this story's artifacts (Revision Log #7 — structure LOCKED).** The epic's
-locked structure is a shared content core (L1) consumed by native per-harness engagement (L2) and
-enforcement (L3) layers — L1 is never duplicated; `Claude/` and `Copilot/` CONSUME it, never
-re-author it (CI-enforced). This story's outputs place cleanly:
-- The emitted `.vscode/settings.json` is **Copilot-native L2/L3 config** — it is authored under the
-  source `Copilot/vscode/` adapter folder (the Copilot-native settings-scoping layer) and emitted
-  into the target repo's `.vscode/settings.json`. It is not a projection of any Claude artifact; the
-  `.claude/`-disabling scope is a Copilot-side native config choice that exists only because Copilot
-  natively discovers `.claude/` under 1.109 Claude-compat.
-- The per-harness **model-routing note is a shared-instruction (L1-adjacent) edit** — it lives in the
-  single shared `CLAUDE.md` instruction that BOTH harnesses read (Claude directly, Copilot via
-  `chat.useClaudeMdFile:true`), so it is authored once and consumed by both, never forked per harness.
-- `_project-deploy/CLAUDE.md` is the **deployed shared instruction** — the single source copied into a
-  provisioned repo's root `CLAUDE.md`. It references the L1 governance content (Write Gate, keyword
-  handlers, model routing) that both harnesses consume; the model note is additive to that shared
-  instruction, keeping one source of truth per the epic Success Metric.
+**L1/L2/L3 placement of this story's artifacts (Revision Log #7 — structure LOCKED).** The epic's locked structure is a shared content core (L1) consumed by native per-harness engagement (L2) and enforcement (L3) layers — L1 is never duplicated; `Claude/` and `Copilot/` CONSUME it, never re-author it (CI-enforced). This story's outputs place cleanly:
+- The emitted `.vscode/settings.json` is **Copilot-native L2/L3 config** — it is authored under the source `Copilot/vscode/` adapter folder (the Copilot-native settings-scoping layer) and emitted into the target repo's `.vscode/settings.json`. It is not a projection of any Claude artifact; the `.claude/`-disabling scope is a Copilot-side native config choice that exists only because Copilot natively discovers `.claude/` under 1.109 Claude-compat.
+- The per-harness **model-routing note is a shared-instruction (L1-adjacent) edit** — it lives in the single shared `CLAUDE.md` instruction that BOTH harnesses read (Claude directly, Copilot via `chat.useClaudeMdFile:true`), so it is authored once and consumed by both, never forked per harness.
+- `_project-deploy/CLAUDE.md` is the **deployed shared instruction** — the single source copied into a provisioned repo's root `CLAUDE.md`. It references the L1 governance content (Write Gate, keyword handlers, model routing) that both harnesses consume; the model note is additive to that shared instruction, keeping one source of truth per the epic Success Metric.
 
-There is therefore no mechanical projection anywhere in this story: the `.vscode` emit is native
-Copilot config, and the model note is a single shared-instruction edit consumed by both harnesses.
+There is therefore no mechanical projection anywhere in this story: the `.vscode` emit is native Copilot config, and the model note is a single shared-instruction edit consumed by both harnesses.
 
-**Exact target files for the instructions change (no ambiguity).** There are two `CLAUDE.md` files
-in this repo and they play different roles:
+**Exact target files for the instructions change (no ambiguity).** There are two `CLAUDE.md` files in this repo and they play different roles:
 
-- `_project-deploy/CLAUDE.md` — the **deployment template**. It is the ONLY source copied into a
-  target repo's root `CLAUDE.md` by `scripts/setup-init-bootstrap.cjs` (stepClaudeMd), and the root
-  `CLAUDE.md` in a provisioned repo is what Copilot reads natively via `chat.useClaudeMdFile:true`.
-  **The per-harness model-routing note MUST land here** so it reaches every deployed repo and both
-  harnesses. This is the primary edit target of this story.
-- Root plugin-dev `CLAUDE.md` — governs the plugin's OWN dev session only. It is not deployed and
-  not read by Copilot in a target repo. This story keeps its §4 in sync as a courtesy so the two
-  copies do not drift, but the load-bearing edit is the `_project-deploy/` template.
+- `_project-deploy/CLAUDE.md` — the **deployment template**. It is the ONLY source copied into a target repo's root `CLAUDE.md` by `scripts/setup-init-bootstrap.cjs` (stepClaudeMd), and the root `CLAUDE.md` in a provisioned repo is what Copilot reads natively via `chat.useClaudeMdFile:true`. **The per-harness model-routing note MUST land here** so it reaches every deployed repo and both harnesses. This is the primary edit target of this story.
+- Root plugin-dev `CLAUDE.md` — governs the plugin's OWN dev session only. It is not deployed and not read by Copilot in a target repo. This story keeps its §4 in sync as a courtesy so the two copies do not drift, but the load-bearing edit is the `_project-deploy/` template.
 
-The per-harness model-routing note is **ADDITIVE** to §4 (MODEL ROUTING): it documents that Claude
-routes generation/review/critic/infra via the `ICEA_MODEL`/`REVIEW_MODEL`/`CRITIC_MODEL`/`INFRA_MODEL`
-env vars (a hard, deterministic route), while Copilot has no equivalent env route — the developer
-selects a model in the Copilot picker and cloud/`Auto` tiers may substitute a model, so Copilot's
-route is soft/advisory and its assurance level is Tier B (ties to the epic's per-artifact
-assurance-level stamp; a Copilot-soft route is never counted as a Claude-hard one).
+The per-harness model-routing note is **ADDITIVE** to §4 (MODEL ROUTING): it documents that Claude routes generation/review/critic/infra via the `ICEA_MODEL`/`REVIEW_MODEL`/`CRITIC_MODEL`/`INFRA_MODEL` env vars (a hard, deterministic route), while Copilot has no equivalent env route — the developer selects a model in the Copilot picker and cloud/`Auto` tiers may substitute a model, so Copilot's route is soft/advisory and its assurance level is Tier B (ties to the epic's per-artifact assurance-level stamp; a Copilot-soft route is never counted as a Claude-hard one).
 
-**Company-name scrub is a verified no-op.** Both `CLAUDE.md` files were inspected on 2026-08-13 and
-neither contains any company or client name — the earlier "scrub" is already complete. This story
-therefore does NOT strip a name; it **verifies** none is present (a regression assertion) and adds
-the model note. The scope of the edit to `_project-deploy/CLAUDE.md` is strictly the §4 additive
-note. The Write Gate (§0), the keyword-handler table (§0a), and the Shell & Git config (§0b) MUST be
-**byte-unchanged** by this story — the diff shown under the Write Gate is expected to touch only §4.
+**Company-name scrub is a verified no-op.** Both `CLAUDE.md` files were inspected on 2026-08-13 and neither contains any company or client name — the earlier "scrub" is already complete. This story therefore does NOT strip a name; it **verifies** none is present (a regression assertion) and adds the model note. The scope of the edit to `_project-deploy/CLAUDE.md` is strictly the §4 additive note. The Write Gate (§0), the keyword-handler table (§0a), and the Shell & Git config (§0b) MUST be **byte-unchanged** by this story — the diff shown under the Write Gate is expected to touch only §4.
 
-The governing pattern is *single shared content core (L1), emitted natively per harness (L2/L3),
-with the non-native harness's discovery explicitly disabled across all three artifact classes
-(skills, rules, hooks)*.
-This story also resolves **Decision D-3** (Copilot instructions: shared `CLAUDE.md` only vs also
-emitting `.github/copilot-instructions.md`).
+The governing pattern is *single shared content core (L1), emitted natively per harness (L2/L3), with the non-native harness's discovery explicitly disabled across all three artifact classes (skills, rules, hooks)*. This story also resolves **Decision D-3** (Copilot instructions: shared `CLAUDE.md` only vs also emitting `.github/copilot-instructions.md`).
 
-`chat.agentSkillsLocations`, `chat.instructionsFilesLocations`, and `chat.hookFilesLocations` are
-`string→boolean` maps where a `false` value EXCLUDES a location (VS Code ships a default
-`~/.claude/rules:false`). These settings are **workspace-trust-gated** (`restricted:true`), so the
-scoping only takes effect after the developer grants Workspace Trust. There is a known Remote-SSH path
-mis-resolution bug (microsoft/vscode#293768) that this story documents. **Both the trust-gating
-dependency and the Remote-SSH bug are MANUAL-verification items** — they cannot be exercised by an
-automated unit test (they depend on live VS Code trust state and a remote host) and are checked by a
-human tester.
+`chat.agentSkillsLocations`, `chat.instructionsFilesLocations`, and `chat.hookFilesLocations` are `string→boolean` maps where a `false` value EXCLUDES a location (VS Code ships a default `~/.claude/rules:false`). These settings are **workspace-trust-gated** (`restricted:true`), so the scoping only takes effect after the developer grants Workspace Trust. There is a known Remote-SSH path mis-resolution bug (microsoft/vscode#293768) that this story documents. **Both the trust-gating dependency and the Remote-SSH bug are MANUAL-verification items** — they cannot be exercised by an automated unit test (they depend on live VS Code trust state and a remote host) and are checked by a human tester.
 
-**Flags cannot be trusted alone — verify by actual load.** VS Code has known suppression bugs where
-a `false` scoping entry does NOT reliably exclude the location it names (microsoft/vscode#297538 and
-microsoft/vscode#299820). Consequently, correct emission of the three keys is necessary but NOT
-sufficient: acceptance for this story requires confirming, by **actual observed load state**, that
-`.claude/*` skills, rules, and hooks did NOT load — via the Copilot `/skills` menu (skills/rules) AND
-the Copilot Hooks output channel (hooks). Passing the flag-content unit tests alone does not satisfy
-AC-F5; the verify-by-actual-load step is mandatory (MANUAL).
+**Flags cannot be trusted alone — verify by actual load.** VS Code has known suppression bugs where a `false` scoping entry does NOT reliably exclude the location it names (microsoft/vscode#297538 and microsoft/vscode#299820). Consequently, correct emission of the three keys is necessary but NOT sufficient: acceptance for this story requires confirming, by **actual observed load state**, that `.claude/*` skills, rules, and hooks did NOT load — via the Copilot `/skills` menu (skills/rules) AND the Copilot Hooks output channel (hooks). Passing the flag-content unit tests alone does not satisfy AC-F5; the verify-by-actual-load step is mandatory (MANUAL).
 
-**Hook double-load — now closed here.** Earlier drafts deferred hook double-registration to Story 4.
-Under the revised AC-F5, this story emits a third scoping key, `chat.hookFilesLocations`, mapping the
-default-Claude hook locations (`.claude/settings.json`, `.claude/settings.local.json`,
-`~/.claude/settings.json`) to `false`, so Copilot registers hooks only from `.github/hooks`. This
-closes the F1.2 double-registration hole at the `.vscode` layer. Story 4 remains the owner of the
-`.github/hooks` compat-shim content (matcher-in-script + tool-name map) that those hooks run; this
-story only ensures the `.claude/` hook sources are not *also* registered by Copilot. The two concerns
-compose: Story 4 makes `.github/hooks` work; Story 5 makes `.github/hooks` the *sole* Copilot hook
-source.
+**Hook double-load — now closed here.** Earlier drafts deferred hook double-registration to Story 4. Under the revised AC-F5, this story emits a third scoping key, `chat.hookFilesLocations`, mapping the default-Claude hook locations (`.claude/settings.json`, `.claude/settings.local.json`, `~/.claude/settings.json`) to `false`, so Copilot registers hooks only from `.github/hooks`. This closes the F1.2 double-registration hole at the `.vscode` layer. Story 4 remains the owner of the `.github/hooks` compat-shim content (matcher-in-script + tool-name map) that those hooks run; this story only ensures the `.claude/` hook sources are not *also* registered by Copilot. The two concerns compose: Story 4 makes `.github/hooks` work; Story 5 makes `.github/hooks` the *sole* Copilot hook source.
 
-**The emitted `.vscode/settings.json` is itself committed configuration** and must be secret-scanned
-like any committed config. It ties to Story 4's parameterized secret guard: the file is generated
-into the target repo and checked in, so the same pre-commit / write-time secret scan that covers
-`.claude/settings.json` must also cover `.vscode/settings.json`. This story emits only non-secret
-scoping keys, but the file must not be exempted from the scan.
+**The emitted `.vscode/settings.json` is itself committed configuration** and must be secret-scanned like any committed config. It ties to Story 4's parameterized secret guard: the file is generated into the target repo and checked in, so the same pre-commit / write-time secret scan that covers `.claude/settings.json` must also cover `.vscode/settings.json`. This story emits only non-secret scoping keys, but the file must not be exempted from the scan.
 
 ---
 
 ## Decision D-3
 
-**Decision:** Copilot instructions source = **shared `CLAUDE.md` only** (via `chat.useClaudeMdFile:true`).
-Do **not** emit `.github/copilot-instructions.md` in this story.
+**Decision:** Copilot instructions source = **shared `CLAUDE.md` only** (via `chat.useClaudeMdFile:true`). Do **not** emit `.github/copilot-instructions.md` in this story.
 
 - Options considered:
-  - A) Also emit `.github/copilot-instructions.md` — rejected for now: creates a second instructions
-    artifact that must be kept in sync with `CLAUDE.md`, reintroducing the content-drift the epic
-    exists to eliminate (Success Metric: 1 source of truth per artifact).
-  - B) Shared `CLAUDE.md` only — chosen: `chat.useClaudeMdFile` defaults true and is verified to be
-    read natively by Copilot >=1.109; parity with Claude is exact; zero drift surface. Matches the
-    epic Deferred-Decision recommended default for D-3.
-- Revisit trigger: if a concrete Copilot-idiomatic gap appears (a directive Copilot honours only from
-  `.github/copilot-instructions.md`), add that file in a follow-on story as a thin pointer to
-  `CLAUDE.md`, not a duplicate. Recorded in the Revision Log and epic Deferred Decisions (D-3, Story 5).
+  - A) Also emit `.github/copilot-instructions.md` — rejected for now: creates a second instructions artifact that must be kept in sync with `CLAUDE.md`, reintroducing the content-drift the epic exists to eliminate (Success Metric: 1 source of truth per artifact).
+  - B) Shared `CLAUDE.md` only — chosen: `chat.useClaudeMdFile` defaults true and is verified to be read natively by Copilot >=1.109; parity with Claude is exact; zero drift surface. Matches the epic Deferred-Decision recommended default for D-3.
+- Revisit trigger: if a concrete Copilot-idiomatic gap appears (a directive Copilot honours only from `.github/copilot-instructions.md`), add that file in a follow-on story as a thin pointer to `CLAUDE.md`, not a duplicate. Recorded in the Revision Log and epic Deferred Decisions (D-3, Story 5).
 
 ---
 
 ## AC Coverage Matrix
 
-Every AC in scope for this story must be covered by at least one file change; every file change must
-satisfy at least one AC. Gaps are flagged with a warning marker.
+Every AC in scope for this story must be covered by at least one file change; every file change must satisfy at least one AC. Gaps are flagged with a warning marker.
 
 ### AC → File mapping
 
@@ -177,8 +93,7 @@ satisfy at least one AC. Gaps are flagged with a warning marker.
 | root `CLAUDE.md` (kept in sync, not deployed) | AC-F5 (drift avoidance only), AC-NF4 (dev-session parity) |
 | provisioner emit logic (`scripts/provision.*`) | AC-F5, AC-NF4 |
 
-**Coverage result:** all in-scope ACs (AC-F5 delivered incl. hook scoping + verify-by-actual-load;
-AC-NF4 parity-checked) are covered; no orphaned file changes.
+**Coverage result:** all in-scope ACs (AC-F5 delivered incl. hook scoping + verify-by-actual-load; AC-NF4 parity-checked) are covered; no orphaned file changes.
 
 ---
 
@@ -197,9 +112,7 @@ AC-NF4 parity-checked) are covered; no orphaned file changes.
 
 ### Emitted `.vscode/settings.json` contract (the "API" of this story)
 
-The provisioner emits exactly this settings block (the `false` values EXCLUDE those locations; both
-project-level `.claude/` and user-level `~/.claude/` are excluded across skills, rules, AND hooks so
-Copilot cannot double-load skills/rules or double-register hooks):
+The provisioner emits exactly this settings block (the `false` values EXCLUDE those locations; both project-level `.claude/` and user-level `~/.claude/` are excluded across skills, rules, AND hooks so Copilot cannot double-load skills/rules or double-register hooks):
 
 ```json
 {
@@ -224,25 +137,12 @@ Copilot cannot double-load skills/rules or double-register hooks):
 ```
 
 Contract notes:
-- All three location keys are `string→boolean` maps; `true` includes a location, `false` excludes it.
-  Order does not matter; presence of the `false` entries is what suppresses `.claude/` discovery on
-  the Copilot side.
-- `chat.hookFilesLocations` is the NEW key added under the asymmetric model (Revision Log #6). It
-  maps the three default-Claude hook sources (`.claude/settings.json`, `.claude/settings.local.json`,
-  `~/.claude/settings.json`) to `false`, so Copilot registers hooks only from `.github/hooks`. This
-  closes the F1.2 hook double-registration hole at the `.vscode` layer — it is no longer deferred to
-  Story 4. Story 4 still owns the `.github/hooks` shim content those hooks execute.
-- `chat.useClaudeMdFile:true` is emitted explicitly (even though it defaults true) so the single shared
-  `CLAUDE.md` is read by Copilot regardless of user-level overrides — this is the D-3 realisation.
-- Both settings are `restricted:true` (workspace-trust-gated); the emit is a no-op on discovery until
-  the workspace is trusted (see Error Handling; MANUAL-verification item).
-- **Flags are necessary but not sufficient.** Because of known suppression bugs
-  (microsoft/vscode#297538, microsoft/vscode#299820) a `false` entry may not reliably exclude its
-  location. Acceptance requires verifying by **actual load** (see INT-1 and INT-6) that `.claude/*`
-  skills, rules, and hooks did not load — via the `/skills` menu AND the Copilot Hooks output channel —
-  not by trusting the emitted flags.
-- The provisioner MUST merge these keys into an existing `.vscode/settings.json` rather than overwrite
-  the whole file (the target repo may already have unrelated VS Code settings).
+- All three location keys are `string→boolean` maps; `true` includes a location, `false` excludes it. Order does not matter; presence of the `false` entries is what suppresses `.claude/` discovery on the Copilot side.
+- `chat.hookFilesLocations` is the NEW key added under the asymmetric model (Revision Log #6). It maps the three default-Claude hook sources (`.claude/settings.json`, `.claude/settings.local.json`, `~/.claude/settings.json`) to `false`, so Copilot registers hooks only from `.github/hooks`. This closes the F1.2 hook double-registration hole at the `.vscode` layer — it is no longer deferred to Story 4. Story 4 still owns the `.github/hooks` shim content those hooks execute.
+- `chat.useClaudeMdFile:true` is emitted explicitly (even though it defaults true) so the single shared `CLAUDE.md` is read by Copilot regardless of user-level overrides — this is the D-3 realisation.
+- Both settings are `restricted:true` (workspace-trust-gated); the emit is a no-op on discovery until the workspace is trusted (see Error Handling; MANUAL-verification item).
+- **Flags are necessary but not sufficient.** Because of known suppression bugs (microsoft/vscode#297538, microsoft/vscode#299820) a `false` entry may not reliably exclude its location. Acceptance requires verifying by **actual load** (see INT-1 and INT-6) that `.claude/*` skills, rules, and hooks did not load — via the `/skills` menu AND the Copilot Hooks output channel — not by trusting the emitted flags.
+- The provisioner MUST merge these keys into an existing `.vscode/settings.json` rather than overwrite the whole file (the target repo may already have unrelated VS Code settings).
 - The emitted file is committed config and is in scope for the repo's committed-config secret scan.
 
 ### Per-harness model note (shape emitted into `_project-deploy/CLAUDE.md` §4)
@@ -282,10 +182,7 @@ Copilot-soft route is never counted as equal to a Claude-hard route (per-artifac
 | AC-NF4 | Parity check — Copilot-only scoping does not alter Claude `.claude/` discovery or the Tier-A hard gate; assert §0/§0a/§0b byte-unchanged | 0.5 |
 | **Total** | | **3** |
 
-**Total SP: 3**
-**Type: STORY** — a single shippable slice: after this ships, a both-harness repo no longer
-double-loads `.claude/` skills+rules OR double-registers `.claude/` hooks under Copilot, and the
-deployed instructions file is harness-aware. No sub-decomposition required (<=5 SP).
+**Total SP: 3** **Type: STORY** — a single shippable slice: after this ships, a both-harness repo no longer double-loads `.claude/` skills+rules OR double-registers `.claude/` hooks under Copilot, and the deployed instructions file is harness-aware. No sub-decomposition required (<=5 SP).
 
 ---
 
@@ -295,14 +192,10 @@ The developer must tick every item before raising the PR.
 
 **Implementation**
 - [ ] `.vscode/settings.json` emit logic added to the Copilot adapter path in `scripts/provision.*`
-- [ ] Emitted block matches the contract exactly: `chat.agentSkillsLocations` excludes `.claude/skills`
-      and `~/.claude/skills`; `chat.instructionsFilesLocations` excludes `.claude/rules` and
-      `~/.claude/rules`; `chat.hookFilesLocations` excludes `.claude/settings.json`,
-      `.claude/settings.local.json`, and `~/.claude/settings.json`; `chat.useClaudeMdFile:true` present
+- [ ] Emitted block matches the contract exactly: `chat.agentSkillsLocations` excludes `.claude/skills` and `~/.claude/skills`; `chat.instructionsFilesLocations` excludes `.claude/rules` and `~/.claude/rules`; `chat.hookFilesLocations` excludes `.claude/settings.json`, `.claude/settings.local.json`, and `~/.claude/settings.json`; `chat.useClaudeMdFile:true` present
 - [ ] Emit is a non-destructive merge into any existing `.vscode/settings.json`
 - [ ] Provisioner fails loudly (non-zero exit, named double-registration risk) if it cannot write the file
-- [ ] Per-harness model-routing note added to `_project-deploy/CLAUDE.md` §4 (the DEPLOYED file), and
-      the same note synced to the root `CLAUDE.md` §4
+- [ ] Per-harness model-routing note added to `_project-deploy/CLAUDE.md` §4 (the DEPLOYED file), and the same note synced to the root `CLAUDE.md` §4
 - [ ] Verified no company/client name remains in either `CLAUDE.md` (already true — regression check)
 - [ ] `CLAUDE.md` §0 (Write Gate), §0a (keyword handlers), §0b (shell config) are BYTE-UNCHANGED in both files
 - [ ] Emitted `.vscode/settings.json` is in scope for the committed-config secret scan (Story 4 guard)
@@ -311,11 +204,8 @@ The developer must tick every item before raising the PR.
 
 **Quality**
 - [ ] All positive and negative unit tests pass — see Test Cases
-- [ ] Verify-by-actual-load (AC-F5, MANUAL): `/skills` in Copilot shows only `.github/` skills+rules
-      AND the Copilot Hooks output channel shows only `.github/hooks` registrations after trust granted —
-      NOT trusting the emitted flags alone (bugs #297538, #299820)
-- [ ] Regression verified (AC-NF4): Claude Tier-A hard gate still `exit 2`-blocks an un-approved Write;
-      Claude `.claude/skills` discovery unchanged
+- [ ] Verify-by-actual-load (AC-F5, MANUAL): `/skills` in Copilot shows only `.github/` skills+rules AND the Copilot Hooks output channel shows only `.github/hooks` registrations after trust granted — NOT trusting the emitted flags alone (bugs #297538, #299820)
+- [ ] Regression verified (AC-NF4): Claude Tier-A hard gate still `exit 2`-blocks an un-approved Write; Claude `.claude/skills` discovery unchanged
 
 **Review readiness**
 - [ ] PR title format: `[ADO-4000] Story 5 CLAUDE.md per-harness note + Copilot .vscode scoping`
@@ -324,22 +214,16 @@ The developer must tick every item before raising the PR.
 - [ ] D-3 resolution recorded in the Revision Log and the epic Deferred-Decisions table
 
 ### Reviewer Checklist
-- [ ] With both harnesses provisioned and workspace trusted, Copilot does NOT double-load `.claude/`
-      skills+rules (verify via `/skills` menu — only `.github/` entries) (AC-F5 / INT-1) (MANUAL)
-- [ ] With both harnesses provisioned and workspace trusted, Copilot does NOT double-register `.claude/`
-      hooks (verify via the Copilot Hooks output channel — only `.github/hooks`) (AC-F5 / INT-6) (MANUAL)
-- [ ] Verification is by ACTUAL LOAD, not the flags — the known suppression bugs (#297538, #299820) mean
-      correct flags do not prove suppression; the `/skills` menu + Hooks output channel are checked
-- [ ] `chat.hookFilesLocations` present mapping `.claude/settings.json`, `.claude/settings.local.json`,
-      `~/.claude/settings.json` → `false` (closes the F1.2 hook double-registration hole)
+- [ ] With both harnesses provisioned and workspace trusted, Copilot does NOT double-load `.claude/` skills+rules (verify via `/skills` menu — only `.github/` entries) (AC-F5 / INT-1) (MANUAL)
+- [ ] With both harnesses provisioned and workspace trusted, Copilot does NOT double-register `.claude/` hooks (verify via the Copilot Hooks output channel — only `.github/hooks`) (AC-F5 / INT-6) (MANUAL)
+- [ ] Verification is by ACTUAL LOAD, not the flags — the known suppression bugs (#297538, #299820) mean correct flags do not prove suppression; the `/skills` menu + Hooks output channel are checked
+- [ ] `chat.hookFilesLocations` present mapping `.claude/settings.json`, `.claude/settings.local.json`, `~/.claude/settings.json` → `false` (closes the F1.2 hook double-registration hole)
 - [ ] `chat.useClaudeMdFile:true` present so `CLAUDE.md` is still read by Copilot (D-3)
-- [ ] Both user-level (`~/.claude/*`) and project-level `.claude/` locations are `false` across all three
-      scoping keys — not just the project-level ones
+- [ ] Both user-level (`~/.claude/*`) and project-level `.claude/` locations are `false` across all three scoping keys — not just the project-level ones
 - [ ] Emit is a non-destructive merge — unrelated `.vscode/settings.json` keys are preserved
 - [ ] Unwritable `.vscode/settings.json` causes a loud provisioning failure, not a silent skip
 - [ ] Emitted `.vscode/settings.json` is treated as committed config for secret scanning
-- [ ] Workspace-untrusted and Remote-SSH (#293768) caveats are surfaced by the provisioner and labelled
-      MANUAL-verification, not assumed away
+- [ ] Workspace-untrusted and Remote-SSH (#293768) caveats are surfaced by the provisioner and labelled MANUAL-verification, not assumed away
 - [ ] Per-harness model note landed in `_project-deploy/CLAUDE.md` §4 (the deployed file), not only the root
 - [ ] No company/client name in either `CLAUDE.md` (regression check; expected already clean)
 - [ ] `CLAUDE.md` §0/§0a/§0b byte-unchanged in both files
@@ -399,43 +283,21 @@ CLAUDE DISCOVERY (unchanged — AC-NF4 parity):
 
 Purely additive to the provisioner and config; no data migration.
 
-- **Provisioner change:** revert the Story 5 commit range on `feature/4.x-multi-harness`. Re-provisioning
-  a repo without the emit step returns to the pre-Story-5 state.
-- **Emitted `.vscode/settings.json`:** this is the one change that touches a shared per-repo file
-  (flagged in the ICEA Irreversibility section). Reversal = re-provision, or delete the scoping keys
-  from `.vscode/settings.json`. Deleting them re-enables Copilot `.claude/` skill+rule discovery AND
-  `.claude/` hook registration (i.e. returns to double-load / double-register) — so removal must be
-  deliberate.
-- **`_project-deploy/CLAUDE.md` / root `CLAUDE.md` §4 note:** revert via git; content is an additive note
-  only, and §0/§0a/§0b were byte-unchanged, so reverting is a clean single-section undo.
-- Verify after rollback: Claude Tier-A gate still blocks an un-approved Write (AC-NF4); on Copilot, the
-  `/skills` menu and Hooks output channel return to their prior state.
+- **Provisioner change:** revert the Story 5 commit range on `feature/4.x-multi-harness`. Re-provisioning a repo without the emit step returns to the pre-Story-5 state.
+- **Emitted `.vscode/settings.json`:** this is the one change that touches a shared per-repo file (flagged in the ICEA Irreversibility section). Reversal = re-provision, or delete the scoping keys from `.vscode/settings.json`. Deleting them re-enables Copilot `.claude/` skill+rule discovery AND `.claude/` hook registration (i.e. returns to double-load / double-register) — so removal must be deliberate.
+- **`_project-deploy/CLAUDE.md` / root `CLAUDE.md` §4 note:** revert via git; content is an additive note only, and §0/§0a/§0b were byte-unchanged, so reverting is a clean single-section undo.
+- Verify after rollback: Claude Tier-A gate still blocks an un-approved Write (AC-NF4); on Copilot, the `/skills` menu and Hooks output channel return to their prior state.
 
 ---
 
 ## Handover
 
 ### QA Team
-**What was added:** for both-harness repos, the provisioner now emits `.vscode/settings.json` that scopes
-Copilot to `.github/` (excludes both project and user `.claude/` skill, rule, AND hook locations) and
-keeps the shared `CLAUDE.md` readable by Copilot. The DEPLOYED instructions template
-(`_project-deploy/CLAUDE.md`) gains an additive per-harness model-routing note in §4; no company name was
-present or removed.
+**What was added:** for both-harness repos, the provisioner now emits `.vscode/settings.json` that scopes Copilot to `.github/` (excludes both project and user `.claude/` skill, rule, AND hook locations) and keeps the shared `CLAUDE.md` readable by Copilot. The DEPLOYED instructions template (`_project-deploy/CLAUDE.md`) gains an additive per-harness model-routing note in §4; no company name was present or removed.
 
-**How to test manually (MANUAL-verification items):** provision a scratch repo with both harnesses; open
-in VS Code >=1.109 Copilot; grant Workspace Trust. Then **verify by actual load, not the flags**: open the
-`/skills` menu and confirm only `.github/` skills+rules appear (no `.claude/` skills/rules), AND open the
-Copilot Hooks output channel and confirm only `.github/hooks` are registered (no `.claude/` hooks). This
-double check is required because of known suppression bugs microsoft/vscode#297538 and #299820 where a
-`false` flag may not actually suppress the location. Confirm `CLAUDE.md` guidance (including the per-harness
-note) is honoured. Repeat WITHOUT granting trust to confirm the documented untrusted behaviour. If a
-Remote-SSH host is available, verify scoping there and note bug microsoft/vscode#293768. Trust-gating and
-Remote-SSH are manual because they depend on live VS Code state.
+**How to test manually (MANUAL-verification items):** provision a scratch repo with both harnesses; open in VS Code >=1.109 Copilot; grant Workspace Trust. Then **verify by actual load, not the flags**: open the `/skills` menu and confirm only `.github/` skills+rules appear (no `.claude/` skills/rules), AND open the Copilot Hooks output channel and confirm only `.github/hooks` are registered (no `.claude/` hooks). This double check is required because of known suppression bugs microsoft/vscode#297538 and #299820 where a `false` flag may not actually suppress the location. Confirm `CLAUDE.md` guidance (including the per-harness note) is honoured. Repeat WITHOUT granting trust to confirm the documented untrusted behaviour. If a Remote-SSH host is available, verify scoping there and note bug microsoft/vscode#293768. Trust-gating and Remote-SSH are manual because they depend on live VS Code state.
 
-**Regression risk (AC-NF4):** this story is Copilot-only for behaviour — Claude behaviour must be
-unchanged. Run the parity check: on Claude, `.claude/skills` still load and the Tier-A hard gate still
-`exit 2`-blocks a Write with no approved ICEA, pre and post this change. Confirm `CLAUDE.md`
-§0/§0a/§0b are byte-identical pre/post.
+**Regression risk (AC-NF4):** this story is Copilot-only for behaviour — Claude behaviour must be unchanged. Run the parity check: on Claude, `.claude/skills` still load and the Tier-A hard gate still `exit 2`-blocks a Write with no approved ICEA, pre and post this change. Confirm `CLAUDE.md` §0/§0a/§0b are byte-identical pre/post.
 
 **Test data:** scratch/synthetic repos only; no real privileged/PII/secret material.
 
@@ -450,15 +312,10 @@ unchanged. Run the parity check: on Claude, `.claude/skills` still load and the 
 | No CI change | Tier-C `ai-gate.yml` is unaffected by this story |
 
 ### Future Developer — follow-on work
-- If a Copilot-idiomatic instruction gap appears, add `.github/copilot-instructions.md` as a **thin
-  pointer** to `CLAUDE.md` (never a duplicate) — this is the D-3 revisit path, tracked as a follow-on.
-- The emit logic lives in the Copilot adapter path of `scripts/provision.*`; the settings contract is
-  the block in Files Changed above. Keep the `false` user-level entries across all three scoping keys —
-  dropping them reopens the skill+rule double-load or hook double-registration hole.
-- The per-harness model note lives in `_project-deploy/CLAUDE.md` §4 (deployed) with a synced copy in the
-  root `CLAUDE.md` §4. Edit the deployed template first; keep the note additive; never touch §0/§0a/§0b.
-- To add a future harness, do not remove the `.claude/`-exclusion keys; add that harness's own include
-  location alongside them.
+- If a Copilot-idiomatic instruction gap appears, add `.github/copilot-instructions.md` as a **thin pointer** to `CLAUDE.md` (never a duplicate) — this is the D-3 revisit path, tracked as a follow-on.
+- The emit logic lives in the Copilot adapter path of `scripts/provision.*`; the settings contract is the block in Files Changed above. Keep the `false` user-level entries across all three scoping keys — dropping them reopens the skill+rule double-load or hook double-registration hole.
+- The per-harness model note lives in `_project-deploy/CLAUDE.md` §4 (deployed) with a synced copy in the root `CLAUDE.md` §4. Edit the deployed template first; keep the note additive; never touch §0/§0a/§0b.
+- To add a future harness, do not remove the `.claude/`-exclusion keys; add that harness's own include location alongside them.
 
 ---
 

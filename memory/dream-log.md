@@ -272,3 +272,6 @@ These were deleted. Watch for more stale v1 references in future sessions.
 ### [capture] [2026-08-17] Approach agreed — Story-2 implemented incrementally: governance-rails first, fleet $PLUGIN_DIR retirement DEFERRED
 
 ### [capture] [2026-08-17] Task completed — Story-2 governance-rails increment (2a+2b+2c-seed) implemented & VERIFIED
+
+### [capture] [2026-08-17] Task completed — migration skill context-budget + resume (Option 1) implemented
+### [capture] [2026-08-11] Plan approved — migration skill context-budget-aware + resumable (Option 1)

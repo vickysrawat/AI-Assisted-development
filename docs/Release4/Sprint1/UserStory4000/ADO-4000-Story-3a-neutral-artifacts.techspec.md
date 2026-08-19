@@ -1,7 +1,6 @@
 # Tech Spec — Story 3a: Neutral shared artifacts
 
-ADO #4000 · Release 4 · Sprint 1 · Story 3a
-Status: DRAFT (revised 2026-08-14 #3) · STORY · 3 SP
+ADO #4000 · Release 4 · Sprint 1 · Story 3a Status: DRAFT (revised 2026-08-14 #3) · STORY · 3 SP
 
 > Per-story spec for the EPIC ADO-4000. Scope: AC-F6 only. Source ICEA:
 > `docs/Release4/Sprint1/UserStory4000/ADO-4000-llm-agnostic-multi-harness.icea.md`
@@ -15,101 +14,46 @@ Status: DRAFT (revised 2026-08-14 #3) · STORY · 3 SP
 
 ## Overview
 
-This story makes the four shared, generated artifacts — architecture docs, the codebase knowledge
-graph, `memory/`, and `docs/` — **single-source** and **read by both harnesses via an explicit,
-harness-neutral path**, with **no per-harness duplication**. Today architecture lives at
-`.claude/architecture/` and the graph at `.claude/graph/`. Under multi-harness convergence, Copilot
-is scoped away from `.claude/` (Story 5 emits `.vscode/settings.json` disabling `.claude/` skills+rules
-discovery). Any artifact left under `.claude/*` that a skill reads implicitly could therefore become
-invisible to Copilot or, worse, get regenerated per harness.
+This story makes the four shared, generated artifacts — architecture docs, the codebase knowledge graph, `memory/`, and `docs/` — **single-source** and **read by both harnesses via an explicit, harness-neutral path**, with **no per-harness duplication**. Today architecture lives at `.claude/architecture/` and the graph at `.claude/graph/`. Under multi-harness convergence, Copilot is scoped away from `.claude/` (Story 5 emits `.vscode/settings.json` disabling `.claude/` skills+rules discovery). Any artifact left under `.claude/*` that a skill reads implicitly could therefore become invisible to Copilot or, worse, get regenerated per harness.
 
-The governing pattern is *generate once, read by a neutral-from-repo-root path*: skills stop reaching
-into a harness-owned folder and instead resolve a single canonical location declared in one place. Per
-Decision D-2 (below) this story **relocates** architecture to `docs/architecture/` and the graph to
-`.aidev/graph/`; `memory/` and `docs/` are already neutral and stay put.
+The governing pattern is *generate once, read by a neutral-from-repo-root path*: skills stop reaching into a harness-owned folder and instead resolve a single canonical location declared in one place. Per Decision D-2 (below) this story **relocates** architecture to `docs/architecture/` and the graph to `.aidev/graph/`; `memory/` and `docs/` are already neutral and stay put.
 
-The revised ICEA AC-F6 asserts **single-source + shared-read**, and explicitly leaves the *physical
-location* (relocate vs keep-under-`.claude/` read-by-path) contingent on D-2. This spec resolves D-2 to
-**relocate**, and is therefore accountable for every consequence of moving — not just a `git mv`. Three
-consequences make this a non-trivial move rather than a byte-identical relocation:
+The revised ICEA AC-F6 asserts **single-source + shared-read**, and explicitly leaves the *physical location* (relocate vs keep-under-`.claude/` read-by-path) contingent on D-2. This spec resolves D-2 to **relocate**, and is therefore accountable for every consequence of moving — not just a `git mv`. Three consequences make this a non-trivial move rather than a byte-identical relocation:
 
-1. The reader footprint is **20 skills** (plus hooks and rules), not a handful — enumerated and gated
-   by a grep-clean acceptance gate, not a fixed list.
-2. `graph-index.md` carries `paths: always` frontmatter (the reason icea-feature orientation auto-loads
-   it) **and** internal markdown links hardcoded to `.claude/graph/...` — both must be regenerated/
-   re-registered for the new location, or the file converted to explicit-read.
-3. `graph.html` moving to `.aidev/` leaves icea-floor's `.claude/` exempt zone and hits the guarded
-   `.html` extension — a coordination point with Story 4.
+1. The reader footprint is **20 skills** (plus hooks and rules), not a handful — enumerated and gated by a grep-clean acceptance gate, not a fixed list.
+2. `graph-index.md` carries `paths: always` frontmatter (the reason icea-feature orientation auto-loads it) **and** internal markdown links hardcoded to `.claude/graph/...` — both must be regenerated/ re-registered for the new location, or the file converted to explicit-read.
+3. `graph.html` moving to `.aidev/` leaves icea-floor's `.claude/` exempt zone and hits the guarded `.html` extension — a coordination point with Story 4.
 
-No skill's *behaviour* changes — only where it reads the one copy from — but the mechanics above are the
-substance of the work.
+No skill's *behaviour* changes — only where it reads the one copy from — but the mechanics above are the substance of the work.
 
 ### Where this story sits in the L1/L2/L3 layering — the `<neutral artifacts>` tier
 
-The ICEA's "Repository structure & layering (L1/L2/L3)" subsection lays out the locked source shape:
-`Shared/` is **L1 — content & standards** (the ICEA method, templates, critic rubric, coding rules, the
-B1–B7 taxonomy, checker knowledge, the Tier-C gate) authored once and never duplicated; `Claude/` and
-`Copilot/` are the **L2 (engagement) + L3 (enforcement)** layers, designed *natively* per harness.
-Alongside those three source folders the layout declares a fourth, non-source tier:
+The ICEA's "Repository structure & layering (L1/L2/L3)" subsection lays out the locked source shape: `Shared/` is **L1 — content & standards** (the ICEA method, templates, critic rubric, coding rules, the B1–B7 taxonomy, checker knowledge, the Tier-C gate) authored once and never duplicated; `Claude/` and `Copilot/` are the **L2 (engagement) + L3 (enforcement)** layers, designed *natively* per harness. Alongside those three source folders the layout declares a fourth, non-source tier:
 
 ```
   <neutral artifacts>  # architecture, graph, memory/, docs/ — generated once, read by both
 ```
 
-**This story owns exactly that `<neutral artifacts>` tier.** The four artifacts AC-F6 governs —
-architecture docs, the knowledge graph, `memory/`, and `docs/` — are the *generated-once, read-by-both*
-tier: they are produced by a generating skill (architect, graph-sync, graph-viz, memory-capture) and
-consumed by both harnesses through one canonical path. Relocating architecture to `docs/architecture/`
-and the graph to `.aidev/graph/` (D-2, below) is precisely what makes this tier live *outside* the
-harness-owned `Claude/`/`.claude/` and `Copilot/`/`.github/` namespaces, so neither harness can claim,
-scope-hide, or per-harness-duplicate it.
+**This story owns exactly that `<neutral artifacts>` tier.** The four artifacts AC-F6 governs — architecture docs, the knowledge graph, `memory/`, and `docs/` — are the *generated-once, read-by-both* tier: they are produced by a generating skill (architect, graph-sync, graph-viz, memory-capture) and consumed by both harnesses through one canonical path. Relocating architecture to `docs/architecture/` and the graph to `.aidev/graph/` (D-2, below) is precisely what makes this tier live *outside* the harness-owned `Claude/`/`.claude/` and `Copilot/`/`.github/` namespaces, so neither harness can claim, scope-hide, or per-harness-duplicate it.
 
-**Orthogonal to L1 content standards — explicitly.** The `<neutral artifacts>` tier is **not part of
-L1** and this story does **not** touch L1. L1 is *authored* content-and-standards (single-source prompt
-and rule material that both harnesses consume verbatim, guardrail-enforced against re-authoring). The
-neutral artifacts are *generated output* about a specific target repo (its architecture, its module
-graph, its captured memory, its docs) — regenerable, repo-specific, and carrying no authoring authority.
-They share L1's "single source, read by both" property but for a different reason (dedupe of generated
-output, not a canonical standard). Concretely: the L1 re-author CI guardrail (AC-F2) does **not** apply
-to these artifacts, and nothing here consumes, versions (AC-F9), or forks an L1 standard. The two
-concerns are independent — this story can ship without touching `Shared/` and an L1 change never repoints
-a neutral artifact.
+**Orthogonal to L1 content standards — explicitly.** The `<neutral artifacts>` tier is **not part of L1** and this story does **not** touch L1. L1 is *authored* content-and-standards (single-source prompt and rule material that both harnesses consume verbatim, guardrail-enforced against re-authoring). The neutral artifacts are *generated output* about a specific target repo (its architecture, its module graph, its captured memory, its docs) — regenerable, repo-specific, and carrying no authoring authority. They share L1's "single source, read by both" property but for a different reason (dedupe of generated output, not a canonical standard). Concretely: the L1 re-author CI guardrail (AC-F2) does **not** apply to these artifacts, and nothing here consumes, versions (AC-F9), or forks an L1 standard. The two concerns are independent — this story can ship without touching `Shared/` and an L1 change never repoints a neutral artifact.
 
 ### Decision D-2 — Neutral artifact locations
 
-- **Chosen option:** Relocate to neutral locations — `.claude/architecture/` → `docs/architecture/`,
-  `.claude/graph/` → `.aidev/graph/`. `memory/` and `docs/` are already neutral and are not moved.
-- **Option rejected:** Keep artifacts under `.claude/*` and rely on skills reading them by explicit
-  path. Rejected because (a) `.claude/` is a harness-owned namespace Copilot is deliberately scoped
-  away from, so a `.claude/`-resident artifact is conceptually "Claude's" even when read by path — it
-  invites per-harness duplication and reader confusion; (b) neutrality is the epic's stated success
-  metric ("1 source of truth per artifact ... generated once in neutral locations"); (c) the churn
-  cost (updating ~20 readers) is paid once here regardless of location, so the cleaner end-state wins.
-- **Rationale:** Neutral paths make single-source obvious by construction and remove any dependency on
-  `.claude/` scoping behaviour. Both harnesses read the same physical copy.
-- **Alternative sub-decision for `graph-index.md`:** because it is auto-loaded via `paths: always`, D-2
-  forces a follow-on choice — (a) keep `paths: always` and re-register the auto-load from the new path,
-  regenerating its hardcoded internal links; **vs** (b) convert it to explicit-read and update
-  icea-feature's orientation step (SKILL.md ~line 85) to read it by path. This spec chooses **(a)** so
-  icea-feature orientation keeps working without an orchestration change; (b) is the documented fallback
-  if `paths: always` cannot resolve a `.aidev/` path on both harnesses.
+- **Chosen option:** Relocate to neutral locations — `.claude/architecture/` → `docs/architecture/`, `.claude/graph/` → `.aidev/graph/`. `memory/` and `docs/` are already neutral and are not moved.
+- **Option rejected:** Keep artifacts under `.claude/*` and rely on skills reading them by explicit path. Rejected because (a) `.claude/` is a harness-owned namespace Copilot is deliberately scoped away from, so a `.claude/`-resident artifact is conceptually "Claude's" even when read by path — it invites per-harness duplication and reader confusion; (b) neutrality is the epic's stated success metric ("1 source of truth per artifact ... generated once in neutral locations"); (c) the churn cost (updating ~20 readers) is paid once here regardless of location, so the cleaner end-state wins.
+- **Rationale:** Neutral paths make single-source obvious by construction and remove any dependency on `.claude/` scoping behaviour. Both harnesses read the same physical copy.
+- **Alternative sub-decision for `graph-index.md`:** because it is auto-loaded via `paths: always`, D-2 forces a follow-on choice — (a) keep `paths: always` and re-register the auto-load from the new path, regenerating its hardcoded internal links; **vs** (b) convert it to explicit-read and update icea-feature's orientation step (SKILL.md ~line 85) to read it by path. This spec chooses **(a)** so icea-feature orientation keeps working without an orchestration change; (b) is the documented fallback if `paths: always` cannot resolve a `.aidev/` path on both harnesses.
 
 ### Shared path contract — canonical `artifact-paths.md`
 
-To prevent Story 3a (this story), Story 4 (hook readers repointing the same graph/arch paths — see ICEA
-Story-Breakdown correction (b)), and Story 6 (the B1–B7 taxonomy's single canonical location — see
-AC-NF2) from independently hardcoding and later clobbering each other, this story introduces **one
-canonical path contract**: `skills/shared/artifact-paths.md`. It is the single source that declares the
-neutral location of every shared artifact and taxonomy. Story 4 and Story 6 **read from it, never
-re-declare**. This is the concrete realisation of the ICEA's "3a↔4 must share a single `artifact-paths.md`
-contract to avoid clobbering," extended to Story 6's taxonomy entry.
+To prevent Story 3a (this story), Story 4 (hook readers repointing the same graph/arch paths — see ICEA Story-Breakdown correction (b)), and Story 6 (the B1–B7 taxonomy's single canonical location — see AC-NF2) from independently hardcoding and later clobbering each other, this story introduces **one canonical path contract**: `skills/shared/artifact-paths.md`. It is the single source that declares the neutral location of every shared artifact and taxonomy. Story 4 and Story 6 **read from it, never re-declare**. This is the concrete realisation of the ICEA's "3a↔4 must share a single `artifact-paths.md` contract to avoid clobbering," extended to Story 6's taxonomy entry.
 
 ---
 
 ## AC Coverage Matrix
 
-Every AC in scope must be covered by at least one file change; every file change must satisfy at
-least one AC.
+Every AC in scope must be covered by at least one file change; every file change must satisfy at least one AC.
 
 ### AC → File mapping
 
@@ -151,9 +95,7 @@ least one AC.
 
 ### Skill readers repointed (20 — grep-derived, not a fixed allow-list)
 
-The current reader set that references `.claude/architecture` or `.claude/graph` in its `SKILL.md` is
-**20 skills**, verified by grep on 2026-08-13 (the earlier draft under-counted at 8). All are repointed
-to the neutral paths:
+The current reader set that references `.claude/architecture` or `.claude/graph` in its `SKILL.md` is **20 skills**, verified by grep on 2026-08-13 (the earlier draft under-counted at 8). All are repointed to the neutral paths:
 
 | Path | Change | Detail |
 |---|---|---|
@@ -201,19 +143,10 @@ to the neutral paths:
 
 ### graph.html × icea-floor coordination (Story 4)
 
-Moving `graph.html` from `.claude/graph/` to `.aidev/graph/` takes it **out of** icea-floor's `.claude/`
-exempt zone and **into** the guarded `.html` extension. Verified against `icea-floor.cjs` /`.ps1` /`.sh`:
-`.claude/` is exempt, but `.html` is in `guardedExts` (the only exempt `.html` files are
-`plugin-guide.html` / `user-guide.html`). Therefore a Write of `.aidev/graph/graph.html` would be
-`exit 2`-**BLOCKED** by icea-floor. Resolution (one of):
+Moving `graph.html` from `.claude/graph/` to `.aidev/graph/` takes it **out of** icea-floor's `.claude/` exempt zone and **into** the guarded `.html` extension. Verified against `icea-floor.cjs` /`.ps1` /`.sh`: `.claude/` is exempt, but `.html` is in `guardedExts` (the only exempt `.html` files are `plugin-guide.html` / `user-guide.html`). Therefore a Write of `.aidev/graph/graph.html` would be `exit 2`-**BLOCKED** by icea-floor. Resolution (one of):
 
-- **Preferred:** coordinate with **Story 4** to add `.aidev/` (or `.aidev/graph/graph.html`) to
-  icea-floor's exempt patterns in all three variants. This is a Story-4-owned change on the hook layer;
-  this spec records the dependency in `artifact-paths.md` and Handover so the two stories don't clobber.
-- **Alternative:** confirm `graph.html` is **not** written via the Write tool (e.g. graph-viz writes it
-  through a Node `fs.writeFileSync` in a `.cjs` script, which PreToolUse Write-hook guards do not
-  intercept). If verified, no icea-floor change is needed. This must be *confirmed*, not assumed — see
-  Open Questions.
+- **Preferred:** coordinate with **Story 4** to add `.aidev/` (or `.aidev/graph/graph.html`) to icea-floor's exempt patterns in all three variants. This is a Story-4-owned change on the hook layer; this spec records the dependency in `artifact-paths.md` and Handover so the two stories don't clobber.
+- **Alternative:** confirm `graph.html` is **not** written via the Write tool (e.g. graph-viz writes it through a Node `fs.writeFileSync` in a `.cjs` script, which PreToolUse Write-hook guards do not intercept). If verified, no icea-floor change is needed. This must be *confirmed*, not assumed — see Open Questions.
 
 ### Already-neutral artifacts
 
@@ -222,10 +155,7 @@ exempt zone and **into** the guarded `.html` extension. Verified against `icea-f
 | `memory/**` | (no move) | Already neutral and read-by-path by both harnesses. Confirmed single-source; documented, not relocated. |
 | `docs/**` | (no move) | Already neutral. ICEA docs, plans, generated docs are shared read-by-path. Confirmed single-source; documented, not relocated. Note `docs/architecture/` becomes a child of this already-neutral tree. |
 
-**No external API — artifact path changes + reader updates.** There is no HTTP endpoint or outbound
-service call in this story. The only "interface" is the set of on-disk artifact paths, which changes
-from `.claude/architecture` + `.claude/graph` to `docs/architecture` + `.aidev/graph`; every reader
-(20 skills + hooks) is repointed. Nothing consumes these artifacts over a network.
+**No external API — artifact path changes + reader updates.** There is no HTTP endpoint or outbound service call in this story. The only "interface" is the set of on-disk artifact paths, which changes from `.claude/architecture` + `.claude/graph` to `docs/architecture` + `.aidev/graph`; every reader (20 skills + hooks) is repointed. Nothing consumes these artifacts over a network.
 
 ---
 
@@ -233,17 +163,9 @@ from `.claude/architecture` + `.claude/graph` to `docs/architecture` + `.aidev/g
 
 No auth tier exists in this plugin story. Security-relevant notes:
 
-1. **`memory/` and `docs/` are untrusted input** — auto-loaded (memory at session start; docs on demand)
-   and can carry attacker- or drift-introduced text. This story grants them no new authority; relocating
-   architecture/graph and confirming memory/docs single-source must **not** make any artifact executable
-   or trusted. Provenance, injection-resistance, and the "no executable authority" guarantee are
-   delivered by **Story 6** (AC-NF3). This story only fixes *location and single-source reads*.
-2. **No secret exposure** — the relocated artifacts contain no credentials; `.env` /
-   `settings.local.json` / PAT are never among them.
-3. **icea-floor guard interaction (see Files Changed):** moving `graph.html` interacts with the
-   write-time guard. Whichever resolution is chosen must not *weaken* the guard for real source `.html`
-   — the exempt pattern must be narrow (`.aidev/graph/graph.html` or `.aidev/` graph output only), not a
-   blanket `.html` exemption.
+1. **`memory/` and `docs/` are untrusted input** — auto-loaded (memory at session start; docs on demand) and can carry attacker- or drift-introduced text. This story grants them no new authority; relocating architecture/graph and confirming memory/docs single-source must **not** make any artifact executable or trusted. Provenance, injection-resistance, and the "no executable authority" guarantee are delivered by **Story 6** (AC-NF3). This story only fixes *location and single-source reads*.
+2. **No secret exposure** — the relocated artifacts contain no credentials; `.env` / `settings.local.json` / PAT are never among them.
+3. **icea-floor guard interaction (see Files Changed):** moving `graph.html` interacts with the write-time guard. Whichever resolution is chosen must not *weaken* the guard for real source `.html` — the exempt pattern must be narrow (`.aidev/graph/graph.html` or `.aidev/` graph output only), not a blanket `.html` exemption.
 
 ---
 
@@ -270,10 +192,7 @@ No auth tier exists in this plugin story. Security-relevant notes:
 | AC-F6 (reader updates) | Repoint **20** skills + all three `graph-stale-detect` variants + other hooks; add `artifact-paths.md`; icea-feature orientation; coordinate graph.html/icea-floor with Story 4; grep-clean gate; confirm memory/docs single-source | 2 |
 | **Total** | | **3** |
 
-**Total SP: 3**
-**Type: STORY** — a single shippable slice delivering one capability (shared artifacts read once by
-both harnesses). No sub-decomposition needed; within the ≤5-SP rule. (The larger reader footprint is
-mechanical repointing, not new capability, so SP holds at 3.)
+**Total SP: 3** **Type: STORY** — a single shippable slice delivering one capability (shared artifacts read once by both harnesses). No sub-decomposition needed; within the ≤5-SP rule. (The larger reader footprint is mechanical repointing, not new capability, so SP holds at 3.)
 
 ---
 
@@ -321,23 +240,13 @@ The developer must tick every item before raising the PR.
 
 ### project-rules.md path-match note
 
-`.claude/rules/project-rules.md` declares `paths: ["**/*"]`, so it already matches every file and will
-now also match the relocated `docs/architecture/**` and `.aidev/graph/**` artifacts (previously these
-lived under `.claude/` which `**/*` also matched — so the *rule-loading* behaviour is unchanged in
-practice). This is a **minor behaviour note**, not a defect: project-rules is a coding-standards rule and
-these artifacts are generated markdown/JSON, so the rule is inert on them. Add a `.aidev/` exclusion to
-the rule's `paths:` **only if** a reviewer finds the rule producing noise on generated artifacts;
-otherwise leave `["**/*"]` unchanged to avoid scope creep into Story 3's rule work.
+`.claude/rules/project-rules.md` declares `paths: ["**/*"]`, so it already matches every file and will now also match the relocated `docs/architecture/**` and `.aidev/graph/**` artifacts (previously these lived under `.claude/` which `**/*` also matched — so the *rule-loading* behaviour is unchanged in practice). This is a **minor behaviour note**, not a defect: project-rules is a coding-standards rule and these artifacts are generated markdown/JSON, so the rule is inert on them. Add a `.aidev/` exclusion to the rule's `paths:` **only if** a reviewer finds the rule producing noise on generated artifacts; otherwise leave `["**/*"]` unchanged to avoid scope creep into Story 3's rule work.
 
 ---
 
 ## Open Questions
 
-- **graph.html write mechanism (blocking for the icea-floor decision, not for APPROVE):** is
-  `graph.html` written via the Write tool (→ needs Story-4 exempt-pattern add) or via a `.cjs`
-  `fs.writeFileSync` inside graph-viz (→ PreToolUse Write guard never fires, no change needed)? The DoD
-  carries both resolution paths; this must be confirmed during implementation, coordinated with Story 4.
-  It does not block APPROVE of this spec because both outcomes are specified.
+- **graph.html write mechanism (blocking for the icea-floor decision, not for APPROVE):** is `graph.html` written via the Write tool (→ needs Story-4 exempt-pattern add) or via a `.cjs` `fs.writeFileSync` inside graph-viz (→ PreToolUse Write guard never fires, no change needed)? The DoD carries both resolution paths; this must be confirmed during implementation, coordinated with Story 4. It does not block APPROVE of this spec because both outcomes are specified.
 
 D-2 is resolved in this spec (relocate to neutral). No other blocking question remains before APPROVE.
 
@@ -345,8 +254,7 @@ D-2 is resolved in this spec (relocate to neutral). No other blocking question r
 
 ## Request Flow
 
-Both harnesses read the one copy of each artifact from its neutral path — no per-harness generation, no
-`.claude/`-scoped read.
+Both harnesses read the one copy of each artifact from its neutral path — no per-harness generation, no `.claude/`-scoped read.
 
 ```
 GENERATION (once, harness-neutral):
@@ -370,45 +278,22 @@ INVARIANT: one write target + one read path per artifact. No per-harness copy is
 
 ## Rollback
 
-Purely a relocation + reader-repoint; no data migration, no schema. Rollback = revert the story's commit
-range on `feature/4.x-multi-harness`, which moves the directories back to `.claude/architecture/` and
-`.claude/graph/`, restores the old reader paths in the 20 skills and three hook variants, and restores
-`graph-index.md`'s original `.claude/graph/...` links. Content is preserved byte-for-byte both directions
-(graph-index links are regenerated deterministically from location, so the revert regenerates them too).
-The frozen `v3.13.0` git tag remains the Claude-only fallback (epic-level rollback). No target-repo data
-is affected; `memory/` and `docs/` are untouched by a rollback since they were never moved.
+Purely a relocation + reader-repoint; no data migration, no schema. Rollback = revert the story's commit range on `feature/4.x-multi-harness`, which moves the directories back to `.claude/architecture/` and `.claude/graph/`, restores the old reader paths in the 20 skills and three hook variants, and restores `graph-index.md`'s original `.claude/graph/...` links. Content is preserved byte-for-byte both directions (graph-index links are regenerated deterministically from location, so the revert regenerates them too). The frozen `v3.13.0` git tag remains the Claude-only fallback (epic-level rollback). No target-repo data is affected; `memory/` and `docs/` are untouched by a rollback since they were never moved.
 
 ---
 
 ## Handover
 
 ### QA Team
-**What was added:** architecture docs and the knowledge graph now live at neutral paths
-(`docs/architecture/`, `.aidev/graph/`) instead of under `.claude/`; `memory/` and `docs/` were already
-neutral. Both Claude Code and Copilot read the same single copy by path. **How to test:** provision a
-scratch repo for both harnesses, open in each tool, confirm each reads the same architecture/graph files
-(INT-1), and confirm the relocated `graph-index.md` links all resolve (P-U5). **Regression risk:** a
-skill or hook (esp. one of the three `graph-stale-detect` variants) left pointing at an old `.claude/`
-path — verify grep-clean (N-U1). **Test data:** existing generated artifacts in a scratch repo; no
-privileged/PII material.
+**What was added:** architecture docs and the knowledge graph now live at neutral paths (`docs/architecture/`, `.aidev/graph/`) instead of under `.claude/`; `memory/` and `docs/` were already neutral. Both Claude Code and Copilot read the same single copy by path. **How to test:** provision a scratch repo for both harnesses, open in each tool, confirm each reads the same architecture/graph files (INT-1), and confirm the relocated `graph-index.md` links all resolve (P-U5). **Regression risk:** a skill or hook (esp. one of the three `graph-stale-detect` variants) left pointing at an old `.claude/` path — verify grep-clean (N-U1). **Test data:** existing generated artifacts in a scratch repo; no privileged/PII material.
 
 ### DevOps / Platform Team
-No pipeline, secret, environment-variable, or infrastructure change. This is a file relocation within
-the repo plus reference updates in markdown/CJS/PS/shell skills and hooks. The `.aidev/` directory is a
-new top-level neutral folder (also home to `.aidev/manifest.json` in Story 8) — ensure the ignore file
-does not exclude `.aidev/graph/` artifacts that must be committed. **Story-4 dependency:** if
-`graph.html` is Write-tool-written, icea-floor's three variants need a narrow `.aidev/graph/graph.html`
-exempt-pattern add — this is Story-4-owned; do not duplicate the hook edit here. No new HTTP clients, no
-Docker/AKS change.
+No pipeline, secret, environment-variable, or infrastructure change. This is a file relocation within the repo plus reference updates in markdown/CJS/PS/shell skills and hooks. The `.aidev/` directory is a new top-level neutral folder (also home to `.aidev/manifest.json` in Story 8) — ensure the ignore file does not exclude `.aidev/graph/` artifacts that must be committed. **Story-4 dependency:** if `graph.html` is Write-tool-written, icea-floor's three variants need a narrow `.aidev/graph/graph.html` exempt-pattern add — this is Story-4-owned; do not duplicate the hook edit here. No new HTTP clients, no Docker/AKS change.
 
 ### Future Developer — Follow-on Work
-- The canonical artifact locations live in `skills/shared/artifact-paths.md` — read that before adding
-  any new reader; never hardcode `.claude/architecture` or `.claude/graph` again. Stories 4 and 6 read
-  the same contract (Story 6 adds the B1–B7 taxonomy location there).
-- When adding a new harness (epic extension point), the four artifacts do **not** move — new adapters
-  read them from the same neutral paths.
-- Trust/injection hardening for `memory/` and `docs/` (untrusted input) is **Story 6** (AC-NF3), not
-  this story — do not assume these artifacts are safe to execute.
+- The canonical artifact locations live in `skills/shared/artifact-paths.md` — read that before adding any new reader; never hardcode `.claude/architecture` or `.claude/graph` again. Stories 4 and 6 read the same contract (Story 6 adds the B1–B7 taxonomy location there).
+- When adding a new harness (epic extension point), the four artifacts do **not** move — new adapters read them from the same neutral paths.
+- Trust/injection hardening for `memory/` and `docs/` (untrusted input) is **Story 6** (AC-NF3), not this story — do not assume these artifacts are safe to execute.
 
 ---
 

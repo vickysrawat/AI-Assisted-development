@@ -1,7 +1,6 @@
 # Tech Spec — Story 1: Skill self-containment spike
 
-ADO #4000 · Release 4 · Sprint 1 · Story 1
-Status: DRAFT (revised 2026-08-14 to match ICEA Revision #8) · STORY · 3 SP
+ADO #4000 · Release 4 · Sprint 1 · Story 1 Status: DRAFT (revised 2026-08-14 to match ICEA Revision #8) · STORY · 3 SP
 
 > Per-story spec under the epic ADO-4000-tech.md. This is the **FIRST implementation story** under the
 > approved plan — the proof-of-concept **spike** that de-risks the multi-harness epic before Story 2
@@ -27,87 +26,28 @@ Status: DRAFT (revised 2026-08-14 to match ICEA Revision #8) · STORY · 3 SP
 
 ## Overview
 
-This is the **first implementation story** under the approved plan. It proves the epic's governing
-structural pattern — *L1 content authored once, CONSUMED natively by each harness, self-contained,
-project-relative reads, no `$PLUGIN_DIR`* — on exactly **one** representative L1 content item before the
-shared L1 core is established fleet-wide in Story 2. The chosen item is the **`icea-status`** skill: a
-read-only, low-dependency status/analysis skill that reports the on-disk state of an ADO ID and the
-single next action.
+This is the **first implementation story** under the approved plan. It proves the epic's governing structural pattern — *L1 content authored once, CONSUMED natively by each harness, self-contained, project-relative reads, no `$PLUGIN_DIR`* — on exactly **one** representative L1 content item before the shared L1 core is established fleet-wide in Story 2. The chosen item is the **`icea-status`** skill: a read-only, low-dependency status/analysis skill that reports the on-disk state of an ADO ID and the single next action.
 
-**What "proven" means here, mapped to the L1/L2/L3 structure (ICEA #7).** The spike delivers two
-structural proofs and nothing more:
-- **(a) L1 content is CONSUMED natively by BOTH harnesses — no mechanical projection.** The `icea-status`
-  content lives once as an L1 item; Claude Code discovers and runs it from its native project skills path
-  and VS Code Copilot ≥1.109 discovers and runs it from its native path. The spike does NOT build a
-  delta-map or a projection engine (both RETIRED in #7); the copy into each harness's native path is a
-  plain, hard-coded placement of the same content, standing in for whatever native packaging Story 2
-  chooses per harness. The load-bearing claim is that the *same L1 content works, consumed natively*, not
-  that a transform layer exists.
-- **(b) Dual-run with NO `$PLUGIN_DIR`.** Neither harness resolves a runtime plugin dir anywhere in the
-  exercised path — the retirement of the `$PLUGIN_DIR` bridge is demonstrated end-to-end on a live skill.
+**What "proven" means here, mapped to the L1/L2/L3 structure (ICEA #7).** The spike delivers two structural proofs and nothing more:
+- **(a) L1 content is CONSUMED natively by BOTH harnesses — no mechanical projection.** The `icea-status` content lives once as an L1 item; Claude Code discovers and runs it from its native project skills path and VS Code Copilot ≥1.109 discovers and runs it from its native path. The spike does NOT build a delta-map or a projection engine (both RETIRED in #7); the copy into each harness's native path is a plain, hard-coded placement of the same content, standing in for whatever native packaging Story 2 chooses per harness. The load-bearing claim is that the *same L1 content works, consumed natively*, not that a transform layer exists.
+- **(b) Dual-run with NO `$PLUGIN_DIR`.** Neither harness resolves a runtime plugin dir anywhere in the exercised path — the retirement of the `$PLUGIN_DIR` bridge is demonstrated end-to-end on a live skill.
 
-**Honest scope of the evidence this spike produces (re-scoped per ICEA Revision #4, note (f)).**
-`icea-status` is a *best-case* pilot, not a representative one. Ground truth from the current source
-(`skills/icea-status/SKILL.md`): its only two `$PLUGIN_DIR` occurrences are **prose "see also" pointers**
-— a reference to a `business-context-severity.md` model it explicitly does NOT trigger, and a
-persona-lens pointer to `personas-spec.md`. It has **no executable `$PLUGIN_DIR` read**, **no
-`.claude/plugin-path.txt` resolver fast-path to strip**, **no `$PLUGIN_DIR/scripts/*` execution**, and
-**no sibling-skill invocation**. Therefore this spike proves ONLY two things: (1) the native-consumption
-mechanics (author once as L1 content, place into both harness native paths, residual-token guard — no
-delta-map, no projection engine) and (2) Copilot *discovery + execution* of a natively-placed L1 skill on
-VS Code ≥1.109. It does **NOT and CANNOT close D-4** (the native-authoring threshold) for orchestrating
-skills, because `icea-status` exercises none of the hard shapes D-4 turns on — runtime `$PLUGIN_DIR`
-reads, `scripts/*` execution, or sibling-skill invocation. **D-4 stays gated on Story 2's harder skills**
-(`icea-feature`,
-`icea-implement`, `migration`); this story records that explicitly and does not let a green
-`icea-status` run be mistaken for a D-4 resolution.
+**Honest scope of the evidence this spike produces (re-scoped per ICEA Revision #4, note (f)).** `icea-status` is a *best-case* pilot, not a representative one. Ground truth from the current source (`skills/icea-status/SKILL.md`): its only two `$PLUGIN_DIR` occurrences are **prose "see also" pointers** — a reference to a `business-context-severity.md` model it explicitly does NOT trigger, and a persona-lens pointer to `personas-spec.md`. It has **no executable `$PLUGIN_DIR` read**, **no `.claude/plugin-path.txt` resolver fast-path to strip**, **no `$PLUGIN_DIR/scripts/*` execution**, and **no sibling-skill invocation**. Therefore this spike proves ONLY two things: (1) the native-consumption mechanics (author once as L1 content, place into both harness native paths, residual-token guard — no delta-map, no projection engine) and (2) Copilot *discovery + execution* of a natively-placed L1 skill on VS Code ≥1.109. It does **NOT and CANNOT close D-4** (the native-authoring threshold) for orchestrating skills, because `icea-status` exercises none of the hard shapes D-4 turns on — runtime `$PLUGIN_DIR` reads, `scripts/*` execution, or sibling-skill invocation. **D-4 stays gated on Story 2's harder skills** (`icea-feature`, `icea-implement`, `migration`); this story records that explicitly and does not let a green `icea-status` run be mistaken for a D-4 resolution.
 
-**Copilot sibling-skill-invocation probe (now INFORMATIONAL — orchestration is review-time per ICEA #6).**
-Under the asymmetric-enforcement model adopted in #6, Copilot's critic/orchestration runs at **review
-time** as the GA `review-icea` code-review skill, which needs **NO inline sibling-skill invocation** — so
-whether Copilot can invoke a sibling skill inline is **no longer on the governance-critical path** (it
-does not decide whether Copilot is governed; the CI `ai-gate` required check does, per #6). The probe is
-therefore retained as **informational** data only: a minimal throwaway skill
-`Shared/skills/spike-sibling-probe/SKILL.md` whose only action is to `Read` the natively-placed `critic`
-SKILL.md and attempt to execute it inline, placed into both harnesses' native paths and invoked in
-Copilot. The outcome is recorded as PROVEN / UNPROVEN and fed forward as a **useful-but-non-blocking**
-input to Story 2's native-authoring decisions (and to D-4). It is *not* a gate on this story and — post
-#6 — no longer the hard governance question it was under the earlier "must project orchestrating skills"
-framing; the ICEA still lists sibling invocation as a Phase-1 check, and this probe supplies that
-evidence without treating a UNPROVEN result as a governance hole.
+**Copilot sibling-skill-invocation probe (now INFORMATIONAL — orchestration is review-time per ICEA #6).** Under the asymmetric-enforcement model adopted in #6, Copilot's critic/orchestration runs at **review time** as the GA `review-icea` code-review skill, which needs **NO inline sibling-skill invocation** — so whether Copilot can invoke a sibling skill inline is **no longer on the governance-critical path** (it does not decide whether Copilot is governed; the CI `ai-gate` required check does, per #6). The probe is therefore retained as **informational** data only: a minimal throwaway skill `Shared/skills/spike-sibling-probe/SKILL.md` whose only action is to `Read` the natively-placed `critic` SKILL.md and attempt to execute it inline, placed into both harnesses' native paths and invoked in Copilot. The outcome is recorded as PROVEN / UNPROVEN and fed forward as a **useful-but-non-blocking** input to Story 2's native-authoring decisions (and to D-4). It is *not* a gate on this story and — post #6 — no longer the hard governance question it was under the earlier "must project orchestrating skills" framing; the ICEA still lists sibling invocation as a Phase-1 check, and this probe supplies that evidence without treating a UNPROVEN result as a governance hole.
 
-**Shared-dependency strategy decision (propagates to all 32 skills in Story 2).** The relocated skill
-needs its two shared reference docs (`business-context-severity.md`, `personas-spec.md`). Two layouts
-were considered; the choice is made **now** because Story 2 replicates it across the fleet:
+**Shared-dependency strategy decision (propagates to all 32 skills in Story 2).** The relocated skill needs its two shared reference docs (`business-context-severity.md`, `personas-spec.md`). Two layouts were considered; the choice is made **now** because Story 2 replicates it across the fleet:
 
-- **A) Per-skill `_shared/` copies** — bundle a copy of each shared file inside every skill folder.
-  Rejected: with 32 skills sharing a handful of reference docs, this duplicates each shared file up to N
-  times, directly violating the ICEA success metric *"1 source of truth per artifact"* and creating
-  drift the epic exists to eliminate.
-- **B) A single `shared/` directory in L1** (`Shared/skills/shared/`, placed once into each harness's
-  native path at `.claude/skills/shared/` and `.github/skills/shared/`) that all skills read by a
-  project-relative path — **CHOSEN**. One L1 source, one copy per harness's native tree, no N-way
-  duplication — the same single-source-per-artifact property the L1 core exists to guarantee; still
-  self-contained (no runtime plugin dir) because the read is a project-relative sibling path, not
-  `$PLUGIN_DIR`.
+- **A) Per-skill `_shared/` copies** — bundle a copy of each shared file inside every skill folder. Rejected: with 32 skills sharing a handful of reference docs, this duplicates each shared file up to N times, directly violating the ICEA success metric *"1 source of truth per artifact"* and creating drift the epic exists to eliminate.
+- **B) A single `shared/` directory in L1** (`Shared/skills/shared/`, placed once into each harness's native path at `.claude/skills/shared/` and `.github/skills/shared/`) that all skills read by a project-relative path — **CHOSEN**. One L1 source, one copy per harness's native tree, no N-way duplication — the same single-source-per-artifact property the L1 core exists to guarantee; still self-contained (no runtime plugin dir) because the read is a project-relative sibling path, not `$PLUGIN_DIR`.
 
-So the work is: relocate `icea-status` into the L1 content core at `Shared/skills/icea-status/`; place
-its two shared reference docs **once** under `Shared/skills/shared/`; rewrite the skill's two prose
-`$PLUGIN_DIR/skills/shared/X` pointers to the project-relative `shared/X` location; author the minimal
-`spike-sibling-probe` skill; place the L1 content into both `.claude/skills/**` (Claude native path) and
-`.github/skills/**` (Copilot native path) with a small provisioning helper; then run in **both** Claude
-Code and VS Code Copilot ≥1.109 against a scratch fixture, confirming (a) identical `icea-status`
-behaviour with **zero** `$PLUGIN_DIR`/dangling-reference failures and (b) the informational sibling-probe
-PROVEN/UNPROVEN result. The placement here is a plain manual/scripted copy — Story 1 deliberately
-hard-codes the one skill and does **not** build any projection engine or delta-map (both RETIRED in #7);
-Story 2 decides the real per-harness native packaging on top of this single-`shared/` layout.
+So the work is: relocate `icea-status` into the L1 content core at `Shared/skills/icea-status/`; place its two shared reference docs **once** under `Shared/skills/shared/`; rewrite the skill's two prose `$PLUGIN_DIR/skills/shared/X` pointers to the project-relative `shared/X` location; author the minimal `spike-sibling-probe` skill; place the L1 content into both `.claude/skills/**` (Claude native path) and `.github/skills/**` (Copilot native path) with a small provisioning helper; then run in **both** Claude Code and VS Code Copilot ≥1.109 against a scratch fixture, confirming (a) identical `icea-status` behaviour with **zero** `$PLUGIN_DIR`/dangling-reference failures and (b) the informational sibling-probe PROVEN/UNPROVEN result. The placement here is a plain manual/scripted copy — Story 1 deliberately hard-codes the one skill and does **not** build any projection engine or delta-map (both RETIRED in #7); Story 2 decides the real per-harness native packaging on top of this single-`shared/` layout.
 
 ---
 
 ## AC Coverage Matrix
 
-Every AC in scope for this story must be covered by at least one file change; every file change must
-satisfy at least one AC. Gaps are flagged ⚠.
+Every AC in scope for this story must be covered by at least one file change; every file change must satisfy at least one AC. Gaps are flagged ⚠.
 
 ### AC → File mapping
 
@@ -129,12 +69,7 @@ satisfy at least one AC. Gaps are flagged ⚠.
 | `scripts/spike-project-skill.cjs` (one-shot native-placement helper + residual-token guard) | AC-F1 |
 | `temp/scratch-fixture/` (provisioned docs fixture the skill reports on) | AC-F1 |
 
-**Coverage result:** AC-F1 is covered by a self-contained L1 content item reading a single shared
-directory, placed into each harness's native path and CONSUMED natively in both tools (no mechanical
-projection). The AC-F2 sibling-invocation capability is covered *as an informational probe only* — under
-#6 it is no longer governance-critical (Copilot's critic is the review-time `review-icea` skill needing
-no inline sibling invocation); this story produces the PROVEN/UNPROVEN evidence and hands it forward as
-non-blocking input; it does not claim to resolve AC-F2 or D-4. No file change is orphaned. No gaps ✅.
+**Coverage result:** AC-F1 is covered by a self-contained L1 content item reading a single shared directory, placed into each harness's native path and CONSUMED natively in both tools (no mechanical projection). The AC-F2 sibling-invocation capability is covered *as an informational probe only* — under #6 it is no longer governance-critical (Copilot's critic is the review-time `review-icea` skill needing no inline sibling invocation); this story produces the PROVEN/UNPROVEN evidence and hands it forward as non-blocking input; it does not claim to resolve AC-F2 or D-4. No file change is orphaned. No gaps ✅.
 
 ---
 
@@ -160,33 +95,17 @@ Real plugin paths. Change column: `+` new, `~` modified. There is no database, s
 
 No external/HTTP API. The skill's interface surface is its invocation contract and its file reads:
 
-- **Invocation (Claude Code):** `/icea-status ADO-9999` or the bare keyword `STATUS ADO-9999`. Claude
-  Code auto-discovers the skill from the project `.claude/skills/icea-status/` path — no plugin dir, no
-  registry lookup.
-- **Invocation (VS Code Copilot ≥1.109):** the skill is discovered from `.github/skills/icea-status/`
-  (Copilot native path) and invoked as an agent skill from the chat surface. Same SKILL.md content,
-  same reported output.
-- **Reads (project-relative only):** (a) the **single** L1 shared references placed at
-  `shared/business-context-severity.md` and `shared/personas-spec.md` — one copy per harness native tree,
-  not a per-skill duplicate; (b) the target project's `docs/**` tree via `find docs …` from the project root.
-  It reads **nothing** outside the project tree — no `$PLUGIN_DIR`, no `~/.claude`, no
-  `plugin-path.txt`, no `installed_plugins.json`.
-- **Sibling-probe interface:** `spike-sibling-probe` reads `../critic/SKILL.md` (project-relative) and
-  attempts inline execution — the *only* skill in this story exercising sibling invocation, and only to
-  gather informational Copilot-support data (non-blocking post #6, where Copilot orchestration is
-  review-time via `review-icea`, not inline sibling invocation).
+- **Invocation (Claude Code):** `/icea-status ADO-9999` or the bare keyword `STATUS ADO-9999`. Claude Code auto-discovers the skill from the project `.claude/skills/icea-status/` path — no plugin dir, no registry lookup.
+- **Invocation (VS Code Copilot ≥1.109):** the skill is discovered from `.github/skills/icea-status/` (Copilot native path) and invoked as an agent skill from the chat surface. Same SKILL.md content, same reported output.
+- **Reads (project-relative only):** (a) the **single** L1 shared references placed at `shared/business-context-severity.md` and `shared/personas-spec.md` — one copy per harness native tree, not a per-skill duplicate; (b) the target project's `docs/**` tree via `find docs …` from the project root. It reads **nothing** outside the project tree — no `$PLUGIN_DIR`, no `~/.claude`, no `plugin-path.txt`, no `installed_plugins.json`.
+- **Sibling-probe interface:** `spike-sibling-probe` reads `../critic/SKILL.md` (project-relative) and attempts inline execution — the *only* skill in this story exercising sibling invocation, and only to gather informational Copilot-support data (non-blocking post #6, where Copilot orchestration is review-time via `review-icea`, not inline sibling invocation).
 - **Writes:** none. `icea-status` is read-only reporting, so the Write Gate is never engaged.
 
 ---
 
 ## Auth & Security
 
-No new concerns beyond the epic-level Governance & Security section of `temp/ADO-4000-tech.md`. This
-story adds no approval path, no data-egress path, and no model call — it relocates and projects a
-read-only reporting skill plus a throwaway probe. The one security-relevant property it must preserve:
-the scratch fixture is **synthetic** (no real privileged/PII/secret material), consistent with the ICEA
-eval-fixtures assumption, so exercising the skill in Copilot's cloud/`Auto` boundary during the spike
-cannot leak privileged context.
+No new concerns beyond the epic-level Governance & Security section of `temp/ADO-4000-tech.md`. This story adds no approval path, no data-egress path, and no model call — it relocates and projects a read-only reporting skill plus a throwaway probe. The one security-relevant property it must preserve: the scratch fixture is **synthetic** (no real privileged/PII/secret material), consistent with the ICEA eval-fixtures assumption, so exercising the skill in Copilot's cloud/`Auto` boundary during the spike cannot leak privileged context.
 
 ---
 
@@ -213,10 +132,7 @@ cannot leak privileged context.
 | AC-F1 (both-tools run) + AC-F2 (informational probe run) | Provision scratch repo; run `icea-status` in Claude Code and VS Code Copilot ≥1.109; diff outputs; run the sibling-probe in Copilot and record PROVEN/UNPROVEN; record evidence (D-4 stays open) | 1 |
 | **Total** | | **3** |
 
-**Total SP: 3**
-**Type: STORY** — a single shippable slice delivering one verifiable outcome (one skill self-contained
-and proven in both tools, plus the informational sibling-invocation probe evidence). It is well within the
-≤5-SP rule and does not sub-decompose.
+**Total SP: 3** **Type: STORY** — a single shippable slice delivering one verifiable outcome (one skill self-contained and proven in both tools, plus the informational sibling-invocation probe evidence). It is well within the ≤5-SP rule and does not sub-decompose.
 
 ---
 
@@ -226,25 +142,17 @@ The developer must tick every item before raising the PR.
 
 **Implementation**
 - [ ] All files created/modified as specified in the Files Changed section.
-- [ ] `Shared/skills/icea-status/SKILL.md` contains **zero** `$PLUGIN_DIR`, `plugin-path.txt`,
-      `installed_plugins.json`, `../` (except the deliberate sibling-probe read), or bare
-      `references/`/`skills/shared/` tokens.
-- [ ] The two shared references live ONCE under `Shared/skills/shared/` (single-source strategy B),
-      NOT copied per-skill, and are read by a project-relative `shared/` path.
-- [ ] `spike-sibling-probe` is authored, placed into both harnesses' native paths, and its
-      `../critic/SKILL.md` read is project-relative.
-- [ ] No hardcoded secrets, credentials, or absolute machine paths anywhere in the relocated skill or
-      the projection helper.
+- [ ] `Shared/skills/icea-status/SKILL.md` contains **zero** `$PLUGIN_DIR`, `plugin-path.txt`, `installed_plugins.json`, `../` (except the deliberate sibling-probe read), or bare `references/`/`skills/shared/` tokens.
+- [ ] The two shared references live ONCE under `Shared/skills/shared/` (single-source strategy B), NOT copied per-skill, and are read by a project-relative `shared/` path.
+- [ ] `spike-sibling-probe` is authored, placed into both harnesses' native paths, and its `../critic/SKILL.md` read is project-relative.
+- [ ] No hardcoded secrets, credentials, or absolute machine paths anywhere in the relocated skill or the projection helper.
 - [ ] The scratch fixture under `temp/scratch-fixture/` is synthetic (no real privileged/PII/secret data).
-- [ ] `scripts/spike-project-skill.cjs` follows the Script Execution Transparency rule (its five points
-      shown to the developer before it is run).
+- [ ] `scripts/spike-project-skill.cjs` follows the Script Execution Transparency rule (its five points shown to the developer before it is run).
 
 **Quality**
 - [ ] All positive and negative test cases pass — see Test Cases section.
-- [ ] The both-tools integration test (INT-1) passes: identical `icea-status` behaviour in Claude Code
-      and VS Code Copilot ≥1.109, zero `$PLUGIN_DIR`/dangling-reference failures.
-- [ ] The informational sibling-invocation probe (INT-3) has a recorded PROVEN or UNPROVEN result; if
-      UNPROVEN it is written into the D-4 note and the Story-2 input checklist (non-blocking post #6).
+- [ ] The both-tools integration test (INT-1) passes: identical `icea-status` behaviour in Claude Code and VS Code Copilot ≥1.109, zero `$PLUGIN_DIR`/dangling-reference failures.
+- [ ] The informational sibling-invocation probe (INT-3) has a recorded PROVEN or UNPROVEN result; if UNPROVEN it is written into the D-4 note and the Story-2 input checklist (non-blocking post #6).
 - [ ] Regression: the original `skills/icea-status/SKILL.md` is left unchanged and still works on Claude.
 
 **Review readiness**
@@ -254,18 +162,12 @@ The developer must tick every item before raising the PR.
 
 ### Reviewer Checklist
 
-- [ ] The relocated skill reads **only** project-relative paths — verified by inspecting every Read
-      instruction in `Shared/skills/icea-status/SKILL.md`.
-- [ ] The two shared docs appear ONCE under `Shared/skills/shared/` — confirm there is no per-skill
-      `_shared/` duplicate (single-source metric upheld for Story 2).
-- [ ] The projection helper's grep guard actually fails on a planted `$PLUGIN_DIR` token (guard is not a
-      no-op) — confirm by a quick tamper check.
-- [ ] Both native trees (`.claude/skills`, `.github/skills`) are byte-identical to the `Shared/skills` L1
-      source, including a single shared `shared/` dir in each.
-- [ ] The Overview's honest-scope statement is intact: reviewer confirms the PR does NOT claim D-4 is
-      closed and does NOT claim sibling invocation works unless the probe PROVED it.
-- [ ] The both-tools run evidence (two `icea-status` outputs + a diff) and the sibling-probe
-      PROVEN/UNPROVEN record are attached to the PR.
+- [ ] The relocated skill reads **only** project-relative paths — verified by inspecting every Read instruction in `Shared/skills/icea-status/SKILL.md`.
+- [ ] The two shared docs appear ONCE under `Shared/skills/shared/` — confirm there is no per-skill `_shared/` duplicate (single-source metric upheld for Story 2).
+- [ ] The projection helper's grep guard actually fails on a planted `$PLUGIN_DIR` token (guard is not a no-op) — confirm by a quick tamper check.
+- [ ] Both native trees (`.claude/skills`, `.github/skills`) are byte-identical to the `Shared/skills` L1 source, including a single shared `shared/` dir in each.
+- [ ] The Overview's honest-scope statement is intact: reviewer confirms the PR does NOT claim D-4 is closed and does NOT claim sibling invocation works unless the probe PROVED it.
+- [ ] The both-tools run evidence (two `icea-status` outputs + a diff) and the sibling-probe PROVEN/UNPROVEN record are attached to the PR.
 - [ ] No new external dependency, no third-party library, no `.gitignore`/CI change introduced by the spike.
 
 ---
@@ -317,8 +219,7 @@ BOTH-TOOLS RUN (the AC-F1 proof — L1 consumed natively by both — + informati
       -> record PROVEN (it ran) or UNPROVEN (it did not / not supported) -> carry to Story 2 / D-4.
 ```
 
-No network or DB tiers are involved; the skills run in-process in each harness and touch only the
-project tree.
+No network or DB tiers are involved; the skills run in-process in each harness and touch only the project tree.
 
 ---
 
@@ -327,59 +228,29 @@ project tree.
 **Schema migrations:** None — this story is code/config only and purely additive to new paths.
 
 **Story-level rollback (git-based):**
-1. The story lands as a commit range on `feature/4.x-multi-harness`; the frozen `v3.13.0` tag and
-   untouched `main` remain the Claude-only fallback.
-2. Revert the story's commit range (`git revert <range>` or drop the branch commits) to remove
-   `Shared/skills/icea-status/`, `Shared/skills/shared/`, `Shared/skills/spike-sibling-probe/`,
-   `scripts/spike-project-skill.cjs`, and the two projected trees. The original
-   `skills/icea-status/SKILL.md` was never modified, so Claude behaviour returns to 3.x exactly.
-3. Delete the throwaway `spike-sibling-probe` and `temp/scratch-fixture/` (both temp/spike-only, not
-   product paths).
+1. The story lands as a commit range on `feature/4.x-multi-harness`; the frozen `v3.13.0` tag and untouched `main` remain the Claude-only fallback.
+2. Revert the story's commit range (`git revert <range>` or drop the branch commits) to remove `Shared/skills/icea-status/`, `Shared/skills/shared/`, `Shared/skills/spike-sibling-probe/`, `scripts/spike-project-skill.cjs`, and the two projected trees. The original `skills/icea-status/SKILL.md` was never modified, so Claude behaviour returns to 3.x exactly.
+3. Delete the throwaway `spike-sibling-probe` and `temp/scratch-fixture/` (both temp/spike-only, not product paths).
 4. Verify: original `/icea-status` still runs on Claude via the unmodified `skills/icea-status/` copy.
 
-Nothing in this story is irreversible: no shared per-repo file (e.g. `.vscode/settings.json`) is touched
-here — that arrives in Story 5.
+Nothing in this story is irreversible: no shared per-repo file (e.g. `.vscode/settings.json`) is touched here — that arrives in Story 5.
 
 ---
 
 ## Handover
 
 ### QA Team
-**What was added:** one existing read-only skill (`icea-status`) relocated to `Shared/skills/`, made
-self-contained (no runtime plugin dir; single shared `shared/` dir), projected into both
-`.claude/skills` and `.github/skills`; plus a throwaway sibling-invocation probe.
-**How to test manually:** provision the scratch fixture, then invoke `STATUS ADO-9999` in Claude Code
-and invoke the `icea-status` skill in VS Code Copilot ≥1.109; the two reports must match and neither may
-raise a `$PLUGIN_DIR`/dangling-reference error. Then invoke the sibling-probe in Copilot and record
-whether it executed the sibling. **Test data:** synthetic scratch fixture only
-(`temp/scratch-fixture/`) — no real privileged/PII/secret material. **Regression risk:** low — the
-original skill copy is untouched; the only risk is the projected copy silently reading the wrong path,
-which INT-1 catches by diffing outputs.
+**What was added:** one existing read-only skill (`icea-status`) relocated to `Shared/skills/`, made self-contained (no runtime plugin dir; single shared `shared/` dir), projected into both `.claude/skills` and `.github/skills`; plus a throwaway sibling-invocation probe. **How to test manually:** provision the scratch fixture, then invoke `STATUS ADO-9999` in Claude Code and invoke the `icea-status` skill in VS Code Copilot ≥1.109; the two reports must match and neither may raise a `$PLUGIN_DIR`/dangling-reference error. Then invoke the sibling-probe in Copilot and record whether it executed the sibling. **Test data:** synthetic scratch fixture only (`temp/scratch-fixture/`) — no real privileged/PII/secret material. **Regression risk:** low — the original skill copy is untouched; the only risk is the projected copy silently reading the wrong path, which INT-1 catches by diffing outputs.
 
 ### DevOps / Platform Team
 - No CI pipeline change, no new secret, no new environment variable, no new HTTP client in this story.
-- New one-shot helper `scripts/spike-project-skill.cjs` is run manually during the spike; it performs
-  only local file copies and greps — no network calls, no git operations, no registry changes.
-- The projected `.claude/skills/` and `.github/skills/` trees are committed on the feature branch; the
-  general provisioning integration (harness selection, manifest) is Story 8, not this story.
+- New one-shot helper `scripts/spike-project-skill.cjs` is run manually during the spike; it performs only local file copies and greps — no network calls, no git operations, no registry changes.
+- The projected `.claude/skills/` and `.github/skills/` trees are committed on the feature branch; the general provisioning integration (harness selection, manifest) is Story 8, not this story.
 
 ### Future Developer — Follow-on Work
-- Story 2 establishes the shared **L1 content core** (`Shared/`: ICEA method+templates, rules, B1–B7
-  taxonomy, checker knowledge, gate) across all 32 skills with the **CI guardrail** (Copilot must not
-  re-author an L1 standard) and the **prompt-version manifest + CHANGELOG + CI bump/hash check** (AC-F9),
-  and removes the old `$PLUGIN_DIR` copies fleet-wide. There is **no projection engine or delta-map** to
-  generalise (both RETIRED in #7) — L2/L3 are authored **natively** per harness on top of the L1 core.
-  Reuse the grep-guard logic from `scripts/spike-project-skill.cjs` as the residual-token check, and
-  reuse the **single `shared/` directory** layout decided here (strategy B) — do NOT introduce per-skill
-  `_shared/` copies.
-- **D-4 is NOT closed by this story.** A green `icea-status` run proves only native L1 consumption +
-  Copilot discovery + no-`$PLUGIN_DIR`. D-4 (native-authoring threshold for orchestrating skills) must be
-  decided against Story 2's hard skills — `icea-feature`, `icea-implement`, `migration` — which actually
-  exercise `$PLUGIN_DIR` execution, `scripts/*`, and sibling invocation. Carry the informational
-  sibling-probe PROVEN/UNPROVEN result in as one non-blocking input (post #6 it is not the decisive
-  factor — Copilot orchestration is review-time via `review-icea`).
-- To add another spike skill later, copy it into `Shared/skills/<name>/` (L1), point its shared reads at
-  the single `shared/` dir, and re-run the placement helper.
+- Story 2 establishes the shared **L1 content core** (`Shared/`: ICEA method+templates, rules, B1–B7 taxonomy, checker knowledge, gate) across all 32 skills with the **CI guardrail** (Copilot must not re-author an L1 standard) and the **prompt-version manifest + CHANGELOG + CI bump/hash check** (AC-F9), and removes the old `$PLUGIN_DIR` copies fleet-wide. There is **no projection engine or delta-map** to generalise (both RETIRED in #7) — L2/L3 are authored **natively** per harness on top of the L1 core. Reuse the grep-guard logic from `scripts/spike-project-skill.cjs` as the residual-token check, and reuse the **single `shared/` directory** layout decided here (strategy B) — do NOT introduce per-skill `_shared/` copies.
+- **D-4 is NOT closed by this story.** A green `icea-status` run proves only native L1 consumption + Copilot discovery + no-`$PLUGIN_DIR`. D-4 (native-authoring threshold for orchestrating skills) must be decided against Story 2's hard skills — `icea-feature`, `icea-implement`, `migration` — which actually exercise `$PLUGIN_DIR` execution, `scripts/*`, and sibling invocation. Carry the informational sibling-probe PROVEN/UNPROVEN result in as one non-blocking input (post #6 it is not the decisive factor — Copilot orchestration is review-time via `review-icea`).
+- To add another spike skill later, copy it into `Shared/skills/<name>/` (L1), point its shared reads at the single `shared/` dir, and re-run the placement helper.
 
 ---
 

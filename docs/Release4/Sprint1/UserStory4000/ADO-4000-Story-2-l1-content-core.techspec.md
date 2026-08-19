@@ -19,60 +19,23 @@ Status: DRAFT · STORY · 4 SP
 
 ## Overview
 
-This story establishes the **shared content core (Layer 1)** for the whole multi-harness epic. Per ICEA
-Revision Log 2026-08-14 #7, the earlier projection-engine design is **RETIRED**: there is no
-`.claude/skills`↔`.github/skills` mechanical transform, no `delta-map.json`, and no per-skill override
-loader. The Copilot side is designed **natively** to its strengths (Story 5+), not mechanically projected
-from a Claude shape. Story 2 therefore delivers **content and its governance rails**, not a transform.
+This story establishes the **shared content core (Layer 1)** for the whole multi-harness epic. Per ICEA Revision Log 2026-08-14 #7, the earlier projection-engine design is **RETIRED**: there is no `.claude/skills`↔`.github/skills` mechanical transform, no `delta-map.json`, and no per-skill override loader. The Copilot side is designed **natively** to its strengths (Story 5+), not mechanically projected from a Claude shape. Story 2 therefore delivers **content and its governance rails**, not a transform.
 
-Concretely it delivers four pieces: (1) the **L1 content core** under `Shared/` — the single, harness-
-independent source of the ICEA + Tech-Spec method, templates, and critic rubric (`Shared/icea/`); the
-coding standards and the B1–B7 business-context taxonomy and decision/consent specs (`Shared/rules/`); the
-code-review + security **checker knowledge** and the architecture/graph generator knowledge
-(`Shared/knowledge/`); and the harness-independent `ai-gate` floor scaffold (`Shared/gate/`). (2) The
-**runtime `$PLUGIN_DIR` retirement** so that L1 content is read by explicit, project-relative path rather
-than resolved at runtime — a large, multi-shape footprint (see Sizing), not a one-line strip. (3) The
-**prompt-artifact versioning system** (AC-F9): a `Shared/prompt-manifest.json` recording
-`{version, sha256, consumes}` for every prompt artifact, a `Shared/CHANGELOG.md`, and a **CI bump-on-change
-check** that fails any PR where an artifact's on-disk content hash differs from the manifest without a
-version bump. (4) The **CI re-author guardrail** (AC-F2): a check that fails any PR where the `Copilot/`
-side *re-authors* an L1 standard — the `Claude/` and `Copilot/` engagement layers must **re-deliver, never
-re-author** L1; forking a standard into two copies is a build failure.
+Concretely it delivers four pieces: (1) the **L1 content core** under `Shared/` — the single, harness- independent source of the ICEA + Tech-Spec method, templates, and critic rubric (`Shared/icea/`); the coding standards and the B1–B7 business-context taxonomy and decision/consent specs (`Shared/rules/`); the code-review + security **checker knowledge** and the architecture/graph generator knowledge (`Shared/knowledge/`); and the harness-independent `ai-gate` floor scaffold (`Shared/gate/`). (2) The **runtime `$PLUGIN_DIR` retirement** so that L1 content is read by explicit, project-relative path rather than resolved at runtime — a large, multi-shape footprint (see Sizing), not a one-line strip. (3) The **prompt-artifact versioning system** (AC-F9): a `Shared/prompt-manifest.json` recording `{version, sha256, consumes}` for every prompt artifact, a `Shared/CHANGELOG.md`, and a **CI bump-on-change check** that fails any PR where an artifact's on-disk content hash differs from the manifest without a version bump. (4) The **CI re-author guardrail** (AC-F2): a check that fails any PR where the `Copilot/` side *re-authors* an L1 standard — the `Claude/` and `Copilot/` engagement layers must **re-deliver, never re-author** L1; forking a standard into two copies is a build failure.
 
-The governing principle is **single source, native consumption**. L1 is authored once in `Shared/` and is
-never duplicated: `Claude/` (native, ≈ the v3.13 plugin) and `Copilot/` (native, redesigned per harness)
-**CONSUME** it — they reference/re-deliver L1 content, they do not re-author it. There is no derived
-artifact to keep in sync, so there is no drift to prevent by transform; drift is prevented by the CI
-guardrail + the version manifest instead. Rollback for every piece is git-based (the transform is not a
-concern because there is no transform). A **parity check** confirms the Claude Tier-A write-time gate
-(`icea-floor` `exit 2` on an un-approved Write — the file-string floor per AC-NF1, not the authoritative
-approval decision) is byte-for-byte unchanged after the `$PLUGIN_DIR` retirement (AC-NF4).
+The governing principle is **single source, native consumption**. L1 is authored once in `Shared/` and is never duplicated: `Claude/` (native, ≈ the v3.13 plugin) and `Copilot/` (native, redesigned per harness) **CONSUME** it — they reference/re-deliver L1 content, they do not re-author it. There is no derived artifact to keep in sync, so there is no drift to prevent by transform; drift is prevented by the CI guardrail + the version manifest instead. Rollback for every piece is git-based (the transform is not a concern because there is no transform). A **parity check** confirms the Claude Tier-A write-time gate (`icea-floor` `exit 2` on an un-approved Write — the file-string floor per AC-NF1, not the authoritative approval decision) is byte-for-byte unchanged after the `$PLUGIN_DIR` retirement (AC-NF4).
 
-Developer picking this up cold: start at the `Shared/` tree (the L1 content), then
-`scripts/check-prompt-versions.cjs` (the bump-on-change + manifest hash check) and
-`scripts/check-l1-reauthor.cjs` (the re-author guardrail), then `scripts/lint-self-containment.cjs` (the
-`$PLUGIN_DIR` retirement lint).
+Developer picking this up cold: start at the `Shared/` tree (the L1 content), then `scripts/check-prompt-versions.cjs` (the bump-on-change + manifest hash check) and `scripts/check-l1-reauthor.cjs` (the re-author guardrail), then `scripts/lint-self-containment.cjs` (the `$PLUGIN_DIR` retirement lint).
 
-**Versioning scheme (AC-F9).** L1 artifacts (where a downstream harness branches on their output shape)
-carry **SemVer** in frontmatter — MAJOR = output-shape/behaviour change, MINOR = additive, PATCH = wording;
-plus a `consumes:` pin listing the L1 versions a consumer depends on. L2 artifacts (per-harness engagement
-bodies, authored in later stories) carry a simple `v1/v2` counter plus a `Shared/CHANGELOG.md` entry rather
-than full SemVer. `Shared/prompt-manifest.json` records `{version, sha256, consumes}` per artifact; the CI
-check recomputes each on-disk `sha256` and fails the PR if content changed without a matching version bump
-(hash ≠ manifest). Rollback of an L1 change = pin the prior L1 version via its git tag; a consumer's
-`consumes:` pin makes the dependency explicit and auditable.
+**Versioning scheme (AC-F9).** L1 artifacts (where a downstream harness branches on their output shape) carry **SemVer** in frontmatter — MAJOR = output-shape/behaviour change, MINOR = additive, PATCH = wording; plus a `consumes:` pin listing the L1 versions a consumer depends on. L2 artifacts (per-harness engagement bodies, authored in later stories) carry a simple `v1/v2` counter plus a `Shared/CHANGELOG.md` entry rather than full SemVer. `Shared/prompt-manifest.json` records `{version, sha256, consumes}` per artifact; the CI check recomputes each on-disk `sha256` and fails the PR if content changed without a matching version bump (hash ≠ manifest). Rollback of an L1 change = pin the prior L1 version via its git tag; a consumer's `consumes:` pin makes the dependency explicit and auditable.
 
-**What is NOT in this story.** No `Claude/`-side or `Copilot/`-side engagement bodies are authored here
-(those are native, per-harness, later stories) — Story 2 only lays down the L1 content they will consume
-plus the two CI guardrails and the version manifest that police that consumption. The projection engine,
-delta-map, and override loader from the prior draft are **deleted from scope**, not merely descoped.
+**What is NOT in this story.** No `Claude/`-side or `Copilot/`-side engagement bodies are authored here (those are native, per-harness, later stories) — Story 2 only lays down the L1 content they will consume plus the two CI guardrails and the version manifest that police that consumption. The projection engine, delta-map, and override loader from the prior draft are **deleted from scope**, not merely descoped.
 
 ---
 
 ## AC Coverage Matrix
 
-Every AC in scope must be covered by at least one file change; every file change must satisfy at least one
-AC. Gaps are flagged ⚠.
+Every AC in scope must be covered by at least one file change; every file change must satisfy at least one AC. Gaps are flagged ⚠.
 
 ### AC → File mapping
 
@@ -115,11 +78,7 @@ AC. Gaps are flagged ⚠.
 | `scripts/verify-parity.cjs` (Claude write-time floor parity harness) | AC-NF4 |
 | `.github/workflows/ai-gate.yml` (wires the two CI checks; logic owned here, distribution by Story 8) | AC-F2, AC-F9 |
 
-**Coverage result:** all in-scope ACs covered (AC-F2 L1-core + re-author guardrail + `$PLUGIN_DIR`
-retirement; AC-F9 versioning; AC-NF4 parity), no orphaned file changes ✅. Other epic ACs (AC-F1, F3–F8,
-NF1–NF3, NF5–NF7) are owned by other stories per the epic rollup matrix and are out of scope here. Note:
-the Phase-1 self-containment spike (AC-F1) remains a precondition for relocating skill knowledge into
-`Shared/`.
+**Coverage result:** all in-scope ACs covered (AC-F2 L1-core + re-author guardrail + `$PLUGIN_DIR` retirement; AC-F9 versioning; AC-NF4 parity), no orphaned file changes ✅. Other epic ACs (AC-F1, F3–F8, NF1–NF3, NF5–NF7) are owned by other stories per the epic rollup matrix and are out of scope here. Note: the Phase-1 self-containment spike (AC-F1) remains a precondition for relocating skill knowledge into `Shared/`.
 
 ---
 
@@ -158,8 +117,7 @@ the Phase-1 self-containment spike (AC-F1) remains a precondition for relocating
 
 ## API Changes — CI check CLI + manifest/guardrail data contracts
 
-No HTTP API (plugin runs in-process). The "API" here is the CLI surface of the CI scripts and the data
-contracts (`prompt-manifest.json`, `l1-standards.json`) that later stories and CI call.
+No HTTP API (plugin runs in-process). The "API" here is the CLI surface of the CI scripts and the data contracts (`prompt-manifest.json`, `l1-standards.json`) that later stories and CI call.
 
 **CLI:**
 
@@ -194,9 +152,7 @@ contracts (`prompt-manifest.json`, `l1-standards.json`) that later stories and C
 }
 ```
 
-L1 entries carry SemVer; L2 entries (added by later stories) carry a `v1/v2` string plus a required
-`CHANGELOG.md` line. `consumes:` lists the `path@version` of each L1 artifact the entry depends on, so a
-downstream bump is traceable.
+L1 entries carry SemVer; L2 entries (added by later stories) carry a `v1/v2` string plus a required `CHANGELOG.md` line. `consumes:` lists the `path@version` of each L1 artifact the entry depends on, so a downstream bump is traceable.
 
 **`Shared/guardrail/l1-standards.json` data contract (AC-F2):**
 
@@ -210,13 +166,9 @@ downstream bump is traceable.
 }
 ```
 
-The re-author guardrail flags a `Copilot/`/`Claude/` file whose content substantially reproduces a
-`canonical` L1 standard body (a fork), while allowing an explicit reference/re-delivery. The exact
-fork-detection heuristic (fingerprint overlap threshold vs an explicit reference marker) is decided inline
-at implement time per the decision-transparency rule and documented in `check-l1-reauthor.cjs`.
+The re-author guardrail flags a `Copilot/`/`Claude/` file whose content substantially reproduces a `canonical` L1 standard body (a fork), while allowing an explicit reference/re-delivery. The exact fork-detection heuristic (fingerprint overlap threshold vs an explicit reference marker) is decided inline at implement time per the decision-transparency rule and documented in `check-l1-reauthor.cjs`.
 
-**Frontmatter version contract (AC-F9):** every L1 prompt artifact carries `version:` (SemVer) and, where
-it depends on other L1 content, a `consumes:` list. Example:
+**Frontmatter version contract (AC-F9):** every L1 prompt artifact carries `version:` (SemVer) and, where it depends on other L1 content, a `consumes:` list. Example:
 
 ```
 ---
@@ -232,24 +184,9 @@ consumes:
 
 No auth layer in this story. Two security-relevant properties:
 
-**(1) Regression parity (AC-NF4).** The `$PLUGIN_DIR` retirement must not weaken the Claude enforcement
-path. Per revised AC-NF1, the Claude Tier-A `icea-floor` hook remains a fast file-string floor (the
-authoritative approval decision moves to Tier C in Story 6); this story must keep that write-time floor
-byte-for-byte unchanged. `scripts/verify-parity.cjs` asserts the Tier-A `icea-floor` hook still `exit
-2`-blocks a Write with no approved ICEA, pre- and post-retirement. Any behaviour change must be an
-explicit, called-out decision, not smuggled under "unchanged" (AC-NF4). No secrets are read, written, or
-placed in model context by any script here; they read `Shared/**` + config and write only the manifest.
+**(1) Regression parity (AC-NF4).** The `$PLUGIN_DIR` retirement must not weaken the Claude enforcement path. Per revised AC-NF1, the Claude Tier-A `icea-floor` hook remains a fast file-string floor (the authoritative approval decision moves to Tier C in Story 6); this story must keep that write-time floor byte-for-byte unchanged. `scripts/verify-parity.cjs` asserts the Tier-A `icea-floor` hook still `exit 2`-blocks a Write with no approved ICEA, pre- and post-retirement. Any behaviour change must be an explicit, called-out decision, not smuggled under "unchanged" (AC-NF4). No secrets are read, written, or placed in model context by any script here; they read `Shared/**` + config and write only the manifest.
 
-**(2) Content-governance guardrails (AC-F2 + AC-F9) prevent silent standard drift.** The core security
-stance of the L1 model is that a standard lives in exactly ONE place. The **re-author guardrail**
-(`check-l1-reauthor.cjs`) makes a forked/duplicated standard a build failure, so a `Copilot/`-side author
-cannot silently diverge the coding rules or the B1–B7 taxonomy from the canonical L1 copy — closing the
-"two divergent toolchains" governance gap the epic exists to solve. The **bump-on-change check**
-(`check-prompt-versions.cjs`) makes an un-versioned change to a governed prompt a build failure, so every
-change to a standard, template, or critic rubric is traceable to a version and (for L2) a CHANGELOG entry —
-the foundation the Story-7 provenance stamp builds on. Both checks are fail-closed and un-bypassable at
-merge once wired as required checks (Story 8). The B1–B7 taxonomy's single canonical location is fixed here
-(`Shared/rules/business-context-severity.md`) — later stories reference it, never re-bundle it.
+**(2) Content-governance guardrails (AC-F2 + AC-F9) prevent silent standard drift.** The core security stance of the L1 model is that a standard lives in exactly ONE place. The **re-author guardrail** (`check-l1-reauthor.cjs`) makes a forked/duplicated standard a build failure, so a `Copilot/`-side author cannot silently diverge the coding rules or the B1–B7 taxonomy from the canonical L1 copy — closing the "two divergent toolchains" governance gap the epic exists to solve. The **bump-on-change check** (`check-prompt-versions.cjs`) makes an un-versioned change to a governed prompt a build failure, so every change to a standard, template, or critic rubric is traceable to a version and (for L2) a CHANGELOG entry — the foundation the Story-7 provenance stamp builds on. Both checks are fail-closed and un-bypassable at merge once wired as required checks (Story 8). The B1–B7 taxonomy's single canonical location is fixed here (`Shared/rules/business-context-severity.md`) — later stories reference it, never re-bundle it.
 
 ---
 
@@ -274,25 +211,15 @@ merge once wired as required checks (Story 8). The B1–B7 taxonomy's single can
 > fork; the implementer picks one per the decision-transparency rule and documents it inline. Default lean:
 > (A) for skill-local scripts, (B) only for genuinely shared infra scripts.
 
-All failures are loud and non-zero-exit (fail-closed) — consistent with the epic's "fails loudly, never
-proceeds leaving a broken/ambiguous state" principle.
+All failures are loud and non-zero-exit (fail-closed) — consistent with the epic's "fails loudly, never proceeds leaving a broken/ambiguous state" principle.
 
 ---
 
 ## Sizing and Story Breakdown
 
-Per ICEA Revision Log 2026-08-14 #7/#8, Story 2 is re-scoped from a projection engine to **"establish the
-L1 core + versioning + guardrail."** The projection engine, delta-map, and per-skill override loader are
-**deleted from scope** — that machinery no longer exists in the design. What remains and grows is the L1
-content consolidation, the `$PLUGIN_DIR` retirement, and the two new CI guardrails + version manifest
-(AC-F9).
+Per ICEA Revision Log 2026-08-14 #7/#8, Story 2 is re-scoped from a projection engine to **"establish the L1 core + versioning + guardrail."** The projection engine, delta-map, and per-skill override loader are **deleted from scope** — that machinery no longer exists in the design. What remains and grows is the L1 content consolidation, the `$PLUGIN_DIR` retirement, and the two new CI guardrails + version manifest (AC-F9).
 
-The `$PLUGIN_DIR` retirement is still NOT a 1–2 SP strip. Verified footprint: **~531 references across ~53
-files in 4 SHAPES** — (a) a skill's own `references/` reads, (b) sibling-skill inline exec, (c) `$PLUGIN_DIR/
-scripts/*.cjs` executions (scripts outside `Shared/`), (d) the resolver spec doc. Retirement is split BY
-SHAPE. Because there is no transform/override/rollout-gate machinery to build, the engineering surface
-shrinks relative to the prior draft, but the **new AC-F9 versioning system + the re-author guardrail** add
-back roughly the removed weight — netting to ~4 SP.
+The `$PLUGIN_DIR` retirement is still NOT a 1–2 SP strip. Verified footprint: **~531 references across ~53 files in 4 SHAPES** — (a) a skill's own `references/` reads, (b) sibling-skill inline exec, (c) `$PLUGIN_DIR/ scripts/*.cjs` executions (scripts outside `Shared/`), (d) the resolver spec doc. Retirement is split BY SHAPE. Because there is no transform/override/rollout-gate machinery to build, the engineering surface shrinks relative to the prior draft, but the **new AC-F9 versioning system + the re-author guardrail** add back roughly the removed weight — netting to ~4 SP.
 
 | AC group | Work | SP |
 |---|---|---|
@@ -303,15 +230,9 @@ back roughly the removed weight — netting to ~4 SP.
 | AC-NF4 (parity) | `verify-parity.cjs` Claude write-time floor parity harness | 0.5 |
 | **Total** | | **~5** |
 
-**Total SP: ~4** (target size per ICEA #7/#8). The table rows sum to ~5 raw effort; consolidating the L1
-content and the versioning frontmatter overlaps with the same file passes (adding `version:` while
-relocating a file is one edit, not two), so the realistic net is **~4 SP**. This is now a single, shippable
-≤5-SP story and **does not sub-decompose** — the deleted projection/override/rollout-gate machinery was the
-source of the earlier oversizing.
+**Total SP: ~4** (target size per ICEA #7/#8). The table rows sum to ~5 raw effort; consolidating the L1 content and the versioning frontmatter overlaps with the same file passes (adding `version:` while relocating a file is one edit, not two), so the realistic net is **~4 SP**. This is now a single, shippable ≤5-SP story and **does not sub-decompose** — the deleted projection/override/rollout-gate machinery was the source of the earlier oversizing.
 
-**Type: STORY** — a self-contained shippable slice at ~4 SP. It establishes the L1 content core, the
-version manifest + bump-on-change check, the re-author guardrail, and the `$PLUGIN_DIR` retirement, and
-proves Claude parity. Later stories consume this L1 core natively per harness.
+**Type: STORY** — a self-contained shippable slice at ~4 SP. It establishes the L1 content core, the version manifest + bump-on-change check, the re-author guardrail, and the `$PLUGIN_DIR` retirement, and proves Claude parity. Later stories consume this L1 core natively per harness.
 
 ---
 
@@ -398,66 +319,33 @@ VERIFY:
 
 Purely additive content + config + CI scripts, all git-tracked — rollback is git-based, no data migration.
 
-1. **Frozen fallback:** the `v3.13.0` git tag remains the Claude-only baseline; `main` stays on 3.13 until
-   4.0 proves out. Full rollback = re-checkout the tag — instant, no data loss.
-2. **Per-story revert:** this story's work lives on `feature/4.x-multi-harness`; `git revert` its commit
-   range removes the `Shared/{icea,rules,knowledge,gate,guardrail}` content, `prompt-manifest.json`,
-   `CHANGELOG.md`, the CI scripts, and the `ai-gate.yml` check wiring, and restores the `$PLUGIN_DIR`
-   references in `Shared/skills/**` and `scripts/*`. The `.claude/` tree reverts to its 3.x state.
-3. **Version rollback (AC-F9):** to roll back a single L1 change without reverting the whole story, pin the
-   prior L1 version via its git tag; a consumer's `consumes:` pin makes the dependency explicit and the
-   rollback traceable.
-4. **Verify after rollback:** `verify-parity.cjs` confirms the Claude Tier-A write-time floor still `exit
-   2`-blocks an un-approved Write (AC-NF4 holds in both directions).
+1. **Frozen fallback:** the `v3.13.0` git tag remains the Claude-only baseline; `main` stays on 3.13 until 4.0 proves out. Full rollback = re-checkout the tag — instant, no data loss.
+2. **Per-story revert:** this story's work lives on `feature/4.x-multi-harness`; `git revert` its commit range removes the `Shared/{icea,rules,knowledge,gate,guardrail}` content, `prompt-manifest.json`, `CHANGELOG.md`, the CI scripts, and the `ai-gate.yml` check wiring, and restores the `$PLUGIN_DIR` references in `Shared/skills/**` and `scripts/*`. The `.claude/` tree reverts to its 3.x state.
+3. **Version rollback (AC-F9):** to roll back a single L1 change without reverting the whole story, pin the prior L1 version via its git tag; a consumer's `consumes:` pin makes the dependency explicit and the rollback traceable.
+4. **Verify after rollback:** `verify-parity.cjs` confirms the Claude Tier-A write-time floor still `exit 2`-blocks an un-approved Write (AC-NF4 holds in both directions).
 
-No schema migrations, no irreversible data changes; `Shared/`, the manifest, and the CI scripts are all
-regenerable from source under git.
+No schema migrations, no irreversible data changes; `Shared/`, the manifest, and the CI scripts are all regenerable from source under git.
 
 ---
 
 ## Handover
 
 ### QA Team
-**What was added:** the **L1 content core** under `Shared/{icea,rules,knowledge,gate}` (the single source
-of the ICEA method+templates+critic rubric, coding rules, B1–B7 taxonomy, checker knowledge, and the
-ai-gate scaffold), a **prompt-artifact versioning system** (`prompt-manifest.json` + `CHANGELOG.md` +
-frontmatter `version:`/`consumes:` + a CI bump-on-change check), a **CI re-author guardrail** (the Copilot
-side must not fork an L1 standard), and the **4-shape `$PLUGIN_DIR` retirement** (L1 read by explicit path,
-no resolver). There is NO projection engine, delta-map, or override loader — those were retired in the
-design (ICEA #7).
+**What was added:** the **L1 content core** under `Shared/{icea,rules,knowledge,gate}` (the single source of the ICEA method+templates+critic rubric, coding rules, B1–B7 taxonomy, checker knowledge, and the ai-gate scaffold), a **prompt-artifact versioning system** (`prompt-manifest.json` + `CHANGELOG.md` + frontmatter `version:`/`consumes:` + a CI bump-on-change check), a **CI re-author guardrail** (the Copilot side must not fork an L1 standard), and the **4-shape `$PLUGIN_DIR` retirement** (L1 read by explicit path, no resolver). There is NO projection engine, delta-map, or override loader — those were retired in the design (ICEA #7).
 
-**How to test:** run `node scripts/build-prompt-manifest.cjs` then `node scripts/check-prompt-versions.cjs`
-and confirm a clean pass; edit an L1 artifact without bumping its `version:` → confirm the check fails
-naming the artifact. Add a duplicated coding-rules body under `Copilot/` → confirm `check-l1-reauthor.cjs`
-fails; replace it with a reference → confirm it passes. Run `node scripts/lint-self-containment.cjs` and
-confirm zero `$PLUGIN_DIR` hits (except the carved-out resolver-spec doc + arch docs). Run `node
-scripts/verify-parity.cjs` and confirm the Claude gate still blocks an un-approved Write.
+**How to test:** run `node scripts/build-prompt-manifest.cjs` then `node scripts/check-prompt-versions.cjs` and confirm a clean pass; edit an L1 artifact without bumping its `version:` → confirm the check fails naming the artifact. Add a duplicated coding-rules body under `Copilot/` → confirm `check-l1-reauthor.cjs` fails; replace it with a reference → confirm it passes. Run `node scripts/lint-self-containment.cjs` and confirm zero `$PLUGIN_DIR` hits (except the carved-out resolver-spec doc + arch docs). Run `node scripts/verify-parity.cjs` and confirm the Claude gate still blocks an un-approved Write.
 
-**Regression risk:** the Claude path (Tier-A write-time floor + project `.claude/` loading) must be
-unchanged after the `$PLUGIN_DIR` retirement — run the parity test (P-U/INT below). Test data: the real L1
-content + the 32 skills' `references/`; no secrets or privileged fixtures are involved.
+**Regression risk:** the Claude path (Tier-A write-time floor + project `.claude/` loading) must be unchanged after the `$PLUGIN_DIR` retirement — run the parity test (P-U/INT below). Test data: the real L1 content + the 32 skills' `references/`; no secrets or privileged fixtures are involved.
 
 ### DevOps / Platform Team
-No pipeline, Key Vault, container, or environment-variable changes beyond adding two content-governance
-checks to `.github/workflows/ai-gate.yml` (`check-prompt-versions.cjs` + `check-l1-reauthor.cjs`). These
-run as ordinary Node.js CJS scripts in CI with no network calls. Making them **required status checks** on a
-protected branch (so they are un-bypassable at merge) is a Story 8 concern; the gate's **approval-binding
-logic** is Story 6. Note the script-execution shape (c): if the narrow-resolver option is chosen for shared
-infra scripts, that resolver is a retained runtime dependency to track. No new secrets.
+No pipeline, Key Vault, container, or environment-variable changes beyond adding two content-governance checks to `.github/workflows/ai-gate.yml` (`check-prompt-versions.cjs` + `check-l1-reauthor.cjs`). These run as ordinary Node.js CJS scripts in CI with no network calls. Making them **required status checks** on a protected branch (so they are un-bypassable at merge) is a Story 8 concern; the gate's **approval-binding logic** is Story 6. Note the script-execution shape (c): if the narrow-resolver option is chosen for shared infra scripts, that resolver is a retained runtime dependency to track. No new secrets.
 
 ### Future Developer — Follow-on Work
-- **Change an L1 standard:** edit the single `Shared/` copy, bump its frontmatter `version:` (SemVer),
-  add a `CHANGELOG.md` line for L2 consumers if any, and re-run `build-prompt-manifest.cjs`. NEVER copy the
-  standard into `Claude/` or `Copilot/` — reference/re-deliver it (the guardrail will fail a fork).
-- **Author a native engagement body (L2):** that is Story 4/5/8 work — `Claude/` and `Copilot/` bodies are
-  designed natively per harness and CONSUME L1; give each a `v1/v2` version + a CHANGELOG line. Do NOT
-  re-introduce a projection engine, delta-map, or override loader.
-- **Where the version stamp / eval-gate lives:** the provenance stamp (output → prompt-version + dated
-  model snapshot, AC-NF5) and the eval-gate-on-version-bump are Story 7 — they consume this manifest.
-- **Where the gate approval logic lives:** Story 6 (`ai-gate` approval binding + review-time `review-icea`);
-  Story 8 distributes it and wires the required status check + branch protection.
-- Story 3 (rules), 3a (artifacts), 4 (hooks), 5 (native Copilot) all consume this L1 core — keep L1 the
-  single source and the manifest authoritative.
+- **Change an L1 standard:** edit the single `Shared/` copy, bump its frontmatter `version:` (SemVer), add a `CHANGELOG.md` line for L2 consumers if any, and re-run `build-prompt-manifest.cjs`. NEVER copy the standard into `Claude/` or `Copilot/` — reference/re-deliver it (the guardrail will fail a fork).
+- **Author a native engagement body (L2):** that is Story 4/5/8 work — `Claude/` and `Copilot/` bodies are designed natively per harness and CONSUME L1; give each a `v1/v2` version + a CHANGELOG line. Do NOT re-introduce a projection engine, delta-map, or override loader.
+- **Where the version stamp / eval-gate lives:** the provenance stamp (output → prompt-version + dated model snapshot, AC-NF5) and the eval-gate-on-version-bump are Story 7 — they consume this manifest.
+- **Where the gate approval logic lives:** Story 6 (`ai-gate` approval binding + review-time `review-icea`); Story 8 distributes it and wires the required status check + branch protection.
+- Story 3 (rules), 3a (artifacts), 4 (hooks), 5 (native Copilot) all consume this L1 core — keep L1 the single source and the manifest authoritative.
 
 ---
 

@@ -15,97 +15,29 @@ Status: DRAFT · STORY · 6 SP
 
 ## Overview
 
-This story makes the plugin's distribution layer **harness-neutral at machine-install time** and
-**harness-selective at application-integration time**. Today the Node installer `install.cjs` is the
-real machine-install path and is heavily Claude-coupled: it registers a Claude marketplace, runs
-`claude plugin install`, and writes a `marketplace.json`. Story 8 splits those concerns so that
-machine install copies only the tool-agnostic payload, and the Claude-marketplace registration is
-**deferred to `provision --harness=claude`** — it is a Claude *integration* step, not a machine-install
-step. The choice of which harness(es) a *project* is wired for (`claude`, `copilot`, or both) is made
-at integration via a new `scripts/provision.cjs` CLI — either `provision --harness=claude,copilot` or
-an interactive prompt — and recorded in a per-project `.aidev/manifest.json`.
+This story makes the plugin's distribution layer **harness-neutral at machine-install time** and **harness-selective at application-integration time**. Today the Node installer `install.cjs` is the real machine-install path and is heavily Claude-coupled: it registers a Claude marketplace, runs `claude plugin install`, and writes a `marketplace.json`. Story 8 splits those concerns so that machine install copies only the tool-agnostic payload, and the Claude-marketplace registration is **deferred to `provision --harness=claude`** — it is a Claude *integration* step, not a machine-install step. The choice of which harness(es) a *project* is wired for (`claude`, `copilot`, or both) is made at integration via a new `scripts/provision.cjs` CLI — either `provision --harness=claude,copilot` or an interactive prompt — and recorded in a per-project `.aidev/manifest.json`.
 
-**Provisioning under the L1/L2/L3 structure (ICEA #7/#8 — no mechanical projection).** The epic's locked
-structure is a shared **content & standards** core (L1 = `Shared/`) that each harness's **native**
-engagement + enforcement layers (L2/L3 = `Claude/` and `Copilot/`) *consume, never re-author*. There is
-therefore **NO mechanical skill projection, NO delta-map, and NO runtime `$PLUGIN_DIR` bridge** — all
-retired in ICEA #7. What "provisioning" means in this structure is a **file-copy composition**, not a
-transform: for each selected harness, `provision.cjs` installs `Shared/` (L1) **plus that harness's own
-native adapter folder** (`Claude/` or `Copilot/`) into the target repo's native paths. Claude gets the
-`Claude/` adapter (≈ the v3.13 plugin, unchanged) laid into `.claude/`; Copilot gets the separately
-authored `Copilot/` adapter (code-review skills, custom agents, `ai-gate.yml` required-check workflow,
-`.vscode/` scoping) laid into `.github/` + `.vscode/`. No skill is transformed from a Claude shape into a
-Copilot shape — the two adapters are authored independently and both point at the same L1 content.
+**Provisioning under the L1/L2/L3 structure (ICEA #7/#8 — no mechanical projection).** The epic's locked structure is a shared **content & standards** core (L1 = `Shared/`) that each harness's **native** engagement + enforcement layers (L2/L3 = `Claude/` and `Copilot/`) *consume, never re-author*. There is therefore **NO mechanical skill projection, NO delta-map, and NO runtime `$PLUGIN_DIR` bridge** — all retired in ICEA #7. What "provisioning" means in this structure is a **file-copy composition**, not a transform: for each selected harness, `provision.cjs` installs `Shared/` (L1) **plus that harness's own native adapter folder** (`Claude/` or `Copilot/`) into the target repo's native paths. Claude gets the `Claude/` adapter (≈ the v3.13 plugin, unchanged) laid into `.claude/`; Copilot gets the separately authored `Copilot/` adapter (code-review skills, custom agents, `ai-gate.yml` required-check workflow, `.vscode/` scoping) laid into `.github/` + `.vscode/`. No skill is transformed from a Claude shape into a Copilot shape — the two adapters are authored independently and both point at the same L1 content.
 
-Story 8 therefore *consumes* the L1 core + native adapters delivered by Story 2 and adds the
-harness-selection CLI, manifest schemas, gate-install step, `Shared/prompt-manifest.json` install +
-AC-F9 CI bump-check + L1 re-author guardrail wiring, sync mode, scoped teardown, and native-adapter agent
-composition on top of them. This composition dependency (plus splitting the Claude-coupled `install.cjs`)
-re-sizes AC-F4 above a `~` tweak — see Sizing.
+Story 8 therefore *consumes* the L1 core + native adapters delivered by Story 2 and adds the harness-selection CLI, manifest schemas, gate-install step, `Shared/prompt-manifest.json` install + AC-F9 CI bump-check + L1 re-author guardrail wiring, sync mode, scoped teardown, and native-adapter agent composition on top of them. This composition dependency (plus splitting the Claude-coupled `install.cjs`) re-sizes AC-F4 above a `~` tweak — see Sizing.
 
-A second, plugin-level `plugin.manifest.json` (neutral registry: `version` · `components` ·
-`harnesses[]`) is introduced. It does **not silently replace** `.claude-plugin/config.json`: `config.json`
-today holds org/marketplace/repo identity that `install.cjs` and `syncConfig` read, so the two coexist
-during 4.x — `plugin.manifest.json` is the neutral provisioning registry (what to project, which
-harnesses), while `config.json` remains the org/marketplace/repo identity source those scripts read.
-The migration is explicit and staged (see "config.json → plugin.manifest.json migration" below), not a
-delete-and-swap. The neutral `plugin.manifest.json` lists the supported **harnesses[]** and — because it
-is the provisioning registry consuming the L1 core — the **L1 content version** it composes against (the
-SemVer of the shared standards, per AC-F9), so a provision is pinned to a known L1 version, not "whatever
-is on disk".
+A second, plugin-level `plugin.manifest.json` (neutral registry: `version` · `components` · `harnesses[]`) is introduced. It does **not silently replace** `.claude-plugin/config.json`: `config.json` today holds org/marketplace/repo identity that `install.cjs` and `syncConfig` read, so the two coexist during 4.x — `plugin.manifest.json` is the neutral provisioning registry (what to project, which harnesses), while `config.json` remains the org/marketplace/repo identity source those scripts read. The migration is explicit and staged (see "config.json → plugin.manifest.json migration" below), not a delete-and-swap. The neutral `plugin.manifest.json` lists the supported **harnesses[]** and — because it is the provisioning registry consuming the L1 core — the **L1 content version** it composes against (the SemVer of the shared standards, per AC-F9), so a provision is pinned to a known L1 version, not "whatever is on disk".
 
-**Prompt-artifact versioning wiring (AC-F9).** The L1 core ships a `Shared/prompt-manifest.json` recording
-`{version, sha256, consumes}` per prompt artifact (SKILL.md, rules, templates, critic rubric, commands,
-agents). Story 2 authors that manifest and the CI logic; **Story 8 installs it into the target and wires
-the two CI checks it drives into the target's CI**: (a) the AC-F9 **bump-on-change** check — a PR whose
-prompt-artifact content changed without a corresponding `version:` bump (on-disk `sha256` ≠ manifest)
-fails the build; and (b) the **L1 re-author guardrail** (AC-F2) — a PR that duplicates/forks an L1
-standard into the `Copilot/` (or `Claude/`) adapter, rather than consuming it, fails the build. Both run
-in the same CI surface `provision --harness=copilot` uses for `ai-gate.yml` (`.github/workflows/`);
-provisioning copies the pinned `Shared/prompt-manifest.json` and records its SHA-256 in the manifest so a
-tamper is detectable on `sync`. Like `ai-gate.yml`, the check **logic** is Story 2's; Story 8 only
-distributes/wires it — it does not author the check.
+**Prompt-artifact versioning wiring (AC-F9).** The L1 core ships a `Shared/prompt-manifest.json` recording `{version, sha256, consumes}` per prompt artifact (SKILL.md, rules, templates, critic rubric, commands, agents). Story 2 authors that manifest and the CI logic; **Story 8 installs it into the target and wires the two CI checks it drives into the target's CI**: (a) the AC-F9 **bump-on-change** check — a PR whose prompt-artifact content changed without a corresponding `version:` bump (on-disk `sha256` ≠ manifest) fails the build; and (b) the **L1 re-author guardrail** (AC-F2) — a PR that duplicates/forks an L1 standard into the `Copilot/` (or `Claude/`) adapter, rather than consuming it, fails the build. Both run in the same CI surface `provision --harness=copilot` uses for `ai-gate.yml` (`.github/workflows/`); provisioning copies the pinned `Shared/prompt-manifest.json` and records its SHA-256 in the manifest so a tamper is detectable on `sync`. Like `ai-gate.yml`, the check **logic** is Story 2's; Story 8 only distributes/wires it — it does not author the check.
 
-Under the epic's **asymmetric enforcement model** (ICEA #6), the two harnesses gate at different points:
-Claude prevents at write-time (Tier-A `icea-floor` `exit 2`, unchanged), while **Copilot's HARD gate is the
-harness-independent CI `ai-gate` running as a REQUIRED status check on a protected branch** — un-bypassable
-at merge, because you cannot `--no-verify` a required check. The Copilot client layer (projected skills, the
-`review-icea` code-review skill, and the read-only agents this story generates) is **best-effort
-authoring/review assistance**, NOT the hard line. This makes Story 8 the story that **stands up the Copilot
-hard gate**: provisioning is now load-bearing for governance, not just file layout.
+Under the epic's **asymmetric enforcement model** (ICEA #6), the two harnesses gate at different points: Claude prevents at write-time (Tier-A `icea-floor` `exit 2`, unchanged), while **Copilot's HARD gate is the harness-independent CI `ai-gate` running as a REQUIRED status check on a protected branch** — un-bypassable at merge, because you cannot `--no-verify` a required check. The Copilot client layer (projected skills, the `review-icea` code-review skill, and the read-only agents this story generates) is **best-effort authoring/review assistance**, NOT the hard line. This makes Story 8 the story that **stands up the Copilot hard gate**: provisioning is now load-bearing for governance, not just file layout.
 
-Concretely, provisioning must (a) distribute Story 6's `ai-gate.yml` into `.github/workflows/`, AND (b)
-**emit the branch-protection setup that marks `ai-gate` a REQUIRED status check on the protected branch** —
-via `gh api` branch-protection automation when a token + `gh` are available, and always as documented manual
-steps as the fallback. Crucially, provisioning must **verify** that the target branch is actually protected
-and the `ai-gate` check is actually required; if it is not, provisioning **WARNS loudly and refuses to claim
-Copilot governance** — because without the required check, the Copilot hard gate simply does not exist and a
-developer would falsely believe they are governed. This warn/refuse behaviour, and its ACs/tests, are new in
-this revision (see "Copilot hard-gate setup" below).
+Concretely, provisioning must (a) distribute Story 6's `ai-gate.yml` into `.github/workflows/`, AND (b) **emit the branch-protection setup that marks `ai-gate` a REQUIRED status check on the protected branch** — via `gh api` branch-protection automation when a token + `gh` are available, and always as documented manual steps as the fallback. Crucially, provisioning must **verify** that the target branch is actually protected and the `ai-gate` check is actually required; if it is not, provisioning **WARNS loudly and refuses to claim Copilot governance** — because without the required check, the Copilot hard gate simply does not exist and a developer would falsely believe they are governed. This warn/refuse behaviour, and its ACs/tests, are new in this revision (see "Copilot hard-gate setup" below).
 
-The story also **generates the Copilot read-only gate agents** (`.github/agents/*.agent.md`) — a
-**best-effort client assistance surface**, explicitly NOT the hard enforcement line (the required-check IS
-the hard gate) — and extends `setup-sync` (re-project with **hash-tracked user-edit protection** so a manual
-edit to a projected file is preserved or flagged, never clobbered) and teardown (remove per-harness projected
-content **by scope**, never deleting user-owned `.github/` workflows/CODEOWNERS or `memory/`). The governing
-pattern is *author-once, project-per-harness* with **idempotent, reversible, additive** provisioning. Gate
-distribution is **vendored, pinned, and integrity-hashed** (AC-NF7 partial) — the provisioner copies the
-pinned `Shared/gate/ai-gate` payload and records its SHA-256 in the manifest. Note: `ai-gate.yml` (the
-CI workflow) is **created by Story 6** (single owner of gate logic); Story 8 only **distributes/projects**
-the already-authored file into `.github/workflows/` — it does not author or double-create it.
+The story also **generates the Copilot read-only gate agents** (`.github/agents/*.agent.md`) — a **best-effort client assistance surface**, explicitly NOT the hard enforcement line (the required-check IS the hard gate) — and extends `setup-sync` (re-project with **hash-tracked user-edit protection** so a manual edit to a projected file is preserved or flagged, never clobbered) and teardown (remove per-harness projected content **by scope**, never deleting user-owned `.github/` workflows/CODEOWNERS or `memory/`). The governing pattern is *author-once, project-per-harness* with **idempotent, reversible, additive** provisioning. Gate distribution is **vendored, pinned, and integrity-hashed** (AC-NF7 partial) — the provisioner copies the pinned `Shared/gate/ai-gate` payload and records its SHA-256 in the manifest. Note: `ai-gate.yml` (the CI workflow) is **created by Story 6** (single owner of gate logic); Story 8 only **distributes/projects** the already-authored file into `.github/workflows/` — it does not author or double-create it.
 
-**Dependencies:** Story 8 depends on **Story 2** (the L1 `Shared/` content core, the native adapters'
-composition/install mechanism, `Shared/prompt-manifest.json`, and the AC-F9 bump-check + L1 re-author
-guardrail CI logic), **Story 5** (Copilot scoping), and **Story 6** (gate logic + `ai-gate.yml` source).
-Story 6 authors the gate; Story 2 authors the prompt-manifest + CI checks; Story 8 installs/distributes
-them and stands up the required-check that turns `ai-gate` into the Copilot hard gate.
+**Dependencies:** Story 8 depends on **Story 2** (the L1 `Shared/` content core, the native adapters' composition/install mechanism, `Shared/prompt-manifest.json`, and the AC-F9 bump-check + L1 re-author guardrail CI logic), **Story 5** (Copilot scoping), and **Story 6** (gate logic + `ai-gate.yml` source). Story 6 authors the gate; Story 2 authors the prompt-manifest + CI checks; Story 8 installs/distributes them and stands up the required-check that turns `ai-gate` into the Copilot hard gate.
 
 ---
 
 ## AC Coverage Matrix
 
-Every AC from this story's scope must be covered by at least one file change; every file change must
-satisfy at least one AC. Gaps are flagged ⚠.
+Every AC from this story's scope must be covered by at least one file change; every file change must satisfy at least one AC. Gaps are flagged ⚠.
 
 ### AC → File mapping
 
@@ -152,10 +84,7 @@ satisfy at least one AC. Gaps are flagged ⚠.
 | `skills/setup-sync/SKILL.md` (modify) | AC-F8a |
 | `skills/setup-teardown/SKILL.md` (modify) | AC-F8b |
 
-**Coverage result:** all in-scope ACs (AC-F4, AC-F7 [Copilot hard gate + client assistance], AC-F8a, AC-F8b,
-AC-F9-partial, AC-NF7-partial) covered; no orphaned file changes ✅. The required-check stand-up (AC-F7) is
-the story's load-bearing enforcement deliverable — without it the Copilot hard gate does not exist; the
-AC-F9 install + CI-wiring is the versioning-integrity deliverable (check logic authored by Story 2).
+**Coverage result:** all in-scope ACs (AC-F4, AC-F7 [Copilot hard gate + client assistance], AC-F8a, AC-F8b, AC-F9-partial, AC-NF7-partial) covered; no orphaned file changes ✅. The required-check stand-up (AC-F7) is the story's load-bearing enforcement deliverable — without it the Copilot hard gate does not exist; the AC-F9 install + CI-wiring is the versioning-integrity deliverable (check logic authored by Story 2).
 
 ---
 
@@ -184,16 +113,11 @@ AC-F9 install + CI-wiring is the versioning-integrity deliverable (check logic a
 
 ### config.json → plugin.manifest.json migration (no silent replace)
 
-`.claude-plugin/config.json` is **not** deleted or overwritten by this story. Today `install.cjs` and
-`syncConfig` read it for `{org, marketplace, repo}` identity. The migration is:
+`.claude-plugin/config.json` is **not** deleted or overwritten by this story. Today `install.cjs` and `syncConfig` read it for `{org, marketplace, repo}` identity. The migration is:
 
-1. Story 8 adds `plugin.manifest.json` as the **neutral provisioning registry** (`version`,
-   `l1ContentVersion`, `components[]`, `harnesses[]`) — which L1 content version to compose and which
-   native adapters to lay down for which harnesses. It carries **no** org/repo identity.
+1. Story 8 adds `plugin.manifest.json` as the **neutral provisioning registry** (`version`, `l1ContentVersion`, `components[]`, `harnesses[]`) — which L1 content version to compose and which native adapters to lay down for which harnesses. It carries **no** org/repo identity.
 2. `install.cjs` / `syncConfig` continue to read `config.json` for org/marketplace/repo — unchanged.
-3. Where the two would overlap (`version`), `plugin.manifest.json` is authoritative for provisioning and
-   `config.json`'s copy is left as-is for backward compat; a follow-on story (out of scope here) may fold
-   identity into the neutral manifest once no reader depends on `config.json`.
+3. Where the two would overlap (`version`), `plugin.manifest.json` is authoritative for provisioning and `config.json`'s copy is left as-is for backward compat; a follow-on story (out of scope here) may fold identity into the neutral manifest once no reader depends on `config.json`.
 
 ### `plugin.manifest.json` — neutral registry shape
 
@@ -209,9 +133,7 @@ AC-F9 install + CI-wiring is the versioning-integrity deliverable (check logic a
 }
 ```
 
-`l1ContentVersion` pins the composed SemVer of the shared `Shared/` (L1) standards (AC-F9); a provision
-composes against a known L1 version. `harnesses[].adapter` names the NATIVE adapter folder copied
-alongside L1 — the two adapters are authored independently, never projected from one another.
+`l1ContentVersion` pins the composed SemVer of the shared `Shared/` (L1) standards (AC-F9); a provision composes against a known L1 version. `harnesses[].adapter` names the NATIVE adapter folder copied alongside L1 — the two adapters are authored independently, never projected from one another.
 
 ### `.aidev/manifest.json` — per-project record shape
 
@@ -236,17 +158,13 @@ alongside L1 — the two adapters are authored independently, never projected fr
 }
 ```
 
-`copilotHardGate.governanceClaimed` is set `true` ONLY when `requiredCheckVerified` is `true` (the branch is
-protected AND `ai-gate` is confirmed a required check). If verification fails, `governanceClaimed:false` is
-recorded and provisioning WARNS that the Copilot hard gate is NOT in effect — it never records a Copilot
-governance claim it could not verify.
+`copilotHardGate.governanceClaimed` is set `true` ONLY when `requiredCheckVerified` is `true` (the branch is protected AND `ai-gate` is confirmed a required check). If verification fails, `governanceClaimed:false` is recorded and provisioning WARNS that the Copilot hard gate is NOT in effect — it never records a Copilot governance claim it could not verify.
 
 ---
 
 ## The provision / sync / teardown CLI (replaces "API Changes")
 
-There is no HTTP API. The public contract is the `scripts/provision.cjs` command surface and the two
-manifest schemas above.
+There is no HTTP API. The public contract is the `scripts/provision.cjs` command surface and the two manifest schemas above.
 
 | Command | Flags | Behaviour |
 |---|---|---|
@@ -254,10 +172,8 @@ manifest schemas above.
 | `node scripts/provision.cjs sync` | `--dry-run` | Re-compose using the harness set recorded in `.aidev/manifest.json`; per target, compare on-disk hash against the ledger; unchanged → re-compose; user-edited → **preserve and flag** (write `.new` alongside), never overwrite. Re-verify gate SHA-256 and `promptManifest` SHA-256 (tamper). |
 | `node scripts/provision.cjs teardown` | `--harness=<id>` or `--full`; `--dry-run` (default preview) | Delegate to the guarded `setup-teardown.cjs`. Remove only plugin-projected paths recorded in the manifest for the named scope, applying the `.github/` DENY-LIST + hash-match FIRST. Never delete user-owned `.github/` workflows/CODEOWNERS or `memory/`. Requires explicit CONFIRM after dry-run. |
 
-- **Machine install (`install.cjs` via `install.sh`/`install.ps1`) takes no `--harness`** — harness-neutral
-  by contract. Harness selection and Claude-marketplace registration happen only at `provision` time (AC-F4).
-- Re-integration is additive: `provision --harness=claude` then later `provision --harness=copilot` adds
-  the Copilot projection and updates `.aidev/manifest.json` **without** a machine reinstall.
+- **Machine install (`install.cjs` via `install.sh`/`install.ps1`) takes no `--harness`** — harness-neutral by contract. Harness selection and Claude-marketplace registration happen only at `provision` time (AC-F4).
+- Re-integration is additive: `provision --harness=claude` then later `provision --harness=copilot` adds the Copilot projection and updates `.aidev/manifest.json` **without** a machine reinstall.
 
 ---
 
@@ -265,60 +181,21 @@ manifest schemas above.
 
 This is a governance plugin; "security" here is the integrity of provisioning and the safety of teardown.
 
-- **Copilot hard-gate setup — the required status check (AC-F7, NEW load-bearing deliverable):** under the
-  asymmetric model the Copilot hard gate is NOT a client hook — it is the CI `ai-gate` as a REQUIRED status
-  check on a protected branch, un-bypassable at merge. `provision --harness=copilot` must therefore, after
-  distributing Story-6 `ai-gate.yml` into `.github/workflows/`:
-  1. **Mark `ai-gate` required.** When a token (`GH_TOKEN`/`GITHUB_TOKEN`) and the `gh` CLI are available,
-     call the branch-protection API — e.g. `gh api -X PUT repos/{owner}/{repo}/branches/{branch}/protection`
-     with `required_status_checks.contexts` including `ai-gate` (and `strict:true`). When no token/`gh` is
-     available (common in the dogfood/local context), it **does not silently skip** — it prints the exact
-     documented `gh api` command + the GitHub UI steps (Settings → Branches → Branch protection rule → Require
-     status checks → select `ai-gate`) for a maintainer to apply, and records `setupMode:"manual-documented"`.
-  2. **Verify.** Re-read the protection state (`gh api …/branches/{branch}/protection` when possible) and
-     confirm the branch is protected AND `ai-gate` is in `required_status_checks.contexts`. Record the result
-     in `.aidev/manifest.json.copilotHardGate.requiredCheckVerified`.
-  3. **Warn + refuse the governance claim if unverified.** If the branch is not protected, or `ai-gate` is not
-     a required check (verification failed, or manual mode with no confirmation), provisioning **WARNS loudly**
-     — "Copilot HARD gate NOT in effect: `ai-gate` is not a required check on protected branch `{branch}`;
-     ungoverned code can merge" — and sets `governanceClaimed:false`. It never records a Copilot governance
-     claim it could not verify. This is the honest-assurance guarantee: no false "you are governed" on Copilot.
-  The generated read-only agents and any projected client hooks are **best-effort assistance layered on top**
-  — they do not substitute for the required check and are never treated as the hard line.
+- **Copilot hard-gate setup — the required status check (AC-F7, NEW load-bearing deliverable):** under the asymmetric model the Copilot hard gate is NOT a client hook — it is the CI `ai-gate` as a REQUIRED status check on a protected branch, un-bypassable at merge. `provision --harness=copilot` must therefore, after distributing Story-6 `ai-gate.yml` into `.github/workflows/`:
+  1. **Mark `ai-gate` required.** When a token (`GH_TOKEN`/`GITHUB_TOKEN`) and the `gh` CLI are available, call the branch-protection API — e.g. `gh api -X PUT repos/{owner}/{repo}/branches/{branch}/protection` with `required_status_checks.contexts` including `ai-gate` (and `strict:true`). When no token/`gh` is available (common in the dogfood/local context), it **does not silently skip** — it prints the exact documented `gh api` command + the GitHub UI steps (Settings → Branches → Branch protection rule → Require status checks → select `ai-gate`) for a maintainer to apply, and records `setupMode:"manual-documented"`.
+  2. **Verify.** Re-read the protection state (`gh api …/branches/{branch}/protection` when possible) and confirm the branch is protected AND `ai-gate` is in `required_status_checks.contexts`. Record the result in `.aidev/manifest.json.copilotHardGate.requiredCheckVerified`.
+  3. **Warn + refuse the governance claim if unverified.** If the branch is not protected, or `ai-gate` is not a required check (verification failed, or manual mode with no confirmation), provisioning **WARNS loudly** — "Copilot HARD gate NOT in effect: `ai-gate` is not a required check on protected branch `{branch}`; ungoverned code can merge" — and sets `governanceClaimed:false`. It never records a Copilot governance claim it could not verify. This is the honest-assurance guarantee: no false "you are governed" on Copilot. The generated read-only agents and any projected client hooks are **best-effort assistance layered on top** — they do not substitute for the required check and are never treated as the hard line.
 
-- **Vendored, pinned, integrity-hashed gate (AC-NF7 partial):** provisioning installs the gate from the
-  in-repo vendored `Shared/gate/ai-gate` payload — never an unpinned `npx`. The installed version and its
-  SHA-256 are recorded in `.aidev/manifest.json.gate`. `sync` re-computes the digest and reports a tamper
-  mismatch. (`ai-gate.yml`, the gate's approval logic, hook hash-verify-before-run, and
-  warn-only/break-glass rollout are Story 6 — Story 8 only distributes the gate + projects Story 6's
-  `ai-gate.yml` into `.github/workflows/`; it does not author or double-create that workflow.)
+- **Vendored, pinned, integrity-hashed gate (AC-NF7 partial):** provisioning installs the gate from the in-repo vendored `Shared/gate/ai-gate` payload — never an unpinned `npx`. The installed version and its SHA-256 are recorded in `.aidev/manifest.json.gate`. `sync` re-computes the digest and reports a tamper mismatch. (`ai-gate.yml`, the gate's approval logic, hook hash-verify-before-run, and warn-only/break-glass rollout are Story 6 — Story 8 only distributes the gate + projects Story 6's `ai-gate.yml` into `.github/workflows/`; it does not author or double-create that workflow.)
 
-- **Teardown DENY-LIST + hash-match before ANY `.github/` unlink (AC-F8b — data-loss guard):** the
-  existing `setup-teardown.cjs` `rmSafe()` blindly unlinks whatever is queued and today **never targets
-  `.github/`**. Story 8 introduces `.github/` as a deletion surface (generated agents, projected hooks,
-  distributed `ai-gate.yml`), so trusting the manifest `projected[]` list alone is unsafe. Before deleting
-  anything under `.github/`, teardown applies, in order:
-  1. **Protected DENY-LIST (hard-coded, non-overridable):** `.github/workflows/**` authored by the user,
-     `.github/CODEOWNERS`, any `.github/` path NOT recorded in `.aidev/manifest.json.projected[]`, and all
-     of `memory/`. A path on the deny-list is refused even if a corrupt/forged manifest lists it.
+- **Teardown DENY-LIST + hash-match before ANY `.github/` unlink (AC-F8b — data-loss guard):** the existing `setup-teardown.cjs` `rmSafe()` blindly unlinks whatever is queued and today **never targets `.github/`**. Story 8 introduces `.github/` as a deletion surface (generated agents, projected hooks, distributed `ai-gate.yml`), so trusting the manifest `projected[]` list alone is unsafe. Before deleting anything under `.github/`, teardown applies, in order:
+  1. **Protected DENY-LIST (hard-coded, non-overridable):** `.github/workflows/**` authored by the user, `.github/CODEOWNERS`, any `.github/` path NOT recorded in `.aidev/manifest.json.projected[]`, and all of `memory/`. A path on the deny-list is refused even if a corrupt/forged manifest lists it.
   2. **Manifest lookup:** the path must appear in `projected[]` for the scope being torn down.
-  3. **Hash-match ("did the plugin actually create this?"):** the on-disk file's SHA-256 must equal the
-     ledger `sha256` recorded at projection time. If the file was hand-edited since projection (hash ≠
-     ledger) it is treated as user-owned → refuse to unlink, flag it. Only a deny-list-clear, manifest-
-     recorded, hash-matching `.github/` file is removable.
-  Non-`.github/` scopes (`.claude/`, `.aidev/`, `temp/`) keep the existing behaviour; the new guard is
-  scoped to the `.github/` deletion surface that Story 8 introduces.
+  3. **Hash-match ("did the plugin actually create this?"):** the on-disk file's SHA-256 must equal the ledger `sha256` recorded at projection time. If the file was hand-edited since projection (hash ≠ ledger) it is treated as user-owned → refuse to unlink, flag it. Only a deny-list-clear, manifest- recorded, hash-matching `.github/` file is removable. Non-`.github/` scopes (`.claude/`, `.aidev/`, `temp/`) keep the existing behaviour; the new guard is scoped to the `.github/` deletion surface that Story 8 introduces.
 
-- **Relationship to the existing teardown (`setup-teardown.cjs` + `skills/setup-teardown/SKILL.md`):**
-  `provision.cjs teardown` does **NOT** replace `setup-teardown.cjs` — they **coexist**. `setup-teardown.cjs`
-  remains the deterministic removal engine and single source of truth for `.claude/` scopes (`--full`,
-  `--skills`, `--hooks`, `--rules`, `--commands`, `--state`) and gains the new `.github/` guard.
-  `provision.cjs teardown --harness=<id>` is the harness-scoped front door that reads `.aidev/manifest.json`
-  and delegates the actual unlink to `setup-teardown.cjs`, so the DENY-LIST + hash-match + CONFIRM flow lives
-  in one place. The SKILL.md is updated to document both entry points and the new `.github/` protected set.
+- **Relationship to the existing teardown (`setup-teardown.cjs` + `skills/setup-teardown/SKILL.md`):** `provision.cjs teardown` does **NOT** replace `setup-teardown.cjs` — they **coexist**. `setup-teardown.cjs` remains the deterministic removal engine and single source of truth for `.claude/` scopes (`--full`, `--skills`, `--hooks`, `--rules`, `--commands`, `--state`) and gains the new `.github/` guard. `provision.cjs teardown --harness=<id>` is the harness-scoped front door that reads `.aidev/manifest.json` and delegates the actual unlink to `setup-teardown.cjs`, so the DENY-LIST + hash-match + CONFIRM flow lives in one place. The SKILL.md is updated to document both entry points and the new `.github/` protected set.
 
-- **No secrets:** provisioning writes no credentials; the gate uses the existing `AZURE_DEVOPS_PAT` env
-  var (never committed). `.aidev/manifest.json` contains only hashes and versions, no secret material.
+- **No secrets:** provisioning writes no credentials; the gate uses the existing `AZURE_DEVOPS_PAT` env var (never committed). `.aidev/manifest.json` contains only hashes and versions, no secret material.
 
 ---
 
@@ -353,19 +230,9 @@ This is a governance plugin; "security" here is the integrity of provisioning an
 | AC-NF7 (partial) + AC-F7 (client assistance) | vendored pinned+hashed gate install; `.github/agents/*` generator (name from directory, hard-fail on missing) | 1 |
 | **Total** | | **6** |
 
-**Total SP: 6** (re-sized from 5 in #2 for the `install.cjs` split + Story-2 dependency; held at 6 through
-this #8 revision. The #7 L1/L2/L3 restructure REMOVES mechanical-projection complexity from AC-F4 —
-composition is a simpler file-copy of L1 + a native adapter than the retired delta-map/override engine — and
-that freed effort absorbs the AC-F9 prompt-manifest install + CI-check wiring folded in here. The required-
-check stand-up (AC-F7) already absorbed the SP the agent line lost when agents became best-effort. Net: flat
-at 6.)
+**Total SP: 6** (re-sized from 5 in #2 for the `install.cjs` split + Story-2 dependency; held at 6 through this #8 revision. The #7 L1/L2/L3 restructure REMOVES mechanical-projection complexity from AC-F4 — composition is a simpler file-copy of L1 + a native adapter than the retired delta-map/override engine — and that freed effort absorbs the AC-F9 prompt-manifest install + CI-check wiring folded in here. The required- check stand-up (AC-F7) already absorbed the SP the agent line lost when agents became best-effort. Net: flat at 6.)
 
-**Type: STORY** — a single shippable slice (the distribution/provisioning layer that composes L1 + native
-adapters and also **stands up the Copilot hard gate**). It depends on **Story 2** (L1 core + native-adapter
-composition + `Shared/prompt-manifest.json` + AC-F9/guardrail CI logic), **Story 5** (scoping), and **Story
-6** (gate logic + `ai-gate.yml` source) but delivers independent user value: a maintainer can provision,
-re-sync, and tear down a repo for either or both harnesses, with the Copilot merge-gate actually enforced.
-No sub-decomposition needed (≤6 SP, single logical slice).
+**Type: STORY** — a single shippable slice (the distribution/provisioning layer that composes L1 + native adapters and also **stands up the Copilot hard gate**). It depends on **Story 2** (L1 core + native-adapter composition + `Shared/prompt-manifest.json` + AC-F9/guardrail CI logic), **Story 5** (scoping), and **Story 6** (gate logic + `ai-gate.yml` source) but delivers independent user value: a maintainer can provision, re-sync, and tear down a repo for either or both harnesses, with the Copilot merge-gate actually enforced. No sub-decomposition needed (≤6 SP, single logical slice).
 
 ---
 
@@ -426,12 +293,7 @@ The developer must tick every item before raising the PR.
 
 ## Open Questions
 
-None. All Story-8-relevant D-blocks resolved in the epic: D-1 (gate distribution) → vendored pinned+hashed
-(this story's AC-NF7-partial); D-2 (artifact locations) is Story 3a and does not gate provisioning. The
-asymmetric enforcement model (ICEA #6) fixes the Copilot hard gate as the CI `ai-gate` required status check
-on a protected branch (known-good GA GitHub behaviour) — Story 8 stands it up; no open question remains.
-Requires org branch-protection on the target repo (an operational prerequisite, surfaced by the WARN path,
-not a design open question).
+None. All Story-8-relevant D-blocks resolved in the epic: D-1 (gate distribution) → vendored pinned+hashed (this story's AC-NF7-partial); D-2 (artifact locations) is Story 3a and does not gate provisioning. The asymmetric enforcement model (ICEA #6) fixes the Copilot hard gate as the CI `ai-gate` required status check on a protected branch (known-good GA GitHub behaviour) — Story 8 stands it up; no open question remains. Requires org branch-protection on the target repo (an operational prerequisite, surfaced by the WARN path, not a design open question).
 
 ---
 
@@ -483,54 +345,31 @@ TEARDOWN (scoped removal; delegates to guarded setup-teardown.cjs):
     -> require CONFIRM; leaves the OTHER harness, all user .github/ files, and memory/ intact
 ```
 
-No network/DB tiers exist (in-process CLI). The only external touch is the local filesystem plus, on
-`provision --harness=claude`, the Claude marketplace registration (deferred out of machine install).
+No network/DB tiers exist (in-process CLI). The only external touch is the local filesystem plus, on `provision --harness=claude`, the Claude marketplace registration (deferred out of machine install).
 
 ---
 
 ## Rollback
 
-**Schema migrations:** None — code/config only; `.aidev/manifest.json` and `plugin.manifest.json` are
-additive JSON files; `.claude-plugin/config.json` is untouched.
+**Schema migrations:** None — code/config only; `.aidev/manifest.json` and `plugin.manifest.json` are additive JSON files; `.claude-plugin/config.json` is untouched.
 
 **Rollback procedure:**
-1. Story 8 lands on `feature/4.x-multi-harness`; revert its commit range to remove `provision.cjs`, the
-   manifests, the agent generator, the `install.cjs` split, and the `setup-teardown.cjs` `.github/` guard —
-   the frozen `v3.13.0` tag remains the Claude-only fallback.
-2. Per provisioned repo: `provision teardown --full` removes all plugin-projected paths recorded in
-   `.aidev/manifest.json` that pass the DENY-LIST + hash-match (leaving user `.github/` workflows/CODEOWNERS
-   and `memory/` intact), returning the repo to a pre-provision state.
-3. To roll back a *single* harness: `provision teardown --harness=copilot` — the other harness keeps
-   working; verified by INT-3.
-4. Verify: Claude-only provision still works (`provision --harness=claude`) and existing setup-init +
-   `.claude/`-scope teardown behaviour is unchanged.
+1. Story 8 lands on `feature/4.x-multi-harness`; revert its commit range to remove `provision.cjs`, the manifests, the agent generator, the `install.cjs` split, and the `setup-teardown.cjs` `.github/` guard — the frozen `v3.13.0` tag remains the Claude-only fallback.
+2. Per provisioned repo: `provision teardown --full` removes all plugin-projected paths recorded in `.aidev/manifest.json` that pass the DENY-LIST + hash-match (leaving user `.github/` workflows/CODEOWNERS and `memory/` intact), returning the repo to a pre-provision state.
+3. To roll back a *single* harness: `provision teardown --harness=copilot` — the other harness keeps working; verified by INT-3.
+4. Verify: Claude-only provision still works (`provision --harness=claude`) and existing setup-init + `.claude/`-scope teardown behaviour is unchanged.
 
 ---
 
 ## Handover
 
 ### QA Team
-**What was added:** a harness-neutral machine install (`install.cjs`, Claude-marketplace registration
-moved to `provision --harness=claude`) plus a `provision`/`sync`/`teardown` CLI that **composes L1 `Shared/`
-+ a NATIVE adapter (`Claude/`/`Copilot/`)** into a repo for Claude, Copilot, or both (file-copy, NO
-mechanical projection — retired #7); a neutral `plugin.manifest.json` (`l1ContentVersion` + native
-`harnesses[]`, coexisting with `config.json`); a per-project `.aidev/manifest.json` recording harness
-choice, a projected-file hash ledger, the vendored gate's version+SHA-256, and the `Shared/prompt-manifest.json`
-SHA-256; the installed `Shared/prompt-manifest.json` with the AC-F9 bump-on-change CI check + the L1
-re-author guardrail wired into the target CI (check logic authored by Story 2); a `.github/` DENY-LIST +
-hash-match guard in `setup-teardown.cjs`; and composed `.github/agents/*.agent.md` read-only gate agents
-(name from directory, from the native Copilot adapter, best-effort assistance). **From the asymmetric
-revision:** `provision --harness=copilot` distributes Story-6 `ai-gate.yml` and stands up `ai-gate`
-as a REQUIRED status check on the protected branch — this IS the Copilot hard gate. If the branch is not
-protected / the check is not required, provisioning WARNS and refuses to claim Copilot governance. Entry
-points and negative tests (incl. the unprotected-branch WARN path) are in **Test Cases**.
+**What was added:** a harness-neutral machine install (`install.cjs`, Claude-marketplace registration moved to `provision --harness=claude`) plus a `provision`/`sync`/`teardown` CLI that **composes L1 `Shared/`
++ a NATIVE adapter (`Claude/`/`Copilot/`)** into a repo for Claude, Copilot, or both (file-copy, NO mechanical projection — retired #7); a neutral `plugin.manifest.json` (`l1ContentVersion` + native `harnesses[]`, coexisting with `config.json`); a per-project `.aidev/manifest.json` recording harness choice, a projected-file hash ledger, the vendored gate's version+SHA-256, and the `Shared/prompt-manifest.json` SHA-256; the installed `Shared/prompt-manifest.json` with the AC-F9 bump-on-change CI check + the L1 re-author guardrail wired into the target CI (check logic authored by Story 2); a `.github/` DENY-LIST + hash-match guard in `setup-teardown.cjs`; and composed `.github/agents/*.agent.md` read-only gate agents (name from directory, from the native Copilot adapter, best-effort assistance). **From the asymmetric revision:** `provision --harness=copilot` distributes Story-6 `ai-gate.yml` and stands up `ai-gate` as a REQUIRED status check on the protected branch — this IS the Copilot hard gate. If the branch is not protected / the check is not required, provisioning WARNS and refuses to claim Copilot governance. Entry points and negative tests (incl. the unprotected-branch WARN path) are in **Test Cases**.
 
-**Regression risk:** the existing Claude-only setup path AND the existing `setup-teardown.cjs` `.claude/`
-scopes must still behave exactly as before — the new guard is `.github/`-only. Provisioning must be
-idempotent (re-run is a hash no-op).
+**Regression risk:** the existing Claude-only setup path AND the existing `setup-teardown.cjs` `.claude/` scopes must still behave exactly as before — the new guard is `.github/`-only. Provisioning must be idempotent (re-run is a hash no-op).
 
-**Test data:** scratch repos only. No real privileged/PII/secret material. Synthetic skill-directory
-fixtures for the agent generator.
+**Test data:** scratch repos only. No real privileged/PII/secret material. Synthetic skill-directory fixtures for the agent generator.
 
 ### DevOps / Platform Team
 
@@ -548,15 +387,10 @@ fixtures for the agent generator.
 | No new secrets | Gate reuses existing `AZURE_DEVOPS_PAT`; branch-protection uses `GH_TOKEN`/`GITHUB_TOKEN`; never committed. |
 
 ### Future Developer — Follow-on Work
-- **Add a harness later** = add one native sibling adapter folder (e.g. `Cursor/`) that CONSUMES the same
-  L1 `Shared/` (never re-authors it — CI guardrail enforces) + one `harnesses[]` entry in
-  `plugin.manifest.json`. `provision.cjs` iterates `harnesses[]` and composes L1 + that adapter — no code
-  change for a well-formed adapter, no projection/delta-map to extend.
-- Fold org/marketplace/repo identity from `.claude-plugin/config.json` into the neutral manifest once no
-  reader depends on `config.json` (deliberately deferred here to avoid a silent replace).
+- **Add a harness later** = add one native sibling adapter folder (e.g. `Cursor/`) that CONSUMES the same L1 `Shared/` (never re-authors it — CI guardrail enforces) + one `harnesses[]` entry in `plugin.manifest.json`. `provision.cjs` iterates `harnesses[]` and composes L1 + that adapter — no code change for a well-formed adapter, no projection/delta-map to extend.
+- Fold org/marketplace/repo identity from `.claude-plugin/config.json` into the neutral manifest once no reader depends on `config.json` (deliberately deferred here to avoid a silent replace).
 - Hook hash-verify-before-run + warn-only/break-glass rollout, and `ai-gate.yml` authoring, are Story 6.
-- The agent generator reads only the skill directory name + SKILL.md body — extend the emitted `.agent.md`
-  shape there if Copilot agent format evolves.
+- The agent generator reads only the skill directory name + SKILL.md body — extend the emitted `.agent.md` shape there if Copilot agent format evolves.
 
 ---
 

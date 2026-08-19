@@ -23,39 +23,16 @@ ADO #4000 · Type: EPIC · ✅ APPROVED 2026-08-14 · ~41 SP total (Story 2 ~4, 
 | 7 | TBD | Eval harness + audit stamping + capability floor; cross-harness cost telemetry | 5 | ✅ Spec drafted | AC-NF5, AC-NF6 |
 | 8 | TBD | Provisioning/sync/teardown (hash-verified `.github/` deletes) + gate agents (name-from-dir) + neutral `plugin.manifest.json`; harness-neutral install | 6 | ✅ Spec revised | AC-F4, AC-F8a, AC-F8b, AC-NF7(distribution), AC-F7(agent-gen, partial); depends on 2,5,6 (distributes Story 6's gate) |
 
-† Stories 2 (5 SP) and 6 (8 SP) exceed the ≤5-SP shippable-slice rule and sub-decompose into ≤5-SP
-child stories at implement-time sizing (2a–2d; 6a–6d). Total ~41 SP grows accordingly.
+† Stories 2 (5 SP) and 6 (8 SP) exceed the ≤5-SP shippable-slice rule and sub-decompose into ≤5-SP child stories at implement-time sizing (2a–2d; 6a–6d). Total ~41 SP grows accordingly.
 
 ## Open items carried (non-blocking)
-- Skill-count denominator: `skills/` has 33 dirs; the ICEA/AC-F2 use **32** (excluding `shared/`). Story 2
-  additionally questioned whether `command-stubs` (an internal deploy helper) counts as a user-facing
-  skill — confirm the exact denominator at Story 2 implement time.
-- Deferred decisions D-1…D-5 + AC-NF2 classifier scope are recorded in each owning story's spec and the
-  epic Tech Spec's "Deferred Decisions" table — resolved before each story implements.
+- Skill-count denominator: `skills/` has 33 dirs; the ICEA/AC-F2 use **32** (excluding `shared/`). Story 2 additionally questioned whether `command-stubs` (an internal deploy helper) counts as a user-facing skill — confirm the exact denominator at Story 2 implement time.
+- Deferred decisions D-1…D-5 + AC-NF2 classifier scope are recorded in each owning story's spec and the epic Tech Spec's "Deferred Decisions" table — resolved before each story implements.
 
 ## Audit
 - 2026-08-13 — Epic ICEA saved (critic ICEA-mode: PASS WITH NOTES, 9 fixes applied).
 - 2026-08-13 — Epic package drafted: epic Tech Spec + 9 story specs (Stories 1–8 + 3a) + this tracker.
-- 2026-08-13 — Adversarial architect review (4 independent code-grounded reviewers) → REVISE. ICEA revised
-  (Revision Log #4: AC-NF1 Tier-C scope, AC-NF2 egress re-scope, AC-F2 real delta-map, AC-F3 rule-inventory,
-  AC-NF6 deterministic eval, producer/dep corrections). All 9 story specs re-revised to match. Cross-story
-  producer contracts now consistent (artifact-paths.md: 3a→4/6; artifact-write.cjs: 4→7). SP re-sized
-  (Story 2 ~7, Story 8 ~6). NOTE: epic Tech Spec `ADO-4000-tech.md` still needs a light sync (SP totals +
-  AC-NF1/NF2 wording) to match the revised ICEA. Awaiting optional re-verification + TECH-mode critic + `SAVE TECH ADO-4000`.
-- 2026-08-14 — Verify-the-fix pass (3 verifiers): all Criticals RESOLVED against code; caught + broke 2 new
-  dependency cycles (6↔8, 3→8→6→5→3); DAG now acyclic.
-- 2026-08-14 — 3-iteration web-grounded critical pass. ADOPTED the ASYMMETRIC enforcement model (ICEA
-  Revision Log #6): Claude = write-time PREVENTION (unchanged); Copilot = DETECTION + MERGE-GATE — hard
-  gate = CI `ai-gate` REQUIRED status check on a protected branch (known-good), critic = review-time
-  `review-icea` code-review skill (owned by Story 6; no sibling-skill orchestration → dissolved F1.1/F2.1).
-  Fixed F1.2 (`chat.hookFilesLocations` in Story 5/AC-F5). Cascaded into Stories 2,4,5,6,7,8 (verified: 4/4
-  headers, no company name). Story 8 now stands up the branch-protection/required-check (the Copilot hard
-  gate) + WARNS if unprotected. Phase-1 spike scaffolded (`spike/`) + protocol (`docs/plans/2026-08-14-phase1-spike.md`).
-  REMAINING before SAVE TECH: (a) run spike H1/H2 (hands-on) to confirm review-icea can load the ICEA;
-  (b) TECH-mode critic will catch any residual epic-spec/story wording drift.
-- 2026-08-14 — STRUCTURE LOCKED (ICEA #7): shared L1 content core + native per-harness (L2/L3); projection/
-  delta-map/`$PLUGIN_DIR` RETIRED. Prompt-artifact versioning added (ICEA #8, AC-F9). Re-cascaded ALL 9
-  story specs + epic AC-matrix to the current design (verified: 4/4 headers, no company name). User chose
-  formal APPROVE ADO-4000 (proceeding without a pre-approval spike — Story 1 IS the spike / first
-  implementation story; H2 failure there → REVISE). IN PROGRESS: TECH-mode critic gate → then SAVE TECH
-  (move temp→docs) → APPROVE flip. Not approving until the critic verifies clean.
+- 2026-08-13 — Adversarial architect review (4 independent code-grounded reviewers) → REVISE. ICEA revised (Revision Log #4: AC-NF1 Tier-C scope, AC-NF2 egress re-scope, AC-F2 real delta-map, AC-F3 rule-inventory, AC-NF6 deterministic eval, producer/dep corrections). All 9 story specs re-revised to match. Cross-story producer contracts now consistent (artifact-paths.md: 3a→4/6; artifact-write.cjs: 4→7). SP re-sized (Story 2 ~7, Story 8 ~6). NOTE: epic Tech Spec `ADO-4000-tech.md` still needs a light sync (SP totals + AC-NF1/NF2 wording) to match the revised ICEA. Awaiting optional re-verification + TECH-mode critic + `SAVE TECH ADO-4000`.
+- 2026-08-14 — Verify-the-fix pass (3 verifiers): all Criticals RESOLVED against code; caught + broke 2 new dependency cycles (6↔8, 3→8→6→5→3); DAG now acyclic.
+- 2026-08-14 — 3-iteration web-grounded critical pass. ADOPTED the ASYMMETRIC enforcement model (ICEA Revision Log #6): Claude = write-time PREVENTION (unchanged); Copilot = DETECTION + MERGE-GATE — hard gate = CI `ai-gate` REQUIRED status check on a protected branch (known-good), critic = review-time `review-icea` code-review skill (owned by Story 6; no sibling-skill orchestration → dissolved F1.1/F2.1). Fixed F1.2 (`chat.hookFilesLocations` in Story 5/AC-F5). Cascaded into Stories 2,4,5,6,7,8 (verified: 4/4 headers, no company name). Story 8 now stands up the branch-protection/required-check (the Copilot hard gate) + WARNS if unprotected. Phase-1 spike scaffolded (`spike/`) + protocol (`docs/plans/2026-08-14-phase1-spike.md`). REMAINING before SAVE TECH: (a) run spike H1/H2 (hands-on) to confirm review-icea can load the ICEA; (b) TECH-mode critic will catch any residual epic-spec/story wording drift.
+- 2026-08-14 — STRUCTURE LOCKED (ICEA #7): shared L1 content core + native per-harness (L2/L3); projection/ delta-map/`$PLUGIN_DIR` RETIRED. Prompt-artifact versioning added (ICEA #8, AC-F9). Re-cascaded ALL 9 story specs + epic AC-matrix to the current design (verified: 4/4 headers, no company name). User chose formal APPROVE ADO-4000 (proceeding without a pre-approval spike — Story 1 IS the spike / first implementation story; H2 failure there → REVISE). IN PROGRESS: TECH-mode critic gate → then SAVE TECH (move temp→docs) → APPROVE flip. Not approving until the critic verifies clean.

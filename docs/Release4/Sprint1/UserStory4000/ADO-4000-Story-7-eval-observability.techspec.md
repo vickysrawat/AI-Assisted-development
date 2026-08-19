@@ -23,101 +23,30 @@ Status: DRAFT · STORY · 5 SP
 
 ## Overview
 
-This story delivers the **assurance and observability** layer of the epic: it makes the
-governance tool detect its own regression **deterministically in CI**, gates on any
-**prompt-artifact version bump**, and makes every governed artifact auditable across
-harnesses under the ASYMMETRIC enforcement model. Four deliverables land together.
+This story delivers the **assurance and observability** layer of the epic: it makes the governance tool detect its own regression **deterministically in CI**, gates on any **prompt-artifact version bump**, and makes every governed artifact auditable across harnesses under the ASYMMETRIC enforcement model. Four deliverables land together.
 
-**L1/L2/L3 framing.** Under the epic's shared-content structure (Revision Log #7), the eval
-fixtures, expected-shape manifests, and the prompt-version manifest are **L1-adjacent**: the
-`Shared/prompt-manifest.json` is authored once in `Shared/` as the single L1 versioning
-source of truth, and the eval corpus lives under `Shared/eval/` where BOTH harnesses'
-artifacts are validated against one shared expected-shape + AC-coverage contract. This story
-adds **no per-harness copy** of any eval or manifest artifact — it consumes the single L1
-source and validates each harness's checked-in output against it. The audit-stamp writer
-(`audit-stamp.cjs`) is wired into `artifact-write.cjs`, which is **produced by Story 4** (the
-L3-enforcement/hook story) — this story owns the stamp *content* (an L1-derived record), not
-the write hook.
+**L1/L2/L3 framing.** Under the epic's shared-content structure (Revision Log #7), the eval fixtures, expected-shape manifests, and the prompt-version manifest are **L1-adjacent**: the `Shared/prompt-manifest.json` is authored once in `Shared/` as the single L1 versioning source of truth, and the eval corpus lives under `Shared/eval/` where BOTH harnesses' artifacts are validated against one shared expected-shape + AC-coverage contract. This story adds **no per-harness copy** of any eval or manifest artifact — it consumes the single L1 source and validates each harness's checked-in output against it. The audit-stamp writer (`audit-stamp.cjs`) is wired into `artifact-write.cjs`, which is **produced by Story 4** (the L3-enforcement/hook story) — this story owns the stamp *content* (an L1-derived record), not the write hook.
 
-(1) An **audit-stamp writer** that records `model + version + harness + skill-hash`, a
-per-artifact **gate point**, AND — new in #8 — the **prompt-artifact version(s)** that
-produced the artifact, the **dated model snapshot** (not an alias), and the **key generation
-params**. Under the asymmetric model, enforcement is HARD on BOTH harnesses — only the gate
-*point* differs: **Claude enforces at a prevention gate (write-time)**; **Copilot enforces at
-a merge gate (the CI `ai-gate` as a required status check on a protected branch)**. Neither is
-soft: a write-time `exit 2` and an un-bypassable required check are both hard lines, applied
-at different points in the flow. The stamp records WHICH gate point governed the artifact so
-provenance is auditable — e.g. `gate: prevention` for a Claude-produced artifact vs
-`gate: merge` for a Copilot-produced one. This REPLACES the earlier "hard vs soft assurance
-tier" framing, which wrongly implied a Copilot artifact was merely soft; there is no "soft"
-value and the stamp never asserts one harness is weaker than the other (AC-NF5).
+(1) An **audit-stamp writer** that records `model + version + harness + skill-hash`, a per-artifact **gate point**, AND — new in #8 — the **prompt-artifact version(s)** that produced the artifact, the **dated model snapshot** (not an alias), and the **key generation params**. Under the asymmetric model, enforcement is HARD on BOTH harnesses — only the gate *point* differs: **Claude enforces at a prevention gate (write-time)**; **Copilot enforces at a merge gate (the CI `ai-gate` as a required status check on a protected branch)**. Neither is soft: a write-time `exit 2` and an un-bypassable required check are both hard lines, applied at different points in the flow. The stamp records WHICH gate point governed the artifact so provenance is auditable — e.g. `gate: prevention` for a Claude-produced artifact vs `gate: merge` for a Copilot-produced one. This REPLACES the earlier "hard vs soft assurance tier" framing, which wrongly implied a Copilot artifact was merely soft; there is no "soft" value and the stamp never asserts one harness is weaker than the other (AC-NF5).
 
-The **gate point is DERIVED from harness detection**, whose signal originates in Story 4: the
-harness-detection helper + the Copilot PreToolUse marker Story 4 delivers. Claude detected ->
-`gate: prevention`; Copilot detected -> `gate: merge`. The gate point is derived from that
-detection, never read from artifact content, so a self-authored gate claim cannot override the
-detected value (AC-NF5). The stamp is invoked from `artifact-write.cjs`, which is **produced by
-Story 4** — this story does NOT create or modify that hook; it adds `audit-stamp.cjs` as a step
-Story 4's hook calls, and depends on Story 4 landing first (dependency edge Story 7 -> Story 4).
+The **gate point is DERIVED from harness detection**, whose signal originates in Story 4: the harness-detection helper + the Copilot PreToolUse marker Story 4 delivers. Claude detected -> `gate: prevention`; Copilot detected -> `gate: merge`. The gate point is derived from that detection, never read from artifact content, so a self-authored gate claim cannot override the detected value (AC-NF5). The stamp is invoked from `artifact-write.cjs`, which is **produced by Story 4** — this story does NOT create or modify that hook; it adds `audit-stamp.cjs` as a step Story 4's hook calls, and depends on Story 4 landing first (dependency edge Story 7 -> Story 4).
 
-**Output -> prompt-version provenance (AC-NF5 x AC-F9, new in #8).** The stamp now closes the
-loop from a governed output back to the exact prompt that produced it. On every stamp,
-`audit-stamp.cjs` reads the producing skill's `version:` and its `consumes:` L1 pins from
-frontmatter, resolves each to the recorded `{version, sha256}` in `Shared/prompt-manifest.json`
-(Story 2's artifact), and records:
-  - `prompt_versions` — an ordered list of `{artifact, version, sha256}` for the producing
-    skill plus every L1 artifact it declares in `consumes:` (so the ICEA/Tech-Spec template +
-    critic-rubric version that shaped the output is captured, not just the skill).
-  - `model_snapshot` — the **dated** model identifier (e.g. a `claude-*-YYYYMMDD` snapshot id),
-    NOT a moving alias, so the record is reproducible after an alias rolls forward.
-  - `params` — the key generation params (temperature, top_p, max_tokens, and the routing env
-    var that selected the model — e.g. `ICEA_MODEL`).
-Any governed output is therefore traceable to the exact prompt-artifact versions AND the exact
-dated model + params that produced it (reproducibility). The prompt-version fields are read
-from frontmatter + the manifest, never hand-asserted in artifact body — a body claim cannot
-override the manifest-resolved value.
+**Output -> prompt-version provenance (AC-NF5 x AC-F9, new in #8).** The stamp now closes the loop from a governed output back to the exact prompt that produced it. On every stamp, `audit-stamp.cjs` reads the producing skill's `version:` and its `consumes:` L1 pins from frontmatter, resolves each to the recorded `{version, sha256}` in `Shared/prompt-manifest.json` (Story 2's artifact), and records:
+  - `prompt_versions` — an ordered list of `{artifact, version, sha256}` for the producing skill plus every L1 artifact it declares in `consumes:` (so the ICEA/Tech-Spec template + critic-rubric version that shaped the output is captured, not just the skill).
+  - `model_snapshot` — the **dated** model identifier (e.g. a `claude-*-YYYYMMDD` snapshot id), NOT a moving alias, so the record is reproducible after an alias rolls forward.
+  - `params` — the key generation params (temperature, top_p, max_tokens, and the routing env var that selected the model — e.g. `ICEA_MODEL`). Any governed output is therefore traceable to the exact prompt-artifact versions AND the exact dated model + params that produced it (reproducibility). The prompt-version fields are read from frontmatter + the manifest, never hand-asserted in artifact body — a body claim cannot override the manifest-resolved value.
 
-(2) A **DETERMINISTIC behavioural eval harness** under `Shared/eval/**` that runs in CI.
-There is **no headless Copilot skill-runner** — skills are markdown executed by an
-interactive agent, so CI does NOT invoke skills live and does NOT depend on paid,
-nondeterministic model calls. Instead the eval validates **checked-in artifacts and/or
-recorded transcripts** against an **expected-shape + AC-coverage** contract per supported
-model+harness for which a fixture exists. Any live-model eval is **Claude-only, budget-gated,
-and best-effort** — never on the CI critical path (AC-NF6).
-A deliberately degraded artifact/transcript trips the **capability-floor scoring function**
-(defined explicitly below), so a weak model is distinguished from a structural regression.
+(2) A **DETERMINISTIC behavioural eval harness** under `Shared/eval/**` that runs in CI. There is **no headless Copilot skill-runner** — skills are markdown executed by an interactive agent, so CI does NOT invoke skills live and does NOT depend on paid, nondeterministic model calls. Instead the eval validates **checked-in artifacts and/or recorded transcripts** against an **expected-shape + AC-coverage** contract per supported model+harness for which a fixture exists. Any live-model eval is **Claude-only, budget-gated, and best-effort** — never on the CI critical path (AC-NF6). A deliberately degraded artifact/transcript trips the **capability-floor scoring function** (defined explicitly below), so a weak model is distinguished from a structural regression.
 
-(3) A **PROMPT-VERSION REGRESSION GATE** (new in #8, AC-F9 x AC-NF6). The eval harness runs on
-**ANY prompt-artifact version bump** detected from `Shared/prompt-manifest.json` — i.e. when a
-PR changes an artifact's `{version, sha256}` in the manifest, the gate re-runs that artifact's
-eval cells before the bump can land. The gate is layered:
-  - **Deterministic shape / AC-coverage checks** — the same `shape-check.cjs` contract, so a
-    version bump that silently drops a required section or an AC row fails immediately (exit 1).
-  - **The critic as LLM-as-judge** — the plugin's existing critic rubric (an L1 artifact) scores
-    the new prompt's output against the prior version's output on the golden set. This is the
-    ONE deliberately non-deterministic, judgement layer; it is **Claude-only, budget-gated, and
-    best-effort** (same constraint as the live probe) — it advises and annotates, it does not by
-    itself hard-fail the deterministic CI path.
-  - **The capability-floor threshold with a quality-delta guard** — the bumped artifact's
-    `score(artifact)` must stay `>= capability_floor` AND must not drop more than a configured
-    `max_regression_delta` (per-skill frontmatter, default `0.05`) below the prior manifest
-    version's recorded score. A drop beyond the delta **blocks the bump** (exit 3).
-  - **Failing cases feed the golden set** — any case that trips the gate is captured (input +
-    both artifact versions + the verdict) into `Shared/eval/golden/**` so the regression is
-    permanently guarded and cannot silently reappear on a later bump.
+(3) A **PROMPT-VERSION REGRESSION GATE** (new in #8, AC-F9 x AC-NF6). The eval harness runs on **ANY prompt-artifact version bump** detected from `Shared/prompt-manifest.json` — i.e. when a PR changes an artifact's `{version, sha256}` in the manifest, the gate re-runs that artifact's eval cells before the bump can land. The gate is layered:
+  - **Deterministic shape / AC-coverage checks** — the same `shape-check.cjs` contract, so a version bump that silently drops a required section or an AC row fails immediately (exit 1).
+  - **The critic as LLM-as-judge** — the plugin's existing critic rubric (an L1 artifact) scores the new prompt's output against the prior version's output on the golden set. This is the ONE deliberately non-deterministic, judgement layer; it is **Claude-only, budget-gated, and best-effort** (same constraint as the live probe) — it advises and annotates, it does not by itself hard-fail the deterministic CI path.
+  - **The capability-floor threshold with a quality-delta guard** — the bumped artifact's `score(artifact)` must stay `>= capability_floor` AND must not drop more than a configured `max_regression_delta` (per-skill frontmatter, default `0.05`) below the prior manifest version's recorded score. A drop beyond the delta **blocks the bump** (exit 3).
+  - **Failing cases feed the golden set** — any case that trips the gate is captured (input + both artifact versions + the verdict) into `Shared/eval/golden/**` so the regression is permanently guarded and cannot silently reappear on a later bump.
 
-(4) A **cross-harness cost/usage telemetry collector** records per-run token/cost/latency per
-model+harness — a retrospective replacement for the dropped proactive budget signal. The
-governing pattern is *stamp-on-write + validate-checked-in-artifacts-in-CI + gate-on-version-
-bump*: stamping is a synchronous side effect of Story 4's artifact-write flow (no new write
-gate), and eval + the prompt-version gate + telemetry are additive CI/reporting layers that
-never block a developer's local write. All eval and golden fixtures are **synthetic** — no
-real privileged, PII, or secret material (ICEA authoring constraint) — so the eval corpus
-itself creates no egress or secret-leak risk.
+(4) A **cross-harness cost/usage telemetry collector** records per-run token/cost/latency per model+harness — a retrospective replacement for the dropped proactive budget signal. The governing pattern is *stamp-on-write + validate-checked-in-artifacts-in-CI + gate-on-version- bump*: stamping is a synchronous side effect of Story 4's artifact-write flow (no new write gate), and eval + the prompt-version gate + telemetry are additive CI/reporting layers that never block a developer's local write. All eval and golden fixtures are **synthetic** — no real privileged, PII, or secret material (ICEA authoring constraint) — so the eval corpus itself creates no egress or secret-leak risk.
 
-**Capability-floor scoring function (explicit).** The floor is NOT "a score compared to a
-frontmatter float" in the abstract. It is a deterministic function over the checked-in
-artifact/transcript for a `(skill, fixture)` pair:
+**Capability-floor scoring function (explicit).** The floor is NOT "a score compared to a frontmatter float" in the abstract. It is a deterministic function over the checked-in artifact/transcript for a `(skill, fixture)` pair:
 
 ```
 score(artifact) = weighted sum of graded checks, each in [0,1]:
@@ -134,21 +63,13 @@ computed from the checked-in artifact only — no model call — so the score is
 byte-deterministic and reproducible in CI.
 ```
 
-Threshold semantics: `capability_floor` is the **inclusive minimum** — `score >= floor`
-passes, `score < floor` trips. A structural regression that removes a required section lowers
-`required_sections_present` and fails shape-check (exit 1) *before* the floor is even scored;
-the floor exists to catch a model that produces syntactically present but substantively weak
-coverage (exit 2). The **prompt-version quality-delta guard** adds a third failure mode: on a
-version bump, `prior_score - new_score > max_regression_delta` blocks the bump (exit 3) even
-when the new score is still above the floor — so a slow quality erosion across bumps is caught.
-All three failure modes are reported distinctly.
+Threshold semantics: `capability_floor` is the **inclusive minimum** — `score >= floor` passes, `score < floor` trips. A structural regression that removes a required section lowers `required_sections_present` and fails shape-check (exit 1) *before* the floor is even scored; the floor exists to catch a model that produces syntactically present but substantively weak coverage (exit 2). The **prompt-version quality-delta guard** adds a third failure mode: on a version bump, `prior_score - new_score > max_regression_delta` blocks the bump (exit 3) even when the new score is still above the floor — so a slow quality erosion across bumps is caught. All three failure modes are reported distinctly.
 
 ---
 
 ## AC Coverage Matrix
 
-Every AC in this story's scope must be covered by at least one file change; every file change
-must satisfy at least one AC. Gaps are flagged with a warning symbol.
+Every AC in this story's scope must be covered by at least one file change; every file change must satisfy at least one AC. Gaps are flagged with a warning symbol.
 
 ### AC -> File mapping
 
@@ -185,32 +106,15 @@ must satisfy at least one AC. Gaps are flagged with a warning symbol.
 | `Shared/eval/telemetry-sink.cjs` | AC-NF6 (cost dimension) |
 | `Shared/eval/cost-report.cjs` | AC-NF6 (cost dimension) |
 
-**Coverage result:** all three scoped ACs (AC-NF5, AC-NF6, AC-F9) covered plus the
-cross-harness telemetry add-on; no orphaned file changes. `artifact-write.cjs` (Story 4) and
-`prompt-manifest.json` (Story 2) appear as consumed dependencies, not changes owned by this
-story. AC-NF5 is satisfied by the **extended gate-point + prompt-version stamp**, AC-NF6 by the
-deterministic eval, and AC-F9 by the **prompt-version regression gate** — matching the revised
-ICEA AC-NF5/AC-NF6/AC-F9 (Revision Log 2026-08-14 #8).
+**Coverage result:** all three scoped ACs (AC-NF5, AC-NF6, AC-F9) covered plus the cross-harness telemetry add-on; no orphaned file changes. `artifact-write.cjs` (Story 4) and `prompt-manifest.json` (Story 2) appear as consumed dependencies, not changes owned by this story. AC-NF5 is satisfied by the **extended gate-point + prompt-version stamp**, AC-NF6 by the deterministic eval, and AC-F9 by the **prompt-version regression gate** — matching the revised ICEA AC-NF5/AC-NF6/AC-F9 (Revision Log 2026-08-14 #8).
 
 ---
 
 ## Files Changed
 
-Plugin reality: no source/DB layers. "Files Changed" = the eval harness (`Shared/eval/**`),
-the prompt-version regression gate, a CI eval workflow, the audit-stamp writer **invoked by**
-Story 4's artifact-write hook, per-skill capability-floor / gate-point / regression-delta
-declarations in skill frontmatter, and the cost-telemetry collector. Schema Changes omitted
-(no relational schema in a markdown/CJS plugin).
+Plugin reality: no source/DB layers. "Files Changed" = the eval harness (`Shared/eval/**`), the prompt-version regression gate, a CI eval workflow, the audit-stamp writer **invoked by** Story 4's artifact-write hook, per-skill capability-floor / gate-point / regression-delta declarations in skill frontmatter, and the cost-telemetry collector. Schema Changes omitted (no relational schema in a markdown/CJS plugin).
 
-**Dependency edges (producer/consumer):** `Shared/hooks/artifact-write.cjs` is **PRODUCED by
-Story 4** and **CONSUMED here** — this story adds `audit-stamp.cjs` as the step Story 4's hook
-invokes on save. `Shared/prompt-manifest.json` (+ the SemVer `version:`/`consumes:` frontmatter
-contract and the bump-on-change CI check) is **PRODUCED by Story 2** and **CONSUMED here** —
-both the stamp's prompt-version provenance (AC-NF5) and the prompt-version regression gate
-(AC-F9) read it. Story 7 therefore has hard dependency edges **Story 7 -> Story 4** and **Story
-7 -> Story 2** (in addition to the existing Story 7 -> Story 6 edge). The gate-point signal
-(AC-NF5) also originates in Story 4 (the harness-detection helper + the Copilot-deny PreToolUse
-marker); this story derives the gate point from that detection and does not re-implement it.
+**Dependency edges (producer/consumer):** `Shared/hooks/artifact-write.cjs` is **PRODUCED by Story 4** and **CONSUMED here** — this story adds `audit-stamp.cjs` as the step Story 4's hook invokes on save. `Shared/prompt-manifest.json` (+ the SemVer `version:`/`consumes:` frontmatter contract and the bump-on-change CI check) is **PRODUCED by Story 2** and **CONSUMED here** — both the stamp's prompt-version provenance (AC-NF5) and the prompt-version regression gate (AC-F9) read it. Story 7 therefore has hard dependency edges **Story 7 -> Story 4** and **Story 7 -> Story 2** (in addition to the existing Story 7 -> Story 6 edge). The gate-point signal (AC-NF5) also originates in Story 4 (the harness-detection helper + the Copilot-deny PreToolUse marker); this story derives the gate point from that detection and does not re-implement it.
 
 | Path | Change | Purpose |
 |---|---|---|
@@ -239,60 +143,25 @@ marker); this story derives the gate point from that detection and does not re-i
 
 ## API Changes (adapted — CLI surface + telemetry sink)
 
-No HTTP API. The "API" here is the eval-runner CLI, the prompt-version gate CLI, plus the
-telemetry sink contract:
+No HTTP API. The "API" here is the eval-runner CLI, the prompt-version gate CLI, plus the telemetry sink contract:
 
-- `node Shared/eval/run-eval.cjs [--harness=claude|copilot] [--skill=<name>] [--report=junit|json]`
-  — runs the DETERMINISTIC eval over checked-in artifacts/transcripts (defaults: all fixtured
-  model+harness pairs, all fixtured skills, JUnit report). Exit 0 = all green; exit 1 =
-  shape/AC regression; exit 2 = capability floor tripped. NO live model call on this path.
-- `node Shared/eval/version-gate.cjs [--base=<ref>] [--head=<ref>]` — AC-F9 gate: diffs
-  `Shared/prompt-manifest.json` between base and head, and for each bumped artifact runs the
-  deterministic shape/AC checks + capability-floor quality-delta guard (+ best-effort
-  critic-judge if `--judge` and a Claude credential are present). Exit 0 = no regression;
-  exit 1 = shape/AC regression on the bumped artifact; exit 3 = quality-delta breach (bump
-  blocked). Promotes a tripped case into `Shared/eval/golden/`.
-- `node Shared/eval/run-eval.cjs --live --model=<claude-id> [--budget=<usd>]` — OPTIONAL,
-  Claude-only, budget-gated, best-effort live-model probe. Off by default, never invoked by
-  `eval.yml`, and its result never fails CI. Refuses to run for a non-Claude harness (no
-  headless Copilot runner exists).
-- `node Shared/eval/cost-report.cjs [--since=<iso>] [--format=md|json]` — emits the
-  cross-harness cost summary from the telemetry sink.
-- Telemetry sink contract: append-only JSONL at `.aidev/telemetry/<yyyy-mm>.jsonl`, one record
-  per run: `ts, harness, model, skill, tokens_in, tokens_out, cost_usd, latency_ms, verdict`.
-  The sink is best-effort — a write failure logs a warning and never aborts the skill/eval run.
+- `node Shared/eval/run-eval.cjs [--harness=claude|copilot] [--skill=<name>] [--report=junit|json]` — runs the DETERMINISTIC eval over checked-in artifacts/transcripts (defaults: all fixtured model+harness pairs, all fixtured skills, JUnit report). Exit 0 = all green; exit 1 = shape/AC regression; exit 2 = capability floor tripped. NO live model call on this path.
+- `node Shared/eval/version-gate.cjs [--base=<ref>] [--head=<ref>]` — AC-F9 gate: diffs `Shared/prompt-manifest.json` between base and head, and for each bumped artifact runs the deterministic shape/AC checks + capability-floor quality-delta guard (+ best-effort critic-judge if `--judge` and a Claude credential are present). Exit 0 = no regression; exit 1 = shape/AC regression on the bumped artifact; exit 3 = quality-delta breach (bump blocked). Promotes a tripped case into `Shared/eval/golden/`.
+- `node Shared/eval/run-eval.cjs --live --model=<claude-id> [--budget=<usd>]` — OPTIONAL, Claude-only, budget-gated, best-effort live-model probe. Off by default, never invoked by `eval.yml`, and its result never fails CI. Refuses to run for a non-Claude harness (no headless Copilot runner exists).
+- `node Shared/eval/cost-report.cjs [--since=<iso>] [--format=md|json]` — emits the cross-harness cost summary from the telemetry sink.
+- Telemetry sink contract: append-only JSONL at `.aidev/telemetry/<yyyy-mm>.jsonl`, one record per run: `ts, harness, model, skill, tokens_in, tokens_out, cost_usd, latency_ms, verdict`. The sink is best-effort — a write failure logs a warning and never aborts the skill/eval run.
 
 ---
 
 ## Auth & Security (adapted — synthetic fixtures, managed-block ignore)
 
-- **Eval fixtures/transcripts/golden cases are SYNTHETIC.** `Shared/eval/fixtures/**`,
-  `Shared/eval/transcripts/**`, and `Shared/eval/golden/**` contain no real privileged, PII,
-  or secret material (ICEA assumption, verified authoring constraint). This keeps the eval and
-  golden corpus itself from creating an egress or secret-leak risk in the dogfood repo, even as
-  the golden set auto-grows from tripped cases (those cases derive only from synthetic inputs).
-- **No live paid API key on the CI path.** The deterministic eval and the deterministic layers
-  of the version-gate read checked-in files only; `eval.yml` needs no model credential. The
-  optional `--live` probe and the critic-as-judge (`critic-judge.cjs`) are Claude-only,
-  budget-gated, and off in CI — so no paid, nondeterministic call gates a PR.
-- The audit stamp records `skill-hash` (content hash of the skill that produced the artifact)
-  and prompt-artifact `sha256` values (from the manifest), not any secret; no credential or PAT
-  is ever written into a stamp, a golden case, or a telemetry record.
-- The stamp's `model_snapshot` and `params` fields record a dated model id + generation params
-  (temperature/top_p/max_tokens/routing var) — never a key, token, or endpoint credential.
-- Telemetry records carry cost/token counts only — never prompt bodies or artifact content —
-  so the sink cannot become an exfiltration channel for privileged context.
-- The stamp's gate-point field is **derived from harness detection** (Story 4's
-  harness-detection helper + Copilot-deny marker): Claude -> `gate: prevention` (write-time),
-  Copilot -> `gate: merge` (CI required-check). Both are hard gates. The prompt-version fields
-  are **derived from frontmatter + the Story-2 manifest**, not from artifact body — so neither a
-  self-authored gate claim nor a hand-written version claim in the body can override the
-  resolved value.
-- **`.aidev/telemetry/` ignore routing.** The ignore entry is added through the `GITIGNORE_BASE`
-  managed block owned by `setup-init-bootstrap` and applied by `gitignore-sync` — the plugin's
-  standard managed-block path. This story does NOT hand-edit `.gitignore` (ad-hoc gitignore
-  edits are ask-first per project rules); it registers the entry in the managed block so
-  `gitignore-sync` writes it idempotently without touching developer lines.
+- **Eval fixtures/transcripts/golden cases are SYNTHETIC.** `Shared/eval/fixtures/**`, `Shared/eval/transcripts/**`, and `Shared/eval/golden/**` contain no real privileged, PII, or secret material (ICEA assumption, verified authoring constraint). This keeps the eval and golden corpus itself from creating an egress or secret-leak risk in the dogfood repo, even as the golden set auto-grows from tripped cases (those cases derive only from synthetic inputs).
+- **No live paid API key on the CI path.** The deterministic eval and the deterministic layers of the version-gate read checked-in files only; `eval.yml` needs no model credential. The optional `--live` probe and the critic-as-judge (`critic-judge.cjs`) are Claude-only, budget-gated, and off in CI — so no paid, nondeterministic call gates a PR.
+- The audit stamp records `skill-hash` (content hash of the skill that produced the artifact) and prompt-artifact `sha256` values (from the manifest), not any secret; no credential or PAT is ever written into a stamp, a golden case, or a telemetry record.
+- The stamp's `model_snapshot` and `params` fields record a dated model id + generation params (temperature/top_p/max_tokens/routing var) — never a key, token, or endpoint credential.
+- Telemetry records carry cost/token counts only — never prompt bodies or artifact content — so the sink cannot become an exfiltration channel for privileged context.
+- The stamp's gate-point field is **derived from harness detection** (Story 4's harness-detection helper + Copilot-deny marker): Claude -> `gate: prevention` (write-time), Copilot -> `gate: merge` (CI required-check). Both are hard gates. The prompt-version fields are **derived from frontmatter + the Story-2 manifest**, not from artifact body — so neither a self-authored gate claim nor a hand-written version claim in the body can override the resolved value.
+- **`.aidev/telemetry/` ignore routing.** The ignore entry is added through the `GITIGNORE_BASE` managed block owned by `setup-init-bootstrap` and applied by `gitignore-sync` — the plugin's standard managed-block path. This story does NOT hand-edit `.gitignore` (ad-hoc gitignore edits are ask-first per project rules); it registers the entry in the managed block so `gitignore-sync` writes it idempotently without touching developer lines.
 
 ---
 
@@ -326,13 +195,8 @@ telemetry sink contract:
 | Telemetry | Cross-harness cost/usage collector + sink + cost report + managed-block ignore entry | 0.5 |
 | **Total** | | **5** |
 
-**Total SP: 5**
-**Type: STORY** — a single shippable slice (assurance + observability + prompt-version gate)
-that adds no new user-facing behaviour beyond the stamp, the CI eval gate, and the
-version-bump gate; under the 5-SP rule, no sub-decomposition. **Blocked by Story 4** (produces
-`artifact-write.cjs` + harness detection), **Story 2** (produces `Shared/prompt-manifest.json`
-+ the versioning frontmatter contract), **and Story 6** (governance hardening / Tier-C
-backstop).
+**Total SP: 5** **Type: STORY** — a single shippable slice (assurance + observability + prompt-version gate) that adds no new user-facing behaviour beyond the stamp, the CI eval gate, and the version-bump gate; under the 5-SP rule, no sub-decomposition. **Blocked by Story 4** (produces `artifact-write.cjs` + harness detection), **Story 2** (produces `Shared/prompt-manifest.json`
++ the versioning frontmatter contract), **and Story 6** (governance hardening / Tier-C backstop).
 
 ---
 
@@ -385,16 +249,7 @@ The developer must tick every item before raising the PR.
 
 ## Open Questions
 
-None open. Scope is fully specified by the revised AC-NF5 (gate-point + prompt-version stamp),
-AC-NF6 (deterministic eval), and AC-F9 (prompt-version regression gate), plus the cross-harness
-telemetry add-on. The eval and the deterministic layers of the version-gate are deterministic
-(checked-in artifact/transcript + manifest-diff validation) so no CI model-credential or
-paid-API decision is pending; the critic-as-judge is explicitly best-effort/off-CI. The
-telemetry backend is a local append-only JSONL sink (no external service). Producer questions
-are resolved: Story 4 owns `artifact-write.cjs` + harness detection; Story 2 owns
-`Shared/prompt-manifest.json` + the versioning frontmatter contract + the bump-on-change check;
-Story 7 consumes both. The gate-point values are fixed by the asymmetric enforcement model
-(`prevention` for Claude, `merge` for Copilot).
+None open. Scope is fully specified by the revised AC-NF5 (gate-point + prompt-version stamp), AC-NF6 (deterministic eval), and AC-F9 (prompt-version regression gate), plus the cross-harness telemetry add-on. The eval and the deterministic layers of the version-gate are deterministic (checked-in artifact/transcript + manifest-diff validation) so no CI model-credential or paid-API decision is pending; the critic-as-judge is explicitly best-effort/off-CI. The telemetry backend is a local append-only JSONL sink (no external service). Producer questions are resolved: Story 4 owns `artifact-write.cjs` + harness detection; Story 2 owns `Shared/prompt-manifest.json` + the versioning frontmatter contract + the bump-on-change check; Story 7 consumes both. The gate-point values are fixed by the asymmetric enforcement model (`prevention` for Claude, `merge` for Copilot).
 
 ---
 
@@ -449,66 +304,28 @@ ARTIFACT WRITE (developer saves a governed artifact — ICEA/Tech/tracker):
     -> telemetry-collector.cjs records the run (best-effort)
 ```
 
-No network/DB tiers — the plugin runs in-process. The CI eval + deterministic version-gate
-touch no external endpoint; the optional live probe and the critic-as-judge are the only paths
-that reach a model, and both are off in CI. The telemetry sink is a local JSONL file.
+No network/DB tiers — the plugin runs in-process. The CI eval + deterministic version-gate touch no external endpoint; the optional live probe and the critic-as-judge are the only paths that reach a model, and both are off in CI. The telemetry sink is a local JSONL file.
 
 ---
 
 ## Rollback
 
-**Schema migrations:** None — this story is code/config only; the telemetry sink, golden set,
-and stamps are additive (`.aidev/telemetry/*.jsonl`, `Shared/eval/golden/**`, and an appended
-stamp block).
+**Schema migrations:** None — this story is code/config only; the telemetry sink, golden set, and stamps are additive (`.aidev/telemetry/*.jsonl`, `Shared/eval/golden/**`, and an appended stamp block).
 
 **Rollback procedure:**
-1. This story ships on `feature/4.x-multi-harness`; revert its commit range to remove
-   `Shared/eval/**` (incl. `version-gate.cjs`, `critic-judge.cjs`, `golden/`),
-   `.github/workflows/eval.yml`, the `audit-stamp.cjs` wiring into Story 4's hook, the
-   frontmatter fields, and the managed-block ignore entry. Story 4's `artifact-write.cjs` and
-   Story 2's `Shared/prompt-manifest.json` are untouched by this revert (they are Story 4's and
-   Story 2's artifacts).
-2. Reverting the stamp wiring returns governed-artifact writes to their pre-Story-7 (unstamped)
-   behaviour — no data loss; existing artifacts keep any stamp already written (including its
-   prompt-version provenance).
-3. Reverting `eval.yml` removes the CI eval gate AND the prompt-version regression gate; the
-   harness-independent Tier-C `ai-gate` (Story 6) and Story 2's bump-on-change hash check remain
-   the enforcement backstops, so governance is not weakened by the rollback.
-4. The telemetry sink and the golden set are additive and inert on rollback — `.aidev/telemetry/`
-   and `Shared/eval/golden/` can be deleted with no functional impact; remove the telemetry
-   managed-block ignore entry via `gitignore-sync`.
+1. This story ships on `feature/4.x-multi-harness`; revert its commit range to remove `Shared/eval/**` (incl. `version-gate.cjs`, `critic-judge.cjs`, `golden/`), `.github/workflows/eval.yml`, the `audit-stamp.cjs` wiring into Story 4's hook, the frontmatter fields, and the managed-block ignore entry. Story 4's `artifact-write.cjs` and Story 2's `Shared/prompt-manifest.json` are untouched by this revert (they are Story 4's and Story 2's artifacts).
+2. Reverting the stamp wiring returns governed-artifact writes to their pre-Story-7 (unstamped) behaviour — no data loss; existing artifacts keep any stamp already written (including its prompt-version provenance).
+3. Reverting `eval.yml` removes the CI eval gate AND the prompt-version regression gate; the harness-independent Tier-C `ai-gate` (Story 6) and Story 2's bump-on-change hash check remain the enforcement backstops, so governance is not weakened by the rollback.
+4. The telemetry sink and the golden set are additive and inert on rollback — `.aidev/telemetry/` and `Shared/eval/golden/` can be deleted with no functional impact; remove the telemetry managed-block ignore entry via `gitignore-sync`.
 
-**Verify after rollback:** a governed-artifact write still succeeds (via Story 4's hook); the
-Story-6 Tier-C gate still blocks a self-forged approval; Story 2's bump-on-change check still
-fails an un-bumped prompt edit; no CI job references the removed `eval.yml`.
+**Verify after rollback:** a governed-artifact write still succeeds (via Story 4's hook); the Story-6 Tier-C gate still blocks a self-forged approval; Story 2's bump-on-change check still fails an un-bumped prompt edit; no CI job references the removed `eval.yml`.
 
 ---
 
 ## Handover
 
 ### QA Team
-**What was added:** every governed artifact now carries an audit stamp (model+version+harness+
-skill-hash + a **harness-derived** gate point — `prevention` on Claude write-time, `merge` on
-Copilot CI required-check; both hard — PLUS the **prompt-artifact version(s)**, a **dated model
-snapshot**, and **key params** so any output traces back to the exact prompt version + model
-that produced it), written by `audit-stamp.cjs` invoked from Story 4's `artifact-write.cjs`; a
-**deterministic** CI eval harness validates checked-in artifacts / recorded transcripts against
-an expected-shape + AC-coverage contract per supported model+harness and fails on regression or
-a tripped per-skill capability floor; a **prompt-version regression gate** re-runs the eval on
-any `Shared/prompt-manifest.json` bump and blocks a quality drop beyond the per-skill delta
-(feeding failing cases into the golden set); a best-effort cross-harness cost/usage telemetry
-collector records per-run cost. **How to test:** run `node Shared/eval/run-eval.cjs` locally
-against the checked-in fixtures (green, no model credential needed), then swap in a deliberately
-degraded checked-in artifact and confirm exit 2 + a floor message with the per-check breakdown.
-Bump an artifact's version in `Shared/prompt-manifest.json` with a degraded output and run
-`node Shared/eval/version-gate.cjs` — confirm exit 3 (bump blocked), the delta message, and a
-new case in `Shared/eval/golden/`. Inspect a Claude-produced vs a Copilot-produced artifact and
-confirm both carry a stamp with distinct gate points (`prevention` vs `merge`) derived from
-harness detection, plus prompt-version + dated-snapshot + params — and that neither is stamped
-"soft". **Test data:** synthetic fixtures/transcripts/golden cases only — no real
-privileged/PII/secret material. **Regression risk:** stamping flows through Story 4's
-artifact-write hook — confirm normal ICEA/Tech/tracker saves still succeed and are not blocked
-by telemetry availability.
+**What was added:** every governed artifact now carries an audit stamp (model+version+harness+ skill-hash + a **harness-derived** gate point — `prevention` on Claude write-time, `merge` on Copilot CI required-check; both hard — PLUS the **prompt-artifact version(s)**, a **dated model snapshot**, and **key params** so any output traces back to the exact prompt version + model that produced it), written by `audit-stamp.cjs` invoked from Story 4's `artifact-write.cjs`; a **deterministic** CI eval harness validates checked-in artifacts / recorded transcripts against an expected-shape + AC-coverage contract per supported model+harness and fails on regression or a tripped per-skill capability floor; a **prompt-version regression gate** re-runs the eval on any `Shared/prompt-manifest.json` bump and blocks a quality drop beyond the per-skill delta (feeding failing cases into the golden set); a best-effort cross-harness cost/usage telemetry collector records per-run cost. **How to test:** run `node Shared/eval/run-eval.cjs` locally against the checked-in fixtures (green, no model credential needed), then swap in a deliberately degraded checked-in artifact and confirm exit 2 + a floor message with the per-check breakdown. Bump an artifact's version in `Shared/prompt-manifest.json` with a degraded output and run `node Shared/eval/version-gate.cjs` — confirm exit 3 (bump blocked), the delta message, and a new case in `Shared/eval/golden/`. Inspect a Claude-produced vs a Copilot-produced artifact and confirm both carry a stamp with distinct gate points (`prevention` vs `merge`) derived from harness detection, plus prompt-version + dated-snapshot + params — and that neither is stamped "soft". **Test data:** synthetic fixtures/transcripts/golden cases only — no real privileged/PII/secret material. **Regression risk:** stamping flows through Story 4's artifact-write hook — confirm normal ICEA/Tech/tracker saves still succeed and are not blocked by telemetry availability.
 
 ### DevOps / Platform Team
 
@@ -522,17 +339,10 @@ by telemetry availability.
 | Model+harness matrix | Defined by the fixtures/transcripts present; extend by adding a checked-in fixture + expected manifest for a new model/harness cell. |
 
 ### Future Developer — Follow-on Work
-- **Add a skill to the eval suite** = add a synthetic fixture + a checked-in reference artifact
-  (or recorded transcript) under `Shared/eval/fixtures/` (and `Shared/eval/transcripts/`), an
-  expected-shape manifest under `Shared/eval/expected/`, and set `capability_floor`,
-  `gate_point`, and `max_regression_delta` in that skill's frontmatter. `run-eval.cjs` and
-  `version-gate.cjs` pick it up automatically.
-- **Add a supported model/harness** = add a checked-in fixture + expected manifest for that
-  cell; no code change if the harness is already stamp-aware. No CI credential needed.
-- **Prune the golden set** (periodic): auto-grown golden cases accumulate; a future maintenance
-  task can dedupe cases that guard the same regression.
-- **Telemetry backend upgrade** (deferred): the local JSONL sink is intentionally simple; a
-  future story could point `telemetry-sink.cjs` at a central store without changing callers.
+- **Add a skill to the eval suite** = add a synthetic fixture + a checked-in reference artifact (or recorded transcript) under `Shared/eval/fixtures/` (and `Shared/eval/transcripts/`), an expected-shape manifest under `Shared/eval/expected/`, and set `capability_floor`, `gate_point`, and `max_regression_delta` in that skill's frontmatter. `run-eval.cjs` and `version-gate.cjs` pick it up automatically.
+- **Add a supported model/harness** = add a checked-in fixture + expected manifest for that cell; no code change if the harness is already stamp-aware. No CI credential needed.
+- **Prune the golden set** (periodic): auto-grown golden cases accumulate; a future maintenance task can dedupe cases that guard the same regression.
+- **Telemetry backend upgrade** (deferred): the local JSONL sink is intentionally simple; a future story could point `telemetry-sink.cjs` at a central store without changing callers.
 
 ---
 

@@ -31,108 +31,40 @@ Status: DRAFT · STORY · 5 SP
 
 ## Overview
 
-This story makes the plugin's nine existing hooks enforce governance on **both** Claude Code and
-GitHub Copilot, and makes committed `memory/MEMORY.md` load at session start on both harnesses.
+This story makes the plugin's nine existing hooks enforce governance on **both** Claude Code and GitHub Copilot, and makes committed `memory/MEMORY.md` load at session start on both harnesses.
 
-**Layering (L1/L2/L3 — shared content, NATIVE per-harness hooks; ICEA #7).** The governing pattern
-is NOT "author-once, mechanically-project-per-harness" — that projection model (the delta-map,
-per-skill projection, and the runtime `$PLUGIN_DIR` bridge) was **RETIRED in ICEA #7**. Instead:
-- **L1 (content & standards, single source in `Shared/`)** — the hook DECISION LOGIC as shared
-  knowledge, the B1–B7 taxonomy the classifying hook reads, the guarded-path SET rules, the compat
-  primitives (input normaliser, tool-name map, matcher-in-script predicate), and the enforcement
-  standard. Authored ONCE; NEVER duplicated.
-- **L2/L3 (engagement + enforcement, NATIVE per harness)** — the **Claude hooks live in `Claude/`**
-  (native, ≈v3.13 unchanged: the Claude write-time hard gate, registered in `.claude/settings.json`
-  with declarative `matcher`), and the **Copilot hooks live in `Copilot/`** (native, best-effort:
-  a `hooks.json` Preview manifest under `.github/hooks`). These two hook sets are AUTHORED NATIVELY
-  to each harness's strengths — the Copilot side is NOT mechanically projected from the Claude shape.
-- **Both harness-native hook sets CONSUME L1, never re-author it.** e.g. the hook that classifies
-  context against B1–B7 reads the L1 taxonomy; the compat shim, matcher-in-script predicate, and
-  tool-name map are L1 primitives consumed by both. A **CI guardrail** (Story 2) fails any PR that
-  re-authors an L1 standard inside `Copilot/` (re-deliver, never re-fork).
+**Layering (L1/L2/L3 — shared content, NATIVE per-harness hooks; ICEA #7).** The governing pattern is NOT "author-once, mechanically-project-per-harness" — that projection model (the delta-map, per-skill projection, and the runtime `$PLUGIN_DIR` bridge) was **RETIRED in ICEA #7**. Instead:
+- **L1 (content & standards, single source in `Shared/`)** — the hook DECISION LOGIC as shared knowledge, the B1–B7 taxonomy the classifying hook reads, the guarded-path SET rules, the compat primitives (input normaliser, tool-name map, matcher-in-script predicate), and the enforcement standard. Authored ONCE; NEVER duplicated.
+- **L2/L3 (engagement + enforcement, NATIVE per harness)** — the **Claude hooks live in `Claude/`** (native, ≈v3.13 unchanged: the Claude write-time hard gate, registered in `.claude/settings.json` with declarative `matcher`), and the **Copilot hooks live in `Copilot/`** (native, best-effort: a `hooks.json` Preview manifest under `.github/hooks`). These two hook sets are AUTHORED NATIVELY to each harness's strengths — the Copilot side is NOT mechanically projected from the Claude shape.
+- **Both harness-native hook sets CONSUME L1, never re-author it.** e.g. the hook that classifies context against B1–B7 reads the L1 taxonomy; the compat shim, matcher-in-script predicate, and tool-name map are L1 primitives consumed by both. A **CI guardrail** (Story 2) fails any PR that re-authors an L1 standard inside `Copilot/` (re-deliver, never re-fork).
 
-The two harnesses have different hook models — Claude Code registers hooks in `.claude/settings.json`
-and supports a declarative `matcher` field with GA (generally available) write-time semantics;
-Copilot uses a `hooks.json` (Preview) with `SessionStart`/`UserPromptSubmit`/`PreToolUse`/`PostToolUse`
-events, does not apply the same `matcher` syntax (matchers are parsed-but-not-applied — web-confirmed),
-and uses different tool names. The **shared L1 compat primitives** reconcile this two ways so each
-native hook set reaches the SAME decision from the SAME L1 logic: **matcher-in-script** (the tool-match
-predicate that Claude expresses declaratively is instead computed inside the hook, so Copilot — which
-does not apply the declarative matcher — gets identical filtering) and a **tool-name map** (a small
-L1 table translating Copilot tool identifiers to the canonical names the shared logic expects, e.g.
-Copilot's edit tool -> canonical `Write`/`Edit`).
+The two harnesses have different hook models — Claude Code registers hooks in `.claude/settings.json` and supports a declarative `matcher` field with GA (generally available) write-time semantics; Copilot uses a `hooks.json` (Preview) with `SessionStart`/`UserPromptSubmit`/`PreToolUse`/`PostToolUse` events, does not apply the same `matcher` syntax (matchers are parsed-but-not-applied — web-confirmed), and uses different tool names. The **shared L1 compat primitives** reconcile this two ways so each native hook set reaches the SAME decision from the SAME L1 logic: **matcher-in-script** (the tool-match predicate that Claude expresses declaratively is instead computed inside the hook, so Copilot — which does not apply the declarative matcher — gets identical filtering) and a **tool-name map** (a small L1 table translating Copilot tool identifiers to the canonical names the shared logic expects, e.g. Copilot's edit tool -> canonical `Write`/`Edit`).
 
-**Enforcement is ASYMMETRIC (revised ICEA #6) and this story sits squarely inside that model.**
-The two harnesses do NOT enforce at the same point, and this story does not pretend they do:
+**Enforcement is ASYMMETRIC (revised ICEA #6) and this story sits squarely inside that model.** The two harnesses do NOT enforce at the same point, and this story does not pretend they do:
 
-- **Claude = write-time PREVENTION (the CLAUDE hard gate — UNCHANGED).** Claude keeps its GA
-  write-time hooks (`icea-floor` `exit 2`, and the other eight) byte-for-byte. These are the Claude
-  hard line and the AC-NF4 parity contract. This story must not weaken them — including keeping
-  `icea-floor`'s fail-OPEN-on-malformed-stdin behaviour, for AC-NF4 parity.
-- **Copilot client hooks = BEST-EFFORT.** The projected `.github/hooks/hooks.json` `PreToolUse` deny
-  *does* hard-deny (`exit 2`) **where it actually fires** — but it is Preview, its events are not
-  guaranteed to deliver on every surface, and on timeout it **fails OPEN**. Therefore the Copilot
-  client hooks are explicitly **NOT the Copilot hard line** — they are best-effort authoring-time
-  assistance layered on top.
-- **The Copilot HARD gate is NOT a client hook at all** — it is the harness-independent CI `ai-gate`
-  as a **required status check on a protected branch** (un-bypassable at merge; you cannot
-  `--no-verify` a required check). That gate is owned/built by **Story 6** (logic) and distributed by
-  **Story 8** (provisioning + branch-protection setup) — it is out of scope for THIS story, which
-  only produces the best-effort Copilot client layer and coordinates with the gate as the backstop.
+- **Claude = write-time PREVENTION (the CLAUDE hard gate — UNCHANGED).** Claude keeps its GA write-time hooks (`icea-floor` `exit 2`, and the other eight) byte-for-byte. These are the Claude hard line and the AC-NF4 parity contract. This story must not weaken them — including keeping `icea-floor`'s fail-OPEN-on-malformed-stdin behaviour, for AC-NF4 parity.
+- **Copilot client hooks = BEST-EFFORT.** The projected `.github/hooks/hooks.json` `PreToolUse` deny *does* hard-deny (`exit 2`) **where it actually fires** — but it is Preview, its events are not guaranteed to deliver on every surface, and on timeout it **fails OPEN**. Therefore the Copilot client hooks are explicitly **NOT the Copilot hard line** — they are best-effort authoring-time assistance layered on top.
+- **The Copilot HARD gate is NOT a client hook at all** — it is the harness-independent CI `ai-gate` as a **required status check on a protected branch** (un-bypassable at merge; you cannot `--no-verify` a required check). That gate is owned/built by **Story 6** (logic) and distributed by **Story 8** (provisioning + branch-protection setup) — it is out of scope for THIS story, which only produces the best-effort Copilot client layer and coordinates with the gate as the backstop.
 
-This story does not itself relocate every hook's business logic wholesale; it establishes the shim,
-neutralises two Claude-only assumptions, projects the Copilot best-effort layer, and adds the memory
-injector + audit-stamp producer. "Runs on both harnesses" (AC-F7) is defined here as *inspects the
-same inputs and reaches the same decision where it fires* — not merely *fires on both*. Two 3.x hooks
-were audited and found to be Claude-only in a way that would silently no-op on a Copilot repo; this
-story neutralises both so the guarantee holds:
+This story does not itself relocate every hook's business logic wholesale; it establishes the shim, neutralises two Claude-only assumptions, projects the Copilot best-effort layer, and adds the memory injector + audit-stamp producer. "Runs on both harnesses" (AC-F7) is defined here as *inspects the same inputs and reaches the same decision where it fires* — not merely *fires on both*. Two 3.x hooks were audited and found to be Claude-only in a way that would silently no-op on a Copilot repo; this story neutralises both so the guarantee holds:
 
-- **`check-settings-secrets.cjs`** hard-codes `.claude/settings.json` in its path predicate
-  (`isSettingsJson`) and in `git show :.claude/settings.json` (`--staged`). On a Copilot repo the
-  committed sensitive config is `.vscode/settings.json`, `.vscode/mcp.json`, and committed `.github/**`
-  hook/workflow config — none of which the 3.x hook scans, so it *fires but inspects nothing*. This
-  story **parameterises the guarded-path SET** so the hook inspects Claude's `.claude/settings.json`
-  **and** the Copilot-side files, on both the write-time and staged tiers.
-- **`memory-capture.cjs`** guards on `.claude/dream-init-state.json`
-  (`if (!fs.existsSync('.claude/dream-init-state.json')) process.exit(0)`). A Copilot-only repo may
-  not carry that Claude-specific state file, so the reminder **silently no-ops**. This story
-  neutralises the guard to a **harness-neutral activation signal** (`.aidev/manifest.json` — the
-  harness-neutral registry from AC-F4 — or the presence of `memory/`).
+- **`check-settings-secrets.cjs`** hard-codes `.claude/settings.json` in its path predicate (`isSettingsJson`) and in `git show :.claude/settings.json` (`--staged`). On a Copilot repo the committed sensitive config is `.vscode/settings.json`, `.vscode/mcp.json`, and committed `.github/**` hook/workflow config — none of which the 3.x hook scans, so it *fires but inspects nothing*. This story **parameterises the guarded-path SET** so the hook inspects Claude's `.claude/settings.json` **and** the Copilot-side files, on both the write-time and staged tiers.
+- **`memory-capture.cjs`** guards on `.claude/dream-init-state.json` (`if (!fs.existsSync('.claude/dream-init-state.json')) process.exit(0)`). A Copilot-only repo may not carry that Claude-specific state file, so the reminder **silently no-ops**. This story neutralises the guard to a **harness-neutral activation signal** (`.aidev/manifest.json` — the harness-neutral registry from AC-F4 — or the presence of `memory/`).
 
 Memory has TWO distinct hook roles, deliberately kept separate:
-- `memory-capture.cjs` is a **REMINDER-injector**, NOT a writer. It emits
-  `hookSpecificOutput.additionalContext` on `UserPromptSubmit` nudging the model to write to
-  `memory/MEMORY.md` if a trigger fired in the previous turn. It never writes memory itself. Its
-  guard is now harness-neutral (above) so it activates on a Copilot-only repo too.
-- `session-start-memory.cjs` (NEW) is the **content injector**: it reads committed `memory/MEMORY.md`
-  and injects it as session context at `SessionStart` on both harnesses. This is correctly new — 3.x
-  had no such injector.
-- The actual memory *content* is written by the baked-in critic/implement skill steps (existing 3.x
-  behaviour), NOT by any hook. So real capture relies on those skill-side writes plus the reminder
-  nudge; the injector only surfaces already-written memory.
+- `memory-capture.cjs` is a **REMINDER-injector**, NOT a writer. It emits `hookSpecificOutput.additionalContext` on `UserPromptSubmit` nudging the model to write to `memory/MEMORY.md` if a trigger fired in the previous turn. It never writes memory itself. Its guard is now harness-neutral (above) so it activates on a Copilot-only repo too.
+- `session-start-memory.cjs` (NEW) is the **content injector**: it reads committed `memory/MEMORY.md` and injects it as session context at `SessionStart` on both harnesses. This is correctly new — 3.x had no such injector.
+- The actual memory *content* is written by the baked-in critic/implement skill steps (existing 3.x behaviour), NOT by any hook. So real capture relies on those skill-side writes plus the reminder nudge; the injector only surfaces already-written memory.
 
-The story ships the shared L1 hook logic + compat primitives in `Shared/hooks/**`, the **native
-Claude hooks in `Claude/hooks/`** wired via the `.claude/settings.json` hooks block (Claude GA, the
-hard gate, unchanged), the **native Copilot hooks in `Copilot/hooks/`** emitted to `.github/hooks/`
-(+ cloud-hooks) as the best-effort Copilot manifest, a hook-input normaliser (L1), the SessionStart
-memory injector, the NEW `Shared/hooks/artifact-write.cjs` audit-stamp hook-in (producer for Story
-7's AC-NF5), and an AC-NF4 parity check. Both native hook sets CONSUME the shared L1 logic — they are
-authored per harness, not projected from one to the other (#7). It also specifies the
-`chat.hookFilesLocations` scoping keys (emitted by Story 5) that close the `.claude/settings.json`
-hook double-registration on Copilot.
+The story ships the shared L1 hook logic + compat primitives in `Shared/hooks/**`, the **native Claude hooks in `Claude/hooks/`** wired via the `.claude/settings.json` hooks block (Claude GA, the hard gate, unchanged), the **native Copilot hooks in `Copilot/hooks/`** emitted to `.github/hooks/` (+ cloud-hooks) as the best-effort Copilot manifest, a hook-input normaliser (L1), the SessionStart memory injector, the NEW `Shared/hooks/artifact-write.cjs` audit-stamp hook-in (producer for Story 7's AC-NF5), and an AC-NF4 parity check. Both native hook sets CONSUME the shared L1 logic — they are authored per harness, not projected from one to the other (#7). It also specifies the `chat.hookFilesLocations` scoping keys (emitted by Story 5) that close the `.claude/settings.json` hook double-registration on Copilot.
 
 ---
 
 ## AC Coverage Matrix
 
-Every AC in this story's scope must be covered by at least one file change; every file change must
-satisfy at least one AC. Gaps are flagged.
+Every AC in this story's scope must be covered by at least one file change; every file change must satisfy at least one AC. Gaps are flagged.
 
-Scope: **AC-F7** (asymmetric enforcement — this story owns the hook slice), **AC-F5** (the
-`chat.hookFilesLocations` hook-discovery scoping requirement — file emitted by Story 5, hook keys
-specified here) and **AC-NF4** (parity — co-owned with Stories 2 and 5; this story owns the hook-path
-slice). This story is also the **PRODUCER** of `artifact-write.cjs`, which Story 7's **AC-NF5** (audit
-stamping) CONSUMES — AC-NF5 is delivered by Story 7, not asserted here.
+Scope: **AC-F7** (asymmetric enforcement — this story owns the hook slice), **AC-F5** (the `chat.hookFilesLocations` hook-discovery scoping requirement — file emitted by Story 5, hook keys specified here) and **AC-NF4** (parity — co-owned with Stories 2 and 5; this story owns the hook-path slice). This story is also the **PRODUCER** of `artifact-write.cjs`, which Story 7's **AC-NF5** (audit stamping) CONSUMES — AC-NF5 is delivered by Story 7, not asserted here.
 
 ### AC -> File mapping
 
@@ -167,12 +99,7 @@ stamping) CONSUMES — AC-NF5 is delivered by Story 7, not asserted here.
 | `.github/agents/gate-icea.agent.md`, `gate-script.agent.md` (read-only gate agents, advisory) | AC-F7 |
 | `Shared/eval/parity/claude-tier-a.test.cjs` (AC-NF4 parity check) | AC-NF4 |
 
-**Coverage result:** all three in-scope ACs (AC-F7 asymmetric, AC-F5 hook scoping, AC-NF4 parity) are
-covered. `artifact-write.cjs` is produced here (its consuming AC-NF5 lives in Story 7) and mapped to
-AC-F7 as a same-story hook-in so it is not orphaned. The Copilot HARD gate (CI `ai-gate` required
-check) is explicitly NOT covered here by design — it is Story 6 (logic) + Story 8 (distribution +
-branch protection); this story produces only the Copilot best-effort client layer plus the shared
-`.vscode` hook-scoping key spec that Story 5 emits.
+**Coverage result:** all three in-scope ACs (AC-F7 asymmetric, AC-F5 hook scoping, AC-NF4 parity) are covered. `artifact-write.cjs` is produced here (its consuming AC-NF5 lives in Story 7) and mapped to AC-F7 as a same-story hook-in so it is not orphaned. The Copilot HARD gate (CI `ai-gate` required check) is explicitly NOT covered here by design — it is Story 6 (logic) + Story 8 (distribution + branch protection); this story produces only the Copilot best-effort client layer plus the shared `.vscode` hook-scoping key spec that Story 5 emits.
 
 ---
 
@@ -217,8 +144,7 @@ branch protection); this story produces only the Copilot best-effort client laye
 
 ## API Changes (adapted — hook I/O contract + tool-name map)
 
-There are no HTTP endpoints. The "API" here is the **hook input/output contract** each harness uses to
-invoke a hook, and the **tool-name map** the shim uses to reconcile them.
+There are no HTTP endpoints. The "API" here is the **hook input/output contract** each harness uses to invoke a hook, and the **tool-name map** the shim uses to reconcile them.
 
 **Hook input contract (canonical, produced by `hook-input.cjs`):**
 
@@ -231,33 +157,16 @@ invoke a hook, and the **tool-name map** the shim uses to reconcile them.
   raw:      object }
 ```
 
-The normaliser reconciles the two field shapes observed across harnesses — snake_case
-`tool_input.file_path` and camelCase `filePath` — into the single canonical `filePath` (web-confirmed
-necessary; different harness/versions emit different shapes). `raw` retains the original untouched.
+The normaliser reconciles the two field shapes observed across harnesses — snake_case `tool_input.file_path` and camelCase `filePath` — into the single canonical `filePath` (web-confirmed necessary; different harness/versions emit different shapes). `raw` retains the original untouched.
 
 **Hook output contract (harness-specific, produced by `compat-shim.cjs`):**
 
-- **Claude (write-time PREVENTION, hard — the Claude hard gate):** deny = process `exit 2` with a
-  stderr message; allow = `exit 0`. Unchanged from 3.x — the parity contract (AC-NF4).
-- **Copilot (BEST-EFFORT client layer):** deny = `exit 2` with a `PreToolUse` deny JSON on stdout
-  (`{ "decision": "deny", "reason": "..." }`) — this DOES hard-deny **where the event actually fires**;
-  allow = `exit 0` empty. But because the event is Preview, may not deliver on every surface, and
-  **times out fail-OPEN**, the Copilot client hook is explicitly NOT the Copilot hard line. The gate
-  point is stamped (via `artifact-write.cjs`, formalised in Story 7 AC-NF5) so provenance records that
-  this was a best-effort client check, and the merge-time CI `ai-gate` (Story 6/8) is the actual
-  Copilot hard gate.
+- **Claude (write-time PREVENTION, hard — the Claude hard gate):** deny = process `exit 2` with a stderr message; allow = `exit 0`. Unchanged from 3.x — the parity contract (AC-NF4).
+- **Copilot (BEST-EFFORT client layer):** deny = `exit 2` with a `PreToolUse` deny JSON on stdout (`{ "decision": "deny", "reason": "..." }`) — this DOES hard-deny **where the event actually fires**; allow = `exit 0` empty. But because the event is Preview, may not deliver on every surface, and **times out fail-OPEN**, the Copilot client hook is explicitly NOT the Copilot hard line. The gate point is stamped (via `artifact-write.cjs`, formalised in Story 7 AC-NF5) so provenance records that this was a best-effort client check, and the merge-time CI `ai-gate` (Story 6/8) is the actual Copilot hard gate.
 
-**Guarded-path SET (`guarded-paths.cjs`, consumed by `check-settings-secrets`):** returns the set of
-committed config files to inspect for the active harness. Claude -> `.claude/settings.json`; Copilot ->
-`.vscode/settings.json`, `.vscode/mcp.json`, and committed `.github/**` hook/workflow config; both ->
-the union. `runHook` matches a write target against the SET; `runStaged` iterates `git show :<path>`
-over each SET member. This makes "runs on both harnesses" mean the guard INSPECTS both, not merely fires.
+**Guarded-path SET (`guarded-paths.cjs`, consumed by `check-settings-secrets`):** returns the set of committed config files to inspect for the active harness. Claude -> `.claude/settings.json`; Copilot -> `.vscode/settings.json`, `.vscode/mcp.json`, and committed `.github/**` hook/workflow config; both -> the union. `runHook` matches a write target against the SET; `runStaged` iterates `git show :<path>` over each SET member. This makes "runs on both harnesses" mean the guard INSPECTS both, not merely fires.
 
-**Tool-name map (`tool-name-map.cjs`):** Copilot tool identifiers are translated to canonical names the
-shared logic switches on. Unknown/unmapped tools pass through unchanged so a new Copilot tool cannot
-silently bypass a matcher (fail-visible, not fail-open). The **matcher-in-script** predicate then runs
-on the canonical `toolName` — needed because Copilot parses the declarative `matcher` field but does
-NOT apply it (web-confirmed), so filtering must be recomputed in-script.
+**Tool-name map (`tool-name-map.cjs`):** Copilot tool identifiers are translated to canonical names the shared logic switches on. Unknown/unmapped tools pass through unchanged so a new Copilot tool cannot silently bypass a matcher (fail-visible, not fail-open). The **matcher-in-script** predicate then runs on the canonical `toolName` — needed because Copilot parses the declarative `matcher` field but does NOT apply it (web-confirmed), so filtering must be recomputed in-script.
 
 **Event mapping per harness:**
 
@@ -273,58 +182,16 @@ NOT apply it (web-confirmed), so filtering must be recomputed in-script.
 
 ## Auth & Security (adapted — the hooks ARE the enforcement layer, asymmetrically)
 
-There is no user auth in a hook layer; the security property is **the integrity of the governance gate
-itself**, and per the revised ICEA (#6) the model is **asymmetric** — each harness enforces where it
-is strong, and this spec states honestly which layer is the hard line on each.
+There is no user auth in a hook layer; the security property is **the integrity of the governance gate itself**, and per the revised ICEA (#6) the model is **asymmetric** — each harness enforces where it is strong, and this spec states honestly which layer is the hard line on each.
 
-- **Claude = write-time PREVENTION (the Claude HARD gate — GA, unchanged):** `icea-floor` `exit 2`-
-  blocks a Write/Edit with no approved ICEA before code is written. The other eight hooks retain their
-  3.x GA semantics. This story must not weaken any of them — AC-NF4 parity test guards it. This is the
-  Claude hard line, byte-for-byte.
-- **Copilot client hooks = BEST-EFFORT (NOT the Copilot hard line):** the projected `.github/hooks`
-  `PreToolUse` deny returns `exit 2` and DOES hard-deny **where it fires**, but it is **Preview**, its
-  events are **not guaranteed to deliver on every Copilot surface**, and it **times out fail-OPEN**.
-  So it is explicitly best-effort authoring-time assistance, paired with read-only gate agents that
-  surface the verdict advisorily. It is stamped as a *client best-effort* gate point (Story 7 AC-NF5)
-  and is NEVER counted as the Copilot hard guarantee.
-- **The Copilot HARD gate is the CI `ai-gate` REQUIRED status check** on a protected branch
-  (un-bypassable at merge — you cannot `--no-verify` a required check). It is harness-independent and
-  is built by **Story 6** (logic) + distributed with branch-protection setup by **Story 8**. It is
-  the real Copilot backstop and is **out of scope for this story** — this story only produces the
-  best-effort Copilot client layer and defers the hard guarantee to that gate.
-- **Secret handling (now cross-harness):** `check-settings-secrets` runs on both harnesses AND inspects
-  each harness's committed config (Claude `.claude/settings.json`; Copilot `.vscode/settings.json`,
-  `.vscode/mcp.json`, committed `.github/**` config) via `guarded-paths.cjs`. The shim never echoes
-  `raw` input containing `.env`/`settings.local.json`/PAT into agent-visible output. Hook scripts are
-  hash-verified against `.hashes` before running (existing 3.x safety, preserved).
-- **Memory as untrusted input:** the SessionStart injector treats `memory/MEMORY.md` as data, not
-  instructions — it injects content for context only and grants no executable authority (full
-  memory-untrusted hardening is Story 6; this story must not introduce an execution path from memory).
-  `memory-capture` only emits a reminder — it neither reads nor executes memory content. The
-  harness-neutral guard change does not alter this: it only changes *when* the reminder activates, not
-  what it can do.
-- **Hook double-registration closure (Copilot) — the F1.2 fix:** per the revised ICEA (AC-F5),
-  Copilot under 1.109 ALSO discovers `.claude/settings.json` hooks, and the two `.vscode` scoping keys
-  for skills/rules (`chat.agentSkillsLocations`, `chat.instructionsFilesLocations`) do NOT disable hook
-  discovery. Left unaddressed, a both-harness Copilot session would fire every hook twice (once via
-  `.claude/settings.json`, once via `.github/hooks`). The fix is the third scoping key,
-  **`chat.hookFilesLocations`**, set to `false` for the three default-Claude hook paths
-  (`.claude/settings.json`, `.claude/settings.local.json`, `~/.claude/settings.json`). Story 5 emits
-  the `.vscode/settings.json` file; this story specifies those hook keys and coordinates so that
-  `.github/hooks` is the **sole** Copilot registration. **Because of known suppression bugs
-  (#297538, #299820), the closure must be verified by ACTUAL LOAD — the Copilot Hooks output channel
-  showing hooks registered only from `.github/hooks` — not by trusting the flag alone.**
+- **Claude = write-time PREVENTION (the Claude HARD gate — GA, unchanged):** `icea-floor` `exit 2`- blocks a Write/Edit with no approved ICEA before code is written. The other eight hooks retain their 3.x GA semantics. This story must not weaken any of them — AC-NF4 parity test guards it. This is the Claude hard line, byte-for-byte.
+- **Copilot client hooks = BEST-EFFORT (NOT the Copilot hard line):** the projected `.github/hooks` `PreToolUse` deny returns `exit 2` and DOES hard-deny **where it fires**, but it is **Preview**, its events are **not guaranteed to deliver on every Copilot surface**, and it **times out fail-OPEN**. So it is explicitly best-effort authoring-time assistance, paired with read-only gate agents that surface the verdict advisorily. It is stamped as a *client best-effort* gate point (Story 7 AC-NF5) and is NEVER counted as the Copilot hard guarantee.
+- **The Copilot HARD gate is the CI `ai-gate` REQUIRED status check** on a protected branch (un-bypassable at merge — you cannot `--no-verify` a required check). It is harness-independent and is built by **Story 6** (logic) + distributed with branch-protection setup by **Story 8**. It is the real Copilot backstop and is **out of scope for this story** — this story only produces the best-effort Copilot client layer and defers the hard guarantee to that gate.
+- **Secret handling (now cross-harness):** `check-settings-secrets` runs on both harnesses AND inspects each harness's committed config (Claude `.claude/settings.json`; Copilot `.vscode/settings.json`, `.vscode/mcp.json`, committed `.github/**` config) via `guarded-paths.cjs`. The shim never echoes `raw` input containing `.env`/`settings.local.json`/PAT into agent-visible output. Hook scripts are hash-verified against `.hashes` before running (existing 3.x safety, preserved).
+- **Memory as untrusted input:** the SessionStart injector treats `memory/MEMORY.md` as data, not instructions — it injects content for context only and grants no executable authority (full memory-untrusted hardening is Story 6; this story must not introduce an execution path from memory). `memory-capture` only emits a reminder — it neither reads nor executes memory content. The harness-neutral guard change does not alter this: it only changes *when* the reminder activates, not what it can do.
+- **Hook double-registration closure (Copilot) — the F1.2 fix:** per the revised ICEA (AC-F5), Copilot under 1.109 ALSO discovers `.claude/settings.json` hooks, and the two `.vscode` scoping keys for skills/rules (`chat.agentSkillsLocations`, `chat.instructionsFilesLocations`) do NOT disable hook discovery. Left unaddressed, a both-harness Copilot session would fire every hook twice (once via `.claude/settings.json`, once via `.github/hooks`). The fix is the third scoping key, **`chat.hookFilesLocations`**, set to `false` for the three default-Claude hook paths (`.claude/settings.json`, `.claude/settings.local.json`, `~/.claude/settings.json`). Story 5 emits the `.vscode/settings.json` file; this story specifies those hook keys and coordinates so that `.github/hooks` is the **sole** Copilot registration. **Because of known suppression bugs (#297538, #299820), the closure must be verified by ACTUAL LOAD — the Copilot Hooks output channel showing hooks registered only from `.github/hooks` — not by trusting the flag alone.**
 
-**Note — icea-floor malformed stdin, KEPT fail-OPEN (AC-NF4 parity, NOT a change):** 3.x
-`icea-floor.cjs` **FAILS OPEN** on malformed stdin — `catch(e){ process.exit(0); }` allows the write
-when the payload cannot be parsed. AC-NF4 demands byte-for-byte 3.x parity on Claude, so this behaviour
-is **retained exactly** — it is NOT flipped to fail-closed and is NOT smuggled under "unchanged": it is
-called out explicitly here as the intended, documented Claude behaviour. Rationale: flipping
-malformed-stdin handling would break AC-NF4 parity for a case already backstopped by the Copilot-side
-CI `ai-gate` at merge and irrelevant to the Claude write-time path (a malformed payload carries no
-write to gate). N-U4 asserts fail-OPEN (`exit 0`) as the documented, intended behaviour; the
-well-formed-but-unapproved block path (N-U1, `exit 2`) is the Claude hard-gate guarantee. If a future
-story wants fail-closed, it must be its own flagged AC.
+**Note — icea-floor malformed stdin, KEPT fail-OPEN (AC-NF4 parity, NOT a change):** 3.x `icea-floor.cjs` **FAILS OPEN** on malformed stdin — `catch(e){ process.exit(0); }` allows the write when the payload cannot be parsed. AC-NF4 demands byte-for-byte 3.x parity on Claude, so this behaviour is **retained exactly** — it is NOT flipped to fail-closed and is NOT smuggled under "unchanged": it is called out explicitly here as the intended, documented Claude behaviour. Rationale: flipping malformed-stdin handling would break AC-NF4 parity for a case already backstopped by the Copilot-side CI `ai-gate` at merge and irrelevant to the Claude write-time path (a malformed payload carries no write to gate). N-U4 asserts fail-OPEN (`exit 0`) as the documented, intended behaviour; the well-formed-but-unapproved block path (N-U1, `exit 2`) is the Claude hard-gate guarantee. If a future story wants fail-closed, it must be its own flagged AC.
 
 ---
 
@@ -357,12 +224,7 @@ story wants fail-closed, it must be its own flagged AC.
 | AC-NF4 (parity) | Claude Tier-A parity test; assert `icea-floor` `exit 2` unchanged on well-formed unapproved Write; assert malformed-stdin fail-OPEN retained | (within above) |
 | **Total** | | **5** |
 
-**Total SP: 5**
-**Type: STORY** — a single shippable slice (hooks + memory inspect and run on both harnesses, Claude
-hard + Copilot best-effort) delivering independent value; depends on Story 2's projection engine and
-coordinates the `.vscode` scoping with Story 5, but is testable and mergeable on its own. Does not
-exceed the <=5 SP shippable-slice rule, so no sub-decomposition is required. The Copilot HARD gate
-(CI `ai-gate` required check) is a separate slice owned by Story 6/8.
+**Total SP: 5** **Type: STORY** — a single shippable slice (hooks + memory inspect and run on both harnesses, Claude hard + Copilot best-effort) delivering independent value; depends on Story 2's projection engine and coordinates the `.vscode` scoping with Story 5, but is testable and mergeable on its own. Does not exceed the <=5 SP shippable-slice rule, so no sub-decomposition is required. The Copilot HARD gate (CI `ai-gate` required check) is a separate slice owned by Story 6/8.
 
 ---
 
@@ -413,24 +275,15 @@ The developer must tick every item before raising the PR.
 - [ ] `artifact-write.cjs` exists and records the stamp fields Story 7 consumes, including the gate-point (producer obligation met).
 - [ ] Graph/arch/memory paths are read via the shared `artifact-paths.md` contract, not hard-coded — no clobber with Story 3a.
 - [ ] SessionStart injector grants `memory/MEMORY.md` **no executable authority** (data only).
-- [ ] All 9 hooks' DECISION LOGIC is authored **once** as L1 in `Shared/hooks/**`; the native
-      `Claude/hooks/` and `Copilot/hooks/` layers CONSUME it (never re-author it) — the CI guardrail
-      (Story 2) fails a PR that re-forks an L1 standard into `Copilot/`. Hooks are native per harness
-      (NOT mechanically projected — #7), but the logic is not duplicated.
-- [ ] The B1–B7-classifying hook READS the L1 taxonomy (single canonical location) rather than
-      bundling its own copy — consumes L1, does not re-author it.
+- [ ] All 9 hooks' DECISION LOGIC is authored **once** as L1 in `Shared/hooks/**`; the native `Claude/hooks/` and `Copilot/hooks/` layers CONSUME it (never re-author it) — the CI guardrail (Story 2) fails a PR that re-forks an L1 standard into `Copilot/`. Hooks are native per harness (NOT mechanically projected — #7), but the logic is not duplicated.
+- [ ] The B1–B7-classifying hook READS the L1 taxonomy (single canonical location) rather than bundling its own copy — consumes L1, does not re-author it.
 - [ ] Hook scripts remain hash-verified against `.hashes` before running on both harnesses.
 
 ---
 
 ## Open Questions
 
-None open. The Copilot Preview event-delivery uncertainty is a **known assumption** from the ICEA
-(UserPromptSubmit `additionalContext` not guaranteed on CLI/cloud; `PreToolUse` Preview + timeout-fail-
-open), handled by design here (Copilot client hooks are best-effort by construction, the CI `ai-gate`
-required check is the hard backstop, and capture falls back to the baked-in skill writes). The
-`chat.hookFilesLocations` suppression bugs (#297538/#299820) are handled by the actual-load
-verification step. Neither blocks SAVE TECH.
+None open. The Copilot Preview event-delivery uncertainty is a **known assumption** from the ICEA (UserPromptSubmit `additionalContext` not guaranteed on CLI/cloud; `PreToolUse` Preview + timeout-fail- open), handled by design here (Copilot client hooks are best-effort by construction, the CI `ai-gate` required check is the hard backstop, and capture falls back to the baked-in skill writes). The `chat.hookFilesLocations` suppression bugs (#297538/#299820) are handled by the actual-load verification step. Neither blocks SAVE TECH.
 
 ---
 
@@ -492,45 +345,20 @@ DOUBLE-REGISTRATION CLOSURE (Copilot, both-harness repo):
 
 ## Rollback
 
-**Schema migrations:** None — this story is code/config only; `memory/` is additive and never rewritten
-by the injector.
+**Schema migrations:** None — this story is code/config only; `memory/` is additive and never rewritten by the injector.
 
 **Story-level rollback procedure:**
-1. This story is a shippable slice on `feature/4.x-multi-harness`; rollback = revert the story's commit
-   range. Because `Shared/hooks/**` is the single source, the projected `.claude/settings.json` hooks
-   block and `.github/hooks/` are regenerated by re-running provisioning against the reverted `Shared/`.
-2. The frozen **`v3.13.0` git tag** remains the Claude-only fallback — the 3.x hooks in
-   `.claude/settings.json` are recovered by re-provisioning from that tag; no data is lost (hooks are
-   stateless).
-3. Copilot-only rollback: remove `.github/hooks/`, `.github/cloud-hooks/`, and the read-only gate agents
-   via `setup-teardown --harness=copilot`, and drop the `chat.hookFilesLocations` keys from
-   `.vscode/settings.json` (coordinated with Story 5) — this never touches user `.github/`
-   workflows/CODEOWNERS or `memory/`.
-4. Verify after rollback: run the AC-NF4 parity test — Claude Tier-A gate still `exit 2`-blocks a
-   well-formed un-approved Write, and malformed stdin still fails open. The Copilot HARD gate (CI
-   `ai-gate` required check) is unaffected by this story's rollback — it lives in Story 6/8.
+1. This story is a shippable slice on `feature/4.x-multi-harness`; rollback = revert the story's commit range. Because `Shared/hooks/**` is the single source, the projected `.claude/settings.json` hooks block and `.github/hooks/` are regenerated by re-running provisioning against the reverted `Shared/`.
+2. The frozen **`v3.13.0` git tag** remains the Claude-only fallback — the 3.x hooks in `.claude/settings.json` are recovered by re-provisioning from that tag; no data is lost (hooks are stateless).
+3. Copilot-only rollback: remove `.github/hooks/`, `.github/cloud-hooks/`, and the read-only gate agents via `setup-teardown --harness=copilot`, and drop the `chat.hookFilesLocations` keys from `.vscode/settings.json` (coordinated with Story 5) — this never touches user `.github/` workflows/CODEOWNERS or `memory/`.
+4. Verify after rollback: run the AC-NF4 parity test — Claude Tier-A gate still `exit 2`-blocks a well-formed un-approved Write, and malformed stdin still fails open. The Copilot HARD gate (CI `ai-gate` required check) is unaffected by this story's rollback — it lives in Story 6/8.
 
 ---
 
 ## Handover
 
 ### QA Team
-**What was added:** the plugin's 9 existing hooks now run AND inspect the right inputs on **both** Claude
-Code and GitHub Copilot via a compat shim; on Claude they remain the GA write-time HARD gate; on Copilot
-the client hooks are BEST-EFFORT (Preview, timeout-fail-open) and the actual Copilot hard gate is the CI
-`ai-gate` required check (Story 6/8, not this story). `check-settings-secrets` now scans Copilot-side
-committed config too; `memory-capture` (a reminder-injector, not a writer) activates on a Copilot-only
-repo; and a NEW SessionStart injector loads committed `memory/MEMORY.md` on both harnesses. Entry points
-and negative tests are in **Test Cases**. **How to test manually:** provision a scratch repo for both
-harnesses; on Claude, attempt a Write with no approved ICEA (expect `exit 2` hard block); on Copilot,
-trigger the edit tool with no approved ICEA (expect a `PreToolUse` deny WHERE it fires + advisory gate
-agent — but treat a non-fire as best-effort, not a hard pass); put a fake secret in
-`.vscode/settings.json` and confirm the guard blocks it; open a fresh session on each and confirm
-`memory/MEMORY.md` content appears; open the Copilot Hooks output channel and confirm hooks register
-only from `.github/hooks` (no `.claude` double-registration). **Regression risk:** Claude Tier-A hard
-gate and the existing 9 hooks must be unchanged (including the malformed-stdin fail-open) — run the
-AC-NF4 parity test. **Test data:** synthetic only; a repo with and without an approved ICEA fixture, a
-populated vs empty `memory/MEMORY.md`, and a secret-bearing Copilot config fixture.
+**What was added:** the plugin's 9 existing hooks now run AND inspect the right inputs on **both** Claude Code and GitHub Copilot via a compat shim; on Claude they remain the GA write-time HARD gate; on Copilot the client hooks are BEST-EFFORT (Preview, timeout-fail-open) and the actual Copilot hard gate is the CI `ai-gate` required check (Story 6/8, not this story). `check-settings-secrets` now scans Copilot-side committed config too; `memory-capture` (a reminder-injector, not a writer) activates on a Copilot-only repo; and a NEW SessionStart injector loads committed `memory/MEMORY.md` on both harnesses. Entry points and negative tests are in **Test Cases**. **How to test manually:** provision a scratch repo for both harnesses; on Claude, attempt a Write with no approved ICEA (expect `exit 2` hard block); on Copilot, trigger the edit tool with no approved ICEA (expect a `PreToolUse` deny WHERE it fires + advisory gate agent — but treat a non-fire as best-effort, not a hard pass); put a fake secret in `.vscode/settings.json` and confirm the guard blocks it; open a fresh session on each and confirm `memory/MEMORY.md` content appears; open the Copilot Hooks output channel and confirm hooks register only from `.github/hooks` (no `.claude` double-registration). **Regression risk:** Claude Tier-A hard gate and the existing 9 hooks must be unchanged (including the malformed-stdin fail-open) — run the AC-NF4 parity test. **Test data:** synthetic only; a repo with and without an approved ICEA fixture, a populated vs empty `memory/MEMORY.md`, and a secret-bearing Copilot config fixture.
 
 ### DevOps / Platform Team
 
@@ -543,19 +371,10 @@ populated vs empty `memory/MEMORY.md`, and a secret-bearing Copilot config fixtu
 | Hook hash verification | hooks remain hash-verified against `.hashes` on both harnesses |
 
 ### Future Developer — Follow-on Work
-- To add a new hook: author its DECISION LOGIC once in `Shared/hooks/` (L1), then wire it NATIVELY in
-  each harness layer — `Claude/hooks/` (registered via `.claude/settings.json`, declarative matcher)
-  and `Copilot/hooks/` (registered via `hooks.json`, matcher-in-script) — each CONSUMING the L1 logic.
-  Re-run provisioning to emit `.claude/settings.json` and `.github/hooks/hooks.json`. Do NOT re-author
-  the L1 logic inside a harness layer — the CI guardrail (Story 2) fails a PR that re-forks an L1
-  standard into `Copilot/`.
-- If a new Copilot tool appears, add its mapping to `tool-name-map.cjs` (unknown tools pass through
-  untranslated + logged until mapped).
-- The gate-point **assurance stamp** on hook output is formalised in Story 7 (AC-NF5), which CONSUMES
-  the `artifact-write.cjs` hook-in produced by this story.
-- The Copilot HARD gate — the CI `ai-gate` required status check that is the real Copilot backstop —
-  is built in Story 6 (logic) and distributed with branch-protection setup by Story 8; the client
-  hooks in this story defer to it and never claim to be it.
+- To add a new hook: author its DECISION LOGIC once in `Shared/hooks/` (L1), then wire it NATIVELY in each harness layer — `Claude/hooks/` (registered via `.claude/settings.json`, declarative matcher) and `Copilot/hooks/` (registered via `hooks.json`, matcher-in-script) — each CONSUMING the L1 logic. Re-run provisioning to emit `.claude/settings.json` and `.github/hooks/hooks.json`. Do NOT re-author the L1 logic inside a harness layer — the CI guardrail (Story 2) fails a PR that re-forks an L1 standard into `Copilot/`.
+- If a new Copilot tool appears, add its mapping to `tool-name-map.cjs` (unknown tools pass through untranslated + logged until mapped).
+- The gate-point **assurance stamp** on hook output is formalised in Story 7 (AC-NF5), which CONSUMES the `artifact-write.cjs` hook-in produced by this story.
+- The Copilot HARD gate — the CI `ai-gate` required status check that is the real Copilot backstop — is built in Story 6 (logic) and distributed with branch-protection setup by Story 8; the client hooks in this story defer to it and never claim to be it.
 - If a new committed config file becomes secret-bearing on either harness, add it to `guarded-paths.cjs`.
 
 ---

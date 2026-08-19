@@ -4,12 +4,7 @@ _Run: 2026-08-14 · Mode: TECH critique · Independent subagent · Scope: ICEA +
 
 ## Verdict: REVISE → fixed → clean
 
-The 9 story specs, the ICEA, and the tracker were mutually consistent and correctly reflected the locked
-design (asymmetric enforcement + L1/L2/L3 shared-content-core, NO mechanical projection + AC-F9 versioning).
-**Single systemic defect:** the epic spec `ADO-4000-…techspec.md` body (Overview, Story-Breakdown table,
-Files-Changed, Governance, Overall-Flow, Deferred-Decisions, header) had not been re-synced past ICEA #4 —
-it still presented the retired converged-projection / three-tier / hard-vs-soft model as live, contradicting
-every story it governs.
+The 9 story specs, the ICEA, and the tracker were mutually consistent and correctly reflected the locked design (asymmetric enforcement + L1/L2/L3 shared-content-core, NO mechanical projection + AC-F9 versioning). **Single systemic defect:** the epic spec `ADO-4000-…techspec.md` body (Overview, Story-Breakdown table, Files-Changed, Governance, Overall-Flow, Deferred-Decisions, header) had not been re-synced past ICEA #4 — it still presented the retired converged-projection / three-tier / hard-vs-soft model as live, contradicting every story it governs.
 
 ### Punch-list (all resolved)
 | Severity | File | Issue | Resolution |
@@ -29,5 +24,4 @@ every story it governs.
 - Dependency DAG acyclic; SP totals ~41 coherent; no client/company name.
 
 ### Post-fix
-Epic body re-synced to #6/#7/#8; re-checked — remaining "projection/delta-map" hits are negations only.
-Package moved to permanent docs and approved (Status ✅ APPROVED 2026-08-14).
+Epic body re-synced to #6/#7/#8; re-checked — remaining "projection/delta-map" hits are negations only. Package moved to permanent docs and approved (Status ✅ APPROVED 2026-08-14).

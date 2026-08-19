@@ -14,37 +14,14 @@ Status: ✅ APPROVED 2026-08-14 · EPIC · ~41 SP total (pre-child-split: Story 
 
 ## Overview
 
-This epic converges the existing Claude-only plugin (v3.13.0) into a **multi-harness** plugin that runs
-under both Claude Code and GitHub Copilot from a **single source of truth**, structured as an
-**L1/L2/L3** model (ICEA Revision Logs #6/#7/#8): a shared **content core (L1)** in `Shared/` — the ICEA +
-Tech-Spec method, templates and critic rubric, the coding rules and B1–B7 taxonomy, the checker knowledge,
-and the harness-independent `ai-gate` floor — is authored ONCE and **consumed NATIVELY** by each harness's
-own engagement + enforcement layers (L2/L3): `Claude/` (native, ≈ the v3.13 plugin) and `Copilot/`
-(native, redesigned to GitHub/Copilot strengths). There is **no mechanical projection, no delta-map, and
-no runtime `$PLUGIN_DIR` bridge** — all retired in #7; `Claude/` and `Copilot/` re-deliver L1, they never
-re-author it (a CI guardrail fails any PR that forks an L1 standard). Enforcement is **asymmetric but hard
-on BOTH harnesses at different gate points**: **Claude = write-time prevention** (Tier-A `icea-floor`
-`exit 2`, unchanged); **Copilot = merge gate** — the harness-independent CI `ai-gate` as a REQUIRED status
-check on a protected branch (un-bypassable at merge) plus a review-time `review-icea` code-review critic;
-the Copilot client hooks/skills are **best-effort** authoring/review assistance on top, never the hard
-line. Prompt artifacts are **versioned** (frontmatter `version:`/`consumes:` + `Shared/prompt-manifest.json`
-+ a CI bump-on-change check, AC-F9). Privileged-data governance is hardened (approval bound to
-system-of-record, B1–B7 classify + warn/withhold + Tier-C artifact scan, memory-as-untrusted, secret
-exclusion, behavioural eval). **Deliberately NOT in this epic:** harnesses beyond Claude Code + Copilot,
-migrating existing 3.x-provisioned repos, a live production-ADO integration for the dogfood (synthetic
-IDs), runtime model-egress interception/DLP, changes to what skills fundamentally do, and
-Copilot-marketplace publication polish.
+This epic converges the existing Claude-only plugin (v3.13.0) into a **multi-harness** plugin that runs under both Claude Code and GitHub Copilot from a **single source of truth**, structured as an **L1/L2/L3** model (ICEA Revision Logs #6/#7/#8): a shared **content core (L1)** in `Shared/` — the ICEA + Tech-Spec method, templates and critic rubric, the coding rules and B1–B7 taxonomy, the checker knowledge, and the harness-independent `ai-gate` floor — is authored ONCE and **consumed NATIVELY** by each harness's own engagement + enforcement layers (L2/L3): `Claude/` (native, ≈ the v3.13 plugin) and `Copilot/` (native, redesigned to GitHub/Copilot strengths). There is **no mechanical projection, no delta-map, and no runtime `$PLUGIN_DIR` bridge** — all retired in #7; `Claude/` and `Copilot/` re-deliver L1, they never re-author it (a CI guardrail fails any PR that forks an L1 standard). Enforcement is **asymmetric but hard on BOTH harnesses at different gate points**: **Claude = write-time prevention** (Tier-A `icea-floor` `exit 2`, unchanged); **Copilot = merge gate** — the harness-independent CI `ai-gate` as a REQUIRED status check on a protected branch (un-bypassable at merge) plus a review-time `review-icea` code-review critic; the Copilot client hooks/skills are **best-effort** authoring/review assistance on top, never the hard line. Prompt artifacts are **versioned** (frontmatter `version:`/`consumes:` + `Shared/prompt-manifest.json`
++ a CI bump-on-change check, AC-F9). Privileged-data governance is hardened (approval bound to system-of-record, B1–B7 classify + warn/withhold + Tier-C artifact scan, memory-as-untrusted, secret exclusion, behavioural eval). **Deliberately NOT in this epic:** harnesses beyond Claude Code + Copilot, migrating existing 3.x-provisioned repos, a live production-ADO integration for the dogfood (synthetic IDs), runtime model-egress interception/DLP, changes to what skills fundamentally do, and Copilot-marketplace publication polish.
 
 ---
 
 ## Story Breakdown
 
-Foundation ordering: **Story 1 is the self-containment spike** (proves the model in both tools) and
-**Story 2 is the shared foundation** — it establishes the shared **content core (L1)** under `Shared/`
-(icea method+templates+critic rubric, coding rules, B1–B7 taxonomy, checker knowledge, the `ai-gate`
-scaffold), the prompt-artifact version manifest + CI bump-on-change check, and the CI re-author guardrail,
-and retires the runtime `$PLUGIN_DIR` — the L1 core every later story consumes NATIVELY. It is NOT a
-projection engine (the projection/delta-map/override machinery was retired in #7).
+Foundation ordering: **Story 1 is the self-containment spike** (proves the model in both tools) and **Story 2 is the shared foundation** — it establishes the shared **content core (L1)** under `Shared/` (icea method+templates+critic rubric, coding rules, B1–B7 taxonomy, checker knowledge, the `ai-gate` scaffold), the prompt-artifact version manifest + CI bump-on-change check, and the CI re-author guardrail, and retires the runtime `$PLUGIN_DIR` — the L1 core every later story consumes NATIVELY. It is NOT a projection engine (the projection/delta-map/override machinery was retired in #7).
 
 | Story | Title | SP | Shippable alone? | Depends on | Tech Spec | Status |
 |---|---|---|---|---|---|---|
@@ -59,10 +36,7 @@ projection engine (the projection/delta-map/override machinery was retired in #7
 | 7 | Behavioural eval harness + audit stamping + capability floor; cross-harness cost telemetry | 5 | Yes | 6 | ADO-4000-Story-7-eval-observability.techspec.md | ⏳ Pending |
 | 8 | Read-only gate agents (generated); provisioning/sync/teardown + neutral `plugin.manifest.json`; harness-neutral install; Copilot required-check stand-up | 6 | Yes | 2,5,6 | ADO-4000-Story-8-provisioning-distribution.techspec.md | ⏳ Pending |
 
-† Story 6 (8 SP) exceeds the ≤5-SP shippable-slice rule and **sub-decomposes into ≤5-SP child stories
-(6a–6d) at its own tech-spec sizing**. Story 2 was re-scoped to ~4 SP under #7 (the retired projection
-machinery was the source of its earlier oversizing) and no longer sub-decomposes. Total ~41 SP (pre child
-split); it grows as Story 6 splits.
+† Story 6 (8 SP) exceeds the ≤5-SP shippable-slice rule and **sub-decomposes into ≤5-SP child stories (6a–6d) at its own tech-spec sizing**. Story 2 was re-scoped to ~4 SP under #7 (the retired projection machinery was the source of its earlier oversizing) and no longer sub-decomposes. Total ~41 SP (pre child split); it grows as Story 6 splits.
 
 ---
 
@@ -148,26 +122,15 @@ split); it grows as Story 6 splits.
 
 ## Governance & Security (cross-cutting — replaces "Auth & Security")
 
-This is a governance plugin for a privileged-data (B1–B7) context; "security" here means the integrity of
-the governance itself and the safety of context handling across two harnesses.
+This is a governance plugin for a privileged-data (B1–B7) context; "security" here means the integrity of the governance itself and the safety of context handling across two harnesses.
 
 **Enforcement model (asymmetric — hard on BOTH harnesses, at different gate points):**
-- **Claude = prevention gate (write-time, hard, GA, unchanged):** `icea-floor` `exit 2` blocks Write/Edit
-  without an approved ICEA, before code is written. Preserved bit-for-bit (parity AC-NF4).
-- **Copilot = merge gate (hard):** the harness-independent CI `ai-gate` as a REQUIRED status check on a
-  protected branch — un-bypassable at merge (you cannot `--no-verify` a required check). The required-check
-  IS the Copilot hard gate; a review-time `review-icea` code-review critic gates the PR diff for
-  AC-traceability alongside it.
-- **Client layer (best-effort, both harnesses):** Copilot client hooks (`PreToolUse` deny where it fires —
-  Preview, timeout-fail-open), the read-only gate agents, and the `review-icea` critic are best-effort
-  authoring/review assistance layered on top — never counted as the hard line.
-- **Common floor:** the same `ai-gate` also runs at git pre-commit as a harness-independent backstop for
-  non-tool edits, teammates without the plugin, and bypassed sessions.
+- **Claude = prevention gate (write-time, hard, GA, unchanged):** `icea-floor` `exit 2` blocks Write/Edit without an approved ICEA, before code is written. Preserved bit-for-bit (parity AC-NF4).
+- **Copilot = merge gate (hard):** the harness-independent CI `ai-gate` as a REQUIRED status check on a protected branch — un-bypassable at merge (you cannot `--no-verify` a required check). The required-check IS the Copilot hard gate; a review-time `review-icea` code-review critic gates the PR diff for AC-traceability alongside it.
+- **Client layer (best-effort, both harnesses):** Copilot client hooks (`PreToolUse` deny where it fires — Preview, timeout-fail-open), the read-only gate agents, and the `review-icea` critic are best-effort authoring/review assistance layered on top — never counted as the hard line.
+- **Common floor:** the same `ai-gate` also runs at git pre-commit as a harness-independent backstop for non-tool edits, teammates without the plugin, and bypassed sessions.
 
-The load-bearing condition for the Copilot gate: `ai-gate` is hard ONLY once branch protection makes it a
-required check. Story 6 owns the gate logic + `ai-gate.yml`; Story 8 distributes it AND stands up the
-required-check / branch-protection setup, WARNING loudly and refusing to claim Copilot governance if the
-branch is unprotected.
+The load-bearing condition for the Copilot gate: `ai-gate` is hard ONLY once branch protection makes it a required check. Story 6 owns the gate logic + `ai-gate.yml`; Story 8 distributes it AND stands up the required-check / branch-protection setup, WARNING loudly and refusing to claim Copilot governance if the branch is unprotected.
 
 **Cross-cutting security concerns:**
 
@@ -181,11 +144,7 @@ branch is unprotected.
 | Silent bypass culture | Warn-only rollout; audited break-glass; no silent `--no-verify` (AC-NF7) | 6 |
 | Double-registration exposure (Copilot loads `.claude/` too) | Emitted `.vscode/settings.json` scopes Copilot to `.github/` (skills+rules+`chat.hookFilesLocations` hooks); fails loudly if unwritable; verify by actual load (AC-F5) | 4,5 |
 
-**Assurance stamping (AC-NF5):** every governed artifact records model+version+harness+skill-hash, the
-**gate point** it passed (Claude = prevention gate at write-time; Copilot = merge gate at the required
-check — both hard, at different points), and the **prompt-artifact version(s)** + dated model snapshot
-(AC-F9), so provenance traces which gate governed it and which exact prompt version produced it — not a
-hard-vs-soft tier.
+**Assurance stamping (AC-NF5):** every governed artifact records model+version+harness+skill-hash, the **gate point** it passed (Claude = prevention gate at write-time; Copilot = merge gate at the required check — both hard, at different points), and the **prompt-artifact version(s)** + dated model snapshot (AC-F9), so provenance traces which gate governed it and which exact prompt version produced it — not a hard-vs-soft tier.
 
 ---
 
@@ -211,8 +170,7 @@ RUNTIME ENFORCEMENT (developer writes code):
                             + review-icea review-time critic (best-effort)
 ```
 
-No network/DB tiers exist (plugin runs in-process); the only external calls are ADO REST (approval
-binding, Story 6) and the model endpoints (egress policy, Story 6).
+No network/DB tiers exist (plugin runs in-process); the only external calls are ADO REST (approval binding, Story 6) and the model endpoints (egress policy, Story 6).
 
 ---
 
@@ -221,31 +179,22 @@ binding, Story 6) and the model endpoints (egress policy, Story 6).
 **Schema migrations:** None — the epic is code/config only; `memory/`, `docs/`, artifacts are additive.
 
 **Epic-level rollback procedure:**
-1. The frozen **`v3.13.0` git tag** is the permanent Claude-only fallback; `main` stays on 3.13 until 4.0
-   proves out. Rollback = `git switch main` (or re-install the `v3.13.0` tag) — instant, no data loss.
-2. Per provisioned target repo: `setup-sync --harness=<prev>` re-projects the previous harness set;
-   `setup-teardown --harness=copilot` removes the Copilot projection by scope (never touches user
-   `.github/` workflows/CODEOWNERS or `memory/`).
+1. The frozen **`v3.13.0` git tag** is the permanent Claude-only fallback; `main` stays on 3.13 until 4.0 proves out. Rollback = `git switch main` (or re-install the `v3.13.0` tag) — instant, no data loss.
+2. Per provisioned target repo: `setup-sync --harness=<prev>` re-projects the previous harness set; `setup-teardown --harness=copilot` removes the Copilot projection by scope (never touches user `.github/` workflows/CODEOWNERS or `memory/`).
 3. Verify: Claude Tier-A gate still blocks an un-approved Write (parity AC-NF4); eval suite green.
 
-**Per-story rollback:** each story is a shippable slice on `feature/4.x-multi-harness`; revert its commit
-range. Story 5's committed `.vscode/settings.json` is the only change touching a shared per-repo file —
-flagged in the ICEA Irreversibility section; reversible by re-provision.
+**Per-story rollback:** each story is a shippable slice on `feature/4.x-multi-harness`; revert its commit range. Story 5's committed `.vscode/settings.json` is the only change touching a shared per-repo file — flagged in the ICEA Irreversibility section; reversible by re-provision.
 
 ---
 
 ## Handover
 
 ### QA Team
-**What was added:** the same skills + ICEA governance now run under GitHub Copilot as well as Claude Code,
-from one source; plus hardened approval/egress/secret controls and a behavioural eval harness. Entry
-points and negative tests are enumerated in **Test Cases** (TC-1…TC-10) above.
+**What was added:** the same skills + ICEA governance now run under GitHub Copilot as well as Claude Code, from one source; plus hardened approval/egress/secret controls and a behavioural eval harness. Entry points and negative tests are enumerated in **Test Cases** (TC-1…TC-10) above.
 
-**Regression risk:** Claude 3.x behaviour — Tier-A hard gate, project `.claude/skills` loading, existing
-hooks — must be unchanged. Run TC-3 (parity) after Stories 2, 4, 5.
+**Regression risk:** Claude 3.x behaviour — Tier-A hard gate, project `.claude/skills` loading, existing hooks — must be unchanged. Run TC-3 (parity) after Stories 2, 4, 5.
 
-**Test data:** synthetic eval fixtures only (`Shared/eval/`) — **no real privileged/PII/secret material**
-(ICEA assumption). Scratch repos for provisioning tests.
+**Test data:** synthetic eval fixtures only (`Shared/eval/`) — **no real privileged/PII/secret material** (ICEA assumption). Scratch repos for provisioning tests.
 
 ### DevOps / Platform Team
 
@@ -259,13 +208,8 @@ hooks — must be unchanged. Run TC-3 (parity) after Stories 2, 4, 5.
 | Harness-neutral machine install | 8 | harness selected at integration, not install |
 
 ### Future Developer — Follow-on Work
-- **Add a harness later** = add one native sibling adapter folder (e.g. `Cursor/`) that CONSUMES the same
-  L1 `Shared/` content + one entry in `plugin.manifest.json.harnesses[]`; nothing in `Shared/` moves and
-  there is no transform to author. Primary extension point.
-- The shared **content core (L1)** lives in `Shared/` (Story 2); each harness re-delivers it natively in
-  `Claude/`/`Copilot/` (never re-authors it — a CI guardrail fails a fork). Provisioning composes L1 + a
-  native adapter by file-copy in `scripts/provision.*` (Story 8) — there is NO projection engine,
-  delta-map, or override loader (all retired in #7).
+- **Add a harness later** = add one native sibling adapter folder (e.g. `Cursor/`) that CONSUMES the same L1 `Shared/` content + one entry in `plugin.manifest.json.harnesses[]`; nothing in `Shared/` moves and there is no transform to author. Primary extension point.
+- The shared **content core (L1)** lives in `Shared/` (Story 2); each harness re-delivers it natively in `Claude/`/`Copilot/` (never re-authors it — a CI guardrail fails a fork). Provisioning composes L1 + a native adapter by file-copy in `scripts/provision.*` (Story 8) — there is NO projection engine, delta-map, or override loader (all retired in #7).
 - Known gaps carried as **Deferred Decisions** below.
 
 ---
@@ -292,8 +236,7 @@ hooks — must be unchanged. Run TC-3 (parity) after Stories 2, 4, 5.
 
 ## Reviewer Checklist (cross-cutting)
 - [ ] No skill reads a runtime `$PLUGIN_DIR`/`plugin-path.txt`/`installed_plugins.json` after Story 2.
-- [ ] Creation-critical rules (Dapper-only, no-hardcoded-secrets) unconditional/in `CLAUDE.md`, NOT
-      path-scoped (load-on-read gotcha) — both harnesses (AC-F3 / D-5).
+- [ ] Creation-critical rules (Dapper-only, no-hardcoded-secrets) unconditional/in `CLAUDE.md`, NOT path-scoped (load-on-read gotcha) — both harnesses (AC-F3 / D-5).
 - [ ] With both harnesses provisioned, Copilot does not double-load `.claude/` (AC-F5 / TC-2).
 - [ ] Every governed artifact carries a **gate-point** stamp (Claude=prevention, Copilot=merge) — both hard, distinguishable (AC-NF5).
 - [ ] Shared artifacts single-source + read-by-path, not duplicated per harness (AC-F6).
@@ -322,23 +265,13 @@ hooks — must be unchanged. Run TC-3 (parity) after Stories 2, 4, 5.
 
 ## Open Questions
 
-None open. (The former ❓[1] — internal registry for the pinned `ai-gate` — was resolved 2026-08-13 to
-"unknown → default to vendored-pinned+hashed" and reframed into Deferred Decision **D-1**, owned by
-Story 6. All remaining forks are story-owned Deferred Decisions with recommended defaults, so no open
-question blocks SAVE TECH.)
+None open. (The former ❓[1] — internal registry for the pinned `ai-gate` — was resolved 2026-08-13 to "unknown → default to vendored-pinned+hashed" and reframed into Deferred Decision **D-1**, owned by Story 6. All remaining forks are story-owned Deferred Decisions with recommended defaults, so no open question blocks SAVE TECH.)
 
 ---
 
 ## Dogfood findings (tooling issues surfaced by running the flow on the plugin itself)
-1. **Critic ↔ template drift:** critic SKILL.md ICEA-mode rubric references fields (Business Impact, Open
-   Questions, Constraint Context table, Given/When/Then table) not in `icea-template.md` v2.4.1.
-2. **`context-budget-tech-write` hook ↔ epic template mismatch:** the hook (Rule 1) hard-requires the exact
-   headers `## Overview`, `## AC Coverage Matrix`, `## Files Changed`, `## Test Cases` — but the
-   **epic-level** template (`techspec-epic-level.md`) deliberately omits the latter three (they belong in
-   per-story specs). An epic-level spec therefore cannot pass the hook without adding those sections.
-   Worked around here by adding epic-level rollup versions with the exact headers; candidate real fix
-   (Story 4/8 hook work): make the hook recognise the epic-level shape, or add rollup sections to the
-   epic template itself.
+1. **Critic ↔ template drift:** critic SKILL.md ICEA-mode rubric references fields (Business Impact, Open Questions, Constraint Context table, Given/When/Then table) not in `icea-template.md` v2.4.1.
+2. **`context-budget-tech-write` hook ↔ epic template mismatch:** the hook (Rule 1) hard-requires the exact headers `## Overview`, `## AC Coverage Matrix`, `## Files Changed`, `## Test Cases` — but the **epic-level** template (`techspec-epic-level.md`) deliberately omits the latter three (they belong in per-story specs). An epic-level spec therefore cannot pass the hook without adding those sections. Worked around here by adding epic-level rollup versions with the exact headers; candidate real fix (Story 4/8 hook work): make the hook recognise the epic-level shape, or add rollup sections to the epic template itself.
 
 ---
 

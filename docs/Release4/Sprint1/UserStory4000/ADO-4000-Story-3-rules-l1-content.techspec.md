@@ -1,7 +1,6 @@
 # Tech Spec — Story 3: Rules as L1 content, consumed natively by both harnesses
 
-ADO #4000 · Release 4 · Sprint 1 · Story 3
-Status: DRAFT · STORY · 3 SP
+ADO #4000 · Release 4 · Sprint 1 · Story 3 Status: DRAFT · STORY · 3 SP
 
 > Per-story spec under the Epic ADO-4000 (LLM-Agnostic Multi-Harness Convergence). Source ICEA:
 > `docs/Release4/Sprint1/UserStory4000/ADO-4000-llm-agnostic-multi-harness.icea.md` (Revision Logs
@@ -15,75 +14,29 @@ Status: DRAFT · STORY · 3 SP
 
 ## Overview
 
-This story establishes the plugin's authoring-time coding rules — including the **B1–B7 business-context
-taxonomy** — as **L1 content**: a single, harness-independent source under `Shared/rules/**` that both
-harnesses CONSUME natively. Per ICEA Revision Log #7 (STRUCTURE LOCKED), there is **NO mechanical
-projection** between harnesses: the delta-map / per-skill mechanical projection / runtime `$PLUGIN_DIR`
-bridge are RETIRED. L1 is the single source; `Claude/` and `Copilot/` each **consume** it in their own
-native rule mechanism, and neither re-authors it (CI guardrail, AC-F2, owned by Story 2).
+This story establishes the plugin's authoring-time coding rules — including the **B1–B7 business-context taxonomy** — as **L1 content**: a single, harness-independent source under `Shared/rules/**` that both harnesses CONSUME natively. Per ICEA Revision Log #7 (STRUCTURE LOCKED), there is **NO mechanical projection** between harnesses: the delta-map / per-skill mechanical projection / runtime `$PLUGIN_DIR` bridge are RETIRED. L1 is the single source; `Claude/` and `Copilot/` each **consume** it in their own native rule mechanism, and neither re-authors it (CI guardrail, AC-F2, owned by Story 2).
 
 Concretely for rules:
 
-- **Claude** reads the L1 rules **natively** through its existing `.claude/rules` mechanism (project-level
-  rule files with front-matter). A creation-critical rule uses Claude's existing `detect.always:true`, which
-  is ALREADY in the active instruction set at new-file creation. No transform layer sits between `Shared/`
-  and Claude — the L1 rule content is the source the Claude native rule carries.
-- **Copilot** consumes the **same L1 rule content natively** into its own paths — `.github/instructions/*`
-  (`applyTo` globs) for path-relevant rules and `CLAUDE.md` (read via `chat.useClaudeMdFile:true`, always
-  active) for creation-critical rules. This is **authored per harness to Copilot's native shape**, NOT
-  produced by a mechanical delta-map from the Claude form.
+- **Claude** reads the L1 rules **natively** through its existing `.claude/rules` mechanism (project-level rule files with front-matter). A creation-critical rule uses Claude's existing `detect.always:true`, which is ALREADY in the active instruction set at new-file creation. No transform layer sits between `Shared/` and Claude — the L1 rule content is the source the Claude native rule carries.
+- **Copilot** consumes the **same L1 rule content natively** into its own paths — `.github/instructions/*` (`applyTo` globs) for path-relevant rules and `CLAUDE.md` (read via `chat.useClaudeMdFile:true`, always active) for creation-critical rules. This is **authored per harness to Copilot's native shape**, NOT produced by a mechanical delta-map from the Claude form.
 
-"Consumed natively" (not "projected") is the load-bearing distinction from earlier drafts: each harness's
-rule surface is written to that harness's idiom, both drawing from the one L1 rule content. The single
-source of truth is the L1 rule set; the two harness surfaces are native deliveries of it, not two copies
-and not a transform output.
+"Consumed natively" (not "projected") is the load-bearing distinction from earlier drafts: each harness's rule surface is written to that harness's idiom, both drawing from the one L1 rule content. The single source of truth is the L1 rule set; the two harness surfaces are native deliveries of it, not two copies and not a transform output.
 
-The rule content itself is a **versioned L1 artifact** per AC-F9 — SemVer frontmatter (`version:`) plus a
-`consumes:` pin, recorded in `Shared/prompt-manifest.json` with `{version, sha256, consumes}`, and guarded
-by the CI bump-on-change + L1 re-author checks. **That manifest, the versioning frontmatter, and the CI
-checks are owned and delivered by Story 2** (the L1 content core). This story does not build the manifest
-or the CI check; it AUTHORS the two creation-critical rule entries as L1 content that participates in
-Story 2's versioning scheme, and references the manifest as the source of their version/hash record.
+The rule content itself is a **versioned L1 artifact** per AC-F9 — SemVer frontmatter (`version:`) plus a `consumes:` pin, recorded in `Shared/prompt-manifest.json` with `{version, sha256, consumes}`, and guarded by the CI bump-on-change + L1 re-author checks. **That manifest, the versioning frontmatter, and the CI checks are owned and delivered by Story 2** (the L1 content core). This story does not build the manifest or the CI check; it AUTHORS the two creation-critical rule entries as L1 content that participates in Story 2's versioning scheme, and references the manifest as the source of their version/hash record.
 
-**Creation-critical means:** the rule must constrain the model *while it writes new code*, not only when an
-existing matching file is opened. The two creation-critical rules are the **Dapper-only data-access** rule
-(all DB access uses Dapper with parameterised SQL; never EF Core or an auto-SQL ORM) and the
-**no-hardcoded-secrets** rule (no secrets, connection strings, credentials, or PATs in source).
+**Creation-critical means:** the rule must constrain the model *while it writes new code*, not only when an existing matching file is opened. The two creation-critical rules are the **Dapper-only data-access** rule (all DB access uses Dapper with parameterised SQL; never EF Core or an auto-SQL ORM) and the **no-hardcoded-secrets** rule (no secrets, connection strings, credentials, or PATs in source).
 
-**Rule-inventory / refactor precursor (FIRST work item — the two rules do NOT exist as discrete files today).**
-Before establishing the L1 rule content, this story reconciles the *actual* current state, which is not what
-an earlier draft assumed:
+**Rule-inventory / refactor precursor (FIRST work item — the two rules do NOT exist as discrete files today).** Before establishing the L1 rule content, this story reconciles the *actual* current state, which is not what an earlier draft assumed:
 
-- **no-hardcoded-secrets** exists today only as a bullet inside `.claude/rules/project-rules.md` (under
-  "Code quality"). That rule file is ALREADY `paths:["**/*"]` + `detect.always:true` — i.e. it is ALREADY
-  always-on at creation on Claude. It is NOT absent at creation on the Claude side.
-- **Dapper-only** exists today as root `CLAUDE.md` prose ("## Data Access Convention") PLUS a
-  directory-scoped `data-access-rules.md`. So it is duplicated across two homes and neither is a discrete
-  single-source rule.
+- **no-hardcoded-secrets** exists today only as a bullet inside `.claude/rules/project-rules.md` (under "Code quality"). That rule file is ALREADY `paths:["**/*"]` + `detect.always:true` — i.e. it is ALREADY always-on at creation on Claude. It is NOT absent at creation on the Claude side.
+- **Dapper-only** exists today as root `CLAUDE.md` prose ("## Data Access Convention") PLUS a directory-scoped `data-access-rules.md`. So it is duplicated across two homes and neither is a discrete single-source rule.
 
-The precursor therefore: (1) EXTRACTS both statements into discrete, single-authoritative `Shared/rules/`
-L1 entries (e.g. `Shared/rules/no-hardcoded-secrets.md` and `Shared/rules/dapper-only.md`), each tagged
-creation-critical; (2) RECONCILES the existing copies so each rule has exactly ONE authoritative L1 home —
-no triplication. The no-hardcoded-secrets bullet is sourced from L1 and continues to be carried by the
-always-on `project-rules.md`-equivalent on Claude; the Dapper rule's two current copies (CLAUDE.md prose +
-`data-access-rules.md`) are collapsed to the single L1 source, with the directory-scoped copy retired.
+The precursor therefore: (1) EXTRACTS both statements into discrete, single-authoritative `Shared/rules/` L1 entries (e.g. `Shared/rules/no-hardcoded-secrets.md` and `Shared/rules/dapper-only.md`), each tagged creation-critical; (2) RECONCILES the existing copies so each rule has exactly ONE authoritative L1 home — no triplication. The no-hardcoded-secrets bullet is sourced from L1 and continues to be carried by the always-on `project-rules.md`-equivalent on Claude; the Dapper rule's two current copies (CLAUDE.md prose + `data-access-rules.md`) are collapsed to the single L1 source, with the directory-scoped copy retired.
 
-**Corrected load-timing premise (kept from the code-grounded finding).** Claude ALREADY loads
-no-hardcoded-secrets at creation via `detect.always:true` on `project-rules.md`. So the unconditional-in-
-`CLAUDE.md` carrier is chiefly needed for **Copilot**, which has NO `always` equivalent — its path-scoped
-`applyTo` instructions load only when a matching file is in context. Therefore this story does NOT add a
-third copy of the Dapper (or secrets) rule into a CLAUDE.md managed block on the Claude side: Claude keeps
-its existing always-on mechanism (`detect.always:true` project-rule). The CLAUDE.md-inline managed block is
-the Copilot-facing carrier only.
+**Corrected load-timing premise (kept from the code-grounded finding).** Claude ALREADY loads no-hardcoded-secrets at creation via `detect.always:true` on `project-rules.md`. So the unconditional-in- `CLAUDE.md` carrier is chiefly needed for **Copilot**, which has NO `always` equivalent — its path-scoped `applyTo` instructions load only when a matching file is in context. Therefore this story does NOT add a third copy of the Dapper (or secrets) rule into a CLAUDE.md managed block on the Claude side: Claude keeps its existing always-on mechanism (`detect.always:true` project-rule). The CLAUDE.md-inline managed block is the Copilot-facing carrier only.
 
-A developer picking this up cold implements, in order: (0) the rule-inventory/refactor precursor above;
-(1) the `Shared/rules/**` L1 rule content (the coding rules + B1–B7 taxonomy as the single source), each
-entry carrying the AC-F9 version frontmatter defined by Story 2; (2) each harness's native consumption of
-that content — Claude via `.claude/rules` (`detect.always:true` for creation-critical, `paths:` for the
-rest); Copilot via `.github/instructions` (`applyTo`) plus the CLAUDE.md creation-critical carrier — authored
-to each harness's native shape, landed AFTER/WITH the AC-F8a hash-tracked user-edit protection for the
-CLAUDE.md block (see Dependencies); (3) the round-trip test that generates a new file on each harness and
-asserts both creation-critical rules were in force.
+A developer picking this up cold implements, in order: (0) the rule-inventory/refactor precursor above; (1) the `Shared/rules/**` L1 rule content (the coding rules + B1–B7 taxonomy as the single source), each entry carrying the AC-F9 version frontmatter defined by Story 2; (2) each harness's native consumption of that content — Claude via `.claude/rules` (`detect.always:true` for creation-critical, `paths:` for the rest); Copilot via `.github/instructions` (`applyTo`) plus the CLAUDE.md creation-critical carrier — authored to each harness's native shape, landed AFTER/WITH the AC-F8a hash-tracked user-edit protection for the CLAUDE.md block (see Dependencies); (3) the round-trip test that generates a new file on each harness and asserts both creation-critical rules were in force.
 
 Decision D-5 is resolved here (see the Decision D-5 note below) and aligned to AC-F3 under the #7 structure.
 
@@ -91,8 +44,7 @@ Decision D-5 is resolved here (see the Decision D-5 note below) and aligned to A
 
 ## AC Coverage Matrix
 
-Every AC from the ICEA in this story's scope must be covered by at least one file change. Every file
-change must satisfy at least one AC. Gaps are flagged ⚠.
+Every AC from the ICEA in this story's scope must be covered by at least one file change. Every file change must satisfy at least one AC. Gaps are flagged ⚠.
 
 ### AC → File mapping
 
@@ -116,8 +68,7 @@ change must satisfy at least one AC. Gaps are flagged ⚠.
 | `scripts/provision.*` (native rule-consumption authoring step + creation-critical routing) | AC-F3 |
 | `Shared/prompt-manifest.json` (version/sha256/consumes record — WRITTEN by Story 2, referenced here) | AC-F9 (referenced) |
 
-**Coverage result:** AC-F3 (precursor + native consumption) covered; AC-F9 covered by conformance and
-referenced to its Story-2 owner; no orphaned file changes ✅.
+**Coverage result:** AC-F3 (precursor + native consumption) covered; AC-F9 covered by conformance and referenced to its Story-2 owner; no orphaned file changes ✅.
 
 ---
 
@@ -144,46 +95,23 @@ referenced to its Story-2 owner; no orphaned file changes ✅.
 
 ## No external API — native rule surfaces
 
-This story exposes **no external/network API**. Its "interface" is the L1 rule content and the native
-surface each harness consumes it into, plus the contract each harness applies them under:
+This story exposes **no external/network API**. Its "interface" is the L1 rule content and the native surface each harness consumes it into, plus the contract each harness applies them under:
 
-- **Claude Code** — reads `.claude/rules/*.md` natively; a rule with `paths:` front-matter loads when a
-  matching file is READ/edited; a rule with `detect.always:true` (e.g. the deduped `project-rules.md`
-  carrying the creation-critical statements) is ALWAYS in the active instruction set, including at new-file
-  creation.
-- **GitHub Copilot (VS Code ≥1.109)** — reads `.github/instructions/*.instructions.md` natively; a rule
-  with an `applyTo` glob applies only when a matching file is in context (no `always` equivalent).
-  Creation-critical coverage therefore comes from `CLAUDE.md` via `chat.useClaudeMdFile:true` (default true),
-  always active.
+- **Claude Code** — reads `.claude/rules/*.md` natively; a rule with `paths:` front-matter loads when a matching file is READ/edited; a rule with `detect.always:true` (e.g. the deduped `project-rules.md` carrying the creation-critical statements) is ALWAYS in the active instruction set, including at new-file creation.
+- **GitHub Copilot (VS Code ≥1.109)** — reads `.github/instructions/*.instructions.md` natively; a rule with an `applyTo` glob applies only when a matching file is in context (no `always` equivalent). Creation-critical coverage therefore comes from `CLAUDE.md` via `chat.useClaudeMdFile:true` (default true), always active.
 
-L1 consumption contract: (a) every `Shared/rules/**` L1 entry maps to exactly one destination class on each
-harness — path-relevant → `paths:`(Claude)+`applyTo`(Copilot); creation-critical → Claude always-on +
-Copilot CLAUDE.md carrier — never orphaned, never re-authored into a second L1 copy (AC-F2 guardrail, Story
-2); (b) the two creation-critical rules appear in the CLAUDE.md managed block (Copilot carrier) and in the
-Claude always-on rule, and are NOT emitted as path-scoped `.claude/rules` files scoped to a file type;
-(c) each harness surface is deterministic — re-running the consumption step produces byte-identical output
-for unchanged L1 source.
+L1 consumption contract: (a) every `Shared/rules/**` L1 entry maps to exactly one destination class on each harness — path-relevant → `paths:`(Claude)+`applyTo`(Copilot); creation-critical → Claude always-on + Copilot CLAUDE.md carrier — never orphaned, never re-authored into a second L1 copy (AC-F2 guardrail, Story 2); (b) the two creation-critical rules appear in the CLAUDE.md managed block (Copilot carrier) and in the Claude always-on rule, and are NOT emitted as path-scoped `.claude/rules` files scoped to a file type; (c) each harness surface is deterministic — re-running the consumption step produces byte-identical output for unchanged L1 source.
 
 ---
 
 ## Auth & Security
 
-The **no-hardcoded-secrets rule is itself a security control**, not merely a style rule. This story keeps it
-active at generation time on both harnesses: on Claude via the existing `detect.always:true` project-rule
-(unchanged), and on Copilot via the CLAUDE.md managed-block carrier — the exact moment a path-scoped
-`applyTo` rule would be silent on Copilot (there is no matching file in context yet). This composes with the
-plugin's existing settings-secret guard (secrets never in committed `settings.json`) and the Tier-C
-`ai-gate` secret scan (Story 6). Security posture for this story specifically:
+The **no-hardcoded-secrets rule is itself a security control**, not merely a style rule. This story keeps it active at generation time on both harnesses: on Claude via the existing `detect.always:true` project-rule (unchanged), and on Copilot via the CLAUDE.md managed-block carrier — the exact moment a path-scoped `applyTo` rule would be silent on Copilot (there is no matching file in context yet). This composes with the plugin's existing settings-secret guard (secrets never in committed `settings.json`) and the Tier-C `ai-gate` secret scan (Story 6). Security posture for this story specifically:
 
-- no-hardcoded-secrets is in the model's active instructions at generation time on Claude (existing
-  `detect.always:true`) AND Copilot (CLAUDE.md carrier) — verified by INT-2 below.
-- The Dapper-only rule prevents auto-SQL ORM code paths (a maintainability + parameterisation/SQL-injection
-  hygiene control) from being generated unguarded.
-- The B1–B7 taxonomy now lives as single-source L1 content here (its single canonical location, referenced
-  by AC-NF2 and consumed by the Story-6 classifier) — one authoritative source removes drift risk in the
-  classification vocabulary downstream.
-- The precursor dedupe REDUCES risk: collapsing three scattered copies to one authoritative L1 source removes
-  the chance of a stale/contradictory copy silently overriding the intended rule.
+- no-hardcoded-secrets is in the model's active instructions at generation time on Claude (existing `detect.always:true`) AND Copilot (CLAUDE.md carrier) — verified by INT-2 below.
+- The Dapper-only rule prevents auto-SQL ORM code paths (a maintainability + parameterisation/SQL-injection hygiene control) from being generated unguarded.
+- The B1–B7 taxonomy now lives as single-source L1 content here (its single canonical location, referenced by AC-NF2 and consumed by the Story-6 classifier) — one authoritative source removes drift risk in the classification vocabulary downstream.
+- The precursor dedupe REDUCES risk: collapsing three scattered copies to one authoritative L1 source removes the chance of a stale/contradictory copy silently overriding the intended rule.
 - No new secrets introduced; the rule-consumption step reads/writes local files only, no network calls.
 
 ---
@@ -205,28 +133,15 @@ plugin's existing settings-secret guard (secrets never in committed `settings.js
 
 ## Glob-parity: no unintended divergence (downgraded from identical-set)
 
-Earlier drafts asserted the Claude `paths:` and Copilot `applyTo` for each path-relevant rule must resolve
-to an **identical file set**. That is INCORRECT and is downgraded here to **"no unintended divergence."**
-Because both surfaces now consume the SAME L1 content natively (not a mechanical projection), a legitimate
-per-harness difference is expected wherever a harness idiom has no analogue on the other.
+Earlier drafts asserted the Claude `paths:` and Copilot `applyTo` for each path-relevant rule must resolve to an **identical file set**. That is INCORRECT and is downgraded here to **"no unintended divergence."** Because both surfaces now consume the SAME L1 content natively (not a mechanical projection), a legitimate per-harness difference is expected wherever a harness idiom has no analogue on the other.
 
-Reason: Claude's `detect.excludeIfDependencies` (e.g. *exclude this rule when `typescript` is present in the
-project*) has NO Copilot `applyTo` equivalent — `applyTo` is a pure include-glob with no dependency-aware
-exclusion. So for any rule that carries a `detect.excludeIfDependencies` condition, the Claude effective
-file set and the Copilot `applyTo` file set will LEGITIMATELY differ, and demanding identity would fail a
-correct native consumption.
+Reason: Claude's `detect.excludeIfDependencies` (e.g. *exclude this rule when `typescript` is present in the project*) has NO Copilot `applyTo` equivalent — `applyTo` is a pure include-glob with no dependency-aware exclusion. So for any rule that carries a `detect.excludeIfDependencies` condition, the Claude effective file set and the Copilot `applyTo` file set will LEGITIMATELY differ, and demanding identity would fail a correct native consumption.
 
 How it is handled:
 
-- The consumption step records, per rule, whether an intended, dependency-driven divergence exists (i.e. the
-  rule carries `detect.excludeIfDependencies` or another Claude-only selector with no Copilot analogue).
-- The parity test asserts that the two harness globs match EXCEPT where such a divergence is declared —
-  i.e. after removing the Claude-only exclusion dimension, the include-selectors agree. Any divergence NOT
-  attributable to a declared Claude-only selector fails the test (that is an unintended divergence / a real
-  bug).
-- Where a Claude-only exclusion cannot be expressed on Copilot, the Copilot surface emits a documented note
-  in the generated `.github/instructions/*` header stating the rule may apply on Copilot in a context Claude
-  would exclude, so the divergence is visible, not silent.
+- The consumption step records, per rule, whether an intended, dependency-driven divergence exists (i.e. the rule carries `detect.excludeIfDependencies` or another Claude-only selector with no Copilot analogue).
+- The parity test asserts that the two harness globs match EXCEPT where such a divergence is declared — i.e. after removing the Claude-only exclusion dimension, the include-selectors agree. Any divergence NOT attributable to a declared Claude-only selector fails the test (that is an unintended divergence / a real bug).
+- Where a Claude-only exclusion cannot be expressed on Copilot, the Copilot surface emits a documented note in the generated `.github/instructions/*` header stating the rule may apply on Copilot in a context Claude would exclude, so the divergence is visible, not silent.
 
 ---
 
@@ -239,58 +154,28 @@ How it is handled:
 | AC-F3 (verification) | Both-harness round-trip: generate a new source file on each harness, assert Dapper-only + no-secrets active; divergence-aware glob-parity + mis-classification + dedupe tests | 1 |
 | **Total** | | **3** |
 
-**Total SP: 3**
-**Type: STORY** — a single logical shippable slice (L1 rule content + native per-harness consumption +
-precursor dedupe working on both harnesses), within the ≤5-SP rule; does not sub-decompose. Depends on
-**Story 2 (L1 content core: manifest + versioning + AC-F2 guardrail) only**. SEQUENCING NOTE (not a blocking
-dependency): the CLAUDE.md carrier writer is idempotent and edits only its own delimited block, so Story 3
-ships without Story 8; full hash-tracked user-edit protection is layered on when Story 8's AC-F8a lands.
+**Total SP: 3** **Type: STORY** — a single logical shippable slice (L1 rule content + native per-harness consumption + precursor dedupe working on both harnesses), within the ≤5-SP rule; does not sub-decompose. Depends on **Story 2 (L1 content core: manifest + versioning + AC-F2 guardrail) only**. SEQUENCING NOTE (not a blocking dependency): the CLAUDE.md carrier writer is idempotent and edits only its own delimited block, so Story 3 ships without Story 8; full hash-tracked user-edit protection is layered on when Story 8's AC-F8a lands.
 
 ---
 
 ## Dependencies
 
 - **Story 2 (L1 content core)** — provides the `Shared/` L1 structure, the `Shared/prompt-manifest.json`
-  + AC-F9 versioning frontmatter scheme, and the AC-F2 CI guardrail (Copilot must not re-author L1). This
-  story authors its two creation-critical rule entries AS L1 content conforming to that scheme and consumes
-  them natively per harness. Per Revision Log #7 there is NO projection engine to inherit — the earlier
-  "author-once, project-per-harness" machinery was retired; both surfaces are native consumptions of L1.
-- **Story 8 — AC-F8a hash-tracked user-edit protection (SEQUENCING NOTE, not a blocking dependency).** The
-  CLAUDE.md managed-block carrier this story ships is **idempotent and edits only its own delimited managed
-  block**, so it does not clobber hand-edits and Story 3 is NOT blocked by Story 8. When Story 8's AC-F8a
-  hash-tracking lands it layers full preserve/flag protection over the same block. (Demoting this to a note
-  avoids the 3→8→6→5→3 dependency cycle a hard edge would create; the Claude side is already covered by the
-  existing `detect.always:true`.)
+  + AC-F9 versioning frontmatter scheme, and the AC-F2 CI guardrail (Copilot must not re-author L1). This story authors its two creation-critical rule entries AS L1 content conforming to that scheme and consumes them natively per harness. Per Revision Log #7 there is NO projection engine to inherit — the earlier "author-once, project-per-harness" machinery was retired; both surfaces are native consumptions of L1.
+- **Story 8 — AC-F8a hash-tracked user-edit protection (SEQUENCING NOTE, not a blocking dependency).** The CLAUDE.md managed-block carrier this story ships is **idempotent and edits only its own delimited managed block**, so it does not clobber hand-edits and Story 3 is NOT blocked by Story 8. When Story 8's AC-F8a hash-tracking lands it layers full preserve/flag protection over the same block. (Demoting this to a note avoids the 3→8→6→5→3 dependency cycle a hard edge would create; the Claude side is already covered by the existing `detect.always:true`.)
 
 ---
 
 ## Decision D-5 — Creation-critical rule mechanism (aligned to AC-F3 under the #7 L1 structure)
 
-**Decision:** Creation-critical coding rules are carried by each harness's **existing native always-on
-mechanism**, both consuming the one L1 rule content — Claude via `detect.always:true` (no change; already
-loads at creation), Copilot via the always-active `CLAUDE.md` managed block (its only always-on carrier,
-since Copilot has no `always` equivalent). All other (path-relevant) rules are consumed natively as
-`.claude/rules` `paths:` (Claude) / `.github/instructions` `applyTo` (Copilot). There is NO mechanical
-projection between the two surfaces — each is authored natively from the shared L1 source.
+**Decision:** Creation-critical coding rules are carried by each harness's **existing native always-on mechanism**, both consuming the one L1 rule content — Claude via `detect.always:true` (no change; already loads at creation), Copilot via the always-active `CLAUDE.md` managed block (its only always-on carrier, since Copilot has no `always` equivalent). All other (path-relevant) rules are consumed natively as `.claude/rules` `paths:` (Claude) / `.github/instructions` `applyTo` (Copilot). There is NO mechanical projection between the two surfaces — each is authored natively from the shared L1 source.
 
 **Options considered:**
-- A) All rules path-scoped (`paths:`/`applyTo`) — rejected: path-scoped rules load on READ/edit of a matching
-  file, NOT at new-file creation; on Copilot a Dapper-only or no-secrets rule scoped to `*.cs`/`*.ts` would
-  be silent exactly when the model authors a brand-new file, so creation-critical enforcement fails (breaks
-  AC-F3).
-- B) Add a fresh unconditional copy of every creation-critical rule into a CLAUDE.md managed block on BOTH
-  harnesses — rejected: on Claude this creates a THIRD copy (the `detect.always:true` project-rule already
-  loads no-hardcoded-secrets at creation), risking drift/triplication. Claude does not need it.
-- C) Route by harness capability from the single L1 source: keep Claude on its existing `detect.always:true`;
-  use the CLAUDE.md managed block ONLY as the Copilot carrier; path-relevant rules → `paths:`/`applyTo` —
-  **chosen**: guarantees creation-time coverage on both harnesses without a redundant third Claude copy, and
-  matches AC-F3's code-grounded note (Claude already loads at creation; carrier chiefly needed for Copilot).
-  It also fits the #7 structure — both harnesses consume the L1 content natively, no transform layer.
+- A) All rules path-scoped (`paths:`/`applyTo`) — rejected: path-scoped rules load on READ/edit of a matching file, NOT at new-file creation; on Copilot a Dapper-only or no-secrets rule scoped to `*.cs`/`*.ts` would be silent exactly when the model authors a brand-new file, so creation-critical enforcement fails (breaks AC-F3).
+- B) Add a fresh unconditional copy of every creation-critical rule into a CLAUDE.md managed block on BOTH harnesses — rejected: on Claude this creates a THIRD copy (the `detect.always:true` project-rule already loads no-hardcoded-secrets at creation), risking drift/triplication. Claude does not need it.
+- C) Route by harness capability from the single L1 source: keep Claude on its existing `detect.always:true`; use the CLAUDE.md managed block ONLY as the Copilot carrier; path-relevant rules → `paths:`/`applyTo` — **chosen**: guarantees creation-time coverage on both harnesses without a redundant third Claude copy, and matches AC-F3's code-grounded note (Claude already loads at creation; carrier chiefly needed for Copilot). It also fits the #7 structure — both harnesses consume the L1 content natively, no transform layer.
 
-**Rationale:** AC-F3 established (code-grounded) that Claude ALREADY loads the creation-critical statements
-at creation via `detect.always:true`, so the CLAUDE.md carrier is a Copilot concern, not a Claude one.
-Option C honours that and the #7 lock: one L1 source, each harness delivering it natively, no re-authoring
-and no mechanical projection.
+**Rationale:** AC-F3 established (code-grounded) that Claude ALREADY loads the creation-critical statements at creation via `detect.always:true`, so the CLAUDE.md carrier is a Copilot concern, not a Claude one. Option C honours that and the #7 lock: one L1 source, each harness delivering it natively, no re-authoring and no mechanical projection.
 
 ---
 
@@ -338,16 +223,13 @@ The developer must tick every item before raising the PR.
 
 ## Open Questions
 
-None open. D-5 is resolved in this spec (option C — native harness-appropriate always-on from the single L1
-source, aligned to AC-F3 under the #7 structure). AC-F9 versioning conformance references Story 2 as owner;
-no further forks block SAVE TECH for this story.
+None open. D-5 is resolved in this spec (option C — native harness-appropriate always-on from the single L1 source, aligned to AC-F3 under the #7 structure). AC-F9 versioning conformance references Story 2 as owner; no further forks block SAVE TECH for this story.
 
 ---
 
 ## Request Flow
 
-Rule-load timing on each harness — this is the load-order that AC-F3 turns on, from the single L1 source
-consumed natively (no projection layer):
+Rule-load timing on each harness — this is the load-order that AC-F3 turns on, from the single L1 source consumed natively (no projection layer):
 
 ```
 PRECURSOR (rule inventory / dedupe — runs first):
@@ -380,10 +262,7 @@ RUNTIME — READ/edit an existing matching file:
   (creation-critical rules remain active throughout via their always-on carrier)
 ```
 
-On Copilot the creation-critical rules MUST ride the always-active CLAUDE.md carrier because Copilot has no
-`always` equivalent — at new-file creation there is no matching file to trigger an `applyTo` rule. On Claude
-this is already solved by `detect.always:true`, so no third copy is introduced there. Both surfaces deliver
-the one L1 rule content natively — there is no mechanical transform between them.
+On Copilot the creation-critical rules MUST ride the always-active CLAUDE.md carrier because Copilot has no `always` equivalent — at new-file creation there is no matching file to trigger an `applyTo` rule. On Claude this is already solved by `detect.always:true`, so no third copy is introduced there. Both surfaces deliver the one L1 rule content natively — there is no mechanical transform between them.
 
 ---
 
@@ -391,18 +270,9 @@ the one L1 rule content natively — there is no mechanical transform between th
 
 Purely additive/config — no schema, no data migration.
 
-1. This story ships on `feature/4.x-multi-harness`; revert its commit range to remove the discrete L1
-   `Shared/rules/no-hardcoded-secrets.md` + `Shared/rules/dapper-only.md` sources, the native
-   `.claude/rules`/`.github/instructions` surfaces, and the CLAUDE.md creation-critical managed block;
-   restore the retired `data-access-rules.md` and the CLAUDE.md Dapper prose from the reverted range. The
-   frozen `v3.13.0` tag remains the permanent Claude-only fallback. (The `Shared/prompt-manifest.json`
-   entries for these rules are Story-2 owned — coordinate their removal with Story 2 on a full rollback.)
-2. Per provisioned target repo: `setup-sync` re-consumes the previous rule set into each harness surface; the
-   CLAUDE.md managed block is idempotently rewritten (or removed on rollback) under AC-F8a hash protection,
-   leaving developer-authored `CLAUDE.md` content untouched.
-3. Verify after rollback: Claude's `detect.always:true` project-rule still loads at creation and path-scoped
-   rules still load on read (parity); no orphaned creation-critical managed block left in `CLAUDE.md`; the
-   legacy Dapper copies are back exactly as before (no partial-dedupe state).
+1. This story ships on `feature/4.x-multi-harness`; revert its commit range to remove the discrete L1 `Shared/rules/no-hardcoded-secrets.md` + `Shared/rules/dapper-only.md` sources, the native `.claude/rules`/`.github/instructions` surfaces, and the CLAUDE.md creation-critical managed block; restore the retired `data-access-rules.md` and the CLAUDE.md Dapper prose from the reverted range. The frozen `v3.13.0` tag remains the permanent Claude-only fallback. (The `Shared/prompt-manifest.json` entries for these rules are Story-2 owned — coordinate their removal with Story 2 on a full rollback.)
+2. Per provisioned target repo: `setup-sync` re-consumes the previous rule set into each harness surface; the CLAUDE.md managed block is idempotently rewritten (or removed on rollback) under AC-F8a hash protection, leaving developer-authored `CLAUDE.md` content untouched.
+3. Verify after rollback: Claude's `detect.always:true` project-rule still loads at creation and path-scoped rules still load on read (parity); no orphaned creation-critical managed block left in `CLAUDE.md`; the legacy Dapper copies are back exactly as before (no partial-dedupe state).
 
 ---
 
@@ -410,39 +280,20 @@ Purely additive/config — no schema, no data migration.
 
 ### QA Team
 
-**What was added:** the two creation-critical rules were consolidated from three scattered copies into one
-authoritative L1 `Shared/` source each (the coding rules + B1–B7 taxonomy now live as single-source L1
-content), then each harness consumes that L1 content natively — Claude via `.claude/rules`, Copilot via
-`.github/instructions` + the CLAUDE.md carrier — with Dapper-only + no-hardcoded-secrets guaranteed active at
-new-file generation on BOTH harnesses (Claude via existing `detect.always:true`; Copilot via the CLAUDE.md
-carrier). There is NO mechanical projection between harnesses. **How to test:** run INT-1/INT-2 — generate a
-brand-new source file on each harness and assert both rules constrained the output (Dapper used, no secrets
-emitted). **Regression risk:** Claude's `detect.always:true` and path-scoped rules must load exactly as in
-3.x; run the parity check (N-U2). **Test data:** synthetic scratch files only; no real privileged/PII/secret
-material in fixtures.
+**What was added:** the two creation-critical rules were consolidated from three scattered copies into one authoritative L1 `Shared/` source each (the coding rules + B1–B7 taxonomy now live as single-source L1 content), then each harness consumes that L1 content natively — Claude via `.claude/rules`, Copilot via `.github/instructions` + the CLAUDE.md carrier — with Dapper-only + no-hardcoded-secrets guaranteed active at new-file generation on BOTH harnesses (Claude via existing `detect.always:true`; Copilot via the CLAUDE.md carrier). There is NO mechanical projection between harnesses. **How to test:** run INT-1/INT-2 — generate a brand-new source file on each harness and assert both rules constrained the output (Dapper used, no secrets emitted). **Regression risk:** Claude's `detect.always:true` and path-scoped rules must load exactly as in 3.x; run the parity check (N-U2). **Test data:** synthetic scratch files only; no real privileged/PII/secret material in fixtures.
 
 ### DevOps / Platform Team
 
 - No new secrets, no new environment variables, no network calls introduced by this story.
-- Rule consumption runs as part of `provision`/`setup-sync`; no new pipeline stage. The AC-F9 versioning CI
-  check + AC-F2 re-author guardrail are Story-2 gates that this story's rules must pass — coordinate with
-  Story 2, do not duplicate the check here.
-- The CLAUDE.md managed-block carrier writer is gated on AC-F8a hash-tracked user-edit protection
-  (Story 8) — do not enable it before Story 8 lands, or a hand-edited `CLAUDE.md` could be clobbered.
+- Rule consumption runs as part of `provision`/`setup-sync`; no new pipeline stage. The AC-F9 versioning CI check + AC-F2 re-author guardrail are Story-2 gates that this story's rules must pass — coordinate with Story 2, do not duplicate the check here.
+- The CLAUDE.md managed-block carrier writer is gated on AC-F8a hash-tracked user-edit protection (Story 8) — do not enable it before Story 8 lands, or a hand-edited `CLAUDE.md` could be clobbered.
 
 ### Future Developer — follow-on work
 
-- To add a new rule: author it ONCE as L1 content in `Shared/rules/**` (with AC-F9 version frontmatter) and
-  tag it creation-critical or path-relevant. If creation-critical it routes to Claude `detect.always:true` +
-  the Copilot CLAUDE.md carrier; otherwise it is consumed natively as `paths:`/`applyTo`. Do NOT hand-edit
-  the harness surfaces (`.claude/rules`/`.github/instructions`) — they are regenerated from L1.
-- Never re-author an L1 rule into the Copilot side — re-deliver it (AC-F2 guardrail). Never re-introduce a
-  third copy of a creation-critical rule on Claude — `detect.always:true` already loads it at creation; the
-  CLAUDE.md managed block is the Copilot carrier only.
-- To add a harness later, the new harness consumes the SAME `Shared/rules/**` L1 content natively; add its
-  always-on carrier + path-scoped output format in the consumption step (one place) — no projection layer.
-- Known gotcha to preserve: on Copilot, path-scoped `applyTo` rules load only when a matching file is in
-  context — never move a creation-critical rule to `applyTo`-only.
+- To add a new rule: author it ONCE as L1 content in `Shared/rules/**` (with AC-F9 version frontmatter) and tag it creation-critical or path-relevant. If creation-critical it routes to Claude `detect.always:true` + the Copilot CLAUDE.md carrier; otherwise it is consumed natively as `paths:`/`applyTo`. Do NOT hand-edit the harness surfaces (`.claude/rules`/`.github/instructions`) — they are regenerated from L1.
+- Never re-author an L1 rule into the Copilot side — re-deliver it (AC-F2 guardrail). Never re-introduce a third copy of a creation-critical rule on Claude — `detect.always:true` already loads it at creation; the CLAUDE.md managed block is the Copilot carrier only.
+- To add a harness later, the new harness consumes the SAME `Shared/rules/**` L1 content natively; add its always-on carrier + path-scoped output format in the consumption step (one place) — no projection layer.
+- Known gotcha to preserve: on Copilot, path-scoped `applyTo` rules load only when a matching file is in context — never move a creation-critical rule to `applyTo`-only.
 
 ---
 

@@ -17,101 +17,35 @@ Status: DRAFT · STORY · 8 SP (sub-decomposes)
 
 ## Overview
 
-Story 6 closes the four SEV-1 governance gaps that make the multi-harness plugin trustworthy in a
-privileged-data context, honouring the revised, honest-scope ACs (2026-08-14 #6, carrying #4 scope). It
-delivers, as new Node.js CJS modules under `Shared/gate/`, four capabilities plus their packaging.
+Story 6 closes the four SEV-1 governance gaps that make the multi-harness plugin trustworthy in a privileged-data context, honouring the revised, honest-scope ACs (2026-08-14 #6, carrying #4 scope). It delivers, as new Node.js CJS modules under `Shared/gate/`, four capabilities plus their packaging.
 
-**Layering (L1/L2/L3 — locked by ICEA #7).** Story 6 sits cleanly on the shared-content-core structure:
-the harness-independent `ai-gate` and its sibling modules are **L1 enforcement content** and live under
-`Shared/gate/` — a single canonical source both harnesses CONSUME, never re-author. The `review-icea`
-critic is the **L2 native Copilot engagement surface** and lives under `Copilot/` (`Copilot/skills/review-icea/`),
-authored natively as a GA Copilot code-review skill — it is NOT a mechanical projection of a Claude skill.
-The B1–B7 boundary classifier reads the taxonomy from its **single L1 canonical location** (fixed by
-Story 3a via the `artifact-paths` contract), never from a per-skill bundled copy. There is **no
-delta-map and no mechanical per-skill projection** in this story: L1 is the single source, Claude and
-Copilot engage it natively at L2, and the Tier-C `ai-gate` is the common L3 floor consumed by both.
+**Layering (L1/L2/L3 — locked by ICEA #7).** Story 6 sits cleanly on the shared-content-core structure: the harness-independent `ai-gate` and its sibling modules are **L1 enforcement content** and live under `Shared/gate/` — a single canonical source both harnesses CONSUME, never re-author. The `review-icea` critic is the **L2 native Copilot engagement surface** and lives under `Copilot/` (`Copilot/skills/review-icea/`), authored natively as a GA Copilot code-review skill — it is NOT a mechanical projection of a Claude skill. The B1–B7 boundary classifier reads the taxonomy from its **single L1 canonical location** (fixed by Story 3a via the `artifact-paths` contract), never from a per-skill bundled copy. There is **no delta-map and no mechanical per-skill projection** in this story: L1 is the single source, Claude and Copilot engage it natively at L2, and the Tier-C `ai-gate` is the common L3 floor consumed by both.
 
-**Asymmetric enforcement — Story 6 is the home of the Copilot HARD gate + the review-time critic (AC-F7).**
-Under the #6 model each harness enforces where it is strong. Claude prevents at write-time (Tier-A
-`icea-floor` `exit 2`, unchanged). Copilot cannot; its HARD guarantee is the harness-independent CI
-`ai-gate` — **but only when that workflow is configured as a REQUIRED status check on a PROTECTED branch
-(org policy)**. That is the load-bearing condition: a CI job that merely runs is advisory; it becomes
-un-bypassable (you cannot `--no-verify` a required check, nor merge around it) ONLY once branch protection
-requires it. **Story 6 owns and creates `ai-gate.cjs` + `.github/workflows/ai-gate.yml` (the gate logic);
-the branch-protection / required-check SETUP is emitted by Story 8** (which distributes the gate) — Story 6
-therefore depends on 2 and 5, and Story 8 depends on Story 6. Provisioning (Story 8) **WARNS if the target
-branch is unprotected**, because an unprotected branch downgrades the Copilot hard gate to advisory. Story 6
-states this dependency plainly; it does not itself provision branch protection.
+**Asymmetric enforcement — Story 6 is the home of the Copilot HARD gate + the review-time critic (AC-F7).** Under the #6 model each harness enforces where it is strong. Claude prevents at write-time (Tier-A `icea-floor` `exit 2`, unchanged). Copilot cannot; its HARD guarantee is the harness-independent CI `ai-gate` — **but only when that workflow is configured as a REQUIRED status check on a PROTECTED branch (org policy)**. That is the load-bearing condition: a CI job that merely runs is advisory; it becomes un-bypassable (you cannot `--no-verify` a required check, nor merge around it) ONLY once branch protection requires it. **Story 6 owns and creates `ai-gate.cjs` + `.github/workflows/ai-gate.yml` (the gate logic); the branch-protection / required-check SETUP is emitted by Story 8** (which distributes the gate) — Story 6 therefore depends on 2 and 5, and Story 8 depends on Story 6. Provisioning (Story 8) **WARNS if the target branch is unprotected**, because an unprotected branch downgrades the Copilot hard gate to advisory. Story 6 states this dependency plainly; it does not itself provision branch protection.
 
-Alongside the merge-gate, Story 6 delivers the **`review-icea` code-review skill** — the Copilot
-REVIEW-TIME critic. It loads the approved ICEA / Tech Spec and gates the PR diff for AC-traceability at
-review time as a GA Copilot code-review surface, needing **NO inline sibling-skill orchestration** — this
-replaces the earlier inline sibling-skill critic invocation on Copilot and dissolves the F1.1/F2.1 concern.
-Load-path caveat: if the code-review surface cannot read the repo ICEA/Tech Spec directly, it falls back to
-**MCP-fed context or a coordinator agent** — which path works is what the Phase-1 **spike H2** verifies.
-The `review-icea` critic is a **best-effort** review assist, NOT the hard line; the required-check CI gate
-is the hard line.
+Alongside the merge-gate, Story 6 delivers the **`review-icea` code-review skill** — the Copilot REVIEW-TIME critic. It loads the approved ICEA / Tech Spec and gates the PR diff for AC-traceability at review time as a GA Copilot code-review surface, needing **NO inline sibling-skill orchestration** — this replaces the earlier inline sibling-skill critic invocation on Copilot and dissolves the F1.1/F2.1 concern. Load-path caveat: if the code-review surface cannot read the repo ICEA/Tech Spec directly, it falls back to **MCP-fed context or a coordinator agent** — which path works is what the Phase-1 **spike H2** verifies. The `review-icea` critic is a **best-effort** review assist, NOT the hard line; the required-check CI gate is the hard line.
 
 The four capabilities plus their packaging:
 
-(1) **Approval integrity — Tier-C scope (AC-NF1).** The **commit/CI `ai-gate` is the authoritative
-approval check** (the system-of-record): it verifies a signed approval **token** (or a live ADO REST
-query where a live org exists), not a `Status: Approved` file grep, so an AI or a developer cannot
-self-forge approval at the commit boundary. The Claude Tier-A `icea-floor` hook **intentionally remains a
-fast file-string floor** — a soft pre-check, NOT the system-of-record — and is **not changed by this
-story** (preserving AC-NF4 byte-for-byte parity). On the dogfood / no-live-ADO repo the gate runs in an
-explicit, audited **advisory mode** (record + warn) instead of fail-closing every commit; enforce mode
-fail-closes. The **signed-token issuance flow** (key custody; token binds ADO-id + approver +
-artifact-hash; minted by `icea-approve`) is a Story-6 deliverable.
+(1) **Approval integrity — Tier-C scope (AC-NF1).** The **commit/CI `ai-gate` is the authoritative approval check** (the system-of-record): it verifies a signed approval **token** (or a live ADO REST query where a live org exists), not a `Status: Approved` file grep, so an AI or a developer cannot self-forge approval at the commit boundary. The Claude Tier-A `icea-floor` hook **intentionally remains a fast file-string floor** — a soft pre-check, NOT the system-of-record — and is **not changed by this story** (preserving AC-NF4 byte-for-byte parity). On the dogfood / no-live-ADO repo the gate runs in an explicit, audited **advisory mode** (record + warn) instead of fail-closing every commit; enforce mode fail-closes. The **signed-token issuance flow** (key custody; token binds ADO-id + approver + artifact-hash; minted by `icea-approve`) is a Story-6 deliverable.
 
-(2) **Data classification & egress — re-scoped to enforceable (AC-NF2).** The story delivers (a) a
-**boundary classifier** that tags context against the existing B1–B7 taxonomy, (b) **skill-level
-warn/withhold at context assembly** on a B6/B7 trigger, and (c) a **Tier-C scan of committed artifacts**.
-It does **NOT** claim a runtime egress block: runtime egress inside the vendor client (especially Copilot
-cloud/`Auto`) is **not plugin-interceptable and is OUT OF SCOPE** — that boundary is a workspace/DLP
-responsibility. The classifier reads the taxonomy from its **single canonical location** fixed by Story 3a
-(`artifact-paths` contract), not a per-skill bundled copy.
+(2) **Data classification & egress — re-scoped to enforceable (AC-NF2).** The story delivers (a) a **boundary classifier** that tags context against the existing B1–B7 taxonomy, (b) **skill-level warn/withhold at context assembly** on a B6/B7 trigger, and (c) a **Tier-C scan of committed artifacts**. It does **NOT** claim a runtime egress block: runtime egress inside the vendor client (especially Copilot cloud/`Auto`) is **not plugin-interceptable and is OUT OF SCOPE** — that boundary is a workspace/DLP responsibility. The classifier reads the taxonomy from its **single canonical location** fixed by Story 3a (`artifact-paths` contract), not a per-skill bundled copy.
 
-(3) **Injection & secret hygiene (AC-NF3).** Secret detection **reuses the existing shape-based detectors**
-from `.claude/hooks/check-settings-secrets.cjs` (fixed token shapes + secret key-name heuristics +
-placeholder allow-list) — no entropy-based guarantee — scoped to files the **plugin assembles**, not the
-vendor context window. Untrusted-input is a **prompt-level control**: a `CLAUDE.md` instruction that
-`memory/` and `docs/` are untrusted data, plus a **provenance stamp written at the `memory-log` hook on
-WRITE**. There is no `.cjs` that "strips executable authority" from already-ingested text (impossible).
+(3) **Injection & secret hygiene (AC-NF3).** Secret detection **reuses the existing shape-based detectors** from `.claude/hooks/check-settings-secrets.cjs` (fixed token shapes + secret key-name heuristics + placeholder allow-list) — no entropy-based guarantee — scoped to files the **plugin assembles**, not the vendor context window. Untrusted-input is a **prompt-level control**: a `CLAUDE.md` instruction that `memory/` and `docs/` are untrusted data, plus a **provenance stamp written at the `memory-log` hook on WRITE**. There is no `.cjs` that "strips executable authority" from already-ingested text (impossible).
 
-(4) **Gate safety / supply chain (AC-NF7).** The `ai-gate` is vendored, version-pinned and
-integrity-hashed; **gate-hash generation is routed THROUGH the bootstrap `.hashes` writer** (the
-`setup-init-bootstrap` regenerates `.claude/hooks/.hashes` on sync and would clobber any out-of-band
-append). Hooks are verified against `.claude/hooks/.hashes` before running; rollout is warn-only first with
-an audited break-glass bypass (no silent `--no-verify`).
+(4) **Gate safety / supply chain (AC-NF7).** The `ai-gate` is vendored, version-pinned and integrity-hashed; **gate-hash generation is routed THROUGH the bootstrap `.hashes` writer** (the `setup-init-bootstrap` regenerates `.claude/hooks/.hashes` on sync and would clobber any out-of-band append). Hooks are verified against `.claude/hooks/.hashes` before running; rollout is warn-only first with an audited break-glass bypass (no silent `--no-verify`).
 
-**Prompt/gate-artifact versioning (AC-F9).** The `ai-gate` (an L1 enforcement artifact) and the L2 native
-`review-icea` critic (`Copilot/skills/review-icea/SKILL.md`) are **versioned prompt/gate artifacts** under
-the AC-F9 regime: each carries a structured frontmatter `version:` (SemVer for the L1 gate; `v1/v2` +
-changelog for the L2 critic) and a `consumes:` pin of the L1 versions it depends on (e.g. `review-icea`
-pins the L1 critic-rubric + B1–B7-taxonomy versions it consumes). `gate-manifest.json` records
-`{version, sha256, consumes}` for the gate modules alongside their integrity hashes — the gate manifest IS
-the AC-F9 prompt-manifest slice for enforcement artifacts. The AC-F9 CI bump-on-change check (a changed
-gate/critic artifact without a version bump = build failure) is delivered by Story 2's manifest/CI check;
-Story 6 supplies the versioned artifacts and their manifest entries.
+**Prompt/gate-artifact versioning (AC-F9).** The `ai-gate` (an L1 enforcement artifact) and the L2 native `review-icea` critic (`Copilot/skills/review-icea/SKILL.md`) are **versioned prompt/gate artifacts** under the AC-F9 regime: each carries a structured frontmatter `version:` (SemVer for the L1 gate; `v1/v2` + changelog for the L2 critic) and a `consumes:` pin of the L1 versions it depends on (e.g. `review-icea` pins the L1 critic-rubric + B1–B7-taxonomy versions it consumes). `gate-manifest.json` records `{version, sha256, consumes}` for the gate modules alongside their integrity hashes — the gate manifest IS the AC-F9 prompt-manifest slice for enforcement artifacts. The AC-F9 CI bump-on-change check (a changed gate/critic artifact without a version bump = build failure) is delivered by Story 2's manifest/CI check; Story 6 supplies the versioned artifacts and their manifest entries.
 
-`.github/workflows/ai-gate.yml` is **owned and created here (Story 6)**; **Story 8 distributes it AND
-emits the branch-protection / required-check setup** — single ownership of the gate logic, no duplicate
-producer. The governing pattern is *authoritative Tier-C enforcement at the commit/merge boundary, plus
-classify-and-warn at assembly, plus a review-time AC-traceability critic on Copilot*: the gate enforces
-what it can actually prove (committed artifacts + real approval), is a HARD gate on Copilot **only as a
-required check on a protected branch**, and is explicit about what it cannot (runtime vendor egress).
-Because the story is 8 SP it sub-decomposes into four ≤5-SP child stories (6a–6d) below.
+`.github/workflows/ai-gate.yml` is **owned and created here (Story 6)**; **Story 8 distributes it AND emits the branch-protection / required-check setup** — single ownership of the gate logic, no duplicate producer. The governing pattern is *authoritative Tier-C enforcement at the commit/merge boundary, plus classify-and-warn at assembly, plus a review-time AC-traceability critic on Copilot*: the gate enforces what it can actually prove (committed artifacts + real approval), is a HARD gate on Copilot **only as a required check on a protected branch**, and is explicit about what it cannot (runtime vendor egress). Because the story is 8 SP it sub-decomposes into four ≤5-SP child stories (6a–6d) below.
 
-Decision **D-1** (ai-gate distribution) is recorded and resolved in this story — see the Decision D-1
-note after the AC Coverage Matrix.
+Decision **D-1** (ai-gate distribution) is recorded and resolved in this story — see the Decision D-1 note after the AC Coverage Matrix.
 
 ---
 
 ## AC Coverage Matrix
 
-Every AC from the ICEA scoped to Story 6 must be covered by at least one file change. Every file change
-must satisfy at least one AC. Gaps are flagged ⚠.
+Every AC from the ICEA scoped to Story 6 must be covered by at least one file change. Every file change must satisfy at least one AC. Gaps are flagged ⚠.
 
 ### AC → File mapping
 
@@ -145,21 +79,11 @@ must satisfy at least one AC. Gaps are flagged ⚠.
 | `.github/workflows/ai-gate.yml` (CI Tier-C gate; **owned here**, distributed by Story 8; the Copilot HARD gate **only when Story 8 configures it as a required check on a protected branch**) | AC-F7, AC-NF1, AC-NF2, AC-NF7 |
 | `.claude/hooks/.hashes` | AC-NF7 |
 
-**Coverage result:** all 5 Story-6 ACs (AC-F7, AC-NF1, AC-NF2, AC-NF3, AC-NF7) covered; no orphaned file
-changes ✅. **AC-F7 dependency note:** the branch-protection / required-check SETUP that makes the CI gate
-un-bypassable is emitted by **Story 8** (which distributes the gate + WARNS if the branch is unprotected) —
-Story 6 owns the gate logic and the `review-icea` critic; it does not itself provision branch protection.
-No back-edge: Story 6 depends on 2, 5; Story 8 depends on 6.
+**Coverage result:** all 5 Story-6 ACs (AC-F7, AC-NF1, AC-NF2, AC-NF3, AC-NF7) covered; no orphaned file changes ✅. **AC-F7 dependency note:** the branch-protection / required-check SETUP that makes the CI gate un-bypassable is emitted by **Story 8** (which distributes the gate + WARNS if the branch is unprotected) — Story 6 owns the gate logic and the `review-icea` critic; it does not itself provision branch protection. No back-edge: Story 6 depends on 2, 5; Story 8 depends on 6.
 
 ### Decision D-1 — ai-gate distribution
 
-Vendored-in-repo (pinned + integrity-hashed) **vs** internal-registry `npx`. Availability of an internal
-package registry is unknown as of 2026-08-13, and a governance gate must be reproducible and tamper-evident
-even offline. **Chosen: vendored-pinned + hashed** — the `ai-gate.cjs` and its sibling modules ship in
-`Shared/gate/`, pinned by a `gate-manifest.json` version field and verified by SHA-256 integrity hashes on
-every run. Registry-`npx` is adopted later **only if** an internal registry is confirmed; that switch is a
-one-line manifest change and does not alter the gate's logic. Rationale: no dependency on unproven infra,
-no unpinned `npx` supply-chain surface, works in air-gapped/offline CI.
+Vendored-in-repo (pinned + integrity-hashed) **vs** internal-registry `npx`. Availability of an internal package registry is unknown as of 2026-08-13, and a governance gate must be reproducible and tamper-evident even offline. **Chosen: vendored-pinned + hashed** — the `ai-gate.cjs` and its sibling modules ship in `Shared/gate/`, pinned by a `gate-manifest.json` version field and verified by SHA-256 integrity hashes on every run. Registry-`npx` is adopted later **only if** an internal registry is confirmed; that switch is a one-line manifest change and does not alter the gate's logic. Rationale: no dependency on unproven infra, no unpinned `npx` supply-chain surface, works in air-gapped/offline CI.
 
 ---
 
@@ -195,40 +119,27 @@ no unpinned `npx` supply-chain surface, works in air-gapped/offline CI.
 > No new plugin-internal HTTP surface. Two external boundaries are introduced/governed by this story.
 
 **Approval verification (AC-NF1) — commit/CI gate.**
-- Primary check (dogfood / no-live-ADO): a **signed approval token** verified by `token-verify.cjs`
-  against a committed public key. The token binds `{ adoId, approver, artifactHash }` and is **minted by
-  `icea-approve`** at approval time (see Signed-Token Issuance Flow below).
-- Where a live ADO org exists: `GET {ADO_URL}/{org}/{project}/_apis/wit/workItems/{id}?fields=System.State,Custom.ApprovalState&api-version=7.0`
-  via the existing `AZURE_DEVOPS_PAT` env var (never committed; read from environment only).
+- Primary check (dogfood / no-live-ADO): a **signed approval token** verified by `token-verify.cjs` against a committed public key. The token binds `{ adoId, approver, artifactHash }` and is **minted by `icea-approve`** at approval time (see Signed-Token Issuance Flow below).
+- Where a live ADO org exists: `GET {ADO_URL}/{org}/{project}/_apis/wit/workItems/{id}?fields=System.State,Custom.ApprovalState&api-version=7.0` via the existing `AZURE_DEVOPS_PAT` env var (never committed; read from environment only).
 - Result contract: `{ approved: boolean, approver: string|null, source: "signed-token"|"ado", mode: "advisory"|"enforce" }`.
-- A plain `Status: Approved` string in a file is **never accepted by the commit gate** as authoritative
-  (the Tier-A `icea-floor` file-string floor is a separate, soft pre-check and is out of scope for change).
+- A plain `Status: Approved` string in a file is **never accepted by the commit gate** as authoritative (the Tier-A `icea-floor` file-string floor is a separate, soft pre-check and is out of scope for change).
 
 **Context-assembly egress boundary (AC-NF2) — advisory, not a block.**
-- `assembly-warn.cjs` sits between a skill's context assembly and the model call. It receives
-  `{ contextFragments[], harness }` and returns `{ decision: "allow"|"warn"|"withhold", triggers[], reason }`.
-- On a B6/B7 trigger it warns and may withhold the fragment at the skill level. It **does not** claim to
-  intercept what the vendor client transmits at runtime — that is OUT OF SCOPE (workspace/DLP).
+- `assembly-warn.cjs` sits between a skill's context assembly and the model call. It receives `{ contextFragments[], harness }` and returns `{ decision: "allow"|"warn"|"withhold", triggers[], reason }`.
+- On a B6/B7 trigger it warns and may withhold the fragment at the skill level. It **does not** claim to intercept what the vendor client transmits at runtime — that is OUT OF SCOPE (workspace/DLP).
 
 ### Signed-Token Issuance Flow (AC-NF1)
 
-1. **Key custody.** A signing key pair is generated out-of-band; the **private key stays with the approver
-   authority** (never committed, never in the repo). Only the **public key is committed** for verification.
-2. **Minting.** When `icea-approve` records an approval it mints a token binding `{ adoId, approver,
-   artifactHash }`, signed with the private key. `artifactHash` is the SHA-256 of the approved ICEA/Tech
-   Spec so an approval cannot be replayed onto a mutated artifact.
-3. **Verification.** `token-verify.cjs` validates the signature against the committed public key and checks
-   the bound `adoId`/`artifactHash` match the commit under test.
-4. **Advisory vs enforce.** With no live ADO and no valid token present the gate runs **advisory**
-   (record + warn) so the synthetic-id dogfood repo stays usable; enforce mode requires a valid token or a
-   live-ADO pass and fail-closes otherwise.
+1. **Key custody.** A signing key pair is generated out-of-band; the **private key stays with the approver authority** (never committed, never in the repo). Only the **public key is committed** for verification.
+2. **Minting.** When `icea-approve` records an approval it mints a token binding `{ adoId, approver, artifactHash }`, signed with the private key. `artifactHash` is the SHA-256 of the approved ICEA/Tech Spec so an approval cannot be replayed onto a mutated artifact.
+3. **Verification.** `token-verify.cjs` validates the signature against the committed public key and checks the bound `adoId`/`artifactHash` match the commit under test.
+4. **Advisory vs enforce.** With no live ADO and no valid token present the gate runs **advisory** (record + warn) so the synthetic-id dogfood repo stays usable; enforce mode requires a valid token or a live-ADO pass and fail-closes otherwise.
 
 ---
 
 ## Auth & Security
 
-**This story is the security hardening for the epic.** The concerns below are the deliverables, mapped
-to their AC and enforcing module.
+**This story is the security hardening for the epic.** The concerns below are the deliverables, mapped to their AC and enforcing module.
 
 | Concern | Mitigation | AC | Module |
 |---|---|---|---|
@@ -240,12 +151,7 @@ to their AC and enforcing module.
 | Gate tampering / supply-chain | Vendored pinned + integrity-hashed gate; hooks hash-verified before run; hash gen routed through the bootstrap `.hashes` writer; fail-closed on mismatch | AC-NF7 | `gate-manifest.json`, `verify-hashes.cjs`, `setup-init-bootstrap.cjs` |
 | Silent bypass culture | Warn-only rollout first; audited break-glass; no silent `--no-verify` | AC-NF7 | `break-glass.cjs` |
 
-**Enforcement principle:** the gate enforces what it can *prove* — committed artifacts and real approval.
-In **enforce** mode, approval checks and hash checks fail-closed when they cannot prove safety (no valid
-token and no live-ADO pass → block; classifier cannot classify a fragment → treat as B7; hash mismatch →
-refuse to run). In **advisory** mode (no live ADO / token — the dogfood default) the gate **records + warns
-rather than blocking every commit**, so the synthetic-id repo stays usable. Runtime egress inside the
-vendor client is explicitly not something the gate proves or blocks.
+**Enforcement principle:** the gate enforces what it can *prove* — committed artifacts and real approval. In **enforce** mode, approval checks and hash checks fail-closed when they cannot prove safety (no valid token and no live-ADO pass → block; classifier cannot classify a fragment → treat as B7; hash mismatch → refuse to run). In **advisory** mode (no live ADO / token — the dogfood default) the gate **records + warns rather than blocking every commit**, so the synthetic-id repo stays usable. Runtime egress inside the vendor client is explicitly not something the gate proves or blocks.
 
 ---
 
@@ -279,9 +185,7 @@ vendor client is explicitly not something the gate proves or blocks.
 | AC-NF7 | Vendor+pin+hash gate, `.hashes` gen via bootstrap writer, warn-only rollout + audited break-glass | 1 |
 | **Total** | | **8** |
 
-**Total SP: 8**
-**Type: EPIC child-split** — the story is 8 SP pre-split; the ≤5-SP shippable-slice rule requires it to
-sub-decompose into four child stories, each independently shippable and testable.
+**Total SP: 8** **Type: EPIC child-split** — the story is 8 SP pre-split; the ≤5-SP shippable-slice rule requires it to sub-decompose into four child stories, each independently shippable and testable.
 
 | Story | Child ADO # | Logical scope | SP | Shippable alone? | Depends on |
 |---|---|---|---|---|---|
@@ -330,16 +234,9 @@ The developer must tick every item before raising the PR.
 
 ### Reviewer Checklist
 
-- [ ] The CI `ai-gate` is documented as the Copilot **HARD** gate **only when configured as a required
-      status check on a protected branch**; the spec states plainly that the branch-protection SETUP is
-      emitted by **Story 8** (which WARNS if unprotected) and is NOT provisioned by Story 6 (AC-F7)
-- [ ] `review-icea` is present as the Copilot **review-time** critic — loads the approved ICEA/Tech Spec,
-      gates the PR diff for AC-traceability, needs **no inline sibling-skill orchestration**, and is
-      framed **best-effort** (not the hard line). Its load-path fallback (MCP/coordinator per spike H2) is
-      documented (AC-F7)
-- [ ] The **commit/CI gate decision** is bound to a signed token (or live ADO) — **no code path lets the
-      COMMIT GATE treat a `Status: Approved` file string as authoritative** (AC-NF1). *(The Tier-A
-      `icea-floor` file-string floor is a separate soft pre-check and is correctly left unchanged.)*
+- [ ] The CI `ai-gate` is documented as the Copilot **HARD** gate **only when configured as a required status check on a protected branch**; the spec states plainly that the branch-protection SETUP is emitted by **Story 8** (which WARNS if unprotected) and is NOT provisioned by Story 6 (AC-F7)
+- [ ] `review-icea` is present as the Copilot **review-time** critic — loads the approved ICEA/Tech Spec, gates the PR diff for AC-traceability, needs **no inline sibling-skill orchestration**, and is framed **best-effort** (not the hard line). Its load-path fallback (MCP/coordinator per spike H2) is documented (AC-F7)
+- [ ] The **commit/CI gate decision** is bound to a signed token (or live ADO) — **no code path lets the COMMIT GATE treat a `Status: Approved` file string as authoritative** (AC-NF1). *(The Tier-A `icea-floor` file-string floor is a separate soft pre-check and is correctly left unchanged.)*
 - [ ] Advisory mode records + warns on the no-live-ADO repo; enforce mode fails **closed** (AC-NF1)
 - [ ] Signed-token binding (adoId + approver + artifact-hash) is verified against the committed public key; the private key is not in the repo (AC-NF1)
 - [ ] Classifier reads the taxonomy from its **canonical `artifact-paths` location** (not a per-skill copy); defaults unclassifiable fragments to B7; assembly warn/withholds; committed-artifact scan present (AC-NF2)
@@ -354,13 +251,7 @@ The developer must tick every item before raising the PR.
 
 ## Open Questions
 
-None open. D-1 is resolved in this spec (vendored-pinned+hashed default; registry-`npx` only if an internal
-registry is later confirmed). AC-NF2's classifier is confirmed a Story-6 deliverable per the revised ICEA,
-reading the taxonomy from the Story-3a canonical `artifact-paths` location. The `review-icea` load-path
-(repo ICEA direct vs MCP-fed context vs coordinator agent) is not open here — it is settled by the Phase-1
-**spike H2**; this spec implements whichever path H2 confirms. The branch-protection / required-check SETUP
-that makes the CI gate un-bypassable on Copilot is a **Story 8** deliverable (Story 8 WARNS if unprotected),
-not open here.
+None open. D-1 is resolved in this spec (vendored-pinned+hashed default; registry-`npx` only if an internal registry is later confirmed). AC-NF2's classifier is confirmed a Story-6 deliverable per the revised ICEA, reading the taxonomy from the Story-3a canonical `artifact-paths` location. The `review-icea` load-path (repo ICEA direct vs MCP-fed context vs coordinator agent) is not open here — it is settled by the Phase-1 **spike H2**; this spec implements whichever path H2 confirms. The branch-protection / required-check SETUP that makes the CI gate un-bypassable on Copilot is a **Story 8** deliverable (Story 8 WARNS if unprotected), not open here.
 
 ---
 
@@ -409,8 +300,7 @@ REVIEW-TIME CRITIC (Copilot PR review — best-effort, NOT the hard line):
   (The HARD line remains the required-check ai-gate; review-icea is authoring/review assistance on top.)
 ```
 
-No network/DB tiers exist inside the plugin (it runs in-process); the only external call is the ADO REST
-approval query where a live org exists (AC-NF1). Runtime model egress is not plugin-interceptable (AC-NF2).
+No network/DB tiers exist inside the plugin (it runs in-process); the only external call is the ADO REST approval query where a live org exists (AC-NF1). Runtime model egress is not plugin-interceptable (AC-NF2).
 
 ---
 
@@ -419,43 +309,21 @@ approval query where a live org exists (AC-NF1). Runtime model egress is not plu
 **Schema migrations:** None — this story is code/config only; the audit log and provenance stamps are additive.
 
 **Rollback procedure:**
-1. Story 6 lands as a set of commits on `feature/4.x-multi-harness`; rollback = revert its commit range.
-   The gate modules are new files under `Shared/gate/`; reverting removes them and restores the prior
-   (Story 5) enforcement surface. The frozen `v3.13.0` git tag remains the Claude-only fallback.
-2. The `.git/hooks/pre-commit`, `.github/workflows/ai-gate.yml`, and `setup-init-bootstrap.cjs` gate-hash
-   changes are additive; reverting the commit removes the gate invocation and the gate-hash emission.
-   Re-running the bootstrap writer after revert regenerates `.claude/hooks/.hashes` without gate hashes.
-3. **Warn-only first** is the safe-rollout lever: the gate ships in advisory/warn-only mode (reports, does
-   not block), is validated in CI against the negative-test corpus, and is flipped to enforce only after the
-   governance negative tests (TC below) pass. Rolling back to advisory is a single mode flag, no revert.
-4. Verify after rollback: Claude Tier-A `icea-floor` still `exit 2`-blocks an unapproved Write (epic parity
-   AC-NF4 — unchanged by this story); a normal commit still proceeds.
+1. Story 6 lands as a set of commits on `feature/4.x-multi-harness`; rollback = revert its commit range. The gate modules are new files under `Shared/gate/`; reverting removes them and restores the prior (Story 5) enforcement surface. The frozen `v3.13.0` git tag remains the Claude-only fallback.
+2. The `.git/hooks/pre-commit`, `.github/workflows/ai-gate.yml`, and `setup-init-bootstrap.cjs` gate-hash changes are additive; reverting the commit removes the gate invocation and the gate-hash emission. Re-running the bootstrap writer after revert regenerates `.claude/hooks/.hashes` without gate hashes.
+3. **Warn-only first** is the safe-rollout lever: the gate ships in advisory/warn-only mode (reports, does not block), is validated in CI against the negative-test corpus, and is flipped to enforce only after the governance negative tests (TC below) pass. Rolling back to advisory is a single mode flag, no revert.
+4. Verify after rollback: Claude Tier-A `icea-floor` still `exit 2`-blocks an unapproved Write (epic parity AC-NF4 — unchanged by this story); a normal commit still proceeds.
 
 ---
 
 ## Handover
 
 ### QA Team
-**What was added:** the SEV-1 governance controls — commit/CI-authoritative approval integrity (signed
-token / live ADO) with advisory-vs-enforce modes, a canonical-B1–B7 boundary classifier with
-assembly-level warn/withhold and a committed-artifact Tier-C scan, secret shape-scanning reused from
-`check-settings-secrets.cjs`, a CLAUDE.md untrusted-data rule + memory-log provenance stamp, a vendored
-pinned+hashed gate, and (new for the asymmetric model) the Copilot **`review-icea`** review-time
-AC-traceability critic. The governance **negative tests** are the primary QA surface — see Test Cases
-(N-U*/INT-*). Run them in both advisory and enforce modes. **Asymmetric-gate caveat (AC-F7):** the CI
-`ai-gate` is a HARD (un-bypassable) gate on Copilot **only when it is a required status check on a
-protected branch** — verify INT-0 on BOTH a protected branch (blocks merge) and an unprotected branch
-(CI fails but merge is not blocked; provisioning WARNED). That branch-protection setup is a Story 8
-deliverable, not exercised by Story 6 alone.
+**What was added:** the SEV-1 governance controls — commit/CI-authoritative approval integrity (signed token / live ADO) with advisory-vs-enforce modes, a canonical-B1–B7 boundary classifier with assembly-level warn/withhold and a committed-artifact Tier-C scan, secret shape-scanning reused from `check-settings-secrets.cjs`, a CLAUDE.md untrusted-data rule + memory-log provenance stamp, a vendored pinned+hashed gate, and (new for the asymmetric model) the Copilot **`review-icea`** review-time AC-traceability critic. The governance **negative tests** are the primary QA surface — see Test Cases (N-U*/INT-*). Run them in both advisory and enforce modes. **Asymmetric-gate caveat (AC-F7):** the CI `ai-gate` is a HARD (un-bypassable) gate on Copilot **only when it is a required status check on a protected branch** — verify INT-0 on BOTH a protected branch (blocks merge) and an unprotected branch (CI fails but merge is not blocked; provisioning WARNED). That branch-protection setup is a Story 8 deliverable, not exercised by Story 6 alone.
 
-**Regression risk:** the commit-time gate sits on every commit. Confirm advisory mode does **not** block on
-the no-live-ADO dogfood repo, and that an approved commit (valid token) in enforce mode passes cleanly
-before flipping to enforce broadly. Confirm Claude Tier-A parity (epic TC-3 / AC-NF4) is unaffected —
-`icea-floor` is unchanged by this story.
+**Regression risk:** the commit-time gate sits on every commit. Confirm advisory mode does **not** block on the no-live-ADO dogfood repo, and that an approved commit (valid token) in enforce mode passes cleanly before flipping to enforce broadly. Confirm Claude Tier-A parity (epic TC-3 / AC-NF4) is unaffected — `icea-floor` is unchanged by this story.
 
-**Test data:** synthetic eval fixtures only — a B7 fixture, a poisoned `MEMORY.md` fixture, and a
-fake-secret (fixed-shape) fixture; **no real privileged/PII/secret material** (ICEA authoring constraint).
-Runtime vendor-egress is not testable here (out of scope / DLP).
+**Test data:** synthetic eval fixtures only — a B7 fixture, a poisoned `MEMORY.md` fixture, and a fake-secret (fixed-shape) fixture; **no real privileged/PII/secret material** (ICEA authoring constraint). Runtime vendor-egress is not testable here (out of scope / DLP).
 
 ### DevOps / Platform Team
 
@@ -469,14 +337,10 @@ Runtime vendor-egress is not testable here (out of scope / DLP).
 | Break-glass audit log | Location and retention for the break-glass audit record must be agreed; it is append-only |
 
 ### Future Developer — Follow-on Work
-- **Adopt registry-`npx` (D-1)** = flip the distribution field in `gate-manifest.json` once an internal
-  registry is confirmed; gate logic is unchanged.
-- **Extend the taxonomy** — the classifier reads B1–B7 from the canonical `artifact-paths` location
-  (Story 3a); adding a trigger there flows through automatically. Do not bundle a per-skill copy.
-- **Add a live-ADO org** = the approval check already supports the ADO REST path; switch the mode from
-  advisory to enforce once a real approval source exists.
-- Story 7 consumes this story's classifier + audit stamps for the behavioural eval harness and capability
-  floor; do not duplicate classification logic there.
+- **Adopt registry-`npx` (D-1)** = flip the distribution field in `gate-manifest.json` once an internal registry is confirmed; gate logic is unchanged.
+- **Extend the taxonomy** — the classifier reads B1–B7 from the canonical `artifact-paths` location (Story 3a); adding a trigger there flows through automatically. Do not bundle a per-skill copy.
+- **Add a live-ADO org** = the approval check already supports the ADO REST path; switch the mode from advisory to enforce once a real approval source exists.
+- Story 7 consumes this story's classifier + audit stamps for the behavioural eval harness and capability floor; do not duplicate classification logic there.
 
 ---
 
