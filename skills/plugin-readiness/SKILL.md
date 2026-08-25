@@ -224,7 +224,7 @@ Evidence: `plugin.json` recommended_models, settings.json overrides.
 
 | Check | Signal |
 |---|---|
-| `ICEA_MODEL` set or default `claude-opus-4-6` | Generation tier appropriate |
+| `ICEA_MODEL` set or default `claude-opus-4-8` | Generation tier appropriate |
 | `REVIEW_MODEL` set or default `claude-sonnet-4-6` | Review tier appropriate |
 | `INFRA_MODEL` set or default `claude-sonnet-4-6` | Infrastructure tier configured |
 | `last_reviewed` within `review_cadence_days` | Defaults are current |

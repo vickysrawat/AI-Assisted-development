@@ -8,7 +8,7 @@ argument-hint: ADO-<id>  e.g.  ADO-1847
 ---
 
 ## Model routing
-This command uses the generation tier — ICEA_MODEL (default: claude-opus-4-6).
+This command uses the generation tier — ICEA_MODEL (default: claude-opus-4-8).
 
 ---
 

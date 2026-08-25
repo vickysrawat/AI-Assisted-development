@@ -10,8 +10,11 @@
 #        setup-init / architect populate this from the detected repo type.
 #        Supported backends: .NET Core · ASP.NET Framework 4.x · VSTO · Java/Spring Boot · Python (FastAPI/Django/Flask) · Node.js
 #        Supported frontends: Angular · React. Tracking: Azure DevOps.
+#        NOTE: migration source/target support is a SUBSET of stack support — see the migration
+#        skill Q1 matrix. Python is a target from Node.js (nodejs→python) and React a target from
+#        Angular (angular→react); Python-as-source and java/dotnet→python have no mapping refs yet.
 # Last updated: keep this file updated when conventions change
-# Plugin version: 3.13.0
+# Plugin version: 3.14.0
 
 ---
 
@@ -91,9 +94,12 @@ Recognised globally, no /command needed. ADO ID is case-insensitive (`ADO-1847`,
 | `MIGRATE ADO-{ID}` | Run migration skill for that ADO ID |
 | `MIGRATE RESUME ADO-{ID} [BACKEND\|FRONTEND]` | Resume migration from checkpoint (cross-session recovery) |
 | `MIGRATE STATUS ADO-{ID}` | Show current migration phase and checkpoint for that ADO ID |
+| `MIGRATE OPTIONS ADO-{ID}` | Invoke migration skill — cross-session recovery at Stage 0.5 Step 0.3 (regenerate the target-options analysis from the confirmed source on disk; skip context budget check; reads migration SKILL.md before proceeding) |
+| `MIGRATE INVENTORY ADO-{ID}` | Invoke migration skill — cross-session recovery at Stage 0.6 (regenerate the source behavioral inventory from the confirmed source on disk; skip context budget check; reads migration SKILL.md before proceeding) |
 | `MIGRATE ARCH ADO-{ID}` | Invoke migration skill — cross-session recovery at Stage 1 Step 1.2 (regenerate architecture docs from Stage 0 decisions on disk; skip context budget check; reads migration SKILL.md before proceeding) |
 | `MIGRATE FEAS ADO-{ID}` | Invoke migration skill — cross-session recovery at Stage 2 (regenerate feasibility from the approved architecture docs on disk; requires architecture_approved gate; skip context budget check; reads migration SKILL.md before proceeding) |
 | `MIGRATE CLUSTERS ADO-{ID}` | Invoke migration skill — cross-session recovery at Stage 3 Step 3.2 (regenerate cluster specs from the approved arch + feasibility docs on disk; requires feasibility_approved gate; skip context budget check; reads migration SKILL.md before proceeding) |
+| `APPROVE OPTIONS / INVENTORY / ARCHITECTURE / FEASIBILITY / MIGRATION ADO-{ID}` | Migration stage-gate approval (cross-session) — invoke the migration skill for that ADO ID, set the corresponding `stage_gates` flag from the on-disk checkpoint, and continue; the migration equivalents of `APPROVE ADO-{ID}` |
 
 ---
 

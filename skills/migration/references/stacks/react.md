@@ -1,6 +1,7 @@
 # Stack Reference: React
 
-_For migration skills — loaded when source stack token = `react`_
+_For migration skills — loaded when source OR target stack token = `react` (React is a frontend
+target from an Angular source; see `mappings/angular-react.md` + `strategies/react.md`)_
 
 ---
 

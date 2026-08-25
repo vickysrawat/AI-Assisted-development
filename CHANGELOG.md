@@ -1,3 +1,136 @@
+## [3.14.0] — 2026-08-21
+
+### Added — Source Behavioral Inventory (Stage 0.6 — human review gate before rewrite)
+- New `skills/migration/references/specs/source-inventory-spec.md` + a new Stage 0.6 producing
+  `ADO-{ADO_ID}-source-inventory.md` — a **behavioral discovery** document (explicitly NOT a
+  stakeholder-validated requirements spec) that a human reviews and signs off (`APPROVE INVENTORY
+  ADO-{ID}`) **before the rewrite**. Confidence-tiered (OBSERVED / STATIC / INFERRED) with `file:line`
+  provenance; a "Review Focus" triage that must be dispositioned per-item (Confirmed/Corrected/
+  Rejected/Deferred) so approval isn't a blanket rubber-stamp; records the source commit SHA as the
+  review baseline; a mandatory §10 "Cannot Be Derived From Code" (NFRs, rationale, priorities,
+  intended-vs-bug → stakeholders, never invented). Depth + gate scale by the Stage 0.5 posture —
+  **blocking for rewrite-from-spec**, recommended for re-architecture, light/optional for a mechanical
+  port. Feeds Stage 1 (rewrite designs FROM it; feature IDs are the traceability spine), Stage 2
+  (feasibility maps each feature GREEN/YELLOW/RED instead of re-scanning), and Stage 5.0 (golden-master
+  verifies GM-verifiable INFERRED items; internal rules stay human-verified). Checkpoint schema
+  1.7 → 1.8 (`inventory_approved`); keyword `MIGRATE INVENTORY`. Extraction craft (v1.12): a
+  first-class **Gaps Report** (§11) for code seen-but-unresolved (distinct from §10 intent-absences
+  and from INFERRED asserted items; each gap `file:line` + resolution route, part of the Review
+  Focus, golden-master worklist); Given/When/Then behaviour detail with **verbatim** outcomes (exact
+  status codes / error strings / thresholds); mandatory happy + error/edge coverage; a
+  behaviour-bearing-code taxonomy + skip-list; "what, not how"; and a scope-driven output layout
+  (single file for small scope, **index + one file per cluster** for large — grouped by feature, not
+  by source file — so a large inventory stays reviewable one cluster at a time). The golden-master
+  spec (Stage 5.0) is aligned to the same discipline — each recording carries the inventory
+  `feature_id`/`gap_id` + the G/W/T it verifies (request=When, response=Then verbatim), never
+  normalizes away an asserted outcome, and writes results BACK to the inventory (INFERRED→OBSERVED
+  promotions, `run-the-source` gap closures, drift flags).
+- **v1.13 review-integrity hardening** (critical-review fixes): golden-master no longer *rewrites* the
+  human-signed inventory — verification is recorded in the GM report and **appended (append-only) to
+  §13**, keeping the approved §5/§11 an immutable baseline; **feature-IDs are stable** across
+  `MIGRATE INVENTORY` regenerates (matched on provenance, never renumbered); the
+  feature→**migration-cluster** mapping is completed at **Stage 3** (the inventory groups by source
+  bounded-context/module, not the not-yet-derived migration clusters); verbatim-outcome normalization
+  now handles **dynamic/PII sub-parts** (assert the stable shape, mask the variable slice); and a
+  **mechanical port may proceed without `APPROVE INVENTORY`**. Migration skill v1.10 → v1.13.
+
+### Added — Migration skill: Target Options Analysis (Stage 0.5) + Golden-Master verification (Stage 5.0)
+- **Stage 0.5 — Target Options Analysis** (`skills/migration/SKILL.md`, new
+  `references/specs/target-options-spec.md`). Runs after source analysis but **before** Q1: the
+  Solution Architect analyses the source and proposes 2–3 scored candidate targets, states a
+  migration **posture** per bounded context (mechanical port / re-architecture / rewrite-from-spec),
+  runs a weighted decision matrix and a rough order of magnitude, and recommends ONE target as an
+  ADR. Q1 now **confirms** the recommendation instead of a cold menu pick. Gated by
+  `APPROVE OPTIONS ADO-{ID}`; skipped for pure `dotnet` version upgrades. This turns the skill into
+  a rewrite **advisor**, not just a construct-mapper. New recovery keyword `MIGRATE OPTIONS ADO-{ID}`.
+- **Stage 5.0 — Golden-Master behavioral verification** (new `references/specs/golden-master-spec.md`).
+  Captures an **external** behavioral oracle from the running SOURCE (request→response recordings,
+  with explicit normalizations), replays it against the TARGET, and diffs. Degrades to INFERRED
+  characterization tests (logged, never silently) when the source can't run. Migration is not marked
+  COMPLETE with unexplained HIGH-risk drift.
+
+### Added — Pluggable target execution profiles (resolves the .NET-hardcoding of Stage 4–6)
+- New `skills/migration/references/strategies/` layer. Stage 4 (build/merge), Stage 5 (test/
+  coverage/E2E) and Stage 6 (run/verify) no longer hardcode `dotnet`/`.sln`/`src/…` — they load a
+  **target execution profile** (`strategies/{target_token}.md`, plus a frontend profile in
+  two-track) that supplies BUILD/TEST/COVERAGE/LAYOUT/COMPOSITION/BUILD_UNIT/PKG_ADD/SERVE/E2E/
+  FITNESS. Execution is keyed on the **target** alone (O(n)), unlike the source×target parity
+  mappings. Ships `dotnet.md` + `angular.md` fully (zero behavior change for .NET); `java-spring.md`
+  and `python.md` are honest-STOP stubs — a missing/`not-implemented` profile stops the run rather
+  than silently using the wrong toolchain. `strategies/README.md` documents the token contract so
+  adding Java/Python later = filling one file. Orchestration (tiers, branch-per-cluster, merge,
+  gates, golden-master) stays stack-agnostic. Migration skill v1.7 → v1.8.
+- **Full stack-agnostic pass (v1.10):** every remaining .NET literal in SKILL.md Stages 3–6 —
+  skeleton layout, build/test/coverage commands, `Program.cs`/`appsettings.json`, the `.sln`/`.csproj`
+  FORBIDDEN set, dev-config pre-flight, `dotnet run`/`ng serve`, NetArchTest, the AUTH/DB/ASYNC idiom
+  examples, and the rule-filename map — now lives ONLY in `strategies/*.md` and is referenced by
+  `{profile TOKEN}`. New tokens added: `SKELETON`, `STANDARDS_EXAMPLE`, `CONFIG`, `RULES`, richer
+  `LAYOUT`. The profile now loads at **Stage 3** (skeleton is a Stage-3 artifact), so a
+  not-implemented target STOPs cleanly at Stage 3 instead of failing on a wrong-toolchain build.
+- **Java Spring Boot execution profile populated** (`strategies/java-spring.md`, STATUS: implemented,
+  ⚠ unverified end-to-end) — `.NET → Java` is now runnable through Stages 3–6 (parity already exists
+  in `mappings/java-dotnet.md`). `strategies/python.md` is populated but marked `profile-ready` — NOT
+  yet selectable (needs a source→python parity mapping + a Q1 matrix row). The profile-load guard now
+  requires `STATUS: implemented` exactly — anything else STOPs.
+- **Python wired as a target from Node.js** — new `references/stacks/python.md` (FastAPI idioms) +
+  `references/mappings/nodejs-python.md` (Node/Express→FastAPI parity, GREEN/YELLOW/RED); Q1 gains a
+  `nodejs → Python FastAPI` option; `strategies/python.md` flipped to `implemented` (⚠ unverified).
+  Scoped deliberately to the well-grounded `nodejs→python` pair — `java`/`dotnet`→python and
+  Python-as-source remain unmapped (no fabricated parity tables).
+- **React wired as a frontend target from Angular** (v1.16) — new `strategies/react.md` (Vite/React
+  execution profile) + `mappings/angular-react.md` (Angular→React parity, incl. RED items: signal
+  auto-tracking → manual `useEffect` deps, Zone.js → explicit renders, RxJS orchestration → TanStack
+  Query). **Step 4.6 (the frontend run's Stage 4) is now target-agnostic** — it resolves
+  BUILD/LAYOUT/COMPOSITION/RULES/etc. from the frontend target profile (`angular.md` **or** `react.md`).
+  Q1 offers Angular OR React as the frontend-run target.
+
+### Added — Full-stack migration as two coordinated single-track runs (v1.15)
+- A full-stack migration is modelled as **two coordinated `/migration` runs sharing a contract**, not
+  one monolithic invocation. `mode.track` ∈ {`backend`, `frontend`, `upgrade`}. A **backend run**
+  migrates the API and, at Step 4.5, **publishes** the contract (`integration-contract.md` +
+  `openapi.json` + `contract_hash`) and prints the frontend-run command. A **frontend run** (react→
+  Angular, with the Angular app as its root target) **consumes** that contract at Step 0, generates a
+  typed API client from it (JS-native generator — no Java dependency), and its Stage 4 (Step 4.6)
+  migrates Angular feature clusters, each gated on the consumed contract's hash (Step 4.3a). This keeps
+  every run single-source / single-graph / single-mapping — dissolving the monolithic two-track's
+  need to double every assumption — and makes "Backend only" / "Frontend only" first-class run types.
+  Frontend behaviour is verified by Playwright (Stage 5.3/6.2); golden-master stays API-level.
+  (Supersedes the earlier monolithic Phase-4A/4B design.)
+
+### Fixed — Migration skill enforcement gaps
+- **Coverage is now measured, not asserted.** Stage 5.2 wires up `coverlet` + `reportgenerator`
+  (JaCoCo / `ng --code-coverage` equivalents) so the per-layer FAIL thresholds are enforced against
+  a real number.
+- **Integration-contract hash is now implemented.** The previously-decorative "ALWAYS check contract
+  hash before every FRONTEND cluster" rule now has real machinery: a SHA-256 of the contract is
+  recorded in the checkpoint at Step 3.2 §7 and re-checked in a new **Step 4.3a** FRONTEND gate that
+  runs the breaking-change classification on drift.
+- **Honest unsupported-source handling.** The Q1 STOP message no longer implies broad support — it
+  names the advertised-vs-mapped gap (Python and React-as-target are supported *stacks* but have no
+  migration mapping references) and refuses rather than fabricating a parity table.
+- Checkpoint schema bumped **1.6 → 1.7** (adds `stage_gates.options_approved`).
+- **Guardrail rules now deploy before Stage 4 (Step 3.3a), not at Stage 6.** `project-rules.md` + the
+  target language rule (`csharp-dotnet-rules.md` / `angular-rules.md` / etc., resolved via the same
+  `STACK_RULE_MAP` as `setup-init-bootstrap.cjs`) are copied into the target `.claude/rules/` and
+  committed with the skeleton, so every cluster branch carries them; each cluster agent is instructed
+  to read them before generating. Previously rules arrived only at `/setup-init` (Stage 6), *after*
+  code generation — so Stage 4 agents generated with no enforced guardrails. `/setup-init` at Stage 6
+  still runs (idempotent) to complete the full rule set + graph + architecture docs. Migration skill
+  v1.8 → v1.9.
+
+### Changed — Model routing default refreshed
+- Generation-tier (`ICEA_MODEL`) default bumped **`claude-opus-4-6` → `claude-opus-4-8`** in
+  `skills/shared/model-routing-spec.md` (v1.3 → 1.4) and the migration skill's model-routing block.
+  Review/infra tiers (`claude-sonnet-4-6`) and the Haiku option are unchanged.
+
+### Known follow-ups (deferred)
+- Execution is now profile-driven (see "Pluggable target execution profiles" above), but only
+  `dotnet` + `angular` profiles are populated; `java-spring` and `python` ship as honest-STOP stubs
+  and need their toolchains filled in + verified against real targets before those become supported.
+- (A3 guardrail-ordering — now resolved; see the "Fixed" section above.)
+
+---
+
 ## [3.12.1] — 2026-07-15
 
 ### Fixed — All plugin file references corrected to use `$PLUGIN_DIR/skills/...` (ADR 0054)

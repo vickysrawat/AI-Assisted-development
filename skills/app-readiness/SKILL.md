@@ -27,7 +27,7 @@ This skill is in the **infrastructure tier** — uses `INFRA_MODEL`
 
 For higher-quality analysis on complex architectures:
 ```json
-{ "env": { "INFRA_MODEL": "claude-opus-4-6" } }
+{ "env": { "INFRA_MODEL": "claude-opus-4-8" } }
 ```
 
 See `$PLUGIN_DIR/skills/shared/model-routing-spec.md`.

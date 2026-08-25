@@ -5,20 +5,30 @@ scenarios:
     input: "run external-dir-map"
     expect:
       triggered: true
-      contains: ["additionalDirectories", "already up to date"]
-      not_contains: ["Error", "duplicate"]
+      contains:
+        - "additionalDirectories"
+        - "already up to date"
+      not_contains:
+        - "Error"
+        - "duplicate"
 
   - id: no-external-paths-no-write
     description: "Must not write settings.local.json when no external paths found"
     input: "sync external directories"
     expect:
       triggered: true
-      contains: ["no external paths", "nothing to add"]
-      not_contains: ["writing", "updated"]
+      contains:
+        - "no external paths"
+        - "nothing to add"
+      not_contains:
+        - "writing"
+        - "updated"
 
   - id: never-removes-existing-paths
     description: "Must never remove existing additionalDirectories entries"
     input: "re-sync external dirs"
     expect:
       triggered: true
-      not_contains: ["removing", "deleted"]
+      not_contains:
+        - "removing"
+        - "deleted"

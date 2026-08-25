@@ -232,7 +232,7 @@ Skills belong to one of three routing tiers. The tier determines which model the
 
 | Tier | Env var | Default | Used for |
 |---|---|---|---|
-| Generation | `ICEA_MODEL` | `claude-opus-4-6` | ICEA planning, code generation, ADO task breakdown, product docs |
+| Generation | `ICEA_MODEL` | `claude-opus-4-8` | ICEA planning, code generation, ADO task breakdown, product docs |
 | Review | `REVIEW_MODEL` | `claude-sonnet-4-6` | Static analysis, compliance checks, security scanning, spec review |
 | Infrastructure | `INFRA_MODEL` | `claude-sonnet-4-6` | Dream, architect, setup-status, sprint-metrics, token-analysis |
 
@@ -244,7 +244,7 @@ Model defaults are declared in `.claude-plugin/plugin.json` under `recommended_m
 
 ```json
 "recommended_models": {
-  "generation": "claude-opus-4-6",
+  "generation": "claude-opus-4-8",
   "review": "claude-sonnet-4-6",
   "last_reviewed": "2026-06-01",
   "review_cadence_days": 90

@@ -1,5 +1,5 @@
 # Model Routing Specification
-_Spec version: 1.3 · Last changed: 2026-06-20 · Applies to all generation, review, and infrastructure skills_
+_Spec version: 1.4 · Last changed: 2026-08-21 · Applies to all generation, review, and infrastructure skills_
 
 This file is the single source of truth for model routing across the plugin.
 Skills read environment variables first, then fall back to the defaults defined here.
@@ -10,7 +10,7 @@ Skills read environment variables first, then fall back to the defaults defined 
 
 ### Generation tier — `ICEA_MODEL`
 
-**Default:** `claude-opus-4-6`
+**Default:** `claude-opus-4-8`
 
 Used by skills that create new content: specs, code, documentation, task breakdowns.
 These tasks are consequential — a poor ICEA causes rework, bad code blocks the PR gate.
@@ -49,7 +49,7 @@ Opus for higher-quality code critique while leaving the rest of the review tier
 on Sonnet:
 
 ```json
-{ "env": { "CRITIC_MODEL": "claude-opus-4-6" } }
+{ "env": { "CRITIC_MODEL": "claude-opus-4-8" } }
 ```
 
 Resolution order: `CRITIC_MODEL` → `REVIEW_MODEL` → `claude-sonnet-4-6`.
@@ -91,7 +91,7 @@ Every generation-tier skill must check `ICEA_MODEL` at the start:
 
 ```bash
 # Read model preference — fall back to Opus if not set
-MODEL=${ICEA_MODEL:-claude-opus-4-6}
+MODEL=${ICEA_MODEL:-claude-opus-4-8}
 # The tool resolves the env var at session start (see user guide for wiring)
 # Skills document this in their Step 0 as a note to the developer
 ```
@@ -137,12 +137,12 @@ the hooks/installation section of `README.md`.
 
 To upgrade the review tier to Opus for a specific project:
 ```json
-{ "env": { "REVIEW_MODEL": "claude-opus-4-6" } }
+{ "env": { "REVIEW_MODEL": "claude-opus-4-8" } }
 ```
 
 To upgrade infrastructure to Opus (e.g. large codebase, higher-quality architecture docs):
 ```json
-{ "env": { "INFRA_MODEL": "claude-opus-4-6" } }
+{ "env": { "INFRA_MODEL": "claude-opus-4-8" } }
 ```
 
 To downgrade infrastructure to Haiku for cost optimisation:

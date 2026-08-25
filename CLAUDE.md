@@ -7,8 +7,11 @@
 #        setup-init / architect populate this from the detected repo type.
 #        Supported backends: .NET Core · ASP.NET Framework 4.x · Java/Spring Boot · Python (FastAPI/Django/Flask) · Node.js
 #        Supported frontends: Angular · React. Tracking: Azure DevOps.
+#        NOTE: migration source/target support is a SUBSET of stack support — see the migration
+#        skill Q1 matrix. Python is a target from Node.js (nodejs→python) and React a target from
+#        Angular (angular→react); Python-as-source and java/dotnet→python have no mapping refs yet.
 # Last updated: keep this file updated when conventions change
-# Plugin version: 3.13.0
+# Plugin version: 3.14.0 (update this line after setup-init or plugin upgrade)
 
 ---
 
@@ -88,9 +91,12 @@ Recognised globally, no /command needed. ADO ID is case-insensitive (`ADO-1847`,
 | `MIGRATE ADO-{ID}` | Run migration skill for that ADO ID |
 | `MIGRATE RESUME ADO-{ID} [BACKEND\|FRONTEND]` | Resume migration from checkpoint (Stage 4 cluster resume) |
 | `MIGRATE STATUS ADO-{ID}` | Show current migration phase and checkpoint for that ADO ID |
+| `MIGRATE OPTIONS ADO-{ID}` | Resume/regenerate Stage 0.5 target-options analysis — re-enters at Step 0.3; requires source confirmed; skip context budget check |
+| `MIGRATE INVENTORY ADO-{ID}` | Resume/regenerate Stage 0.6 source behavioral inventory — re-enters after Step 0.4; requires source confirmed; skip context budget check |
 | `MIGRATE ARCH ADO-{ID}` | Resume/regenerate Stage 1 architecture docs — re-enters migration at Step 1.2; skip context budget check |
 | `MIGRATE FEAS ADO-{ID}` | Resume/regenerate Stage 2 feasibility — requires architecture_approved; skip context budget check |
 | `MIGRATE CLUSTERS ADO-{ID}` | Resume/regenerate Stage 3 cluster specs — re-enters at Step 3.2, requires feasibility_approved; skip context budget check |
+| `APPROVE OPTIONS / INVENTORY / ARCHITECTURE / FEASIBILITY / MIGRATION ADO-{ID}` | Migration stage-gate approval — invoke the migration skill for that ADO ID, record the gate, and continue; works cross-session (the migration equivalents of `APPROVE ADO-{ID}`) |
 
 ---
 

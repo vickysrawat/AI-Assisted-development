@@ -6,7 +6,7 @@ argument-hint: ADO-<id>  Release-<id>  Sprint-<id>   e.g.  ADO-1847 R3 S12   (an
 ## Model routing
 
 This command uses the **generation tier** — `ICEA_MODEL`
-(default: `claude-opus-4-6`).
+(default: `claude-opus-4-8`).
 
 To override: `{{ "env": {{ "ICEA_MODEL": "claude-opus-4-7" }} }}` in `.claude/settings.json`.
 See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for the full specification.

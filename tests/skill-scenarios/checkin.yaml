@@ -6,39 +6,55 @@ scenarios:
     input: "/checkin"
     expect:
       triggered: true
-      contains: ["BLOCKED", "Critical"]
-      not_contains: ["git commit", "PASSED"]
+      contains:
+        - "BLOCKED"
+        - "Critical"
+      not_contains:
+        - "git commit"
+        - "PASSED"
 
   - id: dismissed-finding-does-not-block
     description: "Dismissed findings must not block the commit"
     input: "/checkin"
     expect:
       triggered: true
-      not_contains: ["BLOCKED"]
+      not_contains:
+        - "BLOCKED"
 
   - id: accepted-risk-shown-as-informational
     description: "Accepted-risk dismissed Critical/High must appear as informational, not blocking"
     input: "/checkin"
     expect:
       triggered: true
-      contains: ["accepted-risk", "informational"]
-      not_contains: ["BLOCKED"]
+      contains:
+        - "accepted-risk"
+        - "informational"
+      not_contains:
+        - "BLOCKED"
 
   - id: skip-security-gate-requires-justification
     description: "--skip-security-gate must require a written justification"
     input: "/checkin --skip-security-gate"
     expect:
       triggered: true
-      contains: ["justification", "required"]
-      not_contains: ["git commit"]
+      contains:
+        - "justification"
+        - "required"
+      not_contains:
+        - "git commit"
 
   - id: no-changed-files-stops-early
     description: "Must stop with clear message when no files are staged or modified"
     input: "/checkin"
     expect:
       triggered: true
-      contains: ["No changed files", "Stage your changes"]
-      not_contains: ["PASSED", "BLOCKED", "git commit"]
+      contains:
+        - "No changed files"
+        - "Stage your changes"
+      not_contains:
+        - "PASSED"
+        - "BLOCKED"
+        - "git commit"
 
   # ── ICEA compliance ────────────────────────────────────────────────────────
   - id: icea-missing-noted-not-blocked
@@ -46,5 +62,8 @@ scenarios:
     input: "/checkin"
     expect:
       triggered: true
-      contains: ["No ICEA found", "skipped"]
-      not_contains: ["BLOCKED"]
+      contains:
+        - "No ICEA found"
+        - "skipped"
+      not_contains:
+        - "BLOCKED"

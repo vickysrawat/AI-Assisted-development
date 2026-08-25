@@ -25,11 +25,11 @@ Generates two document types on demand:
 
 ## Model routing
 
-This skill is in the **generation tier** — it uses `ICEA_MODEL` (default: `claude-opus-4-6`).
+This skill is in the **generation tier** — it uses `ICEA_MODEL` (default: `claude-opus-4-8`).
 
 To override for this project, set in `.claude/settings.json`:
 ```json
-{ "env": { "ICEA_MODEL": "claude-opus-4-6" } }
+{ "env": { "ICEA_MODEL": "claude-opus-4-8" } }
 ```
 
 See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for full routing documentation.

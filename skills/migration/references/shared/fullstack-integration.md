@@ -1,18 +1,28 @@
-# Shared Reference: Full-Stack Integration (Two-Track Migrations)
+# Shared Reference: Full-Stack Integration (coordinated backend + frontend runs)
 
-_Loaded when Q7 = two-track (BACKEND + FRONTEND). Covers JWT, CORS, API contracts, and track coordination._
+_Loaded by a `backend` run that PUBLISHES an API contract, or a `frontend` run that CONSUMES one.
+Covers JWT, CORS, the API contract, and how the two runs coordinate._
 
 ---
 
-## Backend-First Rationale
+## The model: two coordinated single-track runs (not one migration)
 
-Always migrate the backend before (or in parallel with, but ahead of) the frontend:
-1. API contracts (OpenAPI/Swagger) must be defined before Angular writes `HttpClient` calls against them. An unstable API during frontend migration doubles rework.
-2. The new .NET API can serve BOTH the old React frontend AND the new Angular frontend simultaneously during the transition — impossible if the frontend is migrated first.
-3. Auth, CORS, and session decisions made on the backend determine constraints for the frontend.
-4. Validated backend endpoints can be smoke-tested with Postman before any frontend code is written.
+A full-stack migration is **two separate `/migration` runs sharing a contract**, not one invocation:
+1. **Backend run** (e.g. nodejs→.NET) migrates the API and, at completion, **publishes** the contract
+   — `ADO-{ID}-integration-contract.md` + the built `openapi.json` + a `contract_hash`.
+2. **Frontend run** (react→Angular) **consumes** that published contract (or an existing backend's
+   OpenAPI), generates a typed client from it, and builds the UI against it.
 
-**Recommended sequence:** Backend slices B1→B4 complete → Integration contract finalised → Frontend slices begin.
+**Backend-first is mandatory** — the frontend builds against a *frozen, published* contract, never a
+moving one:
+1. The contract must be defined before Angular calls it — an unstable API doubles frontend rework.
+2. The new backend can serve BOTH the old and new frontends during the transition.
+3. Auth / CORS / session decisions are the backend's; they constrain the frontend.
+4. Backend endpoints can be smoke-tested before any frontend code exists.
+
+**Sequence:** backend run completes → contract published (+ hash) → frontend run consumes it; each
+frontend cluster re-checks the contract hash (SKILL.md Step 4.3a) so a later backend change can't
+silently break a frontend already built against it.
 
 ---
 

@@ -10,7 +10,7 @@ description: >
 
 # Skill: migration
 
-_Skill version: 1.6 · Last changed: 2026-08-11 · Plugin compatibility: ≥3.13.0 · Consent: A_
+_Skill version: 1.16 · Last changed: 2026-08-21 · Plugin compatibility: ≥3.13.0 · Consent: A_
 
 > ⚠ **Feature Gate bypass**: This skill generates implementation code without a prior ICEA.
 > The architecture documents produced in Stage 1 serve as the governance substitute.
@@ -37,6 +37,8 @@ Triggered by:
 - `MIGRATE RESUME ADO-1847 [CLUSTER-NAME]`
 - `MIGRATE STATUS ADO-1847`
 - `RETRY CLUSTER {name} ADO-1847`
+- `MIGRATE OPTIONS ADO-1847`   (cross-session resume/regenerate Stage 0.5 target-options analysis)
+- `MIGRATE INVENTORY ADO-1847` (cross-session resume/regenerate Stage 0.6 source behavioral inventory)
 - `MIGRATE ARCH ADO-1847`      (cross-session resume/regenerate Stage 1 architecture docs)
 - `MIGRATE FEAS ADO-1847`      (cross-session resume/regenerate Stage 2 feasibility)
 - `MIGRATE CLUSTERS ADO-1847`  (cross-session resume/regenerate Stage 3 cluster specs)
@@ -55,11 +57,12 @@ See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 ## Model routing
 
-- Stage 0–1 (architecture): `${ICEA_MODEL:-claude-opus-4-6}`
+- Stage 0.5 (target options analysis): `${ICEA_MODEL:-claude-opus-4-8}`
+- Stage 0–1 (architecture): `${ICEA_MODEL:-claude-opus-4-8}`
 - Stage 2 (feasibility analysis): `${REVIEW_MODEL:-claude-sonnet-4-6}`
-- Stage 3 (cluster planning): `${ICEA_MODEL:-claude-opus-4-6}`
-- Stage 4+ (code generation): `${ICEA_MODEL:-claude-opus-4-6}`
-- Verification: `${REVIEW_MODEL:-claude-sonnet-4-6}`
+- Stage 3 (cluster planning): `${ICEA_MODEL:-claude-opus-4-8}`
+- Stage 4+ (code generation): `${ICEA_MODEL:-claude-opus-4-8}`
+- Verification (incl. Stage 5.0 golden-master replay harness): `${REVIEW_MODEL:-claude-sonnet-4-6}`
 
 ---
 
@@ -102,6 +105,12 @@ git rev-parse --is-inside-work-tree 2>/dev/null || {
 [ -d "{SOURCE_PATH}" ] || { echo "❌ Source path does not exist: {SOURCE_PATH}"; exit 1; }
 echo "✅ Source confirmed: {SOURCE_PATH}"
 ```
+
+**If this is a `frontend` run:** also collect the **API contract it will consume** — either the
+`ADO-{ID}-integration-contract.md` (+ `openapi.json`) **published by the backend run**, or an
+**existing backend's** OpenAPI URL/file. Record it as `mode.contract_source` and freeze its hash
+(the Stage 4 gate checks drift against it). A frontend run cannot proceed without a contract to build
+against — STOP and ask if none is available.
 
 **Register SOURCE_PATH as additionalDirectory:**
 ```bash
@@ -249,13 +258,36 @@ MISSING tools required for the migration = BLOCKER. Report before asking target 
 
 ### Step 0.3 — Ask target questions (minimal)
 
+**Before Q1 — run Stage 0.5 (Target Options Analysis) unless this is a `dotnet` version upgrade.**
+For a version upgrade (source token `dotnet` → .NET 10 upgrade) there is no genuine target
+choice: skip to Q2 (target is fixed); `options_approved` is recorded `true` when the checkpoint is
+written at Step 0.4. Otherwise:
+```
+Read $PLUGIN_DIR/skills/migration/references/specs/target-options-spec.md
+```
+Produce `docs/.../ADO-{ADO_ID}-target-options.md` (planning doc, no Write Gate) with 2–3 scored
+candidate targets, a migration posture per bounded context (port / re-architecture /
+rewrite-from-spec), a weighted decision matrix, a rough order of magnitude, and ONE recommendation
+as an ADR. Then present the Stage 0.5 gate from that spec and STOP. Only
+`APPROVE OPTIONS ADO-{ADO_ID}` (or an explicit override naming another candidate) advances. Record
+the approval — it is persisted as `stage_gates.options_approved = true` when the checkpoint is
+written at Step 0.4 (or updated in place if a checkpoint already exists from a prior run) — then
+pre-fill Q1 with the recommendation. This turns Q1 from a cold menu pick into a confirmation.
+
 **Q1 — Target platform**
-Present only valid options for the detected source. If source not in supported matrix:
+Q1 CONFIRMS the Stage 0.5 recommendation — present the recommended target pre-selected and let the
+developer confirm or pick another row. (For a `dotnet` version upgrade, present ".NET 10 upgrade"
+as the only option.) Present only valid options for the detected source. If the source stack has
+no migration mapping reference:
 ```
-❌ '{stack}' is not a supported migration source.
-Supported: dotnet_framework · dotnet · java · nodejs · angular+nodejs
+❌ '{stack}' has no migration mapping reference yet, so I cannot produce a verified plan.
+Migration-supported sources today: dotnet_framework · dotnet · java · nodejs · react(FE) · angular(FE)
+Note: Python is a TARGET from Node.js (nodejs→python — `references/mappings/nodejs-python.md`) and
+React is a TARGET from Angular (angular→react — `references/mappings/angular-react.md`). Python as a
+SOURCE and java/dotnet→python have NO migration mapping references yet. I will not guess a mapping —
+an unverified parity table is worse than none.
 ```
-Stop completely. No fallback.
+Stop completely. No fallback — do not fabricate a parity table for an unmapped stack.
 
 | Source | Options |
 |---|---|
@@ -263,8 +295,15 @@ Stop completely. No fallback.
 | `dotnet` | .NET 10 upgrade |
 | `java` | .NET Core Web API · .NET Core MVC |
 | `dotnet` → Java | Java Spring Boot |
-| `nodejs` | .NET Core Web API · Java Spring Boot |
-| `angular` + `nodejs` | Angular + .NET 10 API · Backend only · Frontend only |
+| `nodejs` | .NET Core Web API · Java Spring Boot · Python FastAPI |
+| `angular` + `nodejs` | Backend run: .NET Core Web API (nodejs→.NET) · Frontend run: Angular (react/angular→Angular) OR React (angular→React) |
+
+**Full-stack = TWO coordinated single-track runs, not one invocation.** Migrate the **backend first**
+(a normal single-track run — it *publishes* the API contract at completion), then run a **separate
+frontend migration** that *consumes* that contract. Choose which run THIS is: `mode.track = backend`
+or `frontend`. "Backend only" is just the backend run; "Frontend only" is a frontend run against an
+**existing** backend's published/served contract. The skill prints the command for the other run at
+completion. This keeps every run single-source / single-graph / single-mapping.
 
 **Q2 — Cloud / hosting**
 ```
@@ -309,29 +348,32 @@ Read $PLUGIN_DIR/skills/migration/references/shared/clean-architecture.md
 Also load the matching rule file for the target stack if present (`rules/{stack}-rules.md` or
 `.claude/rules/{stack}-rules.md`) — it holds the authoritative coding guardrails (anti-patterns,
 pipeline order) for the target and governs all generated code. On any conflict between a stacks
-reference and a rule file, the rule file wins.
+reference and a rule file, the rule file wins. These rule files are also **deployed** into the
+target `.claude/rules/` at Step 3.3a (before Stage 4) so the parallel cluster agents generate under
+them — not just the orchestrator.
 
 ### Step 0.4 — Write initial checkpoint
 
 Write `.claude/migration-checkpoint.json` NOW — at the end of Stage 0, before any document is
 generated. This is the resume anchor for every later stage (the context-budget checks in Stages
 1–3 rely on it being present). All values below are known from the Stage 0 analysis and answers:
-`mode.graph` from the graph-availability check (Step 0.1), `mode.track` = `two-track` when Q1 is a
-full-stack target (e.g. "Angular + .NET 10 API"), else `single`; `source_token`/`target_token`
+`mode.graph` from the graph-availability check (Step 0.1), `mode.track` ∈ {`backend`, `frontend`, `upgrade`} from the Q1 run type (a full-stack effort is two
+runs — one `backend`, then one `frontend`; a `frontend` run sets `target_token = angular`); `source_token`/`target_token`
 are the resolved stack tokens; `source_file_count`/`source_module_count` from the Step 0.1 size
 and graph counts.
 
 > **Script transparency** (per `rules/project-rules.md`) — this `node -e` block:
 > 1. **What it does:** writes/updates `.claude/migration-checkpoint.json` with the Stage-0
->    identifiers, `mode`, and seed `decision_log`; sets `phase:"Stage 1"` and all `stage_gates`
->    to `false`. If a checkpoint already exists it MERGES (keeps any existing `decision_log`/
+>    identifiers, `mode`, and seed `decision_log`; sets `phase:"Stage 0.6"` and seeds `stage_gates`
+>    (`options_approved` true, the rest false). If a checkpoint already exists it MERGES (keeps any existing `decision_log`/
 >    `clusters`), never clobbers.
 > 2. **What it touches:** only `.claude/migration-checkpoint.json` (creates `.claude/` if absent).
 > 3. **What it does NOT do:** no network calls, no git operations, no reads of source files, no
 >    writes anywhere else.
 > 4. **APIs used:** Node.js `fs.readFileSync`, `fs.mkdirSync`, `fs.writeFileSync`, `JSON`.
-> 5. **How to verify:** `cat .claude/migration-checkpoint.json` — confirm `schema_version:"1.6"`,
->    `phase:"Stage 1"`, and your Stage-0 answers under `mode`/`decision_log`.
+> 5. **How to verify:** `cat .claude/migration-checkpoint.json` — confirm `schema_version:"1.8"`,
+>    `phase:"Stage 0.6"`, `stage_gates.options_approved:true` (and `inventory_approved:false`), and
+>    your Stage-0 answers under `mode`/`decision_log`.
 
 ```bash
 node -e '
@@ -340,9 +382,9 @@ const p=".claude/migration-checkpoint.json";
 let c={};try{c=JSON.parse(fs.readFileSync(p,"utf8"));}catch(e){}
 const [ado,src,graph,track,st,tt,fileCount,modCount,auth,cloud]=process.argv.slice(1);
 const dl=c.decision_log||{};
-c.schema_version="1.6";
-c.ado_id=ado; c.source_path=src; c.phase=c.phase&&c.ado_id===ado?c.phase:"Stage 1";
-c.stage_gates=c.stage_gates||{architecture_approved:false,feasibility_approved:false,migration_approved:false,stage4_started:false};
+c.schema_version="1.8";
+c.ado_id=ado; c.source_path=src; c.phase=c.phase&&c.ado_id===ado?c.phase:"Stage 0.6";
+c.stage_gates=c.stage_gates||{options_approved:true,inventory_approved:false,architecture_approved:false,feasibility_approved:false,migration_approved:false,stage4_started:false};
 c.mode={graph:graph==="true",track,source_token:st,target_token:tt};
 c.contract_version=c.contract_version||1; c.contract_hash=c.contract_hash||"";
 c.decision_log={auth:dl.auth||auth||"",data_access:dl.data_access||"",architecture:dl.architecture||"",cloud:dl.cloud||cloud||"",red_items:dl.red_items||[],yellow_count:dl.yellow_count||0,source_file_count:Number(fileCount)||0,source_module_count:Number(modCount)||0};
@@ -350,7 +392,7 @@ c.clusters=c.clusters||{};
 fs.mkdirSync(".claude",{recursive:true});
 fs.writeFileSync(p,JSON.stringify(c,null,2));
 console.log("✅ Checkpoint written — phase:",c.phase,"schema:",c.schema_version);
-' -- "{ADO_ID}" "{SOURCE_PATH}" "{graph true|false}" "{single|two-track}" "{source-token}" "{target-token}" "{source_file_count}" "{source_module_count}" "{proposed auth intent|}" "{Q2 cloud}"
+' -- "{ADO_ID}" "{SOURCE_PATH}" "{graph true|false}" "{backend|frontend|upgrade}" "{source-token}" "{target-token}" "{source_file_count}" "{source_module_count}" "{proposed auth intent|}" "{Q2 cloud}"
 ```
 
 Confirm `.claude/migration-checkpoint.json` is covered by the ignore file (checkpoint files are
@@ -360,7 +402,59 @@ file (`rules/project-rules.md` forbids modifying it automatically).
 
 ---
 
+## Stage 0.6 — Source Behavioral Inventory (human review-gate before rewrite)
+
+Produce a behavioral inventory of the SOURCE that a human reviews and signs off before the target is
+built. It is a behavioral discovery — NOT a claimed requirements spec. Depth follows the Stage 0.5
+posture: **mechanical port = Light** (feature/endpoint catalog to seed golden-master),
+**re-architecture = Medium** (+ business rules & workflows), **rewrite-from-spec = Full** (the design input).
+
+```
+Read $PLUGIN_DIR/skills/migration/references/specs/source-inventory-spec.md
+```
+
+**Budget + baseline + decomposition:** run the shared context-budget check (reuse the Step 0.1
+counts — do NOT re-scan). Record the source baseline `git -C {SOURCE_PATH} rev-parse HEAD` (or a
+timestamp if not a git repo) in the doc header — the review is against this snapshot. Decompose by
+the source graph modules / bounded contexts and extract per module, then synthesize; if no graph,
+derive from directory structure. If budget forces a subset, inventory the top-N modules by
+importance and LIST every un-inventoried module in §3 (no silent caps).
+
+Write the inventory per the spec (planning doc — no Write Gate). **Output layout by scope:** a
+small/module inventory is one file `docs/.../ADO-{ADO_ID}-source-inventory.md`; a large/whole-app
+inventory is an **index + one file per cluster** (`…-source-inventory-{cluster}.md`) per the spec's
+Output Organization, so the review stays tractable one cluster at a time. Every
+item carries a confidence tier (OBSERVED / STATIC / INFERRED) + `file:line` provenance; INFERRED is
+never presented as a confirmed requirement. Mask PII values (names/shapes only). Populate §10
+(Cannot Be Derived — stakeholder questions) honestly; never fabricate NFRs / rationale / priorities.
+Log any code you saw but could not resolve statically to the **Gaps Report (§11)** (with `file:line`
++ how to resolve it) — never as a guessed behaviour. Express INFERRED / high-risk behaviours as
+Given/When/Then with outcomes quoted **verbatim** (exact status codes / error strings / thresholds),
+and cover error/edge paths, not just the happy path.
+
+### Stage 0.6 Gate
+Present the gate banner from the spec and STOP. The reviewer dispositions the **Review Focus** set
+(all INFERRED business rules, all high-risk/high-impact features, all §10 stakeholder questions, and
+all open Gaps Report items) in the document, then replies `APPROVE INVENTORY ADO-{ADO_ID}`.
+
+- **rewrite-from-spec:** approval is REQUIRED and BLOCKS Stage 1 — the architecture is designed FROM
+  the approved inventory.
+- **re-architecture:** approval recommended; the inventory is the behavior-preservation contract.
+- **mechanical port:** optional/light — informs feasibility and seeds golden-master; does not block
+  (may proceed to Stage 1 without `APPROVE INVENTORY`).
+
+On `APPROVE INVENTORY ADO-{ADO_ID}`: update the checkpoint (merge) with
+`stage_gates.inventory_approved = true` and `phase = "Stage 1"`.
+
+---
+
 ## Stage 1 — Design Target Architecture
+
+**Rewrite-from-spec gate:** if the Stage 0.5 posture is rewrite-from-spec, require
+`stage_gates.inventory_approved = true` before designing — STOP and point the developer to
+`MIGRATE INVENTORY ADO-{ADO_ID}` / `APPROVE INVENTORY ADO-{ADO_ID}` if not. Design the architecture
+FROM the approved Source Behavioral Inventory (its feature IDs are the spine). For
+port/re-architecture the inventory is input but not a hard gate.
 
 ### Step 1.0 — Context budget check + resume
 
@@ -635,6 +729,11 @@ Read $PLUGIN_DIR/skills/migration/references/specs/feasibility-spec.md
 
 Now that the target architecture is approved, assess what it takes to get FROM the source TO that architecture.
 
+If a Stage 0.6 Source Behavioral Inventory exists, drive the assessment from its feature catalog —
+map each feature ID to GREEN/YELLOW/RED and record the feature ID against each item — rather than
+re-scanning the source. The inventory is the source-behavior lens; this feasibility is the
+migration-difficulty lens over the same features.
+
 Write `docs/.../ADO-{ADO_ID}-migration-feasibility.md` (planning doc, no Write Gate).
 
 ### Honesty rules
@@ -695,6 +794,30 @@ and `decision_log.yellow_count` from the feasibility document.
 
 ## Stage 3 — Cluster Plan + Executable Specs
 
+**Load the target execution profile(s) first — Stages 3–6 are stack-agnostic and read every
+command, path, and example from the profile.** Resolve `mode.target_token` from
+`.claude/migration-checkpoint.json` and:
+```
+Read $PLUGIN_DIR/skills/migration/references/strategies/{target_token}.md
+```
+Resolve the token to its file by the `references/stacks/` convention (`dotnet`→`dotnet.md`,
+`angular`→`angular.md`, `react`→`react.md`, `java`→`java-spring.md`, `nodejs`→`nodejs-express.md`, `python`→`python.md`).
+Each run loads exactly ONE target profile (its own target — a `frontend` run's `target_token` is
+`angular`). If a resolved profile's `STATUS` is not
+exactly `implemented` (e.g. `not-implemented` / `profile-ready`), or the file is absent → **STOP**
+(no cross-stack fallback; see `strategies/README.md`).
+Every `{profile TOKEN}` reference in Stages 3–6 — `SKELETON`, `STANDARDS_EXAMPLE`, `BUILD`,
+`TEST_CLUSTER`, `TEST_ALL`, `TEST_FRAMEWORK`, `COVERAGE`, `LAYOUT`, `COMPOSITION`, `CONFIG`,
+`BUILD_UNIT`, `RULES`, `PKG_ADD`, `SERVE`, `E2E`, `FITNESS` — comes from it. The git/tier/gate
+orchestration around those tokens is identical for every target.
+
+**Resolution rule (important):** YOU, the orchestrator, replace every `{profile …}` token with its
+concrete value from the loaded profile *before* running a command or composing a cluster-agent
+prompt. Bash cannot resolve `{profile …}`, and the spawned cluster sub-agents do **not** load the
+profile — a prompt or command handed off with an unresolved `{profile …}` token will fail (or, in a
+`cp … || true` line, silently skip). (Resume via `MIGRATE CLUSTERS` re-loads the profile here;
+`MIGRATE RESUME` / `RETRY CLUSTER` re-load it at Step 4.0.)
+
 ### Step 3.0 — Context budget check + resume
 
 **Resume path** — if entered via `MIGRATE CLUSTERS ADO-{ADO_ID}`: read the checkpoint. If
@@ -702,7 +825,8 @@ and `decision_log.yellow_count` from the feasibility document.
 `MIGRATE FEAS ADO-{ADO_ID}` first. Otherwise read the 5 architecture docs + the feasibility doc
 from `docs/.../`; if `mode.graph` is `true` re-run the Step 3.1 cluster node script (cheap compute,
 not context-heavy), else derive clusters from the source directory structure; then proceed to
-Step 3.2. Do NOT re-read the source spec.
+Step 3.2. Also load the target execution profile(s) per the Stage 3 preamble — the cluster specs and
+Stage-4 commands reference its `{profile …}` tokens. Do NOT re-read the source spec.
 
 **Budget check** — otherwise, measure the accumulated planning-doc size and run the shared check:
 
@@ -729,7 +853,7 @@ Read $PLUGIN_DIR/skills/shared/context-budget-check.md and execute it with:
                        "write self-contained per-cluster executable specs + integration contract"]
   risks_if_continue = ["incomplete per-cluster source-file lists",
                        "missing PATTERN_ID generation rules",
-                       "truncated integration-contract for two-track"]
+                       "truncated integration-contract (backend run)"]
   saved_context     = "All Stage 1–2 docs are on disk; the checkpoint records both prior gates"
 ```
 
@@ -760,6 +884,10 @@ process.stdout.write(JSON.stringify({shared_kernel:sharedKernel,clusters,file_ma
 
 **If graph absent:** derive from directory structure at SOURCE_PATH.
 
+If a Stage 0.6 Source Behavioral Inventory exists, record which inventory **feature-IDs** each derived
+cluster covers — this completes the feature → migration-cluster → Stage-4-agent spine (the inventory
+groups by source bounded-context/module; the mapping to migration clusters is established here).
+
 ### Step 3.2 — Write TARGET-ARCHITECTURE.md (cluster executable specs)
 
 Load cluster spec template:
@@ -775,14 +903,9 @@ Agents read ONLY their cluster section + listed source files. They do NOT reload
 **Document sections:**
 
 **1. Architecture Standards Reference** (compact — ~20 lines for agents):
-Derived from approved architecture documents:
-```markdown
-AUTH:    {e.g. Entra ID — AddMicrosoftIdentityWebApiAuthentication() in Program.cs}
-DB:      {e.g. Dapper — parameterised SQL, IDbConnection injected}
-LOGGING: {e.g. Serilog — structured: _logger.LogInformation("{Action} {Id}", action, id)}
-ERRORS:  {e.g. RFC 7807 ProblemDetails on all 4xx/5xx}
-ASYNC:   NEVER .Result or .Wait(). Async all the way up.
-```
+Derived from the approved architecture documents, expressed in the target stack's idioms. Use the
+profile `STANDARDS_EXAMPLE` as the shape (auth · data access · logging · errors · async), filled
+from the approved AUTH / DATA / INFRASTRUCTURE decisions.
 
 **2. Cluster Plan:**
 ```markdown
@@ -794,9 +917,9 @@ Tier 2 (parallel after Tier 1): {cluster names}
 **3. Shared Kernel Spec:**
 ```markdown
 Source files: {file list}
-Target path:  {layer}/{Name}/Shared/
-Patterns:     {e.g. BaseEntity, IRepository<T>, Result<T>}
-Standards:    No framework deps, nullable enabled
+Target path:  {profile LAYOUT → shared kernel}
+Patterns:     {shared abstractions — e.g. base entity, repository interface, Result<T>}
+Standards:    No framework dependencies in the shared/domain layer
 ```
 
 **4. Per-Cluster Specs** (one section per cluster):
@@ -818,14 +941,14 @@ Target Generation:
   Tests:          {test types to generate} → {target path}
 
 data-testid:    {list of form fields, buttons, messages needing data-testid attributes}
-Build command:  dotnet build {Name}.sln --no-incremental 2>&1 | tail -5
+Build command:  {profile BUILD — skeleton-verify variant}
 ```
 
-**5. Integration Layer Spec:**
+**5. Integration Layer Spec** (files from the profile `COMPOSITION` token):
 ```markdown
-Program.cs:       DI wiring for all clusters + middleware pipeline
-appsettings.json: configuration skeleton (placeholders only)
-Health check:     /healthz checking database + cache (per approved architecture)
+Composition root: DI wiring for all clusters + middleware pipeline   ({profile COMPOSITION})
+Config skeleton:  placeholders only, no secrets                      ({profile COMPOSITION})
+Health check:     health endpoint checking database + cache (per approved architecture)
 Auth setup:       {exact registration from SECURITY-ARCHITECTURE.md}
 ```
 
@@ -836,10 +959,33 @@ Auth setup:       {exact registration from SECURITY-ARCHITECTURE.md}
 | SharedKernel | {N} | ⏳ Pending | | |
 ```
 
-**7. Integration Contract** (two-track only):
-Write `docs/.../ADO-{ADO_ID}-integration-contract.md`.
-Load: `Read $PLUGIN_DIR/skills/migration/references/shared/fullstack-integration.md`
-Include auth from approved SECURITY-ARCHITECTURE.md.
+**7. Integration Contract** (backend run authors → publishes; frontend run consumes):
+- **Backend run:** write `docs/.../ADO-{ADO_ID}-integration-contract.md` from the approved API + auth
+  (SECURITY-ARCHITECTURE.md); load `Read $PLUGIN_DIR/skills/migration/references/shared/fullstack-integration.md`.
+  It is finalised + **published** at Stage 4.5 (with the built OpenAPI) for a downstream frontend run.
+- **Frontend run:** the contract is an INPUT collected at Step 0 (`mode.contract_source`) — do NOT
+  author it here (the backend owns it); the Stage-4 per-cluster gate checks drift against it.
+
+Record the contract hash in the checkpoint — the anchor the Stage-4 frontend gate (Step 4.3a) compares
+against (makes the "ALWAYS check contract hash" hard rule enforceable, not decorative).
+
+> **Script transparency** (per `rules/project-rules.md`) — this `node -e` block:
+> 1. **What it does:** reads the integration-contract file, computes a SHA-256 of its bytes,
+>    stores the first 16 hex chars as `contract_hash` in `.claude/migration-checkpoint.json`.
+> 2. **What it touches:** reads the contract `.md`; reads + writes only the checkpoint JSON.
+> 3. **What it does NOT do:** no network, no git, no source reads, no other writes.
+> 4. **APIs used:** Node.js `fs.readFileSync`/`writeFileSync`, `crypto.createHash`, `JSON`.
+> 5. **How to verify:** `cat .claude/migration-checkpoint.json` — confirm `contract_hash` is set.
+
+```bash
+node -e '
+const fs=require("fs"),c=require("crypto");
+const f=process.argv[1], p=".claude/migration-checkpoint.json";
+const h=c.createHash("sha256").update(fs.readFileSync(f)).digest("hex").slice(0,16);
+const s=JSON.parse(fs.readFileSync(p,"utf8")); s.contract_hash=h;
+fs.writeFileSync(p,JSON.stringify(s,null,2)); console.log("contract_hash",h);
+' -- "docs/Release{R}/Sprint{S}/UserStory{ADO_ID}/ADO-{ADO_ID}-integration-contract.md"
+```
 
 ### Step 3.3 — Write skeleton to TARGET + commit
 
@@ -858,23 +1004,50 @@ Display Write Gate:
   ✅ docs/.../ADO-{ADO_ID}-target-architecture.md
   ✅ docs/.../ADO-{ADO_ID}-migration.tracker.md
 
-  Project skeleton (Write Gate — written to current directory):
-  [1] {Name}.Domain/{Name}.Domain.csproj
-  [2] {Name}.Application/{Name}.Application.csproj
-  ...
+  Project skeleton (Write Gate — written to current directory; structure from profile SKELETON):
+  {profile SKELETON — the project/solution files to scaffold for this target}
 ```
 
 After `APPROVE MIGRATION ADO-{ADO_ID}`:
 
-Verify skeleton builds:
-```bash
-dotnet build {Name}.sln --no-incremental 2>&1 | tail -5
+Verify skeleton builds (profile `BUILD` — skeleton-verify variant):
+```
+{profile BUILD — skeleton verify}
 ```
 
-Commit skeleton to TARGET main branch:
+**Step 3.3a — Deploy target guardrail rules NOW (before Stage 4, not at Stage 6).** Cluster agents
+in Stage 4 must generate under the enforced coding guardrails. Deploying the rule files into the
+target repo now — and committing them with the skeleton — means every cluster branch carries them
+and each agent can read them. This is a subset; `/setup-init` at Stage 6 completes the full rule set
++ graph + architecture docs (idempotent — it skips rules already present).
+
+The rule files to deploy come from the loaded profile's `RULES` token (`project-rules.md` is always
+included). Each run deploys its single target profile's `RULES` (a `frontend` run → `angular-rules.md` or `react-ecosystem-rules.md`).
+
+> **Script transparency** (per `rules/project-rules.md`) — this copy:
+> 1. **What it does:** copies `project-rules.md` + each file named in the profile `RULES` token from
+>    the plugin's `_project-deploy/rules/` into the target `.claude/rules/`; `cp -n` never overwrites
+>    an existing file (a developer's edited rule is preserved).
+> 2. **What it touches:** only `.claude/rules/*.md` in the current (TARGET) directory.
+> 3. **What it does NOT do:** no network, no git config changes, no source reads, no other writes.
+> 4. **Commands used:** `mkdir -p`, `cp -n`, `ls`.
+> 5. **How to verify:** `ls .claude/rules/` lists `project-rules.md` + the profile's rule file(s).
+
+```bash
+mkdir -p .claude/rules
+# RULES = the files listed in the loaded profile's RULES token:
+for r in project-rules.md {profile RULES files — space-separated}; do
+  cp -n "$PLUGIN_DIR/_project-deploy/rules/$r" .claude/rules/ 2>/dev/null || true
+done
+ls .claude/rules/
+```
+Confirm `.claude/rules/` is NOT covered by the target's ignore file (rules are committed/team-shared);
+if it is, flag it to the developer before the commit (do not auto-edit the ignore file).
+
+Commit skeleton + rules to TARGET main branch (cluster branches inherit both):
 ```bash
 git add .
-git commit -m "Stage 3: Project skeleton — ADO-{ADO_ID}"
+git commit -m "Stage 3: Project skeleton + target guardrail rules — ADO-{ADO_ID}"
 git tag stage3-skeleton
 ```
 
@@ -883,11 +1056,13 @@ exists from Step 0.4 (do NOT clobber the accumulated `decision_log`). On `APPROV
 ADO-{ADO_ID}` set `stage_gates.migration_approved = true`. The merged result is:
 ```json
 {
-  "schema_version": "1.6",
+  "schema_version": "1.8",
   "ado_id": "{ADO_ID}",
   "source_path": "{SOURCE_PATH}",
   "phase": "Stage 4",
   "stage_gates": {
+    "options_approved": true,
+    "inventory_approved": true,
     "architecture_approved": true,
     "feasibility_approved": true,
     "migration_approved": true,
@@ -895,7 +1070,7 @@ ADO-{ADO_ID}` set `stage_gates.migration_approved = true`. The merged result is:
   },
   "mode": {
     "graph": true,
-    "track": "single | two-track",
+    "track": "backend | frontend | upgrade",
     "source_token": "{source-token}",
     "target_token": "{target-token}"
   },
@@ -925,6 +1100,12 @@ repository (current directory). Agents write only to their assigned paths.
 **Hard rule:** SOURCE files are read-only. No isolation needed for source reads — multiple agents
 reading the same source files in parallel is safe. Isolation (worktree) is for TARGET writes.
 
+**Target execution profile:** already loaded at Stage 3 start. If entering Stage 4 fresh (e.g.
+`MIGRATE RESUME ADO-{ADO_ID}` in a new session), re-load it now:
+`Read $PLUGIN_DIR/skills/migration/references/strategies/{target_token}.md`. All `{profile TOKEN}`
+references below resolve from it (ONE profile per run — a `frontend` run's is `angular.md`); if its
+`STATUS` is not exactly `implemented` or it is absent → **STOP** (no cross-stack fallback).
+
 ### Step 4.0 — Context budget check
 
 ```bash
@@ -946,6 +1127,12 @@ From cluster plan in TARGET-ARCHITECTURE.md:
 
 Record tiers in checkpoint.
 
+**Run type:** a `backend` / `upgrade` run uses the standard cluster flow (Steps 4.2–4.5) and, if it
+feeds a downstream frontend run, **publishes** the contract at Step 4.5. A `frontend` run uses the
+**frontend cluster flow (Step 4.6 — it replaces 4.2–4.5)**: it consumes the contract collected at
+Step 0 and touches only the Angular app (no backend code). Each run migrates its own single target;
+a full-stack effort is the backend run followed by a separate frontend run.
+
 ### Step 4.2 — SharedKernel (sequential)
 
 ```bash
@@ -966,24 +1153,29 @@ Branch:        feature/migration-cluster-shared-kernel-{sha}
 ARCHITECTURE STANDARDS:
   {Standards section from TARGET-ARCHITECTURE.md — compact, ~20 lines}
 
+GUARDRAILS — read these TARGET rule files FIRST; they are authoritative and govern all code you
+write. (They are deployed rule files in the target repo, NOT the plugin reference files, and are
+exempt from the "do not reload reference files" rule.)
+  .claude/rules/project-rules.md
+  .claude/rules/{the profile RULES file(s) — the target language rule(s)}
+
 SOURCE files to read (ONLY these):
   {file list from shared-kernel cluster spec}
 
 ASSIGNED output paths (relative to .):
-  src/Shared/
-  tests/SharedKernel.Tests/
+  {profile LAYOUT → shared kernel + shared-kernel tests}
 
 FORBIDDEN paths (do not touch):
-  {Name}.sln · Program.cs · appsettings.json · Any .csproj · src/{other clusters}/
+  {profile BUILD_UNIT — solution/build + composition files} · src/{other clusters}/
 
 CLUSTER SPEC:
   {SharedKernel section from TARGET-ARCHITECTURE.md}
 
 After writing:
   1. git checkout {branch}
-  2. dotnet build {Name}.sln --configuration Debug 2>&1 | tail -5
-  3. dotnet test {Name}.sln --filter "FullyQualifiedName~SharedKernel" --no-build 2>&1 | tail -10
-  4. git add src/Shared/ tests/SharedKernel.Tests/
+  2. {profile BUILD — Debug}
+  3. {profile TEST_CLUSTER — SharedKernel}
+  4. git add {profile LAYOUT → shared kernel + shared-kernel tests}
   5. git commit -m "feat(shared-kernel): migrate shared kernel [ADO-{ADO_ID}]"
 
 Return JSON: ClusterResult schema
@@ -1015,6 +1207,12 @@ Branch:        feature/migration-cluster-{cluster}-{sha}
 ARCHITECTURE STANDARDS:
   {Standards section from TARGET-ARCHITECTURE.md}
 
+GUARDRAILS — read these TARGET rule files FIRST; they are authoritative and govern all code you
+write. (Deployed rule files in the target repo, NOT the plugin reference files — exempt from the
+"do not reload reference files" rule.)
+  .claude/rules/project-rules.md
+  .claude/rules/{the profile RULES file(s) — the target language rule(s)}
+
 SOURCE files to read (ONLY these):
   {file list for this cluster}
 
@@ -1022,18 +1220,17 @@ SharedKernel types available (from merged main):
   {types list from SharedKernel spec}
 
 ASSIGNED output paths:
-  src/{ClusterName}/
-  tests/{ClusterName}.Tests/
+  {profile LAYOUT → cluster source + cluster tests for {ClusterName}}
 
-FORBIDDEN: src/{other clusters}/ · Program.cs · appsettings.json · Any .csproj
+FORBIDDEN: src/{other clusters}/ · {profile BUILD_UNIT}
 
 CLUSTER SPEC:
   {Full cluster section from TARGET-ARCHITECTURE.md}
 
 After writing:
-  1. dotnet build {Name}.sln --configuration Debug 2>&1 | tail -5
-  2. dotnet test {Name}.sln --filter "FullyQualifiedName~{ClusterName}" --no-build 2>&1 | tail -10
-  3. git add src/{ClusterName}/ tests/{ClusterName}.Tests/
+  1. {profile BUILD — Debug}
+  2. {profile TEST_CLUSTER — {ClusterName}}
+  3. git add {profile LAYOUT → cluster source + cluster tests}
   4. git commit -m "feat({cluster-name}): migrate {ClusterName} [ADO-{ADO_ID}]"
 
 Return JSON: ClusterResult schema
@@ -1054,6 +1251,32 @@ Return JSON: ClusterResult schema
   "files_outside_scope": ["list — should be empty"]
 }
 ```
+
+### Step 4.3a — Contract-hash gate (frontend run — before each cluster)
+
+In a `frontend` run, before spawning ANY cluster, recompute the consumed integration-contract hash
+and compare it to `checkpoint.contract_hash`. This implements the "ALWAYS check integration contract
+hash before every frontend cluster" hard rule — it catches the upstream backend contract changing
+under a frontend already being built against it.
+
+```bash
+node -e '
+const fs=require("fs"),c=require("crypto");
+const f=process.argv[1], p=".claude/migration-checkpoint.json";
+const cur=c.createHash("sha256").update(fs.readFileSync(f)).digest("hex").slice(0,16);
+const s=JSON.parse(fs.readFileSync(p,"utf8"));
+process.stdout.write(cur===s.contract_hash?"MATCH":("DRIFT stored="+s.contract_hash+" current="+cur));
+' -- "docs/Release{R}/Sprint{S}/UserStory{ADO_ID}/ADO-{ADO_ID}-integration-contract.md"
+```
+
+- `MATCH` → proceed to spawn the cluster.
+- `DRIFT` → the upstream backend contract changed since this frontend run consumed it. Run the
+  Breaking Change Classification in `fullstack-integration.md`. On any BREAKING row: STOP, surface the
+  change list, re-consume the updated contract + regenerate the API client (Step 4.6.0), then
+  `MIGRATE RESUME ADO-{ADO_ID} FRONTEND`. On non-breaking drift only: bump `contract_version`, refresh
+  `contract_hash`, and proceed.
+
+(Backend / upgrade runs consume no contract — this gate is frontend-run only.)
 
 ### Step 4.4 — Evaluate results and merge Tier 1
 
@@ -1078,27 +1301,150 @@ If Tier 2+ clusters exist: repeat Steps 4.3–4.4 for each tier.
 
 ### Step 4.5 — Integration pass (orchestrator)
 
-After all clusters merged to main, write the integration layer:
-- `Program.cs` — full DI wiring + middleware pipeline + auth setup per SECURITY-ARCHITECTURE.md
-- `appsettings.json` — configuration skeleton (placeholders only, no secrets)
+After all clusters merged to main, write the integration layer (files from profile `COMPOSITION`):
+- Composition root — full DI wiring + middleware pipeline + auth per SECURITY-ARCHITECTURE.md
+- Config skeleton — placeholders only, no secrets
 - `README.md` — project structure, build instructions, setup steps, link to architecture docs
 
-```bash
-dotnet build {Name}.sln --configuration Release 2>&1 | tail -5
+Build (profile `BUILD` — Release):
+```
+{profile BUILD — Release}
 ```
 
-Commit integration layer:
+Commit the backend integration layer:
 ```bash
-git add Program.cs appsettings.json README.md
-git commit -m "feat(integration): wiring and configuration [ADO-{ADO_ID}]"
+git add {profile COMPOSITION files} README.md
+git commit -m "feat(integration): backend wiring and configuration [ADO-{ADO_ID}]"
+```
+
+Update tracker: mark clusters ✅ Done, then `git tag stage4-complete`. (This is a `backend`/`upgrade`
+run — Stage 4 ends here; a `frontend` run uses Step 4.6 instead.)
+
+**If this backend feeds a frontend run — PUBLISH the contract.** Export the OpenAPI from the *built*
+API (run the API and fetch `/swagger/v1/swagger.json`, or `dotnet swagger tofile`), reconcile it with
+`ADO-{ADO_ID}-integration-contract.md`, recompute + record `contract_hash`, and copy both to a shared
+path the frontend run can read (`docs/.../` is fine). Then print the frontend-run command:
+`mkdir <new-frontend-app> && cd <new-frontend-app> && /migration ADO-{ADO_ID}   # frontend run — consume this contract`.
+
+### Step 4.6 — Stage 4 for a FRONTEND run (track = frontend)
+
+This IS Stage 4 when `mode.track = frontend` — it **replaces Steps 4.2–4.5**. It consumes the contract
+collected at Step 0 (`mode.contract_source` — published by a backend run, or an existing backend's
+OpenAPI). Every `{profile …}` token resolves from the frontend run's **target profile** (`angular.md`
+or `react.md`, per `target_token`).
+
+**4.6.0 — Generate the API client + auth wiring from the consumed contract.** From the consumed
+OpenAPI, generate the typed API client (an Angular service, or React hooks / a fetch client — per the
+target) + auth wiring per SECURITY-ARCHITECTURE.md, so agents call the API through a contract-accurate
+generated client, never hand-written URLs. Use a **JS-native generator** (avoids a Java dependency):
+```bash
+npx orval --input {contract openapi.json} --output {profile LAYOUT → generated-client path} 2>&1 | tail -5   # or openapi-typescript
+```
+(JWT interceptor + CORS/proxy patterns: `fullstack-integration.md`.) Commit the generated client to
+`main` so every cluster branch inherits it.
+
+**4.6.1 — Cluster tiers.** From this run's clusters (the target's feature areas — Angular
+routes/feature modules, or React feature folders/routes), compute tiers: a **shared UI kernel** (design-system components, guards,
+interceptors, shared services) first, then feature clusters in parallel. Each frontend cluster carries
+its inventory feature-IDs.
+
+**4.6.2 — Per frontend cluster** (all in a tier in parallel):
+1. **Contract-hash gate (Step 4.3a)** — MATCH required before spawning. The contract is frozen, so
+   this should MATCH; a `DRIFT` means a late backend change slipped in → STOP the frontend track and
+   surface it (do not migrate a feature against a stale contract).
+2. Branch from `main`, spawn the **FRONTEND cluster agent** (prompt below).
+3. `complete` + build + test passed → merge to `main` (Step 4.4 rules; `RETRY CLUSTER` on failure).
+
+**FRONTEND cluster agent prompt:**
+```
+FRONTEND CLUSTER AGENT — {FeatureName}
+TARGET:        . (current directory — this run's target IS the frontend app)
+SOURCE:        {SOURCE_PATH} (read-only — the source frontend, e.g. React or Angular)
+Branch:        feature/migration-cluster-fe-{feature}-{sha}
+
+ARCHITECTURE STANDARDS (frontend):
+  {Standards from TARGET-ARCHITECTURE.md — in the TARGET framework's idioms; see the target profile STANDARDS_EXAMPLE}
+
+GUARDRAILS — read these TARGET rule files FIRST (authoritative, deployed rule files — not plugin refs):
+  .claude/rules/project-rules.md
+  .claude/rules/{the target profile RULES — angular-rules.md or react-ecosystem-rules.md}
+
+INTEGRATION CONTRACT — READ ONLY (the backend owns it; do NOT change it):
+  docs/.../ADO-{ADO_ID}-integration-contract.md   (endpoints, auth, error shape this feature uses)
+  Generated API client: {profile generated-client path}   (call the API ONLY through this — never hand-rolled URLs)
+
+SOURCE files to read (ONLY these):
+  {source frontend files for this feature — components / containers / routes}
+
+ASSIGNED output paths:
+  {profile LAYOUT → this feature's dir + co-located tests}
+
+FORBIDDEN: {profile BUILD_UNIT} · {other feature dirs} · the generated API client dir (do not edit)
+
+CLUSTER SPEC:
+  {Feature cluster section from TARGET-ARCHITECTURE.md — components, routes, guards, data-testid list}
+  - Use the generated API client + auth wiring; parse errors per the contract's error shape.
+  - Add every data-testid listed in the spec (Stage 5.3 / 6.2 E2E depends on them).
+  - Follow the target profile STANDARDS_EXAMPLE + its rules (Angular: takeUntilDestroyed/OnPush;
+    React: correct hook deps, no stale closures).
+
+After writing:
+  1. {profile BUILD}
+  2. {profile TEST_CLUSTER — this feature}
+  3. git add {this feature's dir}
+  4. git commit -m "feat(fe/{feature}): migrate {FeatureName} [ADO-{ADO_ID}]"
+
+Return JSON: ClusterResult schema
+```
+
+**4.6.3 — Frontend integration + finish.** Wire the app composition from the target profile
+`COMPOSITION` (Angular: `app.config.ts` providers + `app.routes.ts` + `environments/`; React:
+`main.tsx` providers + router + `.env`) — the API base URL = the **consumed backend URL** (placeholders
+only). Then:
+```bash
+{profile BUILD}
+git add {profile COMPOSITION files}
+git commit -m "feat(fe-integration): frontend app wiring [ADO-{ADO_ID}]"
 git tag stage4-complete
 ```
-
-Update tracker: mark all clusters ✅ Done.
+Update the tracker: mark frontend clusters ✅ Done. Frontend *behavioural* verification is the
+Playwright suite (Stage 5.3 / 6.2), keyed to the same feature-IDs — golden-master (Stage 5.0) covers
+the API level only.
 
 ---
 
 ## Stage 5 — Test Coverage
+
+### Step 5.0 — Golden-master behavioral verification (external oracle)
+
+Capture an INDEPENDENT behavioral oracle from the running SOURCE and replay it against the TARGET.
+This is stronger than characterization tests (which the migrating agent writes from its own
+reading of the source) because the oracle is recorded from the real source, not inferred.
+
+```
+Read $PLUGIN_DIR/skills/migration/references/specs/golden-master-spec.md
+```
+
+Execute it: decide whether the source can run (Step 1), record request→response recordings from
+SOURCE (Step 2), replay against TARGET after the Stage 6.1 build (Step 3), and write
+`docs/.../ADO-{ADO_ID}-golden-master-report.md` (Step 4). The replay harness is a script — the
+LLM writes it and reads the summary, no LLM during the run.
+
+- If the source cannot be run: SKIP capture and record `⚠ No external oracle — parity is INFERRED
+  only` in the report and the checkpoint `decision_log`. Do NOT claim behavioral parity.
+- Any `drift` on a HIGH-risk item or any `error` → carry to the Stage 6 completion gate: the
+  migration is NOT COMPLETE until each is explained (linked to a feasibility RED/YELLOW) or
+  explicitly accepted with a recorded reason.
+
+The migration posture from Stage 0.5 selects the oracle basis: port/re-architecture judges drift
+against source behaviour; rewrite-from-spec judges it against the feature-parity inventory.
+
+Where a Stage 0.6 Source Behavioral Inventory exists, its GM-verifiable INFERRED items and its
+`run-the-source` gaps are the recordings to prioritise; each recording carries the item's
+`feature_id`/`gap_id`. Record verdicts in the golden-master **report** (verified / gap-resolved /
+drift) and APPEND a "Stage 5.0 verification results" note to the inventory's §13 Review Log — do NOT
+rewrite the approved §5/§11 (the signed inventory is an immutable baseline). Internal rules the
+inventory marks human-verify-only are out of golden-master scope.
 
 ### Step 5.1 — Characterization tests (verify behavioral preservation)
 
@@ -1107,7 +1453,7 @@ They run against the TARGET code — not the source.
 
 For each YELLOW / RED item from Stage 2 feasibility:
 1. Read source behavior by reading `{SOURCE_PATH}` files
-2. Write test in target test framework at `./{Name}.Tests/`
+2. Write the test in the profile `TEST_FRAMEWORK` at the profile `LAYOUT` characterization/unit-tests path
 3. Mark: `// CHARACTERIZATION: {literal | inferred} — {behavior description}`
 
 Write Gate: `APPROVE MIGRATION ADO-{ADO_ID}`.
@@ -1117,7 +1463,7 @@ If no HIGH/MEDIUM risk items: skip.
 
 ### Step 5.2 — Unit tests per layer
 
-Follow test framework from loaded target stack reference.
+Follow the profile `TEST_FRAMEWORK`.
 
 Risk-aligned coverage targets (enforced):
 | Layer | Target | FAIL threshold |
@@ -1127,22 +1473,22 @@ Risk-aligned coverage targets (enforced):
 | Infrastructure / I/O | 70%+ | <60% → STOP |
 | Host / bootstrap | excluded | N/A |
 
+**Measure coverage — the thresholds above are enforced only if measured. Never assert a
+percentage you did not measure.** Run the profile `COVERAGE` command(s), parse the report as the
+profile specifies, and compare per-layer line coverage to the table. Any layer below its FAIL
+threshold → STOP and report which layer + the measured %.
+
 ### Step 5.3 — E2E tests (Playwright — generated from migration knowledge)
 
-Install Playwright:
-```bash
-npm init playwright@latest tests/e2e -- --lang=ts --quiet
-npx playwright install --with-deps chromium
-```
-
-Generate test files from migration knowledge (no LLM involvement during execution):
+Install and configure the profile `E2E` harness. Then generate the test files from migration
+knowledge (no LLM involvement during execution):
 - `tests/e2e/health.spec.ts` — from INFRASTRUCTURE-ARCHITECTURE.md health check config
 - `tests/e2e/auth.spec.ts` — from SECURITY-ARCHITECTURE.md auth flow
 - `tests/e2e/api-contract.spec.ts` — from integration-contract.md (one test per endpoint)
-- `tests/e2e/navigation.spec.ts` — from Angular routing module (two-track only)
+- `tests/e2e/navigation.spec.ts` — from the Angular routing module (frontend run)
 - `tests/e2e/forms.spec.ts` — from cluster specs with data-testid attributes
 
-Generate `playwright.config.ts` with `headless: true`, `screenshot: 'only-on-failure'`.
+Configure the E2E harness headless with screenshot-on-failure (per the profile `E2E`).
 
 Write Gate: `APPROVE MIGRATION ADO-{ADO_ID}`.
 After writing: `git add && git commit -m "test(e2e): Playwright tests [ADO-{ADO_ID}]"`
@@ -1153,58 +1499,28 @@ After writing: `git add && git commit -m "test(e2e): Playwright tests [ADO-{ADO_
 
 ### Step 6.1 — Full build + unit tests
 
-```bash
-dotnet build {Name}.sln --configuration Release 2>&1 | tail -5
-dotnet test {Name}.sln --no-build --configuration Release 2>&1 | tail -20
+```
+{profile BUILD — Release}
+{profile TEST_ALL}
 ```
 
 ### Step 6.2 — Automated E2E (Playwright — headless, no LLM during execution)
 
-Pre-flight: check `appsettings.Development.json` for placeholder connection strings:
-```bash
-node -e '
-const s=JSON.parse(require("fs").readFileSync("appsettings.Development.json","utf8"));
-const cs=s?.ConnectionStrings?.DefaultConnection||"";
-if(!cs||cs.includes("{"))process.exit(1);' \
-  || { echo "❌ Populate appsettings.Development.json before E2E tests"; exit 1; }
-```
+Pre-flight: run the profile `CONFIG` check — fail if the target's dev config still holds placeholder
+connection strings/URLs.
 
-Start backend:
-```bash
-dotnet run --project {Name}.Api --no-build --environment Development > /tmp/backend.log 2>&1 &
-BACKEND_PID=$!
-timeout 30 bash -c 'until curl -sf http://localhost:{port}/healthz>/dev/null 2>&1;do sleep 1;done' \
-  || { echo "❌ Backend failed to start"; cat /tmp/backend.log | tail -20; kill $BACKEND_PID; exit 1; }
-echo "✅ Backend ready"
-```
+Start the target using the profile `SERVE` (+ health probe). A **backend run** serves the backend; a
+**frontend run** serves the Angular app and points it at the **consumed contract's backend URL** (the
+published/existing backend it talks to). Acquire a test token per the approved SECURITY-ARCHITECTURE.md
+auth strategy (Entra ID client_credentials / custom-JWT endpoint / API-key env var / none).
 
-Start frontend if two-track:
-```bash
-cd web && ng serve --port 4200 --no-open > /tmp/frontend.log 2>&1 &
-FRONTEND_PID=$!
-timeout 60 bash -c 'until curl -sf http://localhost:4200>/dev/null 2>&1;do sleep 2;done' \
-  || { echo "❌ Frontend failed to start"; cat /tmp/frontend.log | tail -20; exit 1; }
-echo "✅ Frontend ready"
-```
-
-Acquire test token per SECURITY-ARCHITECTURE.md auth strategy:
-- Entra ID: client_credentials flow against tenant token endpoint
-- Custom JWT: POST to test token endpoint
-- API Key: `export E2E_TOKEN=$E2E_API_KEY`
-- No auth: `export E2E_TOKEN=""`
-
-Run Playwright headless:
-```bash
-npx playwright test tests/e2e/ --reporter=html,list --timeout=30000 2>&1
-PLAYWRIGHT_EXIT=$?
-kill $BACKEND_PID $FRONTEND_PID 2>/dev/null
-[ $PLAYWRIGHT_EXIT -eq 0 ] && echo "✅ All E2E tests passed" || echo "❌ E2E tests failed — see playwright-report/"
-```
+Run the profile `E2E` harness headless, then stop the started process(es). A non-zero exit → E2E
+failed (see the harness report).
 
 ### Step 6.3 — Architecture fitness (if developer chose Yes during architecture review)
 
-```bash
-dotnet test {Name}.sln --filter "Category=Architecture" --no-build 2>&1 | tail -20
+```
+{profile FITNESS}
 ```
 
 ### Step 6.4 — Visual Verification Checklist (for developer)
@@ -1212,14 +1528,13 @@ dotnet test {Name}.sln --filter "Category=Architecture" --no-build 2>&1 | tail -
 Generate checklist based on what was migrated:
 ```markdown
 ## Visual Verification Required — ADO-{ADO_ID}
-Start: dotnet run --project {Name}.Api
-       cd web && ng serve (if two-track)
+Start: {profile SERVE — dev-run command}  (frontend run: `ng serve` + the consumed backend URL)
 
   [ ] Sign in via {auth strategy} — confirm redirect + dashboard
   [ ] {ClusterA} list — data renders, no blank/error state
   [ ] {ClusterA} create form — fills, validates, submits, success message
   [ ] Error state — trigger validation error, confirm message visible
-  [ ] Health: http://localhost:{port}/healthz → {"status":"healthy"}
+  [ ] Health: {profile SERVE — health endpoint} → healthy
 ```
 
 Run `/verify` for interactive browser-driven testing.
@@ -1244,6 +1559,7 @@ Update `migration.tracker.md`: Status → COMPLETE.
   Clusters:  {N} migrated · {N branches merged}
   Tests:     {N} passing
   E2E:       {N} passing (headless Playwright)
+  Golden-master: {N} match · {N} drift (all explained) · coverage {FULL|PARTIAL|INFERRED}
   Coverage:  {backend%} {| frontend%}
 
   Architecture docs:
@@ -1254,10 +1570,11 @@ Update `migration.tracker.md`: Status → COMPLETE.
   • docs/.../ARCHITECTURE-DECISIONS.md
 
   Next:
-  1. /setup-init — deploys {target} stack rules
+  1. /setup-init — completes the full rule set (project + {target} language rules were already
+     deployed at Step 3.3a), builds the knowledge graph, and populates architecture docs
   2. /graph-sync — builds knowledge graph for new codebase
   3. Complete visual verification checklist
-  4. Populate appsettings.Development.json with real values
+  4. Populate the profile CONFIG dev file (e.g. connection strings) with real values
   5. {SOURCE_PATH} remains in additionalDirectories until validated
 
   Cleanup: rm .claude/migration-checkpoint.json
@@ -1269,7 +1586,15 @@ Update `migration.tracker.md`: Status → COMPLETE.
 ## Hard Rules
 
 NEVER write generated code to current directory without `APPROVE MIGRATION ADO-{ID}`.
+NEVER skip Stage 0.5 target-options analysis except for a pure `dotnet` version upgrade — the recommendation ADR is the rewrite decision record.
+NEVER begin Stage 1 architecture for a rewrite-from-spec posture without an APPROVED Stage 0.6 Source Behavioral Inventory — the human review of that document gates the rewrite.
+NEVER present an INFERRED inventory item as a confirmed requirement, and NEVER fabricate the §10 "Cannot Be Derived From Code" items — code carries no NFRs, rationale, or priorities.
+NEVER drop or guess code you couldn't resolve statically — log it in the inventory Gaps Report (§11) with `file:line` + how to resolve it (ask a dev / run the source via golden-master / check runtime config).
 NEVER skip Stage 1 architecture design — the architecture docs are the governance substitute for ICEA.
+NEVER report MIGRATION COMPLETE with unexplained HIGH-risk golden-master drift; if the source could not run, label behavioral parity INFERRED rather than claiming it.
+NEVER fabricate a parity table for a stack with no migration mapping reference — STOP and offer to scaffold the reference.
+NEVER run a target's build/test/serve toolchain without loading its execution profile from `references/strategies/{target_token}.md`; a missing or `STATUS: not-implemented` profile → STOP (no cross-stack fallback).
+ALWAYS deploy the target guardrail rules (`project-rules.md` + the target language rule) to `.claude/rules/` at Step 3.3a — before Stage 4 — and have each cluster agent read them, so generated code is governed by the enforced rules rather than only the ~20-line standards summary.
 NEVER auto-proceed past any stage gate.
 NEVER offer a fallback for unsupported source stacks — STOP with a clear error.
 NEVER migrate + refactor + change behaviour in one step — separate each concern.
@@ -1284,7 +1609,9 @@ NEVER subscribe to Angular Observables without takeUntilDestroyed() or toSignal(
 ALWAYS produce an ADR for every significant architecture component in Stage 1.
 ALWAYS commit skeleton to TARGET main before spawning any cluster agent.
 ALWAYS register SOURCE_PATH in additionalDirectories in Step 0.
-ALWAYS check integration contract hash before every FRONTEND cluster in two-track mode.
+ALWAYS check the consumed integration-contract hash before every cluster in a `frontend` run (Step 4.3a).
+A full-stack migration is TWO coordinated single-track runs — a `backend` run that PUBLISHES the contract, then a separate `frontend` run that CONSUMES it; NEVER migrate backend + frontend in one run.
+A `frontend` run calls the API only through the generated client (never hand-rolled URLs) and never edits the contract (the backend owns it).
 ALWAYS run /setup-init and /graph-sync in current directory at Stage 6 completion.
 
 ---
@@ -1310,15 +1637,28 @@ $PLUGIN_DIR/skills/migration/references/stacks/{target-token}.md
 $PLUGIN_DIR/skills/migration/references/mappings/{pair}.md  (if exists)
 $PLUGIN_DIR/skills/migration/references/shared/clean-architecture.md
 
+# Loaded at Stage 0.5 (target options analysis — skipped for dotnet version upgrade)
+$PLUGIN_DIR/skills/migration/references/specs/target-options-spec.md
+
+# Loaded at Stage 0.6 (source behavioral inventory — human review-gate before rewrite)
+$PLUGIN_DIR/skills/migration/references/specs/source-inventory-spec.md
+
 # Loaded at Stage 1 start
 $PLUGIN_DIR/skills/migration/references/specs/phase1-architecture-spec.md
 
 # Conditionally loaded
 $PLUGIN_DIR/skills/migration/references/shared/ef6-to-efcore.md      (if EF6/.edmx)
-$PLUGIN_DIR/skills/migration/references/shared/fullstack-integration.md  (if two-track)
+$PLUGIN_DIR/skills/migration/references/shared/fullstack-integration.md  (backend run publishing, or frontend run consuming, a contract)
 
 # Loaded at Stage 2
 $PLUGIN_DIR/skills/migration/references/specs/feasibility-spec.md
+
+# Loaded at Stage 4 start (target execution profile — keyed on mode.target_token; one profile per run)
+$PLUGIN_DIR/skills/migration/references/strategies/{target-token}.md
+$PLUGIN_DIR/skills/migration/references/strategies/README.md  (token contract — for adding a target)
+
+# Loaded at Stage 5.0 (golden-master behavioral verification)
+$PLUGIN_DIR/skills/migration/references/specs/golden-master-spec.md
 
 # Loaded at Stage 6.5
 $PLUGIN_DIR/skills/migration/references/specs/migration-report-spec.md

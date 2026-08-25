@@ -74,7 +74,7 @@ function loadSkill(skillName) {
 // ── Anthropic API call ────────────────────────────────────────────────────────
 async function callClaude(systemPrompt, userMessage) {
   const body = JSON.stringify({
-    model: "claude-sonnet-4-20250514",
+    model: process.env.REVIEW_MODEL || "claude-sonnet-4-6",
     max_tokens: 1000,
     system: systemPrompt,
     messages: [{ role: "user", content: userMessage }]

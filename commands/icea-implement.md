@@ -7,7 +7,7 @@ argument-hint: ADO-<id> [Story-N]  e.g.  ADO-1847  or  ADO-1847 Story-2
 ---
 
 ## Model routing
-This command uses the generation tier — ICEA_MODEL (default: claude-opus-4-6).
+This command uses the generation tier — ICEA_MODEL (default: claude-opus-4-8).
 
 ---
 

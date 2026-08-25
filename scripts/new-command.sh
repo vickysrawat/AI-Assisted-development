@@ -32,7 +32,7 @@ argument-hint: TODO: argument format, e.g. "<FP-xxxxxxxx>" or "(no arguments)"
 This command uses the **infrastructure tier** — \`INFRA_MODEL\`
 (default: \`claude-sonnet-4-6\`).
 
-To override: \`{ "env": { "INFRA_MODEL": "claude-opus-4-6" } }\` in \`.claude/settings.json\`.
+To override: \`{ "env": { "INFRA_MODEL": "claude-opus-4-8" } }\` in \`.claude/settings.json\`.
 See \`skills/shared/model-routing-spec.md\` for the full specification.
 
 ---

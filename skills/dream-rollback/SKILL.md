@@ -166,7 +166,7 @@ memory revert — reads audit trail and reverses consolidation runs
 
 To override for this project:
 ```json
-{ "env": { "INFRA_MODEL": "claude-opus-4-6" } }
+{ "env": { "INFRA_MODEL": "claude-opus-4-8" } }
 ```
 
 See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for the full routing specification.

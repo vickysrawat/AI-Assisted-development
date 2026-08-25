@@ -294,7 +294,7 @@ ADO KPI reporting — reads work items and PRs via REST API
 
 To override for this project:
 ```json
-{ "env": { "INFRA_MODEL": "claude-opus-4-6" } }
+{ "env": { "INFRA_MODEL": "claude-opus-4-8" } }
 ```
 
 See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for the full routing specification.

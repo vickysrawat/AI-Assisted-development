@@ -4,15 +4,22 @@ scenarios:
     description: "Should read CLAUDE.md and output a session brief"
     input: "/session-start"
     expect:
-      contains: ["Session ready", "Stack", "ADO project"]
-      not_contains: ["src/", "node_modules"]
+      contains:
+        - "Session ready"
+        - "Stack"
+        - "ADO project"
+      not_contains:
+        - "src/"
+        - "node_modules"
 
   - id: surfaces-red-items-only
     description: "Should only report RED infrastructure items, not green"
     input: "/session-start"
     expect:
-      contains: ["Setup issues"]
-      not_contains: ["✅"]
+      contains:
+        - "Setup issues"
+      not_contains:
+        - "✅"
 
   - id: feature-gate-rule-loaded
     description: "Step 0 must load the ICEA feature gate rule into active context"

@@ -83,4 +83,4 @@ instruction sets loaded on invocation from the plugin installation path.
   active in the plugin repo itself.
 - Skills load from `PLUGIN_DIR` at runtime — the path must be current in `plugin-path.txt`.
 - Model routing: generation → `ICEA_MODEL`, review → `REVIEW_MODEL`, infra → `INFRA_MODEL`.
-  All default to `claude-sonnet-4-6`; generation defaults to `claude-opus-4-6` per `plugin.json`.
+  All default to `claude-sonnet-4-6`; generation defaults to `claude-opus-4-8` per `plugin.json`.

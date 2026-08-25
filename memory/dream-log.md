@@ -220,3 +220,50 @@ These were deleted. Watch for more stale v1 references in future sessions.
 
 ### [capture] [2026-08-12] Architecture decision — v3.13 = frozen git tag, 4.0 convergence on a branch (NOT a 2nd project, NOT a versions/ folder)
 ### [capture] [2026-08-12] Architecture decision — eliminate runtime $PLUGIN_DIR
+
+### [capture] [2026-08-21] Plan approved — migration skill upgrade: Target Options Analysis + Golden-Master + enforcement fixes
+
+### [capture] [2026-08-21] Task completed — migration skill v1.7 upgrade applied (Sets A/B/C) + version-bump convention learned
+
+### [capture] [2026-08-21] Task completed — v3.14.0 release: guide/doc refresh + model-default blast-radius + migration registration gap
+
+### [capture] [2026-08-21] Architecture decision — pluggable target execution profiles for migration Stage 4/5/6 (resolves A2)
+
+### [capture] [2026-08-21] Error resolved — half-registered migration command + target_token/profile mismatch (3-iteration validation)
+
+### [capture] [2026-08-21] Task completed — migration.yaml test scenario + runner.js harness gotchas
+
+### [capture] [2026-08-21] Task completed — activated inert scenario assertions + runner.js model fix
+
+### [capture] [2026-08-21] Architecture decision — deploy migration guardrail rules at Step 3.3a (resolves A3)
+
+### [capture] [2026-08-21] Architecture decision — full stack-agnostic migration: ALL .NET literals move to strategies/dotnet.md
+
+### [capture] [2026-08-21] Error resolved — edge cases from the stack-agnostic migration refactor
+
+### [capture] [2026-08-21] Error resolved — CONFIG pre-flight false-failed DB-less targets
+
+### [capture] [2026-08-21] Error resolved — CONFIG pre-flight false-fails DB-less targets (migration Stage 6.2)
+
+### [capture] [2026-08-21] Plan approved — Stage 0.6 Source Behavioral Inventory as a human review-gate before rewrite
+
+### [capture] [2026-08-21] Task completed — Java/Python execution profiles populated; STOP guard tightened
+
+### [capture] [2026-08-21] Architecture decision — Python wired as a migration target (nodejs→python only)
+
+### [capture] [2026-08-21] Architecture decision — Stage 0.6 gets a first-class Gaps Report (corrected earlier stance)
+### [capture] [2026-08-21] Architecture decision — Python wired as a migration target (nodejs→python only)
+
+### [capture] [2026-08-21] Task completed — Stage 0.6 inventory output organization (index + per-cluster for large scope)
+
+### [capture] [2026-08-21] Task completed — golden-master spec aligned to the Stage 0.6 inventory (closed the capture↔inventory loop)
+
+### [capture] [2026-08-21] Error resolved — golden-master must NOT rewrite the human-signed inventory (+4 hardenings)
+
+### [capture] [2026-08-21] Architecture decision — two-track FRONTEND execution as Stage 4 Phase 4B
+
+### [capture] [2026-08-21] Architecture decision — RE-MODEL two-track as two coordinated single-track runs (abandon the monolith)
+
+### [capture] [2026-08-21] Task completed — React wired as a frontend target (angular→react) + Step 4.6 made target-agnostic
+
+### [capture] [2026-08-21] Error resolved — migration APPROVE gate keywords missing from CLAUDE.md §0a (cross-session approval gap)

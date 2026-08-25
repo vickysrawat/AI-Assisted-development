@@ -6,9 +6,9 @@ argument-hint: ADO-<id>  e.g.  ADO-1847   (or omit — skill will prompt for the
 ## Model routing
 
 This command uses the **generation tier** — `ICEA_MODEL`
-(default: `claude-opus-4-6`).
+(default: `claude-opus-4-8`).
 
-To override: `{{ "env": {{ "ICEA_MODEL": "claude-opus-4-6" }} }}` in `.claude/settings.json`.
+To override: `{{ "env": {{ "ICEA_MODEL": "claude-opus-4-8" }} }}` in `.claude/settings.json`.
 See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for the full specification.
 
 ---

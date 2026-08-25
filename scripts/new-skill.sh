@@ -37,7 +37,7 @@ _Skill version: 1.0 · Last changed: $(date +%Y-%m-%d) · Consent: C_
 This skill uses the **infrastructure tier** — \`INFRA_MODEL\`
 (default: \`claude-sonnet-4-6\`).
 
-To override: \`{ "env": { "INFRA_MODEL": "claude-opus-4-6" } }\` in \`.claude/settings.json\`.
+To override: \`{ "env": { "INFRA_MODEL": "claude-opus-4-8" } }\` in \`.claude/settings.json\`.
 See \`../shared/model-routing-spec.md\` for the full specification.
 
 ---

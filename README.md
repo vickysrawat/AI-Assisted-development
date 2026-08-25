@@ -2,7 +2,7 @@
 
 ICEA-driven development workflow for distributed teams using **Azure DevOps**. Language-agnostic across **.NET 8 · Java/Spring Boot · Python (FastAPI/Django/Flask) · Node.js** backends and **Angular / React** frontends — the active stack is detected per repo and drives detection, generation, review, and scanning.
 
-**Version 3.13.0** — Introduces **external stack detection**: `setup-init` and `setup-sync` now ask for paths to external repositories a project depends on (e.g. a separate .NET API), detect their stacks, and store the results as `external_detected_stacks` in `.claude/dream-init-state.json`. The `icea-feature` overlay selection reads both `detected_stacks` and `external_detected_stacks` to pick the correct Tech Spec template — two new overlays ship in this release: `techspec-aspnet-api-angular.md` (Angular + .NET Web API, no BFF) and `techspec-angular-nodejs.md` (Angular + Node.js BFF with optional .NET API layer). The codebase knowledge graph (`.claude/graph/`) remains the **single codebase-orientation layer**, backed by a machine-readable `graph.json` (typed nodes/edges with confidence) whose **`EXTRACTED` dependency edges are derived deterministically from source imports** by a script rather than the model ([ADR 0041](docs/adr/0041-deterministic-edge-extraction.md)), then projected into the always-loaded index + per-module detail files, with `/graph-viz` for an offline visual map ([ADR 0039](docs/adr/0039-graph-json-sidecar.md)). `CLAUDE.md` is kept lean under a ~200-line context budget ([ADR 0040](docs/adr/0040-claude-md-context-budget.md)), and the plugin version is single-sourced in `.claude-plugin/plugin.json`. See [CHANGELOG.md](CHANGELOG.md) for the full history. **Upgrading from an older version?** Run `/setup-sync`.
+**Version 3.14.0** — Upgrades the **migration skill** into a rewrite **advisor**. A new **Target Options Analysis** stage (Stage 0.5) analyses the source and recommends 2–3 scored target stacks with a migration posture (mechanical port / re-architecture / rewrite-from-spec), a weighted decision matrix, and a rough order of magnitude — presented as an ADR you approve (`APPROVE OPTIONS ADO-{ID}`) before any target is locked. A new **Golden-Master** stage (Stage 5.0) captures a behavioral oracle from the running source and replays it against the target to catch silent drift. Enforcement gaps closed: real coverage measurement, an implemented integration-contract-hash gate, honest handling of unsupported sources, and a refreshed generation model default (`claude-opus-4-8`). The codebase knowledge graph (`.claude/graph/`) remains the **single codebase-orientation layer**, backed by a machine-readable `graph.json` (typed nodes/edges with confidence) whose **`EXTRACTED` dependency edges are derived deterministically from source imports** by a script rather than the model ([ADR 0041](docs/adr/0041-deterministic-edge-extraction.md)), then projected into the always-loaded index + per-module detail files, with `/graph-viz` for an offline visual map ([ADR 0039](docs/adr/0039-graph-json-sidecar.md)). `CLAUDE.md` is kept lean under a ~200-line context budget ([ADR 0040](docs/adr/0040-claude-md-context-budget.md)), and the plugin version is single-sourced in `.claude-plugin/plugin.json`. See [CHANGELOG.md](CHANGELOG.md) for the full history. **Upgrading from an older version?** Run `/setup-sync`.
 
 ---
 
@@ -192,7 +192,7 @@ prod-readiness/
 
 | Task type | Skills | Default model |
 |---|---|---|
-| **Generation** — ICEA planning, code generation, ADO task breakdown | `icea-feature`, `ado-tasks`, `pr-describe`, `product-docs` | `claude-opus-4-6` |
+| **Generation** — ICEA planning, code generation, ADO task breakdown | `icea-feature`, `ado-tasks`, `pr-describe`, `product-docs` | `claude-opus-4-8` |
 | **Review** — compliance checks, static analysis, security scanning, spec review, dynamic scanning | `icea-review`, `code-review`, `security`, `dynamic-scan`, `pr-spec-review`, `pr-create` gate | `claude-sonnet-4-6` |
 | **Infrastructure** — Dream, architect, session tools, operational, readiness | `dream`, `architect`, `setup-status`, `dream-rollback`, `session-start`, `update-arch`, `sprint-metrics`, `token-analysis`, `checkin`, `explain`, `fix`, `bug`, `app-readiness`, `plugin-readiness` | `claude-sonnet-4-6` |
 
@@ -210,7 +210,7 @@ Non-secret model routing goes in the **shared, committed** `.claude/settings.jso
 // .claude/settings.json — committed & team-shared (NO secrets)
 {
   "env": {
-    "ICEA_MODEL":   "claude-opus-4-6",
+    "ICEA_MODEL":   "claude-opus-4-8",
     "REVIEW_MODEL": "claude-sonnet-4-6",
     "INFRA_MODEL":  "claude-sonnet-4-6"
   }

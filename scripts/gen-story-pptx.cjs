@@ -1,6 +1,6 @@
 'use strict';
 // Generates docs/presentations/ai-assisted-development-story.pptx
-// "AI-Assisted Development — From Coder to Conductor" · v3.13.0 · 45-slide people-first arc.
+// "AI-Assisted Development — From Coder to Conductor" · v3.14.0 · 45-slide people-first arc.
 // Slides stay MINIMAL; the full talk-through narration lives in each slide's speaker notes
 // (s.addNotes) as one continuous first-person script.
 // To change the deck: edit this file and re-run `node scripts/gen-story-pptx.cjs`.
@@ -253,7 +253,7 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     fontFace: FONT, fontSize: 18, color: 'cdd9e6', wrap: true,
   });
 
-  const badges = ['v3.13.0', '55 ADRs on disk', '5 acts · 5 absences', '38 commands · 26 skills'];
+  const badges = ['v3.14.0', '55 ADRs on disk', '5 acts · 5 absences', '38 commands · 26 skills'];
   badges.forEach((b, i) => {
     s.addShape(pptx.ShapeType.roundRect, {
       x: 0.6 + i * 2.9, y: 4.1, w: 2.75, h: 0.38,

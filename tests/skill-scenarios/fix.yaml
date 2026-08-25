@@ -4,18 +4,27 @@ scenarios:
     description: "Should ask for fingerprint if not provided"
     input: "/fix"
     expect:
-      contains: ["FP-", "fingerprint"]
-      not_contains: ["Fix applied"]
+      contains:
+        - "FP-"
+        - "fingerprint"
+      not_contains:
+        - "Fix applied"
 
   - id: shows-finding-before-applying
     description: "Must display the finding and ask for confirmation"
     input: "/fix FP-a1b2c3d4"
     expect:
-      contains: ["Apply this fix?", "yes / no"]
-      not_contains: ["str_replace", "applied"]
+      contains:
+        - "Apply this fix?"
+        - "yes / no"
+      not_contains:
+        - "str_replace"
+        - "applied"
 
   - id: blocks-if-no-ledger
     description: "Must stop if CodeReviews/code-review-ledger.md missing"
     input: "/fix FP-a1b2c3d4"
     expect:
-      contains: ["No code-review ledger", "/code-review"]
+      contains:
+        - "No code-review ledger"
+        - "/code-review"

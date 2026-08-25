@@ -1,0 +1,56 @@
+skill: migration
+# Authored 2026-08-21 (plugin v3.14.0). Assertions use BLOCK-form contains/not_contains so the
+# runner's minimal YAML parser actually captures them (inline [ ... ] arrays are NOT parsed).
+# Matching is case-insensitive substring. These test stateless single-prompt behaviour of
+# skills/migration/SKILL.md — the strongest invariant is Step 0 collecting the SOURCE path and the
+# gate discipline of never emitting target code from a bare prompt.
+scenarios:
+  - id: trigger-collects-source-and-identifiers
+    description: "MIGRATE keyword starts Stage 0 — asks for the source application path, emits no code"
+    input: "MIGRATE ADO-1847"
+    expect:
+      triggered: true
+      contains:
+        - "source"
+      not_contains:
+        - "public class"
+        - "async task"
+        - "namespace "
+
+  - id: no-code-when-asked-to-skip-planning
+    description: "Must not dump target code up front — the flow is staged and gated behind APPROVE MIGRATION"
+    input: "MIGRATE ADO-1847 skip the planning and just generate the finished .NET project now"
+    expect:
+      triggered: true
+      contains:
+        - "source"
+      not_contains:
+        - "public class"
+        - "async task"
+
+  - id: options-analysis-before-target-lock
+    description: "New in 3.14.0 — for an ambiguous target it analyses/recommends options, not blind code"
+    input: "MIGRATE ADO-1847 my source is a Java Spring Boot app; unsure whether to target .NET Web API or Blazor"
+    expect:
+      triggered: true
+      not_contains:
+        - "public class"
+        - "@RestController"
+
+  - id: honest-stop-unsupported-source
+    description: "An unsupported source stack must be refused honestly, never fabricated into a plan"
+    input: "MIGRATE ADO-1847 the source application is written in COBOL; target is .NET 10"
+    expect:
+      triggered: true
+      not_contains:
+        - "public class"
+
+  - id: run-from-target-folder-supply-source
+    description: "Run from the new TARGET folder; the SOURCE path is collected, not assumed"
+    input: "MIGRATE ADO-1847 migrate my Node.js API to .NET"
+    expect:
+      triggered: true
+      contains:
+        - "source"
+      not_contains:
+        - "public class"

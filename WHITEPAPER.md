@@ -211,7 +211,7 @@ Different work needs different model tiers ([ADR 0023](docs/adr/0023-model-routi
 
 | Tier | Env var | Default | Used by | Why |
 |---|---|---|---|---|
-| Generation | `ICEA_MODEL` | `claude-opus-4-6` | icea-feature, ado-tasks, pr-describe, product-docs | Specs and code are the most consequential outputs. |
+| Generation | `ICEA_MODEL` | `claude-opus-4-8` | icea-feature, ado-tasks, pr-describe, product-docs | Specs and code are the most consequential outputs. |
 | Review | `REVIEW_MODEL` | `claude-sonnet-4-6` | code-review, security, icea-review, pr-spec-review, dynamic-scan | Review is analytical pattern-matching; faster, lower timeout risk on long scans. |
 | Infrastructure | `INFRA_MODEL` | `claude-sonnet-4-6` | dream, architect, dream-status, session-start, graph-sync, checkin, fix, … | Operational, no creative generation. |
 

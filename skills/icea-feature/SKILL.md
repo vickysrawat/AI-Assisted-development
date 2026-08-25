@@ -1246,7 +1246,7 @@ Implementation is generated after approval.
 ## Model routing
 
 This skill is in the **generation tier** — it uses `ICEA_MODEL`
-(default: `claude-opus-4-6`).
+(default: `claude-opus-4-8`).
 
 To override: set `ICEA_MODEL` in `.claude/settings.json`.
 See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for full routing documentation.

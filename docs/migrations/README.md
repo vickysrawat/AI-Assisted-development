@@ -62,3 +62,6 @@ Summary: {one line — what a sync brings current}
 | 3.11.0 | Disable Claude Code built-in auto-memory (`autoMemoryEnabled: false`) so Dream captures land in the repo `memory/`, not the machine profile |
 | 3.11.1 | Fix CLAUDE.md managed-section duplication — CRLF-tolerant `extractSection` separator; `setup-sync` no longer drags the template tail into each append |
 | 3.12.0 | Share non-secret `settings.json` + `.claude/architecture/` + review ledgers; new `check-settings-secrets.cjs` guard (PreToolUse + pre-commit) blocks secrets in the shared file; secrets/permissions move to gitignored `settings.local.json`; setup-status 1i inverted |
+| 3.12.1 | All plugin file references corrected to the canonical `$PLUGIN_DIR/skills/...` prefix (ADR 0054) — plugin-cache-side prose fix, no project-side sync |
+| 3.13.0 | `external_detected_stacks`: setup-init/setup-sync collect external repo paths and detect their stacks into `dream-init-state.json`; two new Tech Spec overlays; `icea-feature` reads both stack fields |
+| 3.14.0 | Migration skill advisor upgrade — Stage 0.5 Target Options Analysis + Stage 5.0 Golden-Master verification; enforcement fixes; model default opus-4-6→4-8. No required project-side migration; optional CLAUDE.md §0a refresh for the `MIGRATE OPTIONS` keyword |

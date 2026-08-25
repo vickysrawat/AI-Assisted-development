@@ -1,15 +1,15 @@
 {
   "name": "ai-assisted-development",
-  "version": "3.13.0",
+  "version": "3.14.0",
   "description": "ICEA-driven development workflow for distributed teams using Azure DevOps. Language-agnostic across .NET 8, Java/Spring Boot, Python (FastAPI/Django/Flask), Node.js, and Angular/React. Includes Dream memory system, architect skill, codebase knowledge graph (graph.json structure of record with typed edges + confidence, index+detail projection, module-wide fingerprints, git-hook staleness detection), cache-aware code review and security review, DAST dynamic scanning with OWASP ZAP, PR compliance gates, finding ledgers with dismiss workflow, sprint metrics, and product documentation.",
   "author": {
     "name": "Your Company"
   },
   "repository": "https://dev.azure.com/your-org/your-project/_git/ai-assisted-development",
   "recommended_models": {
-    "generation": "claude-opus-4-6",
+    "generation": "claude-opus-4-8",
     "review": "claude-sonnet-4-6",
-    "last_reviewed": "2026-06-03",
+    "last_reviewed": "2026-08-21",
     "review_cadence_days": 90,
     "note": "Update generation/review/infrastructure when Anthropic releases a new default-tier model. setup-status will warn when last_reviewed is older than review_cadence_days.",
     "infrastructure": "claude-sonnet-4-6"
@@ -43,6 +43,7 @@
       "icea-review",
       "icea-revise",
       "icea-status",
+      "migration",
       "plugin-readiness",
       "pr-create",
       "pr-describe",
@@ -76,6 +77,7 @@
       "icea-review",
       "icea-revise",
       "icea-status",
+      "migration",
       "plugin-readiness",
       "pr-create",
       "pr-describe",

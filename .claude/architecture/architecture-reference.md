@@ -25,7 +25,7 @@ No runtime dependencies — all plugin logic uses Node.js built-ins (`fs`, `path
 
 | Tier | env var | Default model | Purpose |
 |---|---|---|---|
-| Generation | `ICEA_MODEL` | `claude-opus-4-6` | ICEA/Tech Spec drafting, code generation |
+| Generation | `ICEA_MODEL` | `claude-opus-4-8` | ICEA/Tech Spec drafting, code generation |
 | Review | `REVIEW_MODEL` | `claude-sonnet-4-6` | Code review, security review, critic |
 | Infrastructure | `INFRA_MODEL` | `claude-sonnet-4-6` | Setup, graph-sync, architect, session-start |
 | Critic fallback | `CRITIC_MODEL` | falls back to `REVIEW_MODEL` | Critic skill |

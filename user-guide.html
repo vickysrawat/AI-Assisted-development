@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- documents-plugin-version: 3.9.0 -->
+<!-- documents-plugin-version: 3.14.0 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>User Guide — ai-assisted-development v3.9.0</title>
+<title>User Guide — ai-assisted-development v3.14.0</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
 
@@ -425,7 +425,7 @@
   <div class="logo">ai-assisted-<em>development</em></div>
   <div class="vsep"></div>
   <div class="hdr-sub">User Guide</div>
-  <div class="hdr-badge">v3.9.0</div>
+  <div class="hdr-badge">v3.14.0</div>
 </header>
 
 <nav id="sidebar">
@@ -468,7 +468,7 @@
     <h1>ai-assisted-development</h1>
     <p>ICEA-driven development workflow for distributed teams using Azure DevOps — language-agnostic across <strong>.NET · Java/Spring Boot · Python · Node.js</strong> backends and Angular / React frontends. Every feature starts with a spec. Every PR is compliance-checked before it opens.</p>
     <div class="hero-chips">
-      <span class="chip">v3.9.0</span>
+      <span class="chip">v3.14.0</span>
       <span class="chip">.NET 8</span>
       <span class="chip">Angular 17+</span>
       <span class="chip">Node.js</span>
@@ -941,6 +941,7 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
       <div class="cmd-card"><div class="cmd-name">dream-audit</div><div class="cmd-title">Memory quality audit</div><div class="cmd-desc">Quarterly memory health check: flags topic files never cited in sessions, surfaces facts developers contradicted, and feeds rollback history into Dream's confidence scoring. Archives stale memory reversibly. Args: [--days &lt;N&gt;]</div></div>
       <div class="cmd-card"><div class="cmd-name">gitignore-sync</div><div class="cmd-title">Gitignore sync</div><div class="cmd-desc">Ensures .gitignore exists with all plugin-required entries in a managed block — never touches your own lines. Use directly if .gitignore is missing or out of date. Arg: --with-artifacts</div></div>
       <div class="cmd-card"><div class="cmd-name">sync-dirs</div><div class="cmd-title">External directory sync</div><div class="cmd-desc">Re-syncs .claude/settings.local.json additionalDirectories by scanning project manifests for module references outside the solution root. Run after adding a new project reference. Idempotent.</div></div>
+      <div class="cmd-card"><div class="cmd-name">migration</div><div class="cmd-title">Stack migration <span class="tag tag-optional">New v3.14.0</span></div><div class="cmd-desc">Migrate an app to a new stack (.NET Framework→.NET 10, Java↔.NET, React+Express→Angular+.NET, Node.js→.NET). Run from inside the new target folder. Stage 0.5 recommends 2–3 scored target stacks + posture as an ADR (APPROVE OPTIONS ADO-&lt;id&gt;); Stage 5.0 golden-master replays source behaviour against the target. Keywords: MIGRATE ADO-&lt;id&gt; · MIGRATE OPTIONS · MIGRATE STATUS · MIGRATE RESUME.</div></div>
     </div>
   </section>
 
@@ -968,6 +969,7 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
         <tr><td><code>sprint-metrics</code></td><td>"sprint metrics", "ICEA compliance rate", "how did the sprint go"</td><td>Post-sprint KPIs: ICEA compliance rate, PR rejection rate, rework hours</td></tr>
         <tr><td><code>token-analysis</code></td><td>"analyse token usage", "token cost", "expensive prompts"</td><td>Session token analysis with persistent graph cache and prompt rewrite recommendations</td></tr>
         <tr><td><code>critic</code></td><td>"critique", "second opinion on this spec", "review this before saving", "is this over-engineered"</td><td>Second-pass critic. Auto-runs at three gates before each artefact is written — the ICEA draft (<code>icea-feature</code> Step 5) and Tech Spec draft (Step 8), plus generated code (<code>icea-implement</code> Step 4a); up to 2 auto-retries then surfaces. Also standalone via <code>/critic icea|code</code>. Ephemeral — no ledger.</td></tr>
+        <tr><td><code>migration</code></td><td>"MIGRATE ADO-&lt;id&gt;", "migrate this app to .NET", "rewrite on a new stack"</td><td>Staged stack migration run from the target folder. Stage 0.5 recommends 2–3 scored target stacks + migration posture (port/re-architecture/rewrite-from-spec) as an ADR before Q1; architecture → feasibility → cluster plan → parallel per-cluster migration → golden-master behavioral verification (Stage 5.0). Gated at each stage; checkpoint-resumable.</td></tr>
       </tbody>
     </table></div>
   </section>
@@ -978,7 +980,7 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
     <p>Skills route to different models based on the nature of the task. You can override defaults in <code>.claude/settings.json</code>.</p>
 
     <div class="tier-card">
-      <div class="tier-head"><span class="tier-pill t-gen">Generation</span><span class="tier-model">ICEA_MODEL · default: claude-opus-4-6</span></div>
+      <div class="tier-head"><span class="tier-pill t-gen">Generation</span><span class="tier-model">ICEA_MODEL · default: claude-opus-4-8</span></div>
       <div class="tier-skills">Used by: <code>icea-feature</code> · <code>ado-tasks</code> · <code>pr-describe</code> · <code>product-docs</code></div>
     </div>
     <div class="tier-card">
@@ -986,15 +988,15 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
       <div class="tier-skills">Used by: <code>icea-review</code> · <code>code-review</code> · <code>security</code> · <code>dynamic-scan</code> · <code>pr-spec-review</code> · <code>pr-create</code> gate · <code>critic</code> (via <code>CRITIC_MODEL</code>, falls back to <code>REVIEW_MODEL</code>)</div>
     </div>
     <div class="tier-card">
-      <div class="tier-head"><span class="tier-pill t-inf">Infrastructure</span><span class="tier-model">Sonnet · no override variable</span></div>
-      <div class="tier-skills">Used by: <code>dream</code> · <code>architect</code> · <code>setup-status</code> · <code>sprint-metrics</code> · <code>token-analysis</code></div>
+      <div class="tier-head"><span class="tier-pill t-inf">Infrastructure</span><span class="tier-model">INFRA_MODEL · default: claude-sonnet-4-6</span></div>
+      <div class="tier-skills">Used by: <code>dream</code> · <code>architect</code> · <code>setup-status</code> · <code>sprint-metrics</code> · <code>token-analysis</code> · <code>graph-sync</code></div>
     </div>
 
     <h3>Override in <code>.claude/settings.json</code></h3>
     <pre><span class="pre-label">json</span><code>{
   "env": {
     "AZURE_DEVOPS_PAT": "your-pat-here",
-    "ICEA_MODEL":       "claude-opus-4-6",
+    "ICEA_MODEL":       "claude-opus-4-8",
     "REVIEW_MODEL":     "claude-sonnet-4-6"
   }
 }</code></pre>

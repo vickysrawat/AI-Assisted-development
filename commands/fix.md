@@ -8,7 +8,7 @@ argument-hint: <FP-xxxxxxxx>  e.g.  FP-a1b2c3d4
 This command uses the **infrastructure tier** — `INFRA_MODEL`
 (default: `claude-sonnet-4-6`).
 
-To override: `{{ "env": {{ "INFRA_MODEL": "claude-opus-4-6" }} }}` in `.claude/settings.json`.
+To override: `{{ "env": {{ "INFRA_MODEL": "claude-opus-4-8" }} }}` in `.claude/settings.json`.
 See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for the full specification.
 
 ---
