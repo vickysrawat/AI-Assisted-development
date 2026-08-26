@@ -88,3 +88,26 @@ migration-specific context below.
 - **No Spring-style auto-configuration** — adding a NuGet package does NOT auto-wire anything. Every capability must be explicitly registered in `Program.cs`.
 - **No `@Transactional` equivalent** — every write path must explicitly call `await _context.SaveChangesAsync()`. This is the #1 correctness bug in Java→.NET migrations.
 - **No classpath scanning** — unlike Spring's `@Component` scan, .NET DI requires explicit registration.
+
+---
+
+## Framework-attribute tier reference (Stage 0.6)
+
+Framework-provided attributes whose *declarative* outcome is framework-GUARANTEED — Stage 0.6 may
+tier that outcome **STATIC** (see `specs/source-inventory-spec.md` → Tier cut-line). Hard rule: an
+attribute **defined in the SOURCE tree is custom → INFERRED**, never STATIC, regardless of this list.
+
+### Curated (human-reviewed, web-grounded)
+| attribute | framework@version | guaranteed outcome | source | grounded |
+|---|---|---|---|---|
+| `[Authorize]` | ASP.NET Core (all) | unauthenticated → **401** (challenge); authenticated but lacking role/policy → **403** (forbid). Exact form is auth-scheme-dependent: token schemes (JWT Bearer) return 401/403, cookie schemes redirect. | https://learn.microsoft.com/en-us/aspnet/core/security/authorization/simple | 2026-08-26 |
+| `[AllowAnonymous]` | ASP.NET Core (all) | bypasses `[Authorize]` filters — endpoint reachable by unauthenticated callers | https://learn.microsoft.com/en-us/aspnet/core/security/authorization/simple | 2026-08-26 |
+| `[ApiController]` | ASP.NET Core ≥ 2.1 | invalid ModelState → automatic **400** *before* the action runs; body = `ValidationProblemDetails` (RFC 7807) at compat ≥ 2.2 (`SerializableError` at 2.1) | https://learn.microsoft.com/en-us/aspnet/core/web-api/ | 2026-08-26 |
+| `[Required]` | .NET DataAnnotations | field mandatory; null / empty-string / whitespace → validation error (→ **400** under `[ApiController]`); with NRT enabled a missing non-nullable ref-type value is implicitly required | https://learn.microsoft.com/en-us/dotnet/api/system.componentmodel.dataannotations.requiredattribute | 2026-08-26 |
+
+### Learned (managed by `/dream` — do not hand-edit inside the markers)
+<!-- LEARNED:BEGIN (managed by /dream; rebuilt from memory/topic-framework-facts.md after upgrades) -->
+| attribute | framework@version | guaranteed outcome | source (official doc) | date | trust |
+|---|---|---|---|---|---|
+<!-- no entries yet — /dream populates from Framework-fact memory entries -->
+<!-- LEARNED:END -->

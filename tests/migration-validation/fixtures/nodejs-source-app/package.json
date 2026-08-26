@@ -1,0 +1,14 @@
+{
+  "name": "expense-approval-service",
+  "version": "1.0.0",
+  "description": "A small expense-approval REST API used as a migration test fixture.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "license": "MIT"
+}

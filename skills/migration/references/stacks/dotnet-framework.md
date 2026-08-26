@@ -105,3 +105,27 @@ The .NET Upgrade Assistant was deprecated in late 2025. Microsoft now directs te
 | Global.asax event handlers | Rewrite as middleware |
 | `[WebMethod]` ASMX | Rewrite as REST endpoint |
 | Static shared mutable state | Refactor to scoped DI services |
+
+---
+
+## Framework-attribute tier reference (Stage 0.6)
+
+Framework-provided attributes whose *declarative* outcome is framework-GUARANTEED → Stage 0.6 may
+tier that outcome **STATIC** (see `specs/source-inventory-spec.md` → Tier cut-line). Hard rule: an
+attribute **defined in the SOURCE tree is custom → INFERRED**. NOTE the big divergence from .NET
+Core: Web API 2 does NOT auto-400 on invalid ModelState, and MVC5 `[Authorize]` does NOT split
+401/403 — do not carry Core assumptions across.
+
+### Curated (human-reviewed, web-grounded — ASP.NET MVC 5 / Web API 2, .NET Framework 4.x)
+| attribute | framework@version | guaranteed outcome | source | grounded |
+|---|---|---|---|---|
+| `[Authorize]` (System.Web.Mvc) | ASP.NET MVC 5 | unauthenticated OR authenticated-but-unauthorized → **401** (does NOT distinguish 401/403); under Forms Auth the 401 is intercepted → **302 redirect to loginUrl**. A true 403 needs a custom `AuthorizeAttribute` (source-defined → INFERRED). | https://learn.microsoft.com/en-us/previous-versions/aspnet/dd460317(v=vs.118) | 2026-08-26 |
+| `[AllowAnonymous]` (System.Web.Mvc) | ASP.NET MVC 5 | exempts an action/controller from `[Authorize]` | https://learn.microsoft.com/en-us/previous-versions/dd381413(v=vs.90) | 2026-08-26 |
+| `[Required]` (DataAnnotations) | ASP.NET Web API 2 | populates `ModelState` (IsValid=false) on null/empty — but **NO automatic 400** (unlike Core `[ApiController]`); the 400 comes from source-side code (manual `ModelState.IsValid` check or a `ValidateModel` action filter) → that HTTP outcome is INFERRED | https://learn.microsoft.com/en-us/aspnet/web-api/overview/formats-and-model-binding/model-validation-in-aspnet-web-api | 2026-08-26 |
+
+### Learned (managed by `/dream` — do not hand-edit inside the markers)
+<!-- LEARNED:BEGIN (managed by /dream; rebuilt from memory/topic-framework-facts.md after upgrades) -->
+| attribute | framework@version | guaranteed outcome | source (official doc) | date | trust |
+|---|---|---|---|---|---|
+<!-- no entries yet — /dream populates from Framework-fact memory entries -->
+<!-- LEARNED:END -->

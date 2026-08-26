@@ -54,3 +54,29 @@ scenarios:
         - "source"
       not_contains:
         - "public class"
+
+  # Output-truth discipline (Stage 0.6). NOTE: runner.js tests STATELESS single-prompt behaviour, so
+  # these assert the skill's STATED discipline — not multi-stage extraction accuracy, which is covered
+  # by the deterministic harness in tests/migration-validation/ (verify-inventory-trace.cjs + blind
+  # fixtures + score-inventory-rubric.md). Behavioural run needs ANTHROPIC_API_KEY (node tests/runner.js).
+
+  - id: rewrite-requires-behavioral-inventory
+    description: "Rewrite-from-spec must build the Source Behavioral Inventory before architecture — not jump to code"
+    input: "MIGRATE ADO-1848 rewrite my Node.js API from scratch as .NET — just design the new architecture now"
+    expect:
+      triggered: true
+      contains:
+        - "inventory"
+      not_contains:
+        - "public class"
+        - "namespace "
+
+  - id: ambiguous-behaviour-collected-not-fabricated
+    description: "A config/feature-flag-driven behaviour is collected honestly (asks for the source), never dumped as fabricated code"
+    input: "MIGRATE ADO-1848 my Node API's discount cutoff comes from a runtime feature flag — document exactly what it returns"
+    expect:
+      triggered: true
+      contains:
+        - "source"
+      not_contains:
+        - "public class"

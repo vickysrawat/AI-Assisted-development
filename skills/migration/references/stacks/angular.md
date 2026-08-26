@@ -163,3 +163,26 @@ With `ChangeDetectionStrategy.OnPush`, Angular re-checks the component ONLY when
 3. **`[property]="value"` vs `property="literal"`** — square brackets bind a variable; without brackets, a string literal is passed. `<p title="name">` sets the string "name"; `<p [title]="name">` binds the variable.
 4. **`inject()` must be called in injection context** — inside a constructor, field initializer, or `runInInjectionContext()`. Not inside methods called later.
 5. **Karma deprecated** — use Vitest or Jest with the Angular Jest preset for new projects.
+
+---
+
+## Framework-attribute tier reference (Stage 0.6)
+
+Angular is a *looser* fit than attribute-driven backends: outcomes are UI / navigation / validation
+states, **not HTTP codes**, and guards/validators are wired by reference — so the entries below are
+framework **contracts** (what the framework does given a return value). The guard/validator's own
+decision logic is source-defined → **INFERRED**; only the contract is STATIC. Defined-in-source ⇒
+INFERRED still applies.
+
+### Curated (human-reviewed, web-grounded — Angular 17+)
+| API | framework@version | guaranteed contract | source | grounded |
+|---|---|---|---|---|
+| `canActivate` route guard | Angular 17+ | guard returns **false → navigation cancelled** (`NavigationCancel` event fired); returns a **`UrlTree` → current navigation cancelled + redirect**. *When* it returns false is source logic → INFERRED. | https://angular.dev/guide/routing/route-guards | 2026-08-26 |
+| `Validators.required` | Angular 17+ | empty control value → control status **INVALID** with `errors = { required: true }` | https://angular.dev/api/forms/Validators | 2026-08-26 |
+
+### Learned (managed by `/dream` — do not hand-edit inside the markers)
+<!-- LEARNED:BEGIN (managed by /dream; rebuilt from memory/topic-framework-facts.md after upgrades) -->
+| API | framework@version | guaranteed contract | source (official doc) | date | trust |
+|---|---|---|---|---|---|
+<!-- no entries yet — /dream populates from Framework-fact memory entries -->
+<!-- LEARNED:END -->

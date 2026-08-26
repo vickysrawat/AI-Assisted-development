@@ -1,0 +1,10 @@
+{
+  "id": "approve_over_limit",
+  "feature_id": "F-03",
+  "risk": "HIGH",
+  "tier": "INFERRED",
+  "verifies_gwt": "Given an over-limit expense and a non-permitted caller / When approve is called / Then 403 Approval limit exceeded",
+  "request": { "method": "POST", "path": "/api/expenses/9/approve", "headers": { "x-user-id": "m2", "x-user-role": "manager" }, "body": null },
+  "response": { "status": 403, "body_normalized": { "error": "Approval limit exceeded" } },
+  "normalizations": []
+}

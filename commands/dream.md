@@ -290,6 +290,35 @@ every session. Max 3 per dream run.
 
 ---
 
+## Framework-fact promotion (migration self-learning)
+
+Stage 0.6 of the migration skill writes `Framework-fact` entries to `MEMORY.md` when it web-grounds a
+framework attribute's guaranteed behaviour (`attribute · framework@version · guaranteed outcome ·
+official-doc URL · date`). Handle these specially — they feed a self-learning cache in the migration
+`stacks/{stack}.md` LEARNED block, not an ordinary topic file.
+
+**Recognise** by the `Framework-fact` tag (entry carries `attribute` + `framework@version` + URL).
+
+**Guardrails — reject the promotion if any fail:**
+- Must carry an **official-doc URL** (learn.microsoft.com, docs.spring.io, nodejs.org, react.dev,
+  angular.dev, docs.python.org, or the framework's canonical docs). No URL → not promoted; drop after
+  one cycle in the inbox.
+- Must be **version-keyed** (`framework@version` or a range).
+- **Dedup by `attribute@version`** against the existing LEARNED block — update in place, never duplicate.
+
+**Operation `STACK-PROMOTE` (Tier 2 — show diff, wait for approval):**
+1. Map the framework to `skills/migration/references/stacks/{stack}.md` (`dotnet` · `dotnet-framework`
+   · `java-spring` · `nodejs-express` · `react` · `angular` · `python`). If the file or its
+   `<!-- LEARNED:BEGIN/END -->` markers are missing, skip with a note.
+2. Append/update a row **inside** the LEARNED markers with `trust: learned`.
+3. **Also DEMOTE the fact to `memory/topic-framework-facts.md`** — the DURABLE source of truth. The
+   LEARNED block is a rebuildable projection: a plugin upgrade replaces `stacks/*.md` wholesale, so on
+   a later run, re-promote any `topic-framework-facts.md` fact whose row is absent from the (fresh)
+   LEARNED block. Never rely on the block alone for durability.
+
+A human moving a `learned` row above the markers (→ `curated`) is the trust upgrade — `/dream` never
+writes `curated`.
+
 ## Phase 4 — Semi-Auto Review
 
 Operations are split into three tiers based on blast radius.

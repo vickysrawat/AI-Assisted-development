@@ -1,0 +1,4 @@
+{
+  "id": "approve_ok",
+  "response": { "status": 200, "body": { "status": "approved", "decidedBy": "m1", "timestamp": "2026-08-26T10:00:00Z" } }
+}

@@ -1,0 +1,4 @@
+{
+  "id": "approve_over_limit",
+  "response": { "status": 403, "body": { "error": "Approval limit exceeded" } }
+}
