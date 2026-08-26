@@ -10,7 +10,7 @@ description: >
 
 # Skill: migration
 
-_Skill version: 1.16 · Last changed: 2026-08-21 · Plugin compatibility: ≥3.13.0 · Consent: A_
+_Skill version: 1.17 · Last changed: 2026-08-26 · Plugin compatibility: ≥3.13.0 · Consent: A_
 
 > ⚠ **Feature Gate bypass**: This skill generates implementation code without a prior ICEA.
 > The architecture documents produced in Stage 1 serve as the governance substitute.
@@ -94,8 +94,10 @@ Normalise ADO ID: `ADO-1847`, `ADO #1847`, and `1847` all resolve the same.
 
 **Verify TARGET (current directory) is a git repository:**
 ```bash
-git rev-parse --is-inside-work-tree 2>/dev/null || {
-  git init && git commit --allow-empty -m "Initial commit — migration target"
+# Use the same git binary as Stage 4 (CLAUDE.md §0b); on non-Windows the plain `git` on PATH is fine.
+GIT="C:/Program Files/Git/mingw64/bin/git.exe"; [ -x "$GIT" ] || GIT=git
+"$GIT" rev-parse --is-inside-work-tree 2>/dev/null || {
+  "$GIT" init && "$GIT" commit --allow-empty -m "Initial commit — migration target"
   echo "✅ Git initialized in current directory"
 }
 ```
@@ -358,7 +360,7 @@ Write `.claude/migration-checkpoint.json` NOW — at the end of Stage 0, before 
 generated. This is the resume anchor for every later stage (the context-budget checks in Stages
 1–3 rely on it being present). All values below are known from the Stage 0 analysis and answers:
 `mode.graph` from the graph-availability check (Step 0.1), `mode.track` ∈ {`backend`, `frontend`, `upgrade`} from the Q1 run type (a full-stack effort is two
-runs — one `backend`, then one `frontend`; a `frontend` run sets `target_token = angular`); `source_token`/`target_token`
+runs — one `backend`, then one `frontend`; a `frontend` run's `target_token` is its chosen frontend target — `angular` (react/angular→Angular) or `react` (angular→React)); `source_token`/`target_token`
 are the resolved stack tokens; `source_file_count`/`source_module_count` from the Step 0.1 size
 and graph counts.
 
@@ -434,10 +436,19 @@ absolute-scope gate, and the §3 coverage denominator. Record the source baselin
 1. **Context-budget check** (shared `context-budget-check.md`) — *session-depth* risk; reuse Step 0.1
    counts, do NOT re-scan.
 2. **Absolute-scope gate** (Stage-0.6-specific — NOT the budget check) — *source size vs. single-pass
-   read capacity*, evaluated even in a fresh session. If the manifest exceeds the per-pass threshold
-   (spec heuristic: single-file layout only when roughly ≤6 clusters), the **index + one file per
-   cluster layout is MANDATORY** — not a judgement call. Decomposition unit = graph module / bounded
-   context (the unit Stage 3.1 uses); decompose along bounded contexts / vertical slices, never
+   read capacity*, evaluated even in a fresh session. The gate trips (→ decompose) if **ANY** of these
+   measured signals exceed threshold — cluster count is not the only knob, because 6 *huge* modules
+   would otherwise slip through as "small":
+   - `source_module_count` > **6** clusters, OR
+   - `source_file_count` > **60** behaviour-bearing source files, OR
+   - the manifest's behaviour-bearing node count (routes/controllers/services/handlers) > **80**, OR
+   - the largest single cluster's file count alone would not fit a single honest read pass.
+
+   When the gate trips, the **index + one file per cluster layout is MANDATORY** — not a judgement
+   call. (Thresholds are heuristics tuned to keep one pass within a fresh context's read budget; when
+   any measured signal is borderline, decompose — the lower-risk choice.) Decomposition unit = graph
+   module / bounded context (the unit Stage 3.1 uses); decompose along bounded contexts / vertical
+   slices, never
    horizontal layers.
 
 **Decomposition — orchestrator + per-cluster sub-agents (when the absolute-scope gate trips).**
@@ -454,15 +465,27 @@ extracted in one accumulating context. Mirror the Stage 4 cluster model:
   cannot see. It also assigns the global `F-NN` IDs post-collection (parallel agents must NOT
   self-assign — collision) and runs a stitch pass for features that span clusters.
 - **Per-fragment trace-verify-before-merge:** run
-  `tests/migration-validation/verify-inventory-trace.cjs` on each returned fragment against that
-  cluster's assigned file set BEFORE merging it into the index (mirrors Stage 4's
+  `$PLUGIN_DIR/tests/migration-validation/verify-inventory-trace.cjs` on each returned fragment
+  against that cluster's assigned file set BEFORE merging it into the index (the script ships with
+  the plugin — it is NOT in the TARGET repo, so it MUST be invoked via the resolved `$PLUGIN_DIR`,
+  never a bare relative path; a bare path resolves against the target CWD and fails file-not-found)
+  (mirrors Stage 4's
   build/test-before-merge). A fragment with a missing-file / out-of-range PROV token is rejected back
   to its agent, not merged. Isolation removes the exhaustion vector; the verifier removes the
   wrong-citation vector.
 
-**No silent caps.** If budget still forces a subset, inventory the top-N clusters by importance and
-LIST every un-inventoried cluster in §3 — the coverage denominator is the manifest count, so any
-un-inventoried cluster is a reconciled, visible gap (never a silent cap).
+**No silent caps + coverage reconciliation (mandatory, before the gate).** The manifest is the
+denominator; §5 is the numerator. After extraction and before presenting the Stage 0.6 gate, the
+orchestrator MUST reconcile them explicitly: enumerate every manifest entity — each behaviour-bearing
+node (route/controller/service/handler) and each data entity — and confirm it maps to at least one
+§5 feature-ID. Any manifest item with **zero** §5 coverage is either (a) inventoried, or (b) recorded
+in §3 as a named skipped cluster AND logged as a §11 GAP (`type: coverage-gap`) — never dropped
+silently. §1/§3 then state the true `covered / total` counts from this reconciliation, not an
+estimate. If budget forced a subset, inventory the top-N clusters by importance and list every
+un-inventoried cluster in §3 — so any un-inventoried cluster is a reconciled, visible gap. (This is
+a deterministic-in-principle check: the per-fragment trace verifier flags dangling feature-IDs, but
+the manifest-vs-§5 reconciliation is the orchestrator's responsibility because only it holds the
+consolidated manifest.)
 
 Write the inventory per the spec (planning doc — no Write Gate). **Output layout by scope:** a
 small/module inventory is one file `docs/.../ADO-{ADO_ID}-source-inventory.md`; a large/whole-app
@@ -855,10 +878,15 @@ Read $PLUGIN_DIR/skills/migration/references/strategies/{target_token}.md
 ```
 Resolve the token to its file by the `references/stacks/` convention (`dotnet`→`dotnet.md`,
 `angular`→`angular.md`, `react`→`react.md`, `java`→`java-spring.md`, `nodejs`→`nodejs-express.md`, `python`→`python.md`).
-Each run loads exactly ONE target profile (its own target — a `frontend` run's `target_token` is
-`angular`). If a resolved profile's `STATUS` is not
+Each run loads exactly ONE target profile (its own target — a `frontend` run's `target_token` is its
+chosen frontend target: `angular` or `react`). If a resolved profile's `STATUS` is not
 exactly `implemented` (e.g. `not-implemented` / `profile-ready`), or the file is absent → **STOP**
-(no cross-stack fallback; see `strategies/README.md`).
+(no cross-stack fallback; see `strategies/README.md`). **Also read the profile's `MATURITY` line:**
+if it carries a `⚠ Unverified` marker (java-spring / python / react today), the profile's commands
+have NOT been run end-to-end by the plugin — a bare `STATUS: implemented` is not that assurance.
+Surface this plainly to the developer and get an explicit go-ahead to proceed with the unverified
+`{target_token}` profile before generating any target code from it (verified profiles proceed
+without the extra confirmation).
 Every `{profile TOKEN}` reference in Stages 3–6 — `SKELETON`, `STANDARDS_EXAMPLE`, `BUILD`,
 `TEST_CLUSTER`, `TEST_ALL`, `TEST_FRAMEWORK`, `COVERAGE`, `LAYOUT`, `COMPOSITION`, `CONFIG`,
 `BUILD_UNIT`, `RULES`, `PKG_ADD`, `SERVE`, `E2E`, `FITNESS` — comes from it. The git/tier/gate
@@ -1156,8 +1184,10 @@ reading the same source files in parallel is safe. Isolation (worktree) is for T
 **Target execution profile:** already loaded at Stage 3 start. If entering Stage 4 fresh (e.g.
 `MIGRATE RESUME ADO-{ADO_ID}` in a new session), re-load it now:
 `Read $PLUGIN_DIR/skills/migration/references/strategies/{target_token}.md`. All `{profile TOKEN}`
-references below resolve from it (ONE profile per run — a `frontend` run's is `angular.md`); if its
-`STATUS` is not exactly `implemented` or it is absent → **STOP** (no cross-stack fallback).
+references below resolve from it (ONE profile per run — a `frontend` run's is `angular.md` or
+`react.md`, per `target_token`); if its `STATUS` is not exactly `implemented` or it is absent →
+**STOP** (no cross-stack fallback), and if its `MATURITY` is `⚠ Unverified`, get the developer's
+explicit go-ahead first (per the Stage 3 preamble).
 
 ### Step 4.0 — Context budget check
 
@@ -1393,6 +1423,12 @@ generated client, never hand-written URLs. Use a **JS-native generator** (avoids
 ```bash
 npx orval --input {contract openapi.json} --output {profile LAYOUT → generated-client path} 2>&1 | tail -5   # or openapi-typescript
 ```
+`npx orval` / `openapi-typescript` need network + npm. **If the registry is unreachable** (offline /
+locked-down): STOP and tell the developer — do NOT silently hand-roll URLs (that defeats the
+contract-accuracy guarantee). Acceptable fallbacks, in order: (a) a locally-installed/vendored
+generator (`node_modules/.bin/orval`), (b) a pre-generated client the developer supplies, or
+(c) as a last resort, hand-author the client strictly from the OpenAPI and mark every file
+`// MANUAL-CLIENT: verify against contract` for review. Never proceed with ad-hoc URLs.
 (JWT interceptor + CORS/proxy patterns: `fullstack-integration.md`.) Commit the generated client to
 `main` so every cluster branch inherits it.
 
@@ -1478,10 +1514,14 @@ reading of the source) because the oracle is recorded from the real source, not 
 Read $PLUGIN_DIR/skills/migration/references/specs/golden-master-spec.md
 ```
 
-Execute it: decide whether the source can run (Step 1), record request→response recordings from
-SOURCE (Step 2), replay against TARGET after the Stage 6.1 build (Step 3), and write
-`docs/.../ADO-{ADO_ID}-golden-master-report.md` (Step 4). The replay harness is a script — the
-LLM writes it and reads the summary, no LLM during the run.
+**Staging note — this step spans two points in the flow; do NOT try to complete it in one sitting
+at 5.0.** At Step 5.0 you only decide runnability (Step 1) and **capture** the recordings from the
+SOURCE (Step 2) — the TARGET is not built yet, so there is nothing to replay against. The **replay +
+diff + report** (Steps 3–4) run **after the Stage 6.1 Release build**; return here from Step 6.1 to
+execute them. Concretely: decide whether the source can run (Step 1), record request→response
+recordings from SOURCE (Step 2) now; then AFTER Step 6.1, replay against the built TARGET (Step 3)
+and write `docs/.../ADO-{ADO_ID}-golden-master-report.md` (Step 4). The replay harness is a script —
+the LLM writes it and reads the summary, no LLM during the run.
 
 - If the source cannot be run: SKIP capture and record `⚠ No external oracle — parity is INFERRED
   only` in the report and the checkpoint `decision_log`. Do NOT claim behavioral parity.
@@ -1556,6 +1596,11 @@ After writing: `git add && git commit -m "test(e2e): Playwright tests [ADO-{ADO_
 {profile BUILD — Release}
 {profile TEST_ALL}
 ```
+
+**After a green Release build — run the deferred golden-master replay (Step 5.0, Steps 3–4).** The
+recordings captured at Step 5.0 now have a built TARGET to replay against: execute the replay + diff,
+write `docs/.../ADO-{ADO_ID}-golden-master-report.md`, and carry any HIGH-risk drift / error to the
+Step 6.5 completion gate. (Skip only if Step 5.0 recorded `⚠ No external oracle`.)
 
 ### Step 6.2 — Automated E2E (Playwright — headless, no LLM during execution)
 
@@ -1647,6 +1692,8 @@ NEVER skip Stage 1 architecture design — the architecture docs are the governa
 NEVER report MIGRATION COMPLETE with unexplained HIGH-risk golden-master drift; if the source could not run, label behavioral parity INFERRED rather than claiming it.
 NEVER fabricate a parity table for a stack with no migration mapping reference — STOP and offer to scaffold the reference.
 NEVER run a target's build/test/serve toolchain without loading its execution profile from `references/strategies/{target_token}.md`; a missing or `STATUS: not-implemented` profile → STOP (no cross-stack fallback).
+NEVER generate target code from a profile whose `MATURITY` line is `⚠ Unverified` (java-spring / python / react today) without surfacing that and getting the developer's explicit go-ahead — `STATUS: implemented` alone does NOT mean the profile was validated end-to-end.
+ALWAYS invoke plugin-shipped scripts (e.g. `tests/migration-validation/verify-inventory-trace.cjs`) via the resolved `$PLUGIN_DIR` — never a bare relative path (CWD is the TARGET repo, which does not contain them).
 ALWAYS deploy the target guardrail rules (`project-rules.md` + the target language rule) to `.claude/rules/` at Step 3.3a — before Stage 4 — and have each cluster agent read them, so generated code is governed by the enforced rules rather than only the ~20-line standards summary.
 NEVER auto-proceed past any stage gate.
 NEVER offer a fallback for unsupported source stacks — STOP with a clear error.
@@ -1719,7 +1766,7 @@ $PLUGIN_DIR/skills/migration/references/specs/migration-report-spec.md
 # DO NOT load docs/migration-architecture.md — human reference only
 # Stage 4 cluster agents DO NOT load reference files — execute from TARGET-ARCHITECTURE.md
 #
-# Checkpoint (.claude/migration-checkpoint.json, schema 1.6) is written at Step 0.4 and updated
+# Checkpoint (.claude/migration-checkpoint.json, schema 1.8) is written at Step 0.4 and updated
 # (merged) at each stage gate — it is the resume anchor for MIGRATE ARCH/FEAS/CLUSTERS/RESUME.
 # The context-budget check (context-budget-check.md) runs at Steps 1.0, 2.0, 3.0 and 4.0.
 ```
