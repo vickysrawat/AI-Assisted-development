@@ -605,7 +605,7 @@ or reordering them causes downstream skills to fail with confusing errors.
 | 2 | Architect questionnaire (runs inside setup-init Step 7) | `.claude/architecture/architecture-deployment.md` | `app-readiness`, `icea-feature`, `plugin-readiness` |
 | 3 | Architect skill (runs inside setup-init Step 7) | `.claude/architecture/*.md`, `.claude/graph/` (index + module files) | `icea-feature`, `icea-review`, `code-review`, `security-review` |
 | 4 | `/session-start` | — (verifies setup) | — |
-| 5 | Normal workflow | `docs/icea/`, `CodeReviews/`, `security/` | — |
+| 5 | Normal workflow | `docs/Release*/Sprint*/UserStory*/`, `CodeReviews/`, `security/` | — |
 
 If `architecture-deployment.md` was skipped (Step 2 incomplete), run:
 ```

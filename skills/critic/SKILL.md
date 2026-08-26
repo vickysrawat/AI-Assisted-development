@@ -73,7 +73,7 @@ source-file-consent category — see `$PLUGIN_DIR/skills/shared/source-file-cons
 | Mode | Source | Consent | What it reads |
 |---|---|---|---|
 | `icea` | `internal` (called by icea-feature at Step 5, before the temp write) | **Category C** | The in-context ICEA draft + architecture docs. Never source. |
-| `icea` | `standalone` (`/critic icea ADO-<id>`) | **Category C** | The ICEA file at `docs/icea/ADO-<id>-*.md` + architecture docs. Never source. |
+| `icea` | `standalone` (`/critic icea ADO-<id>`) | **Category C** | The ICEA file at `docs/Release{R}/Sprint{S}/UserStory{id}/ADO-<id>-*.icea.md` + architecture docs. Never source. |
 | `tech` | `internal` (called by icea-feature at Step 8, before the temp write) | **Category C** | The on-disk approved ICEA + the in-context Tech Spec draft + architecture docs. Never source. |
 | `code` | `internal` (called by icea-implement at Step 4a) | **Category C** | The in-context generated code + the approved ICEA. Nothing is on disk yet, so no source file is read. |
 | `code` | `standalone` (`/critic code [ADO-<id>]`) | **Category A** | Staged/changed source files, announced before reading (same implicit-consent model as `/code-review --changed`). |
@@ -139,7 +139,7 @@ silently as part of the parent flow.
 The command passes a parsed phase argument. Resolve as follows:
 
 1. `/critic icea [ADO-<id>]` → mode `icea`, source `standalone`.
-   - If an ADO id is given, read `docs/icea/ADO-<id>-*.md`.
+   - If an ADO id is given, read the ICEA located via `find docs -name "ADO-<id>-*.icea.md"`.
    - If no id is given, look for the ADO id in the current branch name
      (pattern `ADO-[0-9]+`) and read the matching ICEA file.
    - If neither resolves, ask: *"Which ICEA should I critique? (ADO-<id>)"*

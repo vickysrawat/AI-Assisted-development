@@ -635,7 +635,7 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
     <p>The ICEA gate is enforced in two layers:</p>
     <ol style="padding-left:20px;line-height:2;color:var(--muted);font-size:14px;">
       <li><strong>Session-start pre-load</strong> — <code>/session-start</code> loads the feature gate rule into active context at the beginning of every session, so Claude knows the constraint before any message is processed.</li>
-      <li><strong>Output constraint in <code>CLAUDE.md</code></strong> — a standing rule prevents implementation code from being written for new behaviour without an approved ICEA on disk at <code>docs/icea/ADO-[ID]-*.md</code>.</li>
+      <li><strong>Output constraint in <code>CLAUDE.md</code></strong> — a standing rule prevents implementation code from being written for new behaviour without an approved ICEA on disk at <code>docs/Release{R}/Sprint{S}/UserStory{ID}/ADO-[ID]-*.icea.md</code>.</li>
     </ol>
     <p><strong>Team convention:</strong> invoke <code>/ai-assisted-development:icea-feature</code> explicitly before describing a feature. This is the reliable path — do not rely solely on the gate firing reactively.</p>
     <div class="callout warn"><span class="icon">⚠</span>Always run <code>/session-start</code> at the start of each session to ensure the feature gate rule is active. Sessions started without it fall back to the <code>CLAUDE.md</code> output constraint only.</div>

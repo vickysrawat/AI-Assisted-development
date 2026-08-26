@@ -54,7 +54,7 @@ Before executing, check for orientation files — do not scan source:
 **First, check whether an ICEA file already exists for this work item:**
 
 ```bash
-ls docs/icea/ADO-{ID}-*.md 2>/dev/null | head -1
+find docs -name "ADO-{ID}-*.icea.md" 2>/dev/null | head -1
 ```
 
 - **File found:** read it and proceed with the ICEA content below.

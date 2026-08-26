@@ -95,4 +95,4 @@ or decisions made during implementation that deviate from the ICEA and why.]
 - [ ] Node.js: Zod validation at route level
 - [ ] Node.js: no PII in log output
 - [ ] No secrets or connection strings committed
-- [ ] ICEA saved to docs/icea/ADO-[ID]-[feature].md
+- [ ] ICEA saved to docs/Release{R}/Sprint{S}/UserStory{ID}/ADO-[ID]-[feature].icea.md

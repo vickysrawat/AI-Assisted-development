@@ -25,13 +25,13 @@ per applicable layer. Run this after the ICEA is approved and before sprint plan
 
 If an ADO ID was provided:
 ```bash
-ls docs/icea/ADO-{ID}-*.md 2>/dev/null | head -1
+find docs -name "ADO-{ID}-*.icea.md" 2>/dev/null | head -1
 ```
 
 If not found:
 ```
 ⚠ No ICEA file found for ADO-{ID}.
-Expected: docs/icea/ADO-{ID}-<feature-name>.md
+Expected: docs/Release{R}/Sprint{S}/UserStory{ID}/ADO-{ID}-<feature-name>.icea.md
 Run /icea-feature first to create the ICEA, or provide the file path directly.
 ```
 And stop.

@@ -267,3 +267,88 @@ These were deleted. Watch for more stale v1 references in future sessions.
 ### [capture] [2026-08-21] Task completed — React wired as a frontend target (angular→react) + Step 4.6 made target-agnostic
 
 ### [capture] [2026-08-21] Error resolved — migration APPROVE gate keywords missing from CLAUDE.md §0a (cross-session approval gap)
+
+### [capture] [2026-08-25] Plan approved — fix stale `docs/icea/` paths plugin-wide + bug specs into hierarchy
+### [capture] [2026-08-11] Plan approved — migration skill context-budget-aware + resumable (Option 1)
+
+### [capture] [2026-08-25] Task completed — stale `docs/icea/` paths fixed plugin-wide (9 files)
+### [capture] [2026-08-25] Plan approved — fix stale `docs/icea/` paths plugin-wide + bug specs into hierarchy
+
+### [capture] [manual] YYYY-MM-DD — <topic>
+
+### [capture] [2026-08-25] Architecture decision — /bug must persist approved spec BEFORE writing fix code
+
+## Dream run — 2026-08-25T19:00:00Z
+
+**Sessions searched:** 0 (conversation_search unavailable in CLI mode)
+**Sessions with knowledge:** 0 (used MEMORY.md auto-capture entries as primary source)
+**Trigger:** manual /dream
+**This conversation:** CLI session (no URL)
+
+### Sources this run
+| Session | Date | URL | Knowledge extracted |
+|---------|------|-----|---------------------|
+| MEMORY.md | 2026-06-09 to 2026-08-25 | manual | ~70 auto-capture entries processed (first dream run) |
+
+### Score rationale
+- All entries: 0.70-1.00 base (auto-capture with explicit Confidence tags) — no adjustments needed
+- Age bonus not applied (entries already had Confidence fields)
+- No decay (first dream run)
+- Manual ADO/corporate entries: 0.90 (high priority, production-confirmed)
+
+### Operations applied
+
+| Operation | Entry | Target | Confidence |
+|-----------|-------|--------|------------|
+| ADD | Migration Skill (~28 entries) | memory/topic-migration-skill.md | 0.80 |
+| ADD | Setup Infrastructure (~15 entries) | memory/topic-setup-infrastructure.md | 0.85 |
+| ADD | ICEA Workflow (~8 entries) | memory/topic-icea-workflow.md | 0.90 |
+| ADD | Code Review / SAST (~6 entries) | memory/topic-code-review.md | 0.85 |
+| ADD | Architecture Templates (~6 entries) | memory/topic-architecture-templates.md | 0.85 |
+| ADD | Plugin Infrastructure (~8 entries) | memory/topic-plugin-infrastructure.md | 0.88 |
+| ADD | Graph System (~4 entries) | memory/topic-graph-system.md | 0.85 |
+| ADD | Dream/Memory System (3 entries) | memory/topic-dream-memory.md | 0.80 |
+| ADD | ADO & Corporate (2 manual entries) | memory/topic-ado-corporate.md | 0.90 |
+| ADD | Multi-Harness Convergence (5 entries) | memory/topic-multi-harness.md | 0.80 |
+
+### Conflicts resolved
+- None (first dream run, no prior knowledge to conflict with)
+
+### Memory health
+- Entries before: ~70 in MEMORY.md (1049 lines), 0 topic files
+- Entries after: 1 in MEMORY.md (new auto-capture during run), 10 topic files
+- CLAUDE.md lines before: unchanged
+- CLAUDE.md lines after: unchanged (no PROMOTE operations)
+- Average confidence: 0.84
+- MEMORY.md entries processed: ~70 (all removed from inbox)
+
+### Notes
+- First dream run ever. MEMORY.md accumulated ~70 entries over 2.5 months without consolidation.
+- conversation_search unavailable in CLI — MEMORY.md auto-capture entries used as sole source.
+- Migration skill is dominant topic (~40% of knowledge). Many entries flagged "unverified."
+- No PROMOTE candidates — knowledge needs session confirmation before CLAUDE.md elevation.
+- A new auto-capture entry arrived during this run (bug spec architecture decision) — left in MEMORY.md for next cycle.
+- Recommend /dream every 5-8 sessions to prevent accumulation.
+
+### [capture] [2026-08-25] Task completed — first /dream consolidation run (70 entries -> 10 topic files)
+
+### [capture] [2026-08-25] Plan approved — migration Stage 0.6 inventory validation/hardening harness
+### [capture] [2026-08-25] Architecture decision — 3 anti-hallucination controls for Stage 0.6 (provenance token, absolute-scope gate, sub-agent extraction)
+
+### [capture] [2026-08-25] Error resolved — verifier fixture prose must not contain the ID tokens it scans for
+
+### [capture] [2026-08-26] Task completed — Increment 1 harness caught a real defect (STATIC/INFERRED under-specified)
+
+### [capture] [2026-08-26] Task completed — spec fix verified: tier inflation 10→0, score 15/25→23/25
+
+### [capture] [2026-08-26] Architecture decision — LLM scoring runs via a session SUBAGENT + rubric, NOT an API-calling script
+
+### [capture] [2026-08-26] Task completed — Increment 2 (dotnet-fw) confirms stack-agnosticism; Increment-1 fix generalized
+
+### [capture] [2026-08-26] Architecture decision — declarative-STATIC exception + web-grounded, self-learning framework-fact cache
+
+### [capture] [2026-08-26] Architecture decision — SUPERSEDE: framework-fact self-learning goes via memory → /dream promotion, NOT inline auto-write
+
+### [capture] [2026-08-26] Error resolved — setup-sync CANNOT preserve the stacks LEARNED block; /dream re-promotion is the durability mechanism
+
+### [capture] [2026-08-26] Task completed — Increment 3 (Angular) cleanest run; refined cut-line validated across 3 stacks
