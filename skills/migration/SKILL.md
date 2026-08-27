@@ -10,7 +10,7 @@ description: >
 
 # Skill: migration
 
-_Skill version: 1.17 · Last changed: 2026-08-26 · Plugin compatibility: ≥3.13.0 · Consent: A_
+_Skill version: 1.18 · Last changed: 2026-08-26 · Plugin compatibility: ≥3.13.0 · Consent: A_
 
 > ⚠ **Feature Gate bypass**: This skill generates implementation code without a prior ICEA.
 > The architecture documents produced in Stage 1 serve as the governance substitute.
@@ -1586,6 +1586,32 @@ Configure the E2E harness headless with screenshot-on-failure (per the profile `
 Write Gate: `APPROVE MIGRATION ADO-{ADO_ID}`.
 After writing: `git add && git commit -m "test(e2e): Playwright tests [ADO-{ADO_ID}]"`
 
+### Step 5.4 — Frontend-parity oracle (frontend run only — the UI sibling of Step 5.0)
+
+**Only when `mode.track = frontend`** (a backend/upgrade run skips this — its parity is golden-master
+Step 5.0). Golden-master stops at the HTTP boundary; this covers UI / navigation / validation parity,
+keyed to the same Stage 0.6 feature-IDs. It has two tiers.
+
+```
+Read $PLUGIN_DIR/skills/migration/references/specs/frontend-parity-spec.md
+```
+
+- **Tier 1 — manual parity session (ALWAYS runs, no source dependency):** generated at **Step 6.4**
+  (see there). This is the primary, human-dispositioned parity gate.
+- **Tier 2 — advisory automated oracle (opportunistic):** if the source frontend can be driven live
+  **with a backend**, **capture now** (spec Step 2) the semantic projection per GM-verifiable UI
+  feature-ID — a normalized ARIA snapshot (discovery layer) + verbatim url/text/network outcomes
+  (assertion layer), via role/text locators. **Defer replay to after the Step 6.1 build** (same
+  capture-now/replay-later split as golden-master). If the source can't be driven live, record
+  `⚠ No frontend oracle — parity is manual/INFERRED only (Tier 1)` in the report + checkpoint
+  `decision_log` (merge) and rely on Tier 1.
+
+**Never diff DOM markup or pixels — semantic projection only** (ARIA · URL · visible text · network ·
+validation messages). Drift is **ADVISORY**: it is dispositioned by a human in the Tier-1 session,
+never an automated hard block (frontend drift is too noisy to gate on). Results go to the
+frontend-parity report and an append-only §13 note — the signed inventory stays immutable (identical
+to golden-master's rule).
+
 ---
 
 ## Stage 6 — Verification
@@ -1597,10 +1623,16 @@ After writing: `git add && git commit -m "test(e2e): Playwright tests [ADO-{ADO_
 {profile TEST_ALL}
 ```
 
-**After a green Release build — run the deferred golden-master replay (Step 5.0, Steps 3–4).** The
-recordings captured at Step 5.0 now have a built TARGET to replay against: execute the replay + diff,
-write `docs/.../ADO-{ADO_ID}-golden-master-report.md`, and carry any HIGH-risk drift / error to the
-Step 6.5 completion gate. (Skip only if Step 5.0 recorded `⚠ No external oracle`.)
+**After a green Release build — run the deferred oracle replays.**
+- **Golden-master (Step 5.0, Steps 3–4):** the recordings captured at Step 5.0 now have a built TARGET
+  to replay against: execute the replay + diff, write `docs/.../ADO-{ADO_ID}-golden-master-report.md`,
+  and carry any HIGH-risk drift / error to the Step 6.5 completion gate. (Skip only if Step 5.0
+  recorded `⚠ No external oracle`.)
+- **Frontend-parity (Step 5.4, Tier 2 — frontend run only):** if journeys were captured at Step 5.4,
+  replay them against the served target (spec Step 3), write
+  `docs/.../ADO-{ADO_ID}-frontend-parity-report.md`, and inject every drift as a mandatory row in the
+  Step 6.4 Tier-1 disposition. **Advisory — drift does NOT hard-block here.** (Skip if Step 5.4
+  recorded `⚠ No frontend oracle`.)
 
 ### Step 6.2 — Automated E2E (Playwright — headless, no LLM during execution)
 
@@ -1621,21 +1653,35 @@ failed (see the harness report).
 {profile FITNESS}
 ```
 
-### Step 6.4 — Visual Verification Checklist (for developer)
+### Step 6.4 — Frontend parity session (Tier 1) / Visual verification (for developer)
 
-Generate checklist based on what was migrated:
+**For a `frontend` run this is the Tier-1 manual parity session from `frontend-parity-spec.md` — the
+primary, always-on, human-dispositioned parity gate** (it runs whether or not the source can be driven
+live). Generate `## Frontend Parity Session — ADO-{ADO_ID}` from the Stage 0.6 inventory, one row per
+inventory feature-ID whose Layers include **UI** and that is `GM-verifiable = yes` OR high-risk, PLUS
+every `mappings/angular-react.md` **RED** behavioural-risk item (auto-tracking/effects, Zone.js
+re-render model, two-way binding, complex RxJS orchestration). Grouped by cluster, each row states the
+**verbatim** expected outcome from the inventory G/W/T:
 ```markdown
-## Visual Verification Required — ADO-{ADO_ID}
-Start: {profile SERVE — dev-run command}  (frontend run: `ng serve` + the consumed backend URL)
+## Frontend Parity Session — ADO-{ADO_ID}
+Start: {profile SERVE — dev-run command}  (frontend run: `ng serve`/`npm run dev` + the consumed backend URL)
 
-  [ ] Sign in via {auth strategy} — confirm redirect + dashboard
-  [ ] {ClusterA} list — data renders, no blank/error state
-  [ ] {ClusterA} create form — fills, validates, submits, success message
-  [ ] Error state — trigger validation error, confirm message visible
+### Cluster: {ClusterName}
+  [ ] F-07 reject empty order name
+        expected: stay on /orders/new; show "Name is required"   (verbatim — inventory G/W/T)
+        check:    target — submit empty form; {source — same, if runnable}
+        result:   PASS | DRIFT: {note} | BLOCKED
+  [ ] F-19 sign-in redirect  (HIGH — RED: guard→loader paradigm shift)
+        expected: navigate to /dashboard; greet user; nav shows Orders/Invoices/Admin
+        check:    target — sign in; {source — same, if runnable}
+        result:   PASS | DRIFT | BLOCKED
   [ ] Health: {profile SERVE — health endpoint} → healthy
 ```
-
-Run `/verify` for interactive browser-driven testing.
+**Disposition is the human gate:** every high-risk / must-preserve feature-ID must be `PASS` or
+`DRIFT-accepted: {reason}` before the completion banner; unmarked items BLOCK completion. Any Tier-2
+advisory drift (Step 6.1 replay) is injected here as a mandatory row. For a **backend/upgrade run**,
+generate the generic post-migration spot-check instead (sign-in, one list, one create form, one error
+state, health). Run `/verify` for interactive browser-driven testing.
 
 ### Step 6.5 — Generate MIGRATION-REPORT.md
 
@@ -1658,6 +1704,7 @@ Update `migration.tracker.md`: Status → COMPLETE.
   Tests:     {N} passing
   E2E:       {N} passing (headless Playwright)
   Golden-master: {N} match · {N} drift (all explained) · coverage {FULL|PARTIAL|INFERRED}
+  Frontend-parity: {frontend run: N match · N drift-dispositioned · {FULL|MANUAL|SKIPPED} | n/a}
   Coverage:  {backend%} {| frontend%}
 
   Architecture docs:
@@ -1690,6 +1737,8 @@ NEVER present an INFERRED inventory item as a confirmed requirement, and NEVER f
 NEVER drop or guess code you couldn't resolve statically — log it in the inventory Gaps Report (§11) with `file:line` + how to resolve it (ask a dev / run the source via golden-master / check runtime config).
 NEVER skip Stage 1 architecture design — the architecture docs are the governance substitute for ICEA.
 NEVER report MIGRATION COMPLETE with unexplained HIGH-risk golden-master drift; if the source could not run, label behavioral parity INFERRED rather than claiming it.
+Frontend parity (Stage 5.4, `frontend` runs) is ADVISORY + human-dispositioned — NEVER an automated hard gate and NEVER a silent claim; the Tier-1 manual parity session (Step 6.4) always runs, the Tier-2 automated oracle runs only when the source can be driven live and otherwise degrades to `manual/INFERRED only`.
+NEVER diff DOM markup or pixels/screenshots for frontend parity — compare the SEMANTIC projection only (ARIA snapshot · URL · visible text · network calls · validation messages); a migration restyles legitimately.
 NEVER fabricate a parity table for a stack with no migration mapping reference — STOP and offer to scaffold the reference.
 NEVER run a target's build/test/serve toolchain without loading its execution profile from `references/strategies/{target_token}.md`; a missing or `STATUS: not-implemented` profile → STOP (no cross-stack fallback).
 NEVER generate target code from a profile whose `MATURITY` line is `⚠ Unverified` (java-spring / python / react today) without surfacing that and getting the developer's explicit go-ahead — `STATUS: implemented` alone does NOT mean the profile was validated end-to-end.
@@ -1759,6 +1808,9 @@ $PLUGIN_DIR/skills/migration/references/strategies/README.md  (token contract �
 
 # Loaded at Stage 5.0 (golden-master behavioral verification)
 $PLUGIN_DIR/skills/migration/references/specs/golden-master-spec.md
+
+# Loaded at Stage 5.4 (frontend-parity verification — frontend runs only)
+$PLUGIN_DIR/skills/migration/references/specs/frontend-parity-spec.md
 
 # Loaded at Stage 6.5
 $PLUGIN_DIR/skills/migration/references/specs/migration-report-spec.md

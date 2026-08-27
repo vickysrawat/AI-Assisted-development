@@ -1,0 +1,11 @@
+{
+  "id": "login_redirect",
+  "_note": "DISCOVERY DRIFT: url + greeting + network all still MATCH (the assertions pass), but the ARIA snapshot lost the 'Admin' nav entry — a regression only the discovery layer catches.",
+  "observed": {
+    "url": "/dashboard",
+    "text": ["Welcome, <user>"],
+    "aria": ["banner", "nav: Orders | Invoices", "heading: Dashboard"],
+    "network": ["POST /api/auth/login", "GET /api/me"],
+    "toast": "Signed in 11:22:33"
+  }
+}

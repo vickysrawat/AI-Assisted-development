@@ -1,0 +1,10 @@
+{
+  "id": "login_redirect",
+  "observed": {
+    "url": "/dashboard",
+    "text": ["Welcome, <user>"],
+    "aria": ["banner", "nav: Orders | Invoices | Admin", "heading: Dashboard"],
+    "network": ["POST /api/auth/login", "GET /api/me"],
+    "toast": "Signed in 10:00:01"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "login_redirect",
+  "feature_id": "F-19",
+  "risk": "HIGH",
+  "tier": "INFERRED",
+  "verifies_gwt": "Given valid credentials / When the user signs in / Then navigate to /dashboard, greet the user, and the nav shows Orders | Invoices | Admin",
+  "journey": {
+    "description": "sign in then land on the dashboard",
+    "locators": ["getByLabel('Email')", "getByLabel('Password')", "getByRole('button', {name: 'Sign in'})"]
+  },
+  "observed_normalized": {
+    "url": "/dashboard",
+    "text": ["Welcome, <user>"],
+    "aria": ["banner", "nav: Orders | Invoices | Admin", "heading: Dashboard"],
+    "network": ["POST /api/auth/login", "GET /api/me"]
+  },
+  "normalizations": ["strip:toast"]
+}
