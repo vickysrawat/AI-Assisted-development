@@ -41,7 +41,7 @@ artifact. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 This skill is **Category C** — never reads application source files.
 It reads only plugin state files: `plugin.json`, `.claude/architecture/`, `memory/`,
-`CodeReviews/`, `security/`, `docs/icea/`, and `token-analysis/`.
+`CodeReviews/`, `security/`, ICEA files under `docs/Release*/Sprint*/UserStory*/`, and `token-analysis/`.
 
 ---
 
@@ -130,8 +130,8 @@ try{
 JSEOF
 
 echo "=== ICEA governance ==="
-ls docs/icea/ 2>/dev/null | head -10
-ls docs/icea/ 2>/dev/null | wc -l
+find docs -name "*.icea.md" 2>/dev/null | head -10
+find docs -name "*.icea.md" 2>/dev/null | wc -l
 
 echo "=== Code review ledger ==="
 ls CodeReviews/code-review-ledger.md 2>/dev/null || echo "MISSING"
@@ -165,7 +165,7 @@ grep "^### dream —\|^## dream —" memory/dream-log.md 2>/dev/null | tail -3
 echo "=== PR compliance ==="
 # Count recent PRs with ICEA compliance badge in description
 # Can't check ADO directly without PAT, so check local ICEA file recency
-find docs/icea/ -name "*.md" -newer memory/MEMORY.md 2>/dev/null | wc -l
+find docs -name "*.icea.md" -newer memory/MEMORY.md 2>/dev/null | wc -l
 ```
 
 ---
@@ -261,11 +261,11 @@ Score 5: Score 4 + memory entries have high confidence scores, stale entries pru
 
 ### AI-4: Governance rails
 
-Evidence: docs/icea/ content, code-review ledger, security report B1–B7 annotations, PR patterns.
+Evidence: ICEA content under docs/Release*/Sprint*/UserStory*/, code-review ledger, security report B1–B7 annotations, PR patterns.
 
 | Check | Evidence signal |
 |---|---|
-| ICEA files present for recent work | docs/icea/ contains recent ADO-*.md files |
+| ICEA files present for recent work | docs/Release*/Sprint*/UserStory*/ contains recent ADO-*.icea.md files |
 | ICEA files cover recent ADO items | File count > 0 and files modified recently |
 | Code review findings are getting Fixed | Ledger shows Fixed entries, not only Open accumulation |
 | Security scan run recently | security/ has a report from < 30 days |

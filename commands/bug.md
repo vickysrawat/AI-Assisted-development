@@ -43,6 +43,23 @@ Provide the ADO bug ID and a one-line description:
 
 ---
 
+## Step 1b — Collect Release and Sprint
+
+The bug spec is filed alongside its work item in the same hierarchy as feature
+ICEAs, so it needs the Release and Sprint. If either is not supplied, ask for both
+in a single prompt (mirrors icea-feature Step 1):
+
+```
+Before I file the bug spec I need where it ships:
+
+  Release #:   [e.g. Release 3 / R3]     ← the release this fix ships in
+  Sprint #:    [e.g. Sprint 12 / S12]    ← the sprint it is planned for
+```
+
+Do not proceed until both are confirmed. Store as `RELEASE_ID` and `SPRINT_ID`.
+
+---
+
 ## Step 2 — Gather context (read-only, no source scanning)
 
 ```bash
@@ -136,9 +153,42 @@ If `REJECT [reason]`:
 
 ## Step 6 — Apply the fix
 
-Once APPROVED, apply the source file consent gate from
-`$PLUGIN_DIR/skills/shared/source-file-consent.md` (Category B — post-approval):
+Once APPROVED, work in the order below. **The spec is persisted to disk before any
+source file is touched** — the `icea-floor` PreToolUse hook
+(`.claude/hooks/icea-floor.cjs`) blocks writes to guarded source files unless an
+approved spec (`Status: ✅ Approved` or `Tier: T1`) modified within the last 8h
+exists under `docs/`. If the fix code were written first, that very
+first write would be rejected. `.md` writes are floor-exempt, so saving the spec is
+always allowed.
 
+### Step 6a — Persist the approved Bug Spec (before any source read/write)
+
+Stamp the header (flip `Status` to Approved and add `Tier: T1` — a bug fix is a
+micro-change) and write the spec. It keeps its own `.bugspec.md` extension so ICEA
+finders never mistake it for an ICEA, but the `Status`/`Tier` markers let the
+mechanical floor recognise the one-cycle bug approval:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🐛 BUG SPEC — ADO #{ID} — {Title}
+Status: ✅ Approved
+Tier: T1
+Approved by: {developer} on {YYYY-MM-DD}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{the approved Symptom / Expected behaviour / Root cause / Files likely involved /
+ Fix approach / Regression test / Out of scope fields}
+```
+
+```bash
+DEST_DIR="docs/Release${RELEASE_ID}/Sprint${SPRINT_ID}/UserStory${ADO_ID}"
+mkdir -p "$DEST_DIR"
+# write spec → $DEST_DIR/ADO-${ADO_ID}-bug.bugspec.md
+```
+
+### Step 6b — Source file consent gate
+
+Apply the source file consent gate from
+`$PLUGIN_DIR/skills/shared/source-file-consent.md` (Category B — post-approval).
 For **each** file listed under "Files likely involved", present the gate before reading:
 
 ```
@@ -156,6 +206,8 @@ Read this file? (yes / no)
 Only read files the developer confirms. If a file is declined, note that the
 fix for that area could not be verified and apply only the confirmed portions.
 
+### Step 6c — Apply the change
+
 1. Open only the confirmed files — nothing else
 2. Make the minimal change needed. Decision transparency applies:
    ```
@@ -164,14 +216,13 @@ fix for that area could not be verified and apply only the confirmed portions.
    ```
    Use this only when there are genuinely multiple viable approaches.
 3. Write or update the regression test in the file named in the spec
-4. Save the spec to `docs/icea/ADO-{ID}-bug.md`
-5. Confirm:
+4. Confirm:
 
 ```
 ✅ Fix applied — ADO #{ID}
    Files changed : {list}
    Regression test: {test name}
-   Spec saved    : docs/icea/ADO-{ID}-bug.md
+   Spec saved    : docs/Release{R}/Sprint{S}/UserStory{ID}/ADO-{ID}-bug.bugspec.md
 
 Next: run /checkin to verify the fix passes all checks before committing.
 ```

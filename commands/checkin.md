@@ -78,7 +78,7 @@ cat .claude/file-cache.json 2>/dev/null || echo "NO_CACHE"
 Locate the ICEA file for the current ADO ID:
 
 ```bash
-ls docs/icea/ADO-{ID}-*.md 2>/dev/null | head -1
+find docs -name "ADO-{ID}-*.icea.md" 2>/dev/null | head -1
 ```
 
 If found, read it. If not found, note "No ICEA found — ICEA compliance check will be skipped".

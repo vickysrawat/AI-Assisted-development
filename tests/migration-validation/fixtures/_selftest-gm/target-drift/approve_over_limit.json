@@ -1,0 +1,5 @@
+{
+  "id": "approve_over_limit",
+  "_note": "DRIFT: the migrated target wrongly APPROVED an over-limit expense instead of returning 403.",
+  "response": { "status": 200, "body": { "status": "approved" } }
+}

@@ -30,10 +30,38 @@ port** it is a light feature catalog that seeds golden-master + the migration re
 | Tier | Meaning | Promotion |
 |---|---|---|
 | **OBSERVED** | At authoring: has a passing source test. (A later golden-master reproduction is a stronger signal but is recorded in the Stage 5.0 report / §13 — it does NOT rewrite this signed doc.) | Highest — verifiable |
-| **STATIC** | Mechanically derivable from code structure (endpoint exists, field required by annotation, role check present) | Verifiable by inspection |
-| **INFERRED** | LLM reading of business logic | **Never** auto-promoted to a requirement; confirmed only by human review (§ below) or a golden-master reproduction |
+| **STATIC** | The *existence* of a structural element is mechanically evident: a route/endpoint is declared, a field carries a required/type annotation, a guard/decorator is present on a handler. STATIC asserts the element is THERE — and, when the element is *declarative*, its **framework-guaranteed** outcome (see the Tier cut-line) — never what *imperative* conditional logic decides. | Verifiable by inspection |
+| **INFERRED** | Any behaviour that depends on reading IMPERATIVE conditional logic or specific values — what a validator rejects and with which message/threshold, which roles a *custom* (hand-rolled) guard admits, what a branch returns, not-found / error outcomes. If you had to read a branch to state the outcome, it is INFERRED. | **Never** auto-promoted to a requirement; confirmed only by human review (§ below) or a golden-master reproduction |
+
+**Tier cut-line:** an element being *present* → STATIC; the element's *decision / outcome / values* →
+INFERRED (or OBSERVED if a passing test covers it). **Exception — declarative, framework-guaranteed
+outcomes are STATIC** (they follow mechanically from a declaration, no branch to read): `[Authorize]`
+→ 401 for an unauthenticated caller; `[Authorize(Roles="Manager")]` → the framework rejects other
+roles; a `[Required]` / non-null annotation → the field is mandatory. Resolve the exception by this
+ladder: (1) **is the attribute defined in the SOURCE tree?** → it is custom code, read it → INFERRED;
+(2) framework-provided → confirm its **version-specific** guaranteed outcome via the stack's
+framework-attribute list in `stacks/{stack}.md`, or — if unlisted / version-sensitive / uncertain —
+a WebSearch of the **official docs** for that framework+version, citing the doc URL alongside the
+`PROV:` token; (3) still unresolved → INFERRED. Web grounding is an extraction-phase aid ONLY — the
+offline verifier never depends on it. INFERRED also covers any imperative outcome: a hand-rolled
+`if (!user.IsManager) return Forbid("…")`, what a validator branch returns and with which
+message/threshold. So `[Authorize(Roles="Manager")]` rejecting other roles is STATIC; the same rule
+as an `if` in the handler body, or via a custom `[ManagerOnly]` attribute defined in the repo, is
+INFERRED. When unsure, the lower-confidence tier is the honest choice.
 
 Provenance = `file:line` (or cluster) for every item, so each is falsifiable.
+
+**Machine-readable provenance token (REQUIRED on every §5 / §6 / §11 item).** In addition to any
+prose, each item MUST carry at least one `PROV:` token — the canonical, greppable form the Stage 0.6
+trace verifier reads:
+
+    PROV:<relpath>#L<start>[-L<end>]   — file provenance; <relpath> is POSIX, relative to the SOURCE root
+    PROV:cluster:<cluster-name>        — coarse provenance when no single line applies (use sparingly)
+
+Examples: `PROV:src/services/ApprovalService.cs#L88`, `PROV:src/orders/validate.ts#L40-L57`.
+The token is what makes "falsifiable" mechanical: the verifier extracts every `PROV:` token, resolves
+it against the SOURCE baseline SHA, and flags any that do not exist. Prose alone is not acceptable
+provenance.
 
 **Two verification moments (complementary, not redundant):**
 - **Human review @ Stage 0.6** — dispositions INFERRED items and answers §10. This gate.
@@ -85,6 +113,9 @@ state that in §12.
 - **What, not how.** State what the app does, not its internal implementation; internal class/var
   names belong only in the `file:line` provenance, not in the behaviour statement.
 - **Log unresolved code as a GAP (§11), never as a guessed behaviour** (see the gap-logging rules).
+- **Emit a `PROV:` token on every §5 / §6 / §11 item** (grammar in *Machine-readable provenance
+  token* above). The Stage 0.6 trace verifier resolves each token against the SOURCE baseline SHA and
+  flags any that do not exist — prose-only provenance will not pass.
 
 ---
 
@@ -161,7 +192,7 @@ Primary user roles and the top-level capabilities each exercises.
 Per cluster, a table:
 ```
 | ID | Feature | Layers (UI·API·svc·DB·job) | Behaviour / rules | Confidence | Provenance | GM-verifiable? | Priority | Review status |
-|F-01| ... | ... | ... | OBSERVED/STATIC/INFERRED | file:line | yes/no | UNKNOWN (ask) | Pending |
+|F-01| ... | ... | ... | OBSERVED/STATIC/INFERRED | PROV:src/orders/OrderService.cs#L42 | yes/no | UNKNOWN (ask) | Pending |
 ```
 `GM-verifiable?` = will golden-master (Stage 5.0) be able to check this (externally observable) or is
 it human-verify-only. `Priority` is always `UNKNOWN (ask)` — code cannot tell you.
@@ -172,7 +203,7 @@ the outcome quoted **verbatim**:
 Behaviour F-07: reject over-limit invoice approval
   Given an invoice total > 10000 and the caller lacks the "manager" role
   When POST /invoices/{id}/approve is called
-  Then respond 403 "Approval limit exceeded" — no state change   (INFERRED · ApprovalService.cs:88)
+  Then respond 403 "Approval limit exceeded" — no state change   (INFERRED · PROV:src/services/ApprovalService.cs#L88)
 ```
 Prose is fine for the OBSERVED/STATIC bulk. Cover the error/edge paths, not just the happy path.
 
@@ -203,7 +234,7 @@ Code locations the extractor **saw but could not confidently resolve statically*
 asserted as behaviours. Distinct from §10 (intent *absent* from code) and from INFERRED catalog
 items (which ARE asserted, at low confidence). Each gap is code-anchored and part of the Review Focus.
 ```
-GAP-001 | {file:line} | type: {ambiguous-intent | static-unresolvable (config/feature-flag) | conflicting-paths | unreachable-looking}
+GAP-001 | {PROV:<relpath>#L<nn>} | type: {ambiguous-intent | static-unresolvable (config/feature-flag) | conflicting-paths | unreachable-looking}
         | {what is unresolved} | resolve by: {ask a developer | run the source (golden-master) | check runtime config | usage data}
         | disposition: Pending
 ```

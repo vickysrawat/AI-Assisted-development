@@ -10,7 +10,7 @@ description: >
 
 # Skill: migration
 
-_Skill version: 1.16 · Last changed: 2026-08-21 · Plugin compatibility: ≥3.13.0 · Consent: A_
+_Skill version: 1.18 · Last changed: 2026-08-26 · Plugin compatibility: ≥3.13.0 · Consent: A_
 
 > ⚠ **Feature Gate bypass**: This skill generates implementation code without a prior ICEA.
 > The architecture documents produced in Stage 1 serve as the governance substitute.
@@ -94,8 +94,10 @@ Normalise ADO ID: `ADO-1847`, `ADO #1847`, and `1847` all resolve the same.
 
 **Verify TARGET (current directory) is a git repository:**
 ```bash
-git rev-parse --is-inside-work-tree 2>/dev/null || {
-  git init && git commit --allow-empty -m "Initial commit — migration target"
+# Use the same git binary as Stage 4 (CLAUDE.md §0b); on non-Windows the plain `git` on PATH is fine.
+GIT="C:/Program Files/Git/mingw64/bin/git.exe"; [ -x "$GIT" ] || GIT=git
+"$GIT" rev-parse --is-inside-work-tree 2>/dev/null || {
+  "$GIT" init && "$GIT" commit --allow-empty -m "Initial commit — migration target"
   echo "✅ Git initialized in current directory"
 }
 ```
@@ -358,7 +360,7 @@ Write `.claude/migration-checkpoint.json` NOW — at the end of Stage 0, before 
 generated. This is the resume anchor for every later stage (the context-budget checks in Stages
 1–3 rely on it being present). All values below are known from the Stage 0 analysis and answers:
 `mode.graph` from the graph-availability check (Step 0.1), `mode.track` ∈ {`backend`, `frontend`, `upgrade`} from the Q1 run type (a full-stack effort is two
-runs — one `backend`, then one `frontend`; a `frontend` run sets `target_token = angular`); `source_token`/`target_token`
+runs — one `backend`, then one `frontend`; a `frontend` run's `target_token` is its chosen frontend target — `angular` (react/angular→Angular) or `react` (angular→React)); `source_token`/`target_token`
 are the resolved stack tokens; `source_file_count`/`source_module_count` from the Step 0.1 size
 and graph counts.
 
@@ -413,24 +415,98 @@ posture: **mechanical port = Light** (feature/endpoint catalog to seed golden-ma
 Read $PLUGIN_DIR/skills/migration/references/specs/source-inventory-spec.md
 ```
 
-**Budget + baseline + decomposition:** run the shared context-budget check (reuse the Step 0.1
-counts — do NOT re-scan). Record the source baseline `git -C {SOURCE_PATH} rev-parse HEAD` (or a
-timestamp if not a git repo) in the doc header — the review is against this snapshot. Decompose by
-the source graph modules / bounded contexts and extract per module, then synthesize; if no graph,
-derive from directory structure. If budget forces a subset, inventory the top-N modules by
-importance and LIST every un-inventoried module in §3 (no silent caps).
+**Preconditions — fresh source graph (posture-scoped).** The scope manifest, coverage denominator,
+and decomposition units all derive from the SOURCE knowledge graph, so:
+- **rewrite-from-spec → HARD prerequisite:** a fresh source graph is required. "Fresh" = present at
+  `{SOURCE_PATH}/.claude/graph/graph.json`, not `.stale`, and its fingerprint baseline matches the
+  source baseline SHA recorded below. Absent/stale → STOP; instruct: run `/graph-sync` in
+  `{SOURCE_PATH}` first (on a never-initialised source this is initial graph *creation*, which needs
+  the graph scaffolding). Do NOT fall back to directory-structure mode for this posture.
+- **re-architecture → recommended:** warn if absent/stale, allow override to heuristic mode.
+- **mechanical port → optional:** directory-structure derivation is acceptable (light catalog).
+
+**Scope manifest + baseline (no re-scan).** Build a machine-readable scope manifest from the Step 0.1
+analysis — reuse `source_module_count` / `source_file_count` from the checkpoint and the graph
+`{modules, hubs, names}`, and add behaviour-bearing node counts (routes/controllers/services/handlers,
+per `stacks/{stack}.md`). This one manifest feeds three consumers: the context-budget signal, the
+absolute-scope gate, and the §3 coverage denominator. Record the source baseline
+`git -C {SOURCE_PATH} rev-parse HEAD` (or a timestamp if not a git repo) in the doc header.
+
+**Two independent scope checks — different axes, run BOTH:**
+1. **Context-budget check** (shared `context-budget-check.md`) — *session-depth* risk; reuse Step 0.1
+   counts, do NOT re-scan.
+2. **Absolute-scope gate** (Stage-0.6-specific — NOT the budget check) — *source size vs. single-pass
+   read capacity*, evaluated even in a fresh session. The gate trips (→ decompose) if **ANY** of these
+   measured signals exceed threshold — cluster count is not the only knob, because 6 *huge* modules
+   would otherwise slip through as "small":
+   - `source_module_count` > **6** clusters, OR
+   - `source_file_count` > **60** behaviour-bearing source files, OR
+   - the manifest's behaviour-bearing node count (routes/controllers/services/handlers) > **80**, OR
+   - the largest single cluster's file count alone would not fit a single honest read pass.
+
+   When the gate trips, the **index + one file per cluster layout is MANDATORY** — not a judgement
+   call. (Thresholds are heuristics tuned to keep one pass within a fresh context's read budget; when
+   any measured signal is borderline, decompose — the lower-risk choice.) Decomposition unit = graph
+   module / bounded context (the unit Stage 3.1 uses); decompose along bounded contexts / vertical
+   slices, never
+   horizontal layers.
+
+**Decomposition — orchestrator + per-cluster sub-agents (when the absolute-scope gate trips).**
+Context isolation is the root fix for exhaustion-driven confabulation, so a large inventory is NOT
+extracted in one accumulating context. Mirror the Stage 4 cluster model:
+- **Small scope (gate not tripped):** extract in the main context, single file — unchanged.
+- **Large scope (gate tripped):** the ORCHESTRATOR spawns one sub-agent per cluster. Each sub-agent
+  receives ONLY its cluster's source file list (the graph module assignment) and returns a STRUCTURED
+  fragment — §5 feature rows + §6 rules, each carrying a confidence tier, a `PROV:` token, and (for
+  INFERRED / high-risk) Given/When/Then with verbatim outcomes. A fresh context per cluster = full
+  read budget per cluster, so each agent can actually read the lines it cites.
+- **Orchestrator owns everything cross-cutting** — §1 roll-ups, §4 actor map, §7 cross-cluster entity
+  relationships, §8 integrations, §9 auth/authz, and the consolidated §11 — which a slice-scoped agent
+  cannot see. It also assigns the global `F-NN` IDs post-collection (parallel agents must NOT
+  self-assign — collision) and runs a stitch pass for features that span clusters.
+- **Per-fragment trace-verify-before-merge:** run
+  `$PLUGIN_DIR/tests/migration-validation/verify-inventory-trace.cjs` on each returned fragment
+  against that cluster's assigned file set BEFORE merging it into the index (the script ships with
+  the plugin — it is NOT in the TARGET repo, so it MUST be invoked via the resolved `$PLUGIN_DIR`,
+  never a bare relative path; a bare path resolves against the target CWD and fails file-not-found)
+  (mirrors Stage 4's
+  build/test-before-merge). A fragment with a missing-file / out-of-range PROV token is rejected back
+  to its agent, not merged. Isolation removes the exhaustion vector; the verifier removes the
+  wrong-citation vector.
+
+**No silent caps + coverage reconciliation (mandatory, before the gate).** The manifest is the
+denominator; §5 is the numerator. After extraction and before presenting the Stage 0.6 gate, the
+orchestrator MUST reconcile them explicitly: enumerate every manifest entity — each behaviour-bearing
+node (route/controller/service/handler) and each data entity — and confirm it maps to at least one
+§5 feature-ID. Any manifest item with **zero** §5 coverage is either (a) inventoried, or (b) recorded
+in §3 as a named skipped cluster AND logged as a §11 GAP (`type: coverage-gap`) — never dropped
+silently. §1/§3 then state the true `covered / total` counts from this reconciliation, not an
+estimate. If budget forced a subset, inventory the top-N clusters by importance and list every
+un-inventoried cluster in §3 — so any un-inventoried cluster is a reconciled, visible gap. (This is
+a deterministic-in-principle check: the per-fragment trace verifier flags dangling feature-IDs, but
+the manifest-vs-§5 reconciliation is the orchestrator's responsibility because only it holds the
+consolidated manifest.)
 
 Write the inventory per the spec (planning doc — no Write Gate). **Output layout by scope:** a
 small/module inventory is one file `docs/.../ADO-{ADO_ID}-source-inventory.md`; a large/whole-app
 inventory is an **index + one file per cluster** (`…-source-inventory-{cluster}.md`) per the spec's
 Output Organization, so the review stays tractable one cluster at a time. Every
-item carries a confidence tier (OBSERVED / STATIC / INFERRED) + `file:line` provenance; INFERRED is
+item carries a confidence tier (OBSERVED / STATIC / INFERRED) + a machine-readable `PROV:` provenance
+token (spec § Machine-readable provenance token); INFERRED is
 never presented as a confirmed requirement. Mask PII values (names/shapes only). Populate §10
 (Cannot Be Derived — stakeholder questions) honestly; never fabricate NFRs / rationale / priorities.
 Log any code you saw but could not resolve statically to the **Gaps Report (§11)** (with `file:line`
 + how to resolve it) — never as a guessed behaviour. Express INFERRED / high-risk behaviours as
 Given/When/Then with outcomes quoted **verbatim** (exact status codes / error strings / thresholds),
 and cover error/edge paths, not just the happy path.
+
+**Framework-fact self-learning.** When tiering a declarative outcome STATIC required web-grounding a
+framework attribute's guaranteed behaviour (spec Tier cut-line, step 2), the ORCHESTRATOR writes a
+`Framework-fact` entry to the repo-root `memory/MEMORY.md` — `attribute · framework@version ·
+guaranteed outcome · official-doc URL · date` — so `/dream` can propose promoting it into the
+`stacks/{stack}.md` LEARNED block for reuse by later runs. **No official-doc URL → do not write it**
+(it stays a per-run INFERRED). Reuse a grounded fact within the same run without re-searching. Never
+write to `stacks/*.md` directly from a migration run — promotion is `/dream`'s job (the review gate).
 
 ### Stage 0.6 Gate
 Present the gate banner from the spec and STOP. The reviewer dispositions the **Review Focus** set
@@ -802,10 +878,15 @@ Read $PLUGIN_DIR/skills/migration/references/strategies/{target_token}.md
 ```
 Resolve the token to its file by the `references/stacks/` convention (`dotnet`→`dotnet.md`,
 `angular`→`angular.md`, `react`→`react.md`, `java`→`java-spring.md`, `nodejs`→`nodejs-express.md`, `python`→`python.md`).
-Each run loads exactly ONE target profile (its own target — a `frontend` run's `target_token` is
-`angular`). If a resolved profile's `STATUS` is not
+Each run loads exactly ONE target profile (its own target — a `frontend` run's `target_token` is its
+chosen frontend target: `angular` or `react`). If a resolved profile's `STATUS` is not
 exactly `implemented` (e.g. `not-implemented` / `profile-ready`), or the file is absent → **STOP**
-(no cross-stack fallback; see `strategies/README.md`).
+(no cross-stack fallback; see `strategies/README.md`). **Also read the profile's `MATURITY` line:**
+if it carries a `⚠ Unverified` marker (java-spring / python / react today), the profile's commands
+have NOT been run end-to-end by the plugin — a bare `STATUS: implemented` is not that assurance.
+Surface this plainly to the developer and get an explicit go-ahead to proceed with the unverified
+`{target_token}` profile before generating any target code from it (verified profiles proceed
+without the extra confirmation).
 Every `{profile TOKEN}` reference in Stages 3–6 — `SKELETON`, `STANDARDS_EXAMPLE`, `BUILD`,
 `TEST_CLUSTER`, `TEST_ALL`, `TEST_FRAMEWORK`, `COVERAGE`, `LAYOUT`, `COMPOSITION`, `CONFIG`,
 `BUILD_UNIT`, `RULES`, `PKG_ADD`, `SERVE`, `E2E`, `FITNESS` — comes from it. The git/tier/gate
@@ -1103,8 +1184,10 @@ reading the same source files in parallel is safe. Isolation (worktree) is for T
 **Target execution profile:** already loaded at Stage 3 start. If entering Stage 4 fresh (e.g.
 `MIGRATE RESUME ADO-{ADO_ID}` in a new session), re-load it now:
 `Read $PLUGIN_DIR/skills/migration/references/strategies/{target_token}.md`. All `{profile TOKEN}`
-references below resolve from it (ONE profile per run — a `frontend` run's is `angular.md`); if its
-`STATUS` is not exactly `implemented` or it is absent → **STOP** (no cross-stack fallback).
+references below resolve from it (ONE profile per run — a `frontend` run's is `angular.md` or
+`react.md`, per `target_token`); if its `STATUS` is not exactly `implemented` or it is absent →
+**STOP** (no cross-stack fallback), and if its `MATURITY` is `⚠ Unverified`, get the developer's
+explicit go-ahead first (per the Stage 3 preamble).
 
 ### Step 4.0 — Context budget check
 
@@ -1340,6 +1423,12 @@ generated client, never hand-written URLs. Use a **JS-native generator** (avoids
 ```bash
 npx orval --input {contract openapi.json} --output {profile LAYOUT → generated-client path} 2>&1 | tail -5   # or openapi-typescript
 ```
+`npx orval` / `openapi-typescript` need network + npm. **If the registry is unreachable** (offline /
+locked-down): STOP and tell the developer — do NOT silently hand-roll URLs (that defeats the
+contract-accuracy guarantee). Acceptable fallbacks, in order: (a) a locally-installed/vendored
+generator (`node_modules/.bin/orval`), (b) a pre-generated client the developer supplies, or
+(c) as a last resort, hand-author the client strictly from the OpenAPI and mark every file
+`// MANUAL-CLIENT: verify against contract` for review. Never proceed with ad-hoc URLs.
 (JWT interceptor + CORS/proxy patterns: `fullstack-integration.md`.) Commit the generated client to
 `main` so every cluster branch inherits it.
 
@@ -1425,10 +1514,14 @@ reading of the source) because the oracle is recorded from the real source, not 
 Read $PLUGIN_DIR/skills/migration/references/specs/golden-master-spec.md
 ```
 
-Execute it: decide whether the source can run (Step 1), record request→response recordings from
-SOURCE (Step 2), replay against TARGET after the Stage 6.1 build (Step 3), and write
-`docs/.../ADO-{ADO_ID}-golden-master-report.md` (Step 4). The replay harness is a script — the
-LLM writes it and reads the summary, no LLM during the run.
+**Staging note — this step spans two points in the flow; do NOT try to complete it in one sitting
+at 5.0.** At Step 5.0 you only decide runnability (Step 1) and **capture** the recordings from the
+SOURCE (Step 2) — the TARGET is not built yet, so there is nothing to replay against. The **replay +
+diff + report** (Steps 3–4) run **after the Stage 6.1 Release build**; return here from Step 6.1 to
+execute them. Concretely: decide whether the source can run (Step 1), record request→response
+recordings from SOURCE (Step 2) now; then AFTER Step 6.1, replay against the built TARGET (Step 3)
+and write `docs/.../ADO-{ADO_ID}-golden-master-report.md` (Step 4). The replay harness is a script —
+the LLM writes it and reads the summary, no LLM during the run.
 
 - If the source cannot be run: SKIP capture and record `⚠ No external oracle — parity is INFERRED
   only` in the report and the checkpoint `decision_log`. Do NOT claim behavioral parity.
@@ -1493,6 +1586,32 @@ Configure the E2E harness headless with screenshot-on-failure (per the profile `
 Write Gate: `APPROVE MIGRATION ADO-{ADO_ID}`.
 After writing: `git add && git commit -m "test(e2e): Playwright tests [ADO-{ADO_ID}]"`
 
+### Step 5.4 — Frontend-parity oracle (frontend run only — the UI sibling of Step 5.0)
+
+**Only when `mode.track = frontend`** (a backend/upgrade run skips this — its parity is golden-master
+Step 5.0). Golden-master stops at the HTTP boundary; this covers UI / navigation / validation parity,
+keyed to the same Stage 0.6 feature-IDs. It has two tiers.
+
+```
+Read $PLUGIN_DIR/skills/migration/references/specs/frontend-parity-spec.md
+```
+
+- **Tier 1 — manual parity session (ALWAYS runs, no source dependency):** generated at **Step 6.4**
+  (see there). This is the primary, human-dispositioned parity gate.
+- **Tier 2 — advisory automated oracle (opportunistic):** if the source frontend can be driven live
+  **with a backend**, **capture now** (spec Step 2) the semantic projection per GM-verifiable UI
+  feature-ID — a normalized ARIA snapshot (discovery layer) + verbatim url/text/network outcomes
+  (assertion layer), via role/text locators. **Defer replay to after the Step 6.1 build** (same
+  capture-now/replay-later split as golden-master). If the source can't be driven live, record
+  `⚠ No frontend oracle — parity is manual/INFERRED only (Tier 1)` in the report + checkpoint
+  `decision_log` (merge) and rely on Tier 1.
+
+**Never diff DOM markup or pixels — semantic projection only** (ARIA · URL · visible text · network ·
+validation messages). Drift is **ADVISORY**: it is dispositioned by a human in the Tier-1 session,
+never an automated hard block (frontend drift is too noisy to gate on). Results go to the
+frontend-parity report and an append-only §13 note — the signed inventory stays immutable (identical
+to golden-master's rule).
+
 ---
 
 ## Stage 6 — Verification
@@ -1503,6 +1622,17 @@ After writing: `git add && git commit -m "test(e2e): Playwright tests [ADO-{ADO_
 {profile BUILD — Release}
 {profile TEST_ALL}
 ```
+
+**After a green Release build — run the deferred oracle replays.**
+- **Golden-master (Step 5.0, Steps 3–4):** the recordings captured at Step 5.0 now have a built TARGET
+  to replay against: execute the replay + diff, write `docs/.../ADO-{ADO_ID}-golden-master-report.md`,
+  and carry any HIGH-risk drift / error to the Step 6.5 completion gate. (Skip only if Step 5.0
+  recorded `⚠ No external oracle`.)
+- **Frontend-parity (Step 5.4, Tier 2 — frontend run only):** if journeys were captured at Step 5.4,
+  replay them against the served target (spec Step 3), write
+  `docs/.../ADO-{ADO_ID}-frontend-parity-report.md`, and inject every drift as a mandatory row in the
+  Step 6.4 Tier-1 disposition. **Advisory — drift does NOT hard-block here.** (Skip if Step 5.4
+  recorded `⚠ No frontend oracle`.)
 
 ### Step 6.2 — Automated E2E (Playwright — headless, no LLM during execution)
 
@@ -1523,21 +1653,35 @@ failed (see the harness report).
 {profile FITNESS}
 ```
 
-### Step 6.4 — Visual Verification Checklist (for developer)
+### Step 6.4 — Frontend parity session (Tier 1) / Visual verification (for developer)
 
-Generate checklist based on what was migrated:
+**For a `frontend` run this is the Tier-1 manual parity session from `frontend-parity-spec.md` — the
+primary, always-on, human-dispositioned parity gate** (it runs whether or not the source can be driven
+live). Generate `## Frontend Parity Session — ADO-{ADO_ID}` from the Stage 0.6 inventory, one row per
+inventory feature-ID whose Layers include **UI** and that is `GM-verifiable = yes` OR high-risk, PLUS
+every `mappings/angular-react.md` **RED** behavioural-risk item (auto-tracking/effects, Zone.js
+re-render model, two-way binding, complex RxJS orchestration). Grouped by cluster, each row states the
+**verbatim** expected outcome from the inventory G/W/T:
 ```markdown
-## Visual Verification Required — ADO-{ADO_ID}
-Start: {profile SERVE — dev-run command}  (frontend run: `ng serve` + the consumed backend URL)
+## Frontend Parity Session — ADO-{ADO_ID}
+Start: {profile SERVE — dev-run command}  (frontend run: `ng serve`/`npm run dev` + the consumed backend URL)
 
-  [ ] Sign in via {auth strategy} — confirm redirect + dashboard
-  [ ] {ClusterA} list — data renders, no blank/error state
-  [ ] {ClusterA} create form — fills, validates, submits, success message
-  [ ] Error state — trigger validation error, confirm message visible
+### Cluster: {ClusterName}
+  [ ] F-07 reject empty order name
+        expected: stay on /orders/new; show "Name is required"   (verbatim — inventory G/W/T)
+        check:    target — submit empty form; {source — same, if runnable}
+        result:   PASS | DRIFT: {note} | BLOCKED
+  [ ] F-19 sign-in redirect  (HIGH — RED: guard→loader paradigm shift)
+        expected: navigate to /dashboard; greet user; nav shows Orders/Invoices/Admin
+        check:    target — sign in; {source — same, if runnable}
+        result:   PASS | DRIFT | BLOCKED
   [ ] Health: {profile SERVE — health endpoint} → healthy
 ```
-
-Run `/verify` for interactive browser-driven testing.
+**Disposition is the human gate:** every high-risk / must-preserve feature-ID must be `PASS` or
+`DRIFT-accepted: {reason}` before the completion banner; unmarked items BLOCK completion. Any Tier-2
+advisory drift (Step 6.1 replay) is injected here as a mandatory row. For a **backend/upgrade run**,
+generate the generic post-migration spot-check instead (sign-in, one list, one create form, one error
+state, health). Run `/verify` for interactive browser-driven testing.
 
 ### Step 6.5 — Generate MIGRATION-REPORT.md
 
@@ -1560,6 +1704,7 @@ Update `migration.tracker.md`: Status → COMPLETE.
   Tests:     {N} passing
   E2E:       {N} passing (headless Playwright)
   Golden-master: {N} match · {N} drift (all explained) · coverage {FULL|PARTIAL|INFERRED}
+  Frontend-parity: {frontend run: N match · N drift-dispositioned · {FULL|MANUAL|SKIPPED} | n/a}
   Coverage:  {backend%} {| frontend%}
 
   Architecture docs:
@@ -1592,8 +1737,12 @@ NEVER present an INFERRED inventory item as a confirmed requirement, and NEVER f
 NEVER drop or guess code you couldn't resolve statically — log it in the inventory Gaps Report (§11) with `file:line` + how to resolve it (ask a dev / run the source via golden-master / check runtime config).
 NEVER skip Stage 1 architecture design — the architecture docs are the governance substitute for ICEA.
 NEVER report MIGRATION COMPLETE with unexplained HIGH-risk golden-master drift; if the source could not run, label behavioral parity INFERRED rather than claiming it.
+Frontend parity (Stage 5.4, `frontend` runs) is ADVISORY + human-dispositioned — NEVER an automated hard gate and NEVER a silent claim; the Tier-1 manual parity session (Step 6.4) always runs, the Tier-2 automated oracle runs only when the source can be driven live and otherwise degrades to `manual/INFERRED only`.
+NEVER diff DOM markup or pixels/screenshots for frontend parity — compare the SEMANTIC projection only (ARIA snapshot · URL · visible text · network calls · validation messages); a migration restyles legitimately.
 NEVER fabricate a parity table for a stack with no migration mapping reference — STOP and offer to scaffold the reference.
 NEVER run a target's build/test/serve toolchain without loading its execution profile from `references/strategies/{target_token}.md`; a missing or `STATUS: not-implemented` profile → STOP (no cross-stack fallback).
+NEVER generate target code from a profile whose `MATURITY` line is `⚠ Unverified` (java-spring / python / react today) without surfacing that and getting the developer's explicit go-ahead — `STATUS: implemented` alone does NOT mean the profile was validated end-to-end.
+ALWAYS invoke plugin-shipped scripts (e.g. `tests/migration-validation/verify-inventory-trace.cjs`) via the resolved `$PLUGIN_DIR` — never a bare relative path (CWD is the TARGET repo, which does not contain them).
 ALWAYS deploy the target guardrail rules (`project-rules.md` + the target language rule) to `.claude/rules/` at Step 3.3a — before Stage 4 — and have each cluster agent read them, so generated code is governed by the enforced rules rather than only the ~20-line standards summary.
 NEVER auto-proceed past any stage gate.
 NEVER offer a fallback for unsupported source stacks — STOP with a clear error.
@@ -1660,13 +1809,16 @@ $PLUGIN_DIR/skills/migration/references/strategies/README.md  (token contract �
 # Loaded at Stage 5.0 (golden-master behavioral verification)
 $PLUGIN_DIR/skills/migration/references/specs/golden-master-spec.md
 
+# Loaded at Stage 5.4 (frontend-parity verification — frontend runs only)
+$PLUGIN_DIR/skills/migration/references/specs/frontend-parity-spec.md
+
 # Loaded at Stage 6.5
 $PLUGIN_DIR/skills/migration/references/specs/migration-report-spec.md
 
 # DO NOT load docs/migration-architecture.md — human reference only
 # Stage 4 cluster agents DO NOT load reference files — execute from TARGET-ARCHITECTURE.md
 #
-# Checkpoint (.claude/migration-checkpoint.json, schema 1.6) is written at Step 0.4 and updated
+# Checkpoint (.claude/migration-checkpoint.json, schema 1.8) is written at Step 0.4 and updated
 # (merged) at each stage gate — it is the resume anchor for MIGRATE ARCH/FEAS/CLUSTERS/RESUME.
 # The context-budget check (context-budget-check.md) runs at Steps 1.0, 2.0, 3.0 and 4.0.
 ```

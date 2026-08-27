@@ -35,7 +35,7 @@ dependent skill will fail or produce incomplete output.
 
 | Skill | Requires | Produced by |
 |---|---|---|
-| `icea-review` | An approved ICEA document in `docs/icea/` | `icea-feature` |
+| `icea-review` | An approved ICEA document under `docs/Release*/Sprint*/UserStory*/` | `icea-feature` |
 | `pr-create` | A PR description in the current conversation | `pr-describe` |
 | `pr-spec-review` | An ICEA file path and a PR diff | `icea-feature` + `pr-create` |
 | `app-readiness` | `.claude/architecture/architecture-deployment.md` populated | `architect` (Step 0.5) via `setup-init` or `update-arch --deployment` |

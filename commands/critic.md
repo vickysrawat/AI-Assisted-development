@@ -59,9 +59,9 @@ Announce before proceeding:
 ## Step 1 — Resolve the target
 
 **PHASE = icea:**
-- If an ADO id was given, locate `docs/icea/ADO-<id>-*.md`:
+- If an ADO id was given, locate the ICEA in the hierarchy:
   ```bash
-  ls docs/icea/ADO-<id>-*.md 2>/dev/null | head -1
+  find docs -name "ADO-<id>-*.icea.md" 2>/dev/null | head -1
   ```
 - If no id was given, extract it from the branch name (pattern `ADO-[0-9]+`) and
   locate the matching ICEA file.

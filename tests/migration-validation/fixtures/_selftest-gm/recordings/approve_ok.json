@@ -1,0 +1,10 @@
+{
+  "id": "approve_ok",
+  "feature_id": "F-19",
+  "risk": "HIGH",
+  "tier": "INFERRED",
+  "verifies_gwt": "Given a pending expense / When a different manager approves / Then 200 status approved",
+  "request": { "method": "POST", "path": "/api/expenses/1/approve", "headers": { "x-user-id": "m1", "x-user-role": "manager" }, "body": null },
+  "response": { "status": 200, "body_normalized": { "status": "approved", "decidedBy": "m1" } },
+  "normalizations": ["strip:timestamp"]
+}

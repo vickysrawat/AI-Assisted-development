@@ -1,0 +1,9 @@
+{
+  "id": "form_validation",
+  "observed": {
+    "url": "/orders/new",
+    "text": ["Name is required"],
+    "aria": ["form: New order", "alert: Name is required"],
+    "network": []
+  }
+}

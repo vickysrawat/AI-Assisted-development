@@ -1,3 +1,24 @@
+## [Unreleased]
+
+### Fixed — stale flat `docs/icea/` ICEA paths across commands, skills, and docs
+- Several commands/skills still located the ICEA at the legacy flat `docs/icea/ADO-{ID}-*.md` —
+  a path that does not exist since the move to `docs/Release{R}/Sprint{S}/UserStory{ID}/`
+  (see the 3.x entries below that first flagged this). Aligned every remaining reference to the
+  canonical finder `find docs -name "ADO-{ID}-*.icea.md"`: `checkin`, `ado-tasks` (command + skill),
+  `critic` (command + skill), `pr-create`, and `plugin-readiness` (governance folder scans + prose).
+- `/bug` now files its spec in the same work-item hierarchy instead of the dead `docs/icea/` path.
+  Because a bug spec is **not** an ICEA (Root Cause / Fix / Regression Test — no I·C·E·A), it uses a
+  distinct extension `ADO-{ID}-bug.bugspec.md` so ICEA finders never mistake it for one, and `/bug`
+  gained a Release/Sprint collection step (it previously knew only the ADO ID). `/checkin` on a pure
+  bug branch therefore still correctly reports "No ICEA found — skipped".
+- `/bug` Step 6 reordered so the approved spec is persisted **before** any source file is written, and
+  its saved header now carries `Status: ✅ Approved` + `Tier: T1`. Without this, the `icea-floor`
+  PreToolUse hook (which requires an approved/T1 spec under `docs/` before any guarded source write)
+  would block the very first fix write on a no-ICEA bug branch — a bug spec's `DRAFT — Awaiting
+  Approval` status does not satisfy the floor.
+- Documentation aligned: `skills/shared/README.md`, the pr-describe checklist template,
+  `DEVELOPER-GUIDE.md`, `user-guide.html`, and `plugin-guide.html`.
+
 ## [3.14.0] — 2026-08-21
 
 ### Added — Source Behavioral Inventory (Stage 0.6 — human review gate before rewrite)

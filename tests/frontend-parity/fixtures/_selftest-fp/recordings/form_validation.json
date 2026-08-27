@@ -1,0 +1,18 @@
+{
+  "id": "form_validation",
+  "feature_id": "F-07",
+  "risk": "HIGH",
+  "tier": "INFERRED",
+  "verifies_gwt": "Given an empty required Name / When the new-order form is submitted / Then stay on /orders/new and show the message \"Name is required\"",
+  "journey": {
+    "description": "submit the new-order form with an empty Name",
+    "locators": ["getByRole('button', {name: 'Create order'})"]
+  },
+  "observed_normalized": {
+    "url": "/orders/new",
+    "text": ["Name is required"],
+    "aria": ["form: New order", "alert: Name is required"],
+    "network": []
+  },
+  "normalizations": []
+}

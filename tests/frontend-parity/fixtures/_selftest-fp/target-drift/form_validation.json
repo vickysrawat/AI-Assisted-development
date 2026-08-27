@@ -1,0 +1,10 @@
+{
+  "id": "form_validation",
+  "_note": "ASSERTION DRIFT: the migrated target changed the verbatim validation message from 'Name is required' to 'This field is required' — an assertion-layer (text + alert) regression.",
+  "observed": {
+    "url": "/orders/new",
+    "text": ["This field is required"],
+    "aria": ["form: New order", "alert: This field is required"],
+    "network": []
+  }
+}

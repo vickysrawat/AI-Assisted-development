@@ -86,7 +86,7 @@ It will begin with a heading matching `## [ADO-ID] ...`.
 
 **ICEA file:**
 ```bash
-ls docs/icea/ADO-<ID>-*.md 2>/dev/null | head -1
+find docs -name "ADO-<ID>-*.icea.md" 2>/dev/null | head -1
 ```
 
 Read it if found. Note "No ICEA found" if absent — the compliance check will handle this.
@@ -97,7 +97,7 @@ Read it if found. Note "No ICEA found" if absent — the compliance check will h
   Source  : <source-branch>
   Target  : dev  (or overridden value)
   ADO     : #<ID>
-  ICEA    : docs/icea/ADO-<ID>-<name>.md  (or: not found)
+  ICEA    : docs/Release{R}/Sprint{S}/UserStory{ID}/ADO-<ID>-<name>.icea.md  (or: not found)
   Title   : <derived from pr-describe output>
 ```
 
@@ -432,7 +432,7 @@ Open this URL in a browser — source branch, target branch, and title will be p
    ID  : <pullRequestId>
    URL : https://dev.azure.com/{org}/{project}/_git/{repo}/pullrequest/<id>
 
-Next: run /pr-spec-review spec=docs/icea/ADO-<ID>-<name>.md to validate the PR against its ICEA.
+Next: run /pr-spec-review spec=docs/Release{R}/Sprint{S}/UserStory{ID}/ADO-<ID>-<name>.icea.md to validate the PR against its ICEA.
 ```
 
 **Connect path — failure:** show HTTP status and `message` field from ADO response.
