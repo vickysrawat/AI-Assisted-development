@@ -352,3 +352,12 @@ These were deleted. Watch for more stale v1 references in future sessions.
 ### [capture] [2026-08-26] Error resolved — setup-sync CANNOT preserve the stacks LEARNED block; /dream re-promotion is the durability mechanism
 
 ### [capture] [2026-08-26] Task completed — Increment 3 (Angular) cleanest run; refined cut-line validated across 3 stacks
+
+### [capture] [2026-08-27] Plan approved — make the 3 PR skills provider-aware (ADO or GitHub)
+### [capture] [2026-08-27] Architecture decision — transport-only provider-awareness; ADO-{ID} stays the work identity
+
+### [capture] [2026-08-27] Plan approved — SRP refactor of plugin skills/commands
+
+### [capture] [2026-08-28] Architecture decision — keep governance gates orthogonal; add batch Write-Gate approval
+
+### [capture] [2026-08-28] Task completed — added "Governance gates" table to developer guide (both formats)

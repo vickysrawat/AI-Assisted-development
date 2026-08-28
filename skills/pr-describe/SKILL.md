@@ -1,17 +1,17 @@
 ---
 name: pr-describe
 description: >
-  Generates a complete, ICEA-compliant pull request description for Azure DevOps.
+  Generates a complete, ICEA-compliant pull request description for Azure DevOps or GitHub.
   Use when a developer asks to write a PR description, create a pull request,
   summarise their changes, or is ready to raise a PR. Triggers on: "write PR",
   "create pull request", "PR description", "ready to merge", "raise a PR",
   "open a PR", or any request to document changes for code review.
-  Reads staged git diff automatically. Validates all changes against the ICEA.
+  Reads the git diff against the resolved base branch automatically. Validates all changes against the ICEA.
 ---
 
 # PR Description Skill
 
-_Skill version: 1.0 · Last changed: 2026-06-03 · Plugin compatibility: ≥1.14.0 · Consent: C_
+_Skill version: 1.1 · Last changed: 2026-08-27 · Plugin compatibility: ≥1.14.0 · Consent: C_
 ## Purpose
 Generate a structured, ICEA-traceable PR description that maps every code change
 to an Acceptance Criterion, flags scope creep, and gives reviewers a clear
@@ -25,7 +25,8 @@ defaults below.
 
 **Default stack (K&E project — update architecture.md to override):**
 - Repo: .NET 8 / Angular 17+ / Node.js
-- Tracking: Azure DevOps (ADO) work items
+- Hosting: Azure DevOps **or** GitHub (auto-detected; only the base branch differs)
+- Tracking: Azure DevOps (ADO) work items — the ADO-{ID} identifies the work regardless of host
 - Branch convention: feature/ADO-[ID]-short-description
 
 
@@ -43,12 +44,19 @@ Before executing, check for orientation files — do not scan source:
 
 ### Step 1 — Collect Context
 
-Run these commands automatically without asking the developer:
+First resolve the base branch (the diff target). Read `.claude/plugin-path.txt` for
+`PLUGIN_DIR` (if absent, use the §1a resolver), then read
+`$PLUGIN_DIR/skills/shared/git-remote-provider-spec.md` and run its base-branch policy:
+`ado` → `dev`-or-ask; `github`/`other` → remote-default-or-ask. Capture the printed value
+and substitute it as the literal `{base-branch}` below (each `!` line is a fresh shell — do
+not rely on a `$VAR` persisting across lines).
+
+Then run these commands automatically without asking the developer:
 
 ```
 !git symbolic-ref --short HEAD
-!git log dev..HEAD --oneline
-!git diff dev..HEAD --stat
+!git log {base-branch}..HEAD --oneline
+!git diff {base-branch}..HEAD --stat
 ```
 
 Extract the ADO work item ID from the branch name (pattern: ADO-[0-9]+).
@@ -66,9 +74,9 @@ If the developer says the ICEA is already in context, use it directly.
 
 ### Step 3 — Analyse the Diff
 
-Read the full diff:
+Read the full diff (same `{base-branch}` resolved in Step 1):
 ```
-!git diff dev..HEAD
+!git diff {base-branch}..HEAD
 ```
 
 For each changed file, identify:
@@ -152,5 +160,5 @@ identifiers, or other B1–B7 categories without acknowledgement.
 - NEVER generate a PR description without reading the actual git diff
 - NEVER mark an AC as "implemented" without finding the corresponding code
 - NEVER skip the scope creep check
-- If the diff is empty, say: "No changes detected between this branch and dev.
-  Run git diff dev..HEAD to verify your branch has commits."
+- If the diff is empty, say: "No changes detected between this branch and {base-branch}.
+  Run git diff {base-branch}..HEAD to verify your branch has commits."

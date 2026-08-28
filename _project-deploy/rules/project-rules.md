@@ -46,6 +46,10 @@ detect:
 - No hardcoded secrets, connection strings, or credentials anywhere in source
 - No `TODO` comments without a linked ADO item number
 - No `any` type in TypeScript — always type explicitly
+- Always Single responsibility principle
+- Keep methods small
+- Prioritize simplicity
+- Do not assume and over complicate. 
 
 ## Script execution transparency
 

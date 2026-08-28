@@ -17,13 +17,14 @@ starting point.
 7. [Cache architecture](#cache-architecture)
 8. [Knowledge graph and staleness detection](#knowledge-graph-and-staleness-detection)
 9. [Dream memory system](#dream-memory-system)
-10. [Security conventions](#security-conventions)
-11. [Testing](#testing)
-12. [Releasing a new version](#releasing-a-new-version)
-13. [Updating model defaults](#updating-model-defaults)
-14. [First-time project setup order](#first-time-project-setup-order)
-15. [Fix protocol — making changes without creating new gaps](#fix-protocol--making-changes-without-creating-new-gaps)
-16. [Defined done — release readiness checklist](#defined-done--release-readiness-checklist)
+10. [Governance gates](#governance-gates)
+11. [Security conventions](#security-conventions)
+12. [Testing](#testing)
+13. [Releasing a new version](#releasing-a-new-version)
+14. [Updating model defaults](#updating-model-defaults)
+15. [First-time project setup order](#first-time-project-setup-order)
+16. [Fix protocol — making changes without creating new gaps](#fix-protocol--making-changes-without-creating-new-gaps)
+17. [Defined done — release readiness checklist](#defined-done--release-readiness-checklist)
 
 ---
 
@@ -369,6 +370,27 @@ via `scripts/setup-init-bootstrap.cjs`. No manual wiring is needed.
 
 **Design note:** plain `echo` / `cat` from a Stop hook does NOT reach the model; output must
 be JSON with `hookSpecificOutput.additionalContext` (see ADR 0049).
+
+---
+
+## Governance gates
+
+The plugin enforces four gates. They are deliberately **independent** — each guards a
+different risk, so skipping one never implies skipping another. `/skip-icea` lifts only
+the Feature Gate; the Write Gate, secrets scan, and findings gate still apply.
+
+| Gate | Guards against | Skippable? |
+|------|----------------|------------|
+| **Feature Gate** (ICEA) | Building without an agreed design/spec | Yes — `/skip-icea` (warns once, logged) |
+| **Write Gate** (`APPROVE` per file) | Wrong file/path, hallucinated content, clobbering existing files — the cheapest, highest-value check | Batch-approvable, never silent (diffs still shown) |
+| **Secrets scan** | Committing credentials or sensitive files | No — always runs |
+| **Findings gate** | Shipping known Critical/High vulnerabilities | No — override needs written justification |
+
+Because the gates are orthogonal, a single "skip everything" switch is intentionally
+**not** provided: it would remove the Write Gate (the last line of defence before an
+irreversible disk write) and the non-negotiable secrets/findings gates along with the
+Feature Gate. For autonomy without losing visibility, use batch/session Write-Gate
+approval rather than disabling the gate.
 
 ---
 

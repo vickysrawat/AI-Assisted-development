@@ -2310,6 +2310,27 @@ To start implementation:
             <div class="callout warning"><span class="callout-icon">i</span><span>Check C (secrets) and Check D (findings gate) always run and block on failure — resolve or dismiss open Critical/High findings before committing.</span></div>
           </div></div>
         </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">i</span>
+            <span class="step-title">Why the gates are separate — each guards a different risk</span>
+            <span class="step-badge info">info</span>
+            <span class="step-chevron">&#8250;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>The plugin's gates are deliberately independent because each protects against a different failure. Skipping one never implies skipping another — <code>/skip-icea</code> lifts only the Feature Gate.</p>
+            <table class="ref-table">
+              <thead><tr><th>Gate</th><th>Guards against</th><th>Skippable?</th></tr></thead>
+              <tbody>
+                <tr><td>Feature Gate (ICEA)</td><td>Building without an agreed design/spec</td><td>Yes — <code>/skip-icea</code> (warns once, logged)</td></tr>
+                <tr><td>Write Gate (<code>APPROVE</code> per file)</td><td>Wrong file/path, hallucinated content, clobbering existing files — the cheapest, highest-value check</td><td>Batch-approvable, never silent (diffs still shown)</td></tr>
+                <tr><td>Secrets scan</td><td>Committing credentials or sensitive files</td><td>No — always runs</td></tr>
+                <tr><td>Findings gate</td><td>Shipping known Critical/High vulnerabilities</td><td>No — override needs written justification</td></tr>
+              </tbody>
+            </table>
+            <div class="callout warning"><span class="callout-icon">i</span><span><code>/skip-icea</code> bypasses the Feature Gate only. The Write Gate, secrets scan, and findings gate still apply. A single "skip everything" switch is intentionally not provided — use batch Write-Gate approval for autonomy instead.</span></div>
+          </div></div>
+        </div>
       </div>
     </div>
 

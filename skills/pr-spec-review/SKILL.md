@@ -16,7 +16,7 @@ description: >
 
 # PR Spec Review Skill
 
-_Skill version: 1.0 · Last changed: 2026-06-03 · Plugin compatibility: ≥1.14.0 · Consent: B_
+_Skill version: 1.1 · Last changed: 2026-08-27 · Plugin compatibility: ≥1.14.0 · Consent: B_
 Reviews a Pull Request against a functional specification and produces four
 structured outputs: Spec Compliance Check, Code Review Against Spec,
 Traceability Matrix, and Gaps/Risks Report.
@@ -87,10 +87,38 @@ table below, in priority order.
 
 | How provided          | Action                                              |
 |-----------------------|-----------------------------------------------------|
-| `pr=<N>` argument     | Run `gh pr diff <N>` and `gh pr view <N>`           |
+| `pr=<N>` argument     | Provider-aware fetch — see **Fetching a PR by number** below |
 | `diff=<file>` argument| Read the file                                       |
-| Neither               | Run `git diff $(git merge-base HEAD dev)...HEAD`   |
+| Neither               | Resolve `{base-branch}` (below), then `git diff $(git merge-base HEAD {base-branch})...HEAD` |
 | Pasted diff text      | Use directly                                        |
+
+#### Resolving `{base-branch}` (for the "Neither" path)
+
+Read `.claude/plugin-path.txt` for `PLUGIN_DIR` (if absent, use the resolver in
+`skills/shared/plugin-path-resolution.md §1a`), then read
+`$PLUGIN_DIR/skills/shared/git-remote-provider-spec.md` and run its base-branch policy:
+`ado` → `dev`-or-ask; `github`/`other` → remote-default-or-ask. Substitute the printed value
+as literal `{base-branch}` (do not rely on `$VAR` across separate command lines).
+
+#### Fetching a PR by number (`pr=<N>`)
+
+`gh` is **not required** and may be absent. Use the provider-aware flow from the shared spec:
+
+1. Run `detect_git_provider`; parse `{owner}`/`{repo}` (GitHub) or `{org}`/`{project}`/`{repo}` (ADO).
+2. `resolve_pr_refs {N}` (spec Helper 4) → one metadata `curl` returns the PR's
+   `{base-ref}`, `{head-ref}`, and title/body for context.
+3. Get the diff locally:
+   ```bash
+   git fetch origin
+   git diff {base-ref}...{head-ref}
+   ```
+- **Optional fast-path:** if `gh` (GitHub) or `az` (ADO) is installed, use
+  `gh pr diff {N}` / `gh pr view {N}` (or `az repos pr show`) instead of the curl+git flow.
+- **Cross-fork guard:** if `{head-ref}` is not on `origin` after fetch (GitHub
+  `.head.repo.full_name` ≠ `{owner}/{repo}`), stop and tell the developer to add the fork
+  remote (`git remote add fork <url> && git fetch fork`) or pass `diff=<file>`.
+- **Auth:** GitHub public repos need no token; private repos use `GITHUB_TOKEN`; ADO uses
+  `AZURE_DEVOPS_PAT`. Never echo or log the credential.
 
 After collecting the diff, present a **source file scan request** before
 reading any source file (apply `$PLUGIN_DIR/skills/shared/source-file-consent.md` Category B bulk gate):
