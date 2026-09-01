@@ -1,0 +1,25 @@
+skill: gitignore-sync
+scenarios:
+  - id: trigger-sync
+    description: "Should detect the VCS and write the plugin managed block"
+    input: "/gitignore-sync"
+    expect:
+      triggered: true
+      contains:
+        - "managed"
+
+  - id: with-artifacts
+    description: "Should offer detected build artifacts with --with-artifacts"
+    input: "/gitignore-sync --with-artifacts"
+    expect:
+      triggered: true
+      contains:
+        - "artifact"
+
+  - id: hard-rule-vcs-first
+    description: "Must detect VCS first — .tfignore on TFVC, not an inert .gitignore"
+    input: "/gitignore-sync in a TFVC repo"
+    expect:
+      triggered: true
+      contains:
+        - ".tfignore"

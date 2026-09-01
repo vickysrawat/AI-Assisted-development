@@ -552,7 +552,22 @@ hookFiles.forEach(h => {
   const f = path.join('.claude','hooks', h+ext);
   console.log(h+ext+': '+(fs.existsSync(f) ? 'OK' : 'MISSING'));
 });
-console.log('check-settings-secrets.cjs: '+(fs.existsSync(path.join('.claude','hooks','check-settings-secrets.cjs')) ? 'OK' : 'MISSING'));
+['check-settings-secrets.cjs','script-review-gate.cjs','context-budget-tech-write.cjs','audit-append.cjs','audit-prompt.cjs'].forEach(h => {
+  console.log(h+': '+(fs.existsSync(path.join('.claude','hooks',h)) ? 'OK' : 'MISSING'));
+});
+
+// 2b. Audit-liveness self-check (Break 1.3): the audit hook can be silently absent (disabled,
+// or a harness with no UserPromptSubmit support). Wired-but-never-writing looks the same as
+// 'nothing to audit' — surface it as amber so it is not mistaken for a clean trail.
+try {
+  const wiredAudit = ((JSON.parse(fs.readFileSync('.claude/settings.json','utf8')).hooks||{}).UserPromptSubmit||[])
+    .flatMap(h=>(h.hooks||[])).some(x=>(x.command||'').includes('audit-prompt.cjs'));
+  const auditDir = path.join('.claude','audit');
+  const shards = fs.existsSync(auditDir) ? fs.readdirSync(auditDir).filter(f=>f.endsWith('.jsonl')) : [];
+  if (!wiredAudit) console.log('audit: ⚠ NOT WIRED (governance events are not being recorded)');
+  else if (shards.length === 0) console.log('audit: ⚠ WIRED, no shards yet (no governance event captured — expected if none occurred)');
+  else console.log('audit: OK ('+shards.length+' shard'+(shards.length===1?'':'s')+')');
+} catch(e) { console.log('audit: CHECK_ERROR'); }
 
 // 3. Verify hook commands in settings.json match shell_type
 try {

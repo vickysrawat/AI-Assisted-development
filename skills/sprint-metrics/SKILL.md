@@ -151,6 +151,41 @@ Active/open PRs are excluded — they have not been decided yet.
 
 ---
 
+## Step 4b — Reconcile lead/product PR approvals into the audit trail
+
+Lead/product approval happens server-side in the ADO PR — no local hook can observe it. This
+step pulls the **authoritative, ADO-verified** approver identity from each PR and writes it to
+the governance audit trail, and flags any local `Status: ✅ Approved` ICEA whose PR has no
+approving lead vote. Best-effort — skip silently on any API error.
+
+For each PR seen in Step 4 (prefer PRs that have a `pr.linked` event in `.claude/audit/*.jsonl`,
+falling back to all completed PRs), fetch its reviewers:
+
+```bash
+curl -s --ssl-no-revoke -4 \
+  "https://dev.azure.com/{ADO_ORG}/{ADO_PROJECT}/_apis/git/repositories/{repo}/pullRequests/{prId}/reviewers?api-version=7.1" \
+  -H "Authorization: Basic $AUTH"
+```
+
+For each reviewer with an approving vote (`vote` ≥ 5: 10 = approved, 5 = approved-with-suggestions),
+append an ADO-verified approval — the real approver overrides the local identity:
+
+```bash
+node .claude/hooks/audit-append.cjs "{\"event\":\"gate.approve\",\"action\":\"PR approval\",\"ado\":\"${ADO_ID}\",\"pr_id\":${PR_ID},\"result\":\"granted\",\"source\":\"ado-pr\",\"verified\":true,\"verified_actor\":\"${REVIEWER_UNIQUE_NAME}\",\"actor_confidence\":\"verified\",\"vote\":\"${VOTE}\",\"detail\":\"${REVIEWER_DISPLAY_NAME}\"}" 2>/dev/null || true
+```
+
+**Mismatch detection:** if an ICEA under `docs/**` shows `Status: ✅ Approved` (or a local
+`gate.approve` exists for its ADO id) but its linked PR has **no** reviewer vote ≥ 5, append:
+
+```bash
+node .claude/hooks/audit-append.cjs "{\"event\":\"gate.mismatch\",\"action\":\"approved-without-lead-vote\",\"ado\":\"${ADO_ID}\",\"pr_id\":${PR_ID},\"result\":\"flagged\",\"source\":\"ado-pr\",\"detail\":\"ICEA Approved locally but PR has no approving lead vote\"}" 2>/dev/null || true
+```
+
+Surface any mismatches in the report as a "Governance" line. This is the governance payoff the
+ADO↔PR link alone cannot give. (The same reconcile can be run on demand outside a metrics pass.)
+
+---
+
 ## Step 5 — Rework Hours
 
 **Query Bug work items created during the sprint:**

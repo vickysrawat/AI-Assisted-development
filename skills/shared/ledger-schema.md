@@ -35,7 +35,7 @@ grep -q "^{folder}" .gitignore 2>/dev/null || echo "{folder}" >> .gitignore
 _Last updated: YYYY-MM-DD · Managed by /{skill-command} · Do not edit manually_
 
 ## Summary
-Open: N · Fixed: N · Dismissed: N · Manual-fix-required: N
+Open: N · Fixed: N · Dismissed: N · Manual-fix-required: N · Baseline: N
 
 ---
 
@@ -99,6 +99,20 @@ Open: N · Fixed: N · Dismissed: N · Manual-fix-required: N
 - **Reason**: <false-positive | wont-fix | accepted-risk | by-design>
 - **Justification**: <free-text explanation>
 - **Verify flag**: <none | code-changed>
+
+---
+
+## Baseline
+
+_Pre-existing findings recorded on the first Phase D run (**code-review only**, per phase-d-spec.md §4).
+Baseline findings NEVER gate commits or PRs. A baseline finding moves to `## Open Findings` only when
+its file is touched (boy-scout rule) or via `/code-review --baseline-review`._
+
+### [FP-xxxxxxxx] <CODE> — <Severity>
+- **File**: <file path>
+- **Symbol**: <symbol>
+- **Source**: deterministic (<tool> <version>)
+- **Status**: Baseline
 ```
 
 ---
@@ -128,6 +142,8 @@ ledger:
 | New | Finding in scan but NOT in ledger | Add as new Open entry |
 | Already Fixed | Finding in ledger as Fixed, absent from scan | Leave unchanged |
 | Dismissed | Finding in ledger as Dismissed | Delegate to `dismissed-findings-reconciliation.md` |
+| Baseline | Finding in `## Baseline` (code-review Phase D first run) | Never gates; move to Open only on file-touch (boy-scout) or `--baseline-review` |
+| Capability-aware | Finding's `Source` names a tool THIS run lacked | Carry forward unchanged — never mark not-re-confirmed (`phase-d-spec.md §5`) |
 
 ### Reading the existing ledger
 
@@ -148,3 +164,8 @@ If `NO_LEDGER_YET`, all findings are new — write the full ledger from scratch.
 - **One ledger per skill.** Skills never write to another skill's ledger.
 - **Ledger folders are gitignored.** Reports contain potentially sensitive
   finding details (file paths, code snippets, vulnerability descriptions).
+- **Baseline never gates.** `## Baseline` findings are excluded from every gate — checkin and
+  pr-create match `Status: Open` only (`findings-gate.md`). Baseline is code-review/Phase D only.
+- **Block moves use the shared primitive.** This schema owns the *structure*; move findings between
+  sections (Open↔Fixed↔Dismissed, Baseline→Open) via `ledger-block-mutation.md` — never re-implement
+  the parse/move/re-count inline.

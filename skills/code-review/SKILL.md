@@ -67,15 +67,22 @@ transparency). Never name the persona in any finding. See `$PLUGIN_DIR/skills/sh
 
 ---
 
-## Scan Architecture — Three Passes
+## Scan Architecture — Phase D + Three Passes
 
-This skill implements the three-pass scan architecture defined in
-`$PLUGIN_DIR/skills/shared/three-pass-spec.md`. Read that spec for the full architecture.
+This skill runs a **deterministic Pass 0 (Phase D)** — real analyzers where the machine has them,
+per `$PLUGIN_DIR/skills/shared/phase-d-spec.md` — then the three-pass LLM architecture defined in
+`$PLUGIN_DIR/skills/shared/three-pass-spec.md`. Later passes receive Phase D's findings and MUST
+NOT re-report them (dedup gate). This is the single source of truth for code-review; the
+`/code-review` command is a thin stub that invokes it.
 
 ```
+Pass 0 — PHASE D · DETERMINISTIC ANALYZERS  (full /code-review only — skipped in the checkin light path)
+   Real tools where they exist: C# build-warnings (CA/SCS/SA), eslint, web.config checks.
+   Machine-capability-aware. First run writes a non-gating ## Baseline. Source: deterministic.
+        |
+        v
 Pass 1 — STRUCTURED RULE-BASED SCAN
-   Known checker categories, deterministic checks. Fast, reproducible.
-   Coverity-style CID numbering, event paths, concrete fixes.
+   Known checker categories (LLM), deduped against Phase D. Coverity-style, concrete fixes.
         |
         v
 Pass 2 — SPECIALIZED PERSONA PASSES
@@ -225,10 +232,51 @@ Pass 1 — Structured Rule-Based Scan
 
 ---
 
+## Pass 0 — Phase D · Deterministic Analyzer Layer
+
+Runs FIRST on the full `/code-review` scan, per `$PLUGIN_DIR/skills/shared/phase-d-spec.md`.
+**Skipped in the checkin light path** — checkin Check A applies Pass 1 checker categories only on
+`--changed`; real builds are too heavy for a pre-commit gate.
+
+### Step 0i — Read the machine-local capability profile
+Read `.claude/settings.local.json` → `phaseD` (written by architect Step 1b; NEVER committed — tool
+availability is a per-machine fact). If absent, run the architect-time probe (`phase-d-spec.md §2`)
+now and write it. Per-run verify: re-check only the versions the profile claims (~1s); self-heal on
+mismatch and proceed with actual capabilities.
+
+### Step 0j — Run the deterministic layer (capture, not execution, where possible)
+- **C# (build-warnings mode):** parse the project's analyzer warning stream — match stable CODES only
+  (`CA\d+`, `SCS\d+`, `SA\d+`), never message text (it localizes). Fingerprint `code|file|symbol`.
+- **JS/TS (eslint mode):** run the project-local eslint with the project config; fingerprint `rule-id|file|symbol`.
+- **web.config / app.config:** apply `references/webconfig-checks.md` (build-free, always available).
+- Tag each finding `Source: deterministic ({tool} {version})`. Stacks with no available tool →
+  `Source: probabilistic-fallback`, recorded in the coverage block.
+
+### Step 0k — Baseline (MANDATORY before any gating)
+If the ledger has no `## Baseline` section, this is the FIRST Phase D run — write ALL current findings
+to `## Baseline` and tell the developer they do NOT gate. On later runs, only findings NEW vs baseline,
+or baseline findings in files the developer touched (boy-scout rule), enter `## Open Findings` (move via
+`$PLUGIN_DIR/skills/shared/ledger-block-mutation.md`). Burn the baseline down with
+`/code-review --baseline-review`, never by ambushing commits.
+
+### Step 0l — Coverage honesty
+The scope report + ledger summary state what actually ran:
+```
+Phase D coverage: .cs → SecurityCodeScan 5.6.7 ✓ · .config → webconfig-checks ✓
+                  .js → NONE (no node toolchain) → probabilistic-fallback
+```
+"No deterministic findings" and "not deterministically scanned" must never be confusable.
+
+**Dedup gate:** Phase D findings feed the three passes as a compact list — Pass 1/2/3 MUST NOT
+re-report a Phase D finding. The model may ANNOTATE one (B1–B7 severity, probable-FP note) but NEVER
+delete or suppress it — suppression is `/dismiss` with a human justification (`phase-d-spec.md §6`).
+
+---
+
 ## Pass 1 — Structured Rule-Based Scan
 
 Apply the deterministic checker patterns from `$PLUGIN_DIR/skills/code-review/references/checkers.md` and
-the language-specific checkers to every in-scope file. This is the
+the language-specific checkers to every in-scope file, **deduping against Phase D findings**. This is the
 Coverity-equivalent pass.
 
 ### What Pass 1 checks
@@ -407,14 +455,20 @@ Write to `CodeReviews/code-review-{YYYY-MM-DD}.html` and Markdown report.
 
 ### Ledger update
 
-Write or update `CodeReviews/code-review-ledger.md` per `$PLUGIN_DIR/skills/shared/ledger-schema.md`.
+Write or update `CodeReviews/code-review-ledger.md` per `$PLUGIN_DIR/skills/shared/ledger-schema.md`
+(which includes the non-gating `## Baseline` section for Phase D first-run findings).
 
 Read existing ledger first:
 ```bash
 cat CodeReviews/code-review-ledger.md 2>/dev/null || echo "NO_LEDGER_YET"
 ```
 
-Apply reconciliation rules. Create folder and add to .gitignore:
+Apply reconciliation per `ledger-schema.md` + `dismissed-findings-reconciliation.md`, **plus
+capability-aware reconciliation (`phase-d-spec.md §5`): a finding may only be marked
+not-re-confirmed by a scan that POSSESSED the producing capability** — compare this run's `phaseD`
+profile against each finding's `Source`; carry findings outside the run's capability set forward
+unchanged (`last-seen` untouched). All block moves (Open↔Fixed↔Dismissed, Baseline→Open) use
+`$PLUGIN_DIR/skills/shared/ledger-block-mutation.md`. Create folder and add to .gitignore:
 ```bash
 mkdir -p CodeReviews
 grep -q "^CodeReviews/" .gitignore 2>/dev/null || echo "CodeReviews/" >> .gitignore
@@ -445,7 +499,8 @@ Delete `.claude/code-review-checkpoint.json` on successful completion.
 | `$PLUGIN_DIR/skills/code-review/references/analysis-rules.md` | Always — analysis meta-rules |
 | `$PLUGIN_DIR/skills/code-review/references/output-format.md` | Always — finding format |
 | `$PLUGIN_DIR/skills/code-review/references/webconfig-checks.md` | ASP.NET Framework web.config analysis |
-| `$PLUGIN_DIR/skills/shared/three-pass-spec.md` | Architecture reference |
+| `$PLUGIN_DIR/skills/shared/phase-d-spec.md` | Pass 0 deterministic layer + Baseline + capability-aware reconciliation |
+| `$PLUGIN_DIR/skills/shared/three-pass-spec.md` | Architecture reference (Pass 1–3) |
 | `$PLUGIN_DIR/skills/shared/interactive-menu-spec.md` | Menu specification |
 | `$PLUGIN_DIR/skills/shared/scope-flags-spec.md` | Scope flag definitions |
 | `$PLUGIN_DIR/skills/shared/file-cache-schema.md` | Cache schema and merge rules |

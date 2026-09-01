@@ -53,6 +53,31 @@ These files must be added to `.gitignore` — they are runtime state, not source
 }
 ```
 
+### Optional `goalLoop` block (goal-loop engine)
+
+A skill that runs the bounded goal-loop (`goal-loop-spec.md`) across turns — e.g.
+`migration` Stage 4 — persists loop progress here so a resumed session continues
+the count instead of restarting. Keyed by loop unit (e.g. cluster name):
+
+```json
+{
+  "goalLoop": {
+    "shared-kernel": { "iteration": 1, "tokenSpend": 0, "lastScore": { "percentDone": 80, "blocking": ["SR-3"] } }
+  }
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `goalLoop.{unit}.iteration` | number | Iterations spent on this unit so far (against the engine's `maxIterations` ceiling) |
+| `goalLoop.{unit}.tokenSpend` | number | Optional token spend, when a `tokenBudget` ceiling is in use |
+| `goalLoop.{unit}.lastScore` | object | The most recent `{ percentDone, blocking }` — lets a resume detect the diminishing-returns guard |
+
+Only the checkpoint **owner** (the orchestrator) writes this block; dispatched
+agents return scores and never write it (`single-writer-assumption.md`).
+`icea-implement` runs its Step 4b loop within a single turn and does **not** persist
+a `goalLoop` block — a dropped implementation loop simply re-runs from Step 4.
+
 ---
 
 ## Field definitions

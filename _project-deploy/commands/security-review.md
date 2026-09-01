@@ -25,4 +25,4 @@ Examples:
   /security-review --full --ci
 ```
 
-<skill>ai-assisted-development:security-review</skill>
+<skill>ai-assisted-development:security</skill>

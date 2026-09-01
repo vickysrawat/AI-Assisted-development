@@ -321,6 +321,39 @@ Score 3: All shared specs present at correct versions. Consent in all review ski
 Score 4: Score 3 + cache-aware scanning working; --area and --continue flags working.
 Score 5: Score 4 + all 169 structural validator checks passing.
 
+#### SRP-violation signals (skill-quality tripwire)
+
+Scan every `skills/*/SKILL.md` and `commands/*.md` for single-responsibility drift.
+Signals 1–3 are the rule (one skill = one responsibility); 4–5 are tripwires that say
+"go look", not violations by themselves.
+
+```bash
+echo "=== SRP signal scan ==="
+for f in skills/*/SKILL.md; do
+  personas=$(grep -ciE "Execute as \*\*\[" "$f")
+  lines=$(wc -l < "$f")
+  [ "$personas" -ge 2 ] && echo "SIGNAL-1 multi-persona: $f ($personas)"
+  [ "$lines" -gt 600 ] && echo "SIGNAL-4 size>600: $f ($lines)"
+done
+for c in commands/*.md; do
+  n=$(basename "$c" .md); L=$(wc -l < "$c")
+  { [ ! -f "skills/$n/SKILL.md" ] && [ "$L" -gt 120 ] && ! grep -qiE "SKILL.md|scripts/|\.cjs" "$c"; } \
+    && echo "SIGNAL-5 thick skill-less command: $c ($L)"
+done
+```
+
+| # | Signal | Rule vs tripwire | Severity |
+|---|---|---|---|
+| 1 | Skill declares ≥2 personas | one skill = one persona | HARD |
+| 2 | ≥2 distinct artifact types with independent schemas | doing two jobs | HARD |
+| 3 | Stage-gated sub-phases re-entering at different steps | a pipeline, not one skill | HARD |
+| 4 | SKILL.md > ~600 lines | prompt to inspect 1–3 | SOFT |
+| 5 | Command not a thin stub (embeds logic, no backing skill/script) | logic belongs in a skill | SOFT→HARD |
+
+Signals 2–3 need a judgment read of the flagged file; 1, 4, 5 are mechanical. **Cap:** any
+unresolved HARD signal (a multi-persona skill, or a thick skill-less command) caps AI-5 at
+Score 3 until fixed or explicitly waived with a recorded note.
+
 ---
 
 ### AI-6: Session budget and context health

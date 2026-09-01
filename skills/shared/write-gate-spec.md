@@ -35,3 +35,37 @@ The gate fires on what the model is about to **produce**, not on what the develo
 (ADR 0002, output-gated enforcement; ADR 0028, write gate). Keeping the operative rule in
 CLAUDE.md (loaded every session) — rather than in a `paths`-scoped rule — is what makes it
 fire during planning, before any file is edited.
+
+## Batch / session approval — `APPROVE ALL ADO-{ID}`
+
+Per-file approval is the default and the safest. For a large, already-reviewed multi-file
+plan, the developer may grant a **standing** Write-Gate approval for the current plan/ADO:
+
+`APPROVE ALL ADO-{ID}` — standing approval for every source/config write in this session's
+work on ADO-{ID}. The model still **streams the diff + path for each file before writing it**
+(visibility is never removed) but does not stop-and-wait per file.
+
+- **Scope:** current session + current ADO/plan only. Never persists across sessions; a new
+  session starts back at per-file approval.
+- **Revoke:** `REVOKE ALL ADO-{ID}` (or `STOP BATCH`) returns to per-file `APPROVE ADO-{ID}`.
+- **Still shown + auditable:** each write is preceded by its diff + path and a one-line
+  `✍ Writing under APPROVE ALL — {path}` marker.
+- **Does NOT widen scope:** covers only files within the approved plan's Change Manifest /
+  stated file set; a write outside that set falls back to a per-file WRITE PENDING prompt.
+
+## Gate orthogonality — the gates guard different risks
+
+Independent gates; never collapse them into one switch:
+
+| Gate | Guards against | Skippable? |
+|---|---|---|
+| Feature Gate (ICEA) | building without thinking | `/skip-icea` (Feature Gate ONLY; warns once) |
+| Write Gate (per-file APPROVE) | wrong path, hallucinated content, clobbering | `APPROVE ALL ADO-{ID}` removes the per-file *pause* — never the visibility |
+| Secrets scan | leaking credentials | NEVER — no flag (`secrets-scan-spec.md`) |
+| Findings gate | shipping known Critical/High | `--skip-security-gate` + written justification only |
+
+`/skip-icea` never affects the Write/Secrets/Findings gates. `APPROVE ALL` never affects the
+Feature/Secrets/Findings gates. Secrets is never skippable by any flag. A future "fast mode"
+may compose ONLY the skippable gates, must be loudly logged, and STILL shows diffs.
+Rejected: a single "no gates" flag — it conflates orthogonal risks and removes the last line
+of defence before an irreversible disk write.

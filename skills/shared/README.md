@@ -9,6 +9,8 @@ rather than inventing its own conventions.
 | File | Used by | Purpose |
 |---|---|---|
 | `three-pass-spec.md` | code-review, security | Three-pass scan architecture (structured rules, persona passes, free-flow adversarial) |
+| `goal-loop-spec.md` | goal-loop, icea-implement, migration | Bounded, gated goal-loop engine — generate → self-score → revise until goal met or ceiling; exits at a human gate |
+| `rubric-score-schema.md` | goal-loop-spec, icea-implement, migration | I/O contract for the self-scoring agent (per-criterion PASS/FAIL/PARTIAL + evidence + derived percentDone) |
 | `interactive-menu-spec.md` | code-review, security | Interactive scope menu when no flag provided |
 | `checkpoint-schema.md` | code-review, security | Resume-on-drop checkpoint file schema |
 | `fingerprint-spec.md` | code-review, security, dynamic-scan | FP-xxxxxxxx deterministic finding fingerprint generation |

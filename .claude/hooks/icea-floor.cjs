@@ -67,6 +67,8 @@ process.stdin.on('end', () => {
     }
   }
 
+  try { require('./audit-append.cjs').appendEvent({ event: 'gate.block', action: 'icea-floor', path: filePath, result: 'blocked', source: 'PreToolUse' }); } catch (e) { /* best-effort — auditing never blocks the gate */ }
+
   process.stderr.write(
     'ICEA FLOOR: blocked write to ' + filePath +
     ' — no approved ICEA (or T1 auto-ICEA) found modified in the last 8h under docs/.' +

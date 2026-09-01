@@ -121,7 +121,11 @@ function runHook() {
     if (e && typeof e.new_string === 'string') parts.push(e.new_string);
   }
   const hits = scanText(parts.join('\n'));
-  if (hits.length) { report(hits, '.claude/settings.json'); return 2; }
+  if (hits.length) {
+    try { require('./audit-append.cjs').appendEvent({ event: 'gate.block', action: 'secrets-guard', path: '.claude/settings.json', result: 'blocked', source: 'PreToolUse', detail: hits.join('; ') }); } catch (e) { /* best-effort */ }
+    report(hits, '.claude/settings.json');
+    return 2;
+  }
   return 0;
 }
 

@@ -53,8 +53,11 @@ The skill runs six gated stages, each pausing for explicit approval:
 ## Keyword handlers (any session)
 
 `MIGRATE ADO-{ID}` · `MIGRATE OPTIONS ADO-{ID}` · `MIGRATE ARCH ADO-{ID}` ·
-`MIGRATE FEAS ADO-{ID}` · `MIGRATE CLUSTERS ADO-{ID}` · `MIGRATE RESUME ADO-{ID} [BACKEND|FRONTEND]` ·
-`MIGRATE STATUS ADO-{ID}` — cross-session resume/regenerate from the on-disk checkpoint.
+`MIGRATE FEAS ADO-{ID}` · `MIGRATE CLUSTERS ADO-{ID}` · `MIGRATE RESUME ADO-{ID} [BACKEND|FRONTEND]` —
+cross-session resume/regenerate from the on-disk checkpoint.
+
+**Status (read-only):** `/migration-status ADO-{ID}` (or `MIGRATE STATUS ADO-{ID}`) renders the
+checkpoint — phase, stage-gates, per-cluster progress, and the next command to resume.
 
 ---
 

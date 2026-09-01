@@ -46,7 +46,7 @@ Critically, the gate changed behaviour **through incentive alignment, not coerci
 |---|---|---|
 | **Stateless skills are expensive** | Code review re-scanned all 50 files daily when only 2 changed; security loaded Python/JS/Java references for a pure C# repo. | Shared primitives — the knowledge graph, `file-cache.json`, scope flags — cut token cost 80–95% after the first baseline run ([ADR 0016](docs/adr/0016-cache-aware-scanning.md)). |
 | **Orientation beats source reads** | Every skill opened source files to learn structure; the ICEA skill was reading half the codebase per invocation. | The codebase knowledge graph maps modules to entry points and per-module detail; skills orient in *one* read ([ADR 0038](docs/adr/0038-knowledge-graph-orientation.md), which superseded the earlier `domain-map.md` of [ADR 0017](docs/adr/0017-domain-map.md)). |
-| **Secure credentials from day one** | A PAT in an un-gitignored `.claude/settings.json` is a real credential leak under delivery pressure. | Credentials default to environment variables; `dream-init` writes the ignore block; `dream-status` audits it. |
+| **Secure credentials from day one** | A PAT in an un-gitignored `.claude/settings.json` is a real credential leak under delivery pressure. | Credentials default to environment variables; `setup-init` writes the ignore block; `setup-status` audits it. |
 
 ---
 

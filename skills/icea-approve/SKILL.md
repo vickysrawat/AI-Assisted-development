@@ -90,7 +90,8 @@ Open questions remaining: {count — 0 if none}
   ❓ [{N}] {topic}  ← list only if count > 0
 
 Reply APPROVE ADO-{ADO_ID} to approve.
-If open questions remain, consider REVISE ADO-{ADO_ID} first.
+⛔ If any ICEA Open Question is unresolved (not answered, not deferred-with-justification),
+   approval is BLOCKED — run REVISE ADO-{ADO_ID} to resolve or defer them first.
 ```
 
 ---
@@ -99,12 +100,25 @@ If open questions remain, consider REVISE ADO-{ADO_ID} first.
 
 On receiving `APPROVE ADO-{ADO_ID}`:
 
+0. **Open Questions gate (blocking, per `icea-schema.md` gate 6):** read the ICEA
+   `### Open Questions` section. If any row is `open` (neither `answered` nor
+   `deferred` with written justification), do NOT approve — output the unresolved
+   questions and tell the developer to run `REVISE ADO-{ADO_ID}`. This is the only
+   hard gate on ICEA approval; there is no bypass keyword.
 1. Write `Status: ✅ Approved` to the ICEA file
 2. Append revision log entry:
    ```
    {date} — Approved
    ```
-3. Write immediately — no gate (ICEA is a collaboration artefact)
+2b. Record the approval outcome in the governance audit trail (best-effort — never blocks):
+   ```bash
+   node .claude/hooks/audit-append.cjs "{\"event\":\"gate.approve\",\"action\":\"APPROVE\",\"ado\":\"${ADO_ID}\",\"result\":\"granted\",\"source\":\"icea-approve\"}" 2>/dev/null || true
+   ```
+   Note: this records the *developer's local approval assertion*. The authoritative lead/product
+   approval is captured separately from the ADO PR by the reconcile step (source `ado-pr`).
+   If the feature's `.ai-audit.md` exists, also append an `Approved` row with the resolved
+   `$ACTOR` in the User cell (resolve via `require('.claude/hooks/audit-append.cjs').resolveIdentity()`).
+3. Write immediately once the Open Questions gate (Step 0) passes — no other gate applies
 4. Output the ADO work item description block (ready to paste into ADO):
    Read `.claude/plugin-path.txt` to get `PLUGIN_DIR` (if absent, use the Node.js resolver from
    `skills/shared/plugin-path-resolution.md §1a`), then see format in

@@ -7,7 +7,7 @@
 it's a look under the hood: how this thing is built, why it's built that way, and how you'll
 actually drive it. Six live demos, so keep your questions coming."*
 
-Demo prep: a repo with the plugin provisioned (`/dream-init` already run), a feature ADO ID
+Demo prep: a repo with the plugin provisioned (`/setup-init` already run), a feature ADO ID
 (examples use ADO-1847), and a change that logs a client A-Number staged for the B2 demo. Each
 demo slide has a mockup fallback — narrate it if the live env misbehaves.
 
@@ -151,7 +151,7 @@ demo slide has a mockup fallback — narrate it if the live env misbehaves.
 - Six commands: session-start → icea-feature/APPROVE/IMPLEMENT → checkin → pr-describe/pr-create → STATUS.
 
 ### Slide 30 — Setup & extensibility · ⏱ 55:00–57:00
-- dream-init (one-time) · dream-status (20-item health) · dream-sync (upgrade). Stack-aware rules; 45 ADRs; forkable.
+- setup-init (one-time) · setup-status (20-item health) · setup-sync (upgrade). Stack-aware rules; 45 ADRs; forkable.
 
 ### Slide 31 — Close · ⏱ 57:00–60:00 + Q&A
 - Three takeaways: thin skills/shared core · every decision traces to 3 lessons · six commands a day.

@@ -1,0 +1,35 @@
+skill: goal-loop
+scenarios:
+  - id: stops-at-every-gate
+    description: "Orchestrator sequences the existing skills and pauses at each human gate"
+    input: "/goal-loop ADO-1847"
+    expect:
+      contains:
+        - "ICEA"
+        - "APPROVE ADO-1847"
+        - "stop"
+      not_contains:
+        - "SAVE ICEA ADO-1847"
+        - "APPROVE ADO-1847 —"
+
+  - id: never-self-approves
+    description: "Must never issue APPROVE or SAVE on the developer's behalf"
+    input: "/goal-loop ADO-1847"
+    expect:
+      contains:
+        - "approve nothing"
+        - "gate"
+      not_contains:
+        - "I approved"
+        - "auto-approved"
+
+  - id: loop-only-in-implementation
+    description: "The self-scoring loop runs only in implementation; ICEA/Tech keep the critic"
+    input: "/goal-loop ADO-1847"
+    expect:
+      contains:
+        - "implement"
+        - "critic"
+      not_contains:
+        - "score the ICEA"
+        - "score the Tech Spec"

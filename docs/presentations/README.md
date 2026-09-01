@@ -77,7 +77,7 @@ Each file's slide numbers line up 1:1 with the deck; time cues sum to the stated
 ## Live demos (developer decks)
 
 Demo slides are marked with a **🎬 DEMO** banner and a scripted walkthrough (steps + expected
-result). To run them live you need a repo with the plugin provisioned (`/dream-init` already run);
+result). To run them live you need a repo with the plugin provisioned (`/setup-init` already run);
 for the B2 severity demo, stage a change that logs a client identifier. If the environment isn't
 available, each demo slide pairs the script with an on-slide mockup — just narrate it. The
 **Leaders** and **Personas** decks have no live demos by design.

@@ -68,6 +68,7 @@ process.stdin.on('end', () => {
   if (content.includes(REVIEW_MARKER)) process.exit(0);
 
   // Block
+  try { require('./audit-append.cjs').appendEvent({ event: 'gate.block', action: 'script-review-gate', path: filePath, result: 'blocked', source: 'PreToolUse' }); } catch (e) { /* best-effort */ }
   process.stderr.write(BLOCK_MSG + '\n');
   process.exit(2);
 });

@@ -200,6 +200,43 @@ Nothing reaches disk while verdict is REVISE.
 
 ---
 
+## Step 4b — AC self-scoring goal-loop (completeness gate)
+
+Step 4a asks *is the code sound?* Step 4b asks *does the code satisfy every
+Acceptance Criterion this story owns?* — the completeness counterpart to the
+critic's quality check. It runs on the in-context code, still before any disk
+write, and it **augments** 4a; it does not replace it.
+
+Run the bounded goal-loop engine:
+
+```
+Read .claude/plugin-path.txt to get PLUGIN_DIR (if absent, use §1a resolver), then
+Read $PLUGIN_DIR/skills/shared/goal-loop-spec.md and run the engine with:
+  goal       = the ICEA Goal one-liner
+  rubric     = the pending ACs for this story, taken VERBATIM from the ICEA
+               Acceptance section / tracker (id + text + functional|non-functional)
+  artifact   = the in-context generated code from Step 4
+  regenerate = re-run Step 4 code generation addressing each `remaining`,
+               then re-run Step 4a (critic) on the result
+  ceilings   = { maxIterations: 3 }
+```
+
+- The engine and the Step 4a critic share **one** iteration budget — one iteration
+  is `regenerate → critic (4a) → self-score`. This keeps the ceiling meaningful and
+  avoids nesting two bounded loops (goal-loop-spec §"Composing with the critic").
+- The self-score is **Category C** — it reads only the in-context code and the
+  rubric, never source from disk, and writes nothing (`rubric-score-schema.md`).
+- **Goal met** (`percentDone == 100`, no blocking ACs) → proceed to Step 5.
+- **Escalation** (ceiling or no progress) surfaces `ACCEPT AS-IS / GUIDE / HALT`
+  per the engine. On `ACCEPT AS-IS`, the unmet ACs are carried into the Step 5
+  WRITE PENDING prompt so partial completion is explicit at approval. On `HALT`,
+  write nothing.
+
+The loop never writes and never issues `APPROVE` — it stops AT the Write Gate.
+Nothing reaches disk until Step 5.
+
+---
+
 ## Step 5 — Write Gate (source code only)
 
 Present all files to be written:
@@ -215,6 +252,10 @@ Present all files to be written:
   Test files:
   [N] {path/to/test}  — {AC reference} positive + negative cases
   ...
+
+  {If Step 4b exited via ACCEPT AS-IS, list carried-forward unmet ACs so partial
+   completion is explicit at approval:}
+  ⚠ Unmet ACs at {percentDone}%: {AC-id — what remains}, …
 ```
 
 Write only after receiving `APPROVE ADO-{ADO_ID}`.
@@ -244,3 +285,34 @@ Confirm:
    {If all ACs done:}
    All ACs complete. ICEA marked COMPLETE.
 ```
+
+Then run the pre-commit gate below (Step 7) before handing off.
+
+---
+
+## Step 7 — Post-write gate: stage written files, then checkin (advisory)
+
+Run the pre-commit gate on the just-written code while context is fresh. This composes the
+`checkin` skill — do not reimplement its checks.
+
+1. **Stage the written set first (critical).** The files just written include NEW files,
+   which are untracked and therefore invisible to checkin's `git diff` scope. Stage exactly
+   the set from Step 5 (the Write-Gate file list) so every new + modified file is scanned:
+   ```bash
+   git add {file 1} {file 2} … {test files}   # the exact Write-Gate set — never `git add -A`
+   ```
+2. **Invoke checkin:**
+   ```
+   Read .claude/plugin-path.txt to get PLUGIN_DIR (if absent, use §1a resolver), then
+   Read $PLUGIN_DIR/skills/checkin/SKILL.md and execute it in full against the staged set.
+   ```
+3. **Advisory only — NEVER auto-commit.** checkin only *suggests* a commit command;
+   icea-implement must not run it (Write-Gate philosophy — the developer commits):
+   - checkin ✅ / ⚠ → surface its verdict + the suggested commit command, then stop.
+   - checkin ❌ FAIL → do NOT hard-block (there is no commit to block yet). Enter a
+     generate→gate→fix loop: fix the flagged findings (re-enter Step 4 → 4a → 5 Write Gate
+     for the fix), re-stage, re-run checkin. Report each pass.
+
+Complementary to the pre-write gates: 4a (critic) checks intent-alignment and 4b
+(goal-loop) checks AC completeness — both PRE-write; checkin checks defects / secrets /
+findings POST-write. Keep all three.

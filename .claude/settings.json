@@ -54,6 +54,14 @@
             "command": "node .claude/hooks/context-budget-icea-save.cjs"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/audit-prompt.cjs"
+          }
+        ]
       }
     ],
     "PostToolUse": [

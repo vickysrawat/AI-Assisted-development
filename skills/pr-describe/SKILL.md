@@ -11,7 +11,7 @@ description: >
 
 # PR Description Skill
 
-_Skill version: 1.1 · Last changed: 2026-08-27 · Plugin compatibility: ≥1.14.0 · Consent: C_
+_Skill version: 1.2 · Last changed: 2026-08-28 · Plugin compatibility: ≥1.14.0 · Consent: C_
 ## Purpose
 Generate a structured, ICEA-traceable PR description that maps every code change
 to an Acceptance Criterion, flags scope creep, and gives reviewers a clear
@@ -79,10 +79,12 @@ Read the full diff (same `{base-branch}` resolved in Step 1):
 !git diff {base-branch}..HEAD
 ```
 
-For each changed file, identify:
-- Which layer it belongs to (Angular / .NET / Node.js / DB / Tests / Config)
-- Which Acceptance Criterion it implements (AC-F1, AC-F2, AC-NF1, etc.)
-- Whether it introduces any behaviour NOT described in the ICEA
+Apply the shared mapping in
+`$PLUGIN_DIR/skills/shared/traceability-mapping-spec.md` to build the diff↔AC
+correspondence (both directions). For each changed file additionally note which
+layer it belongs to (Angular / .NET / Node.js / DB / Tests / Config). The shared
+spec defines the status vocabulary, evidence rules, and scope-creep detection —
+do not restate them here.
 
 ### Step 4 — Generate the PR Description
 
@@ -94,20 +96,10 @@ If a section genuinely has no content, write "N/A — not applicable for this ch
 
 ### Step 5 — Flag Scope Creep
 
-After the description, check every changed file against the ICEA.
-If any change implements behaviour not described in any AC or Example, output:
-
-```
-⚠️ SCOPE CREEP DETECTED
-The following changes are not covered by any ICEA Acceptance Criterion:
-- [file path]: [what it does that isn't in the ICEA]
-Action required: either add an AC to the ICEA or remove this change.
-```
-
-If no scope creep found:
-```
-✅ Scope check passed — all changes map to ICEA Acceptance Criteria
-```
+After the description, run the **code → requirement** direction from
+`$PLUGIN_DIR/skills/shared/traceability-mapping-spec.md` and emit its
+**Scope-creep output** block verbatim (the ⚠️ SCOPE CREEP / ✅ Scope check passed
+forms). Do not maintain a local copy of that wording.
 
 ### Step 6 — Self-Review Checklist
 

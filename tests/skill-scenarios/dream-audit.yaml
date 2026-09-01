@@ -1,0 +1,17 @@
+skill: dream-audit
+scenarios:
+  - id: trigger-audit
+    description: "Should run the memory quality audit and report citation/contradiction/rollback signals"
+    input: "Run /dream-audit"
+    expect:
+      triggered: true
+      contains:
+        - "audit"
+
+  - id: read-only
+    description: "Must not modify memory files — audit only, feeds hints back to dream"
+    input: "Run /dream-audit on a project with topic files and a dream-log."
+    expect:
+      triggered: true
+      not_contains:
+        - "PROMOTE"

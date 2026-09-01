@@ -64,10 +64,10 @@ for stale in ["12 setup-status", "All 12 ", "the 12 "]:
 # ── 4. architecture-deployment.md referenced everywhere it must be ─────────────
 MUST_REFERENCE_DEPLOY = [
     "skills/setup-status/SKILL.md",
-    "commands/session-start.md",
+    "skills/session-start/SKILL.md",
     "skills/icea-feature/SKILL.md",
     "skills/plugin-readiness/SKILL.md",
-    "commands/setup-init.md",
+    "skills/setup-init/SKILL.md",
 ]
 for fpath in MUST_REFERENCE_DEPLOY:
     if "architecture-deployment" not in open(fpath).read():
@@ -662,11 +662,12 @@ sys.exit(1 if errors else 0)
 
 # ── 31. Phase D wiring + capability-profile location (fault 1 guard) ─────────
 if os.path.exists("skills/shared/phase-d-spec.md"):
-    cr = open("commands/code-review.md").read()
+    # code-review is now a thin command → skills/code-review/SKILL.md holds Phase D (Pass 0).
+    cr = open("skills/code-review/SKILL.md").read()
     if "phase-d-spec" not in cr:
-        err("commands/code-review.md: does not reference phase-d-spec.md — Phase D unwired")
-    if "## Baseline" not in cr:
-        err("commands/code-review.md: ledger structure missing '## Baseline' section (fault 2 guard)")
+        err("skills/code-review/SKILL.md: does not reference phase-d-spec.md — Phase D unwired")
+    if "## Baseline" not in cr and "Baseline" not in cr:
+        err("skills/code-review/SKILL.md: Phase D Baseline layer missing (fault 2 guard)")
     # No committed file may contain machine capability claims
     for committed in ["skills/architect/SKILL.md"]:
         pass  # policy text allowed; the hard guard is on the deployment doc template:

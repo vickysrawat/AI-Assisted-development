@@ -204,6 +204,18 @@ those live in the command reference table below.
 | `icea-revise` | C | Reads existing ICEA/Tech Spec docs only — never reads application source |
 | `icea-status` | C | Reads ICEA state and tracker only — never reads application source |
 | `setup-sync` | C | Reads plugin state and runs the bootstrap script only — never reads application source |
+| `dream` | C | Session history + memory files only — never reads source |
+| `dream-health` | C | Memory files only — never reads source |
+| `dismiss` | C | Reads/writes finding ledgers only — never reads source |
+| `fix` | A | Reads only the one file named in the finding; announces before the str_replace |
+| `bug` | B | Gate before each file read after the Bug Spec is approved |
+| `update-arch` | B | Gate before reading changed entry-point files (targeted architecture refresh) |
+| `gitignore-sync` | C | Ignore-file + VCS management only — never reads source |
+| `goal-loop` | C | Orchestrator — reads ICEA/tracker/state + architecture docs only; sequenced skills apply their own gates (icea-implement is B) |
+| `explain` | B | Architecture docs + knowledge graph first; gate before reading any source file |
+| `dream-audit` | C | Reads memory files only — never reads source |
+| `session-start` | C | Architecture docs + memory only — never reads source |
+| `setup-init` | C | Provisioning/orchestration only — never reads application source |
 
 ### Command reference (informational — not validator-checked)
 

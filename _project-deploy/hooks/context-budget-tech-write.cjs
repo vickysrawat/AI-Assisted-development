@@ -8,6 +8,11 @@
 const fs   = require('fs');
 const path = require('path');
 
+// Best-effort governance-audit append — never blocks the gate.
+function auditBlock(noun, filePath) {
+  try { require('./audit-append.cjs').appendEvent({ event: 'gate.block', action: 'context-budget', path: filePath, result: 'blocked', source: 'PreToolUse', detail: noun }); } catch (e) { /* best-effort */ }
+}
+
 // DECISION: dispatch table — first match wins, enables per-type thresholds and force flags.
 // Rejected: nested if/else — harder to extend, harder to test each rule independently.
 const RULES = [
@@ -183,6 +188,7 @@ process.stdin.on('end', () => {
       `             ${flagNote}\n` +
       `             The document will be saved as-is with placeholder gaps.\n`
     );
+    auditBlock(noun, filePath);
     process.exit(2);
   }
 
@@ -210,6 +216,7 @@ process.stdin.on('end', () => {
         `             ${flagNote}\n` +
         `             The document will be saved as-is with incomplete content.\n`
       );
+      auditBlock(noun, filePath);
       process.exit(2);
     }
   }
@@ -239,6 +246,7 @@ process.stdin.on('end', () => {
         `             ${flagNote}\n` +
         `             The document will be saved with missing sections.\n`
       );
+      auditBlock(noun, filePath);
       process.exit(2);
     }
   }

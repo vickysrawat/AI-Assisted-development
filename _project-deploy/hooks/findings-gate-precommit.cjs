@@ -10,8 +10,22 @@ const fs              = require('fs');
 const path            = require('path');
 const { spawnSync }   = require('child_process');
 
+// Best-effort governance-audit append — never blocks the commit.
+function audit(evt) { try { require('./audit-append.cjs').appendEvent(evt); } catch (e) { /* best-effort */ } }
+
 if (process.env.SKIP_FINDINGS_GATE === '1') {
-  console.log('⚠ SKIP_FINDINGS_GATE=1 — findings gate bypassed for this commit');
+  // A bypass must carry a justification — the error message IS the ask (a pre-commit hook
+  // cannot prompt-and-wait interactively).
+  const justification = (process.env.FINDINGS_GATE_JUSTIFICATION || '').trim();
+  if (!justification) {
+    process.stderr.write(
+      '\n❌ SKIP_FINDINGS_GATE=1 requires a justification.\n' +
+      '   Set FINDINGS_GATE_JUSTIFICATION="reason" to bypass, e.g.:\n' +
+      '   SKIP_FINDINGS_GATE=1 FINDINGS_GATE_JUSTIFICATION="hotfix CVE waiver ADO-1234" git commit ...\n\n');
+    process.exit(1);
+  }
+  audit({ event: 'gate.bypass', action: 'SKIP_FINDINGS_GATE', result: 'granted', source: 'pre-commit', detail: justification });
+  console.log('⚠ SKIP_FINDINGS_GATE=1 — findings gate bypassed (justification logged to the audit trail)');
   process.exit(0);
 }
 
@@ -19,7 +33,10 @@ if (process.env.SKIP_FINDINGS_GATE === '1') {
 const secretsHook = path.join('.claude', 'hooks', 'check-settings-secrets.cjs');
 if (fs.existsSync(secretsHook)) {
   const r = spawnSync(process.execPath, [secretsHook, '--staged'], { stdio: 'inherit' });
-  if (r.status !== 0) process.exit(r.status || 1);
+  if (r.status !== 0) {
+    audit({ event: 'gate.block', action: 'secrets-guard', result: 'blocked', source: 'pre-commit' });
+    process.exit(r.status || 1);
+  }
 }
 
 // Parse ledger files for open Critical/High findings
@@ -46,9 +63,10 @@ for (const ledger of LEDGERS) {
 }
 
 if (total > 0) {
+  audit({ event: 'gate.block', action: 'findings-gate', result: 'blocked', source: 'pre-commit', detail: total + ' open Critical/High' });
   process.stderr.write('\n❌ COMMIT BLOCKED: ' + total + ' open Critical/High finding(s) must be resolved before committing.\n');
   openFindings.forEach(f => process.stderr.write('  ' + f.ledger + ': ' + f.title + '\n'));
-  process.stderr.write('\nResolve findings or set SKIP_FINDINGS_GATE=1 to bypass (requires documented justification).\n\n');
+  process.stderr.write('\nResolve findings or set SKIP_FINDINGS_GATE=1 (with FINDINGS_GATE_JUSTIFICATION="reason") to bypass.\n\n');
   process.exit(1);
 }
 process.exit(0);

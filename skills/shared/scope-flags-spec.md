@@ -1,5 +1,5 @@
 # Scope Flags Specification
-_Spec version: 1.4 · Last changed: 2026-06-03 · Compatible skill versions: code-review ≥1.2.0, security ≥1.2.0_
+_Spec version: 1.5 · Last changed: 2026-08-28 · Compatible skill versions: code-review ≥1.2.0, security ≥1.2.0_
 
 
 Shared by: `code-review`, `security`
@@ -218,6 +218,8 @@ Skills that require flags outside the standard set (`--changed`, `--pr`, `--full
 | `--quick` | `app-readiness` | Phases 1–2 only — infrastructure + architecture checks, no source reads | Faster than default; recommended for routine health checks |
 | `--full` (app-readiness variant) | `app-readiness` | All 8 phases including targeted source reads for Red domains | Distinct from the standard `--full` (which means "scan all files ignoring cache") — semantics differ because app-readiness is not a file scanner |
 | `--deployment` | `update-arch` | Skip Steps 1–7; run only architect Step 0.5 deployment questionnaire | Re-captures hosting/auth context to `architecture-deployment.md` |
+| `--icea-only` | `pr-spec-review` | Restrict compliance scope to ICEA acceptance criteria (skip Tech Spec design checks) | Default scope is ICEA + Tech Spec; `icea-review` is an alias for this flag |
+| `--compact` | `pr-spec-review` | Emit only the compact verdict block instead of the four-part report | Used by the `pr-create` and `checkin` gates |
 
 > Standard `--full` (file scanner semantics) and app-readiness `--full` (phase selector
 > semantics) share a name but differ in behaviour. The distinction is local to each skill.

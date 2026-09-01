@@ -19,7 +19,7 @@ _Skill version: 1.4 · Last changed: 2026-08-27 · Consent: B_
 Submit a Pull Request to Azure DevOps (ADO REST API) or GitHub (GitHub REST API /
 `gh`), or produce a complete PR draft artifact for manual submission. The git remote
 provider is auto-detected (Step 0.5) and only the *transport* (endpoint, auth, base
-branch, URLs) differs — the work-item ID, ICEA gate, and findings gate are identical
+branch, URLs) differs — the work-item ID, ICEA gate, secrets gate, and findings gate are identical
 on both. This skill completes the end-to-end PR workflow:
 `pr-describe` → `pr-create` → `pr-spec-review`.
 
@@ -146,29 +146,30 @@ Always runs. No connection required.
 git diff <base-branch>..HEAD --stat
 ```
 
-Invoke the `icea-review` skill:
+Invoke the single compliance engine `pr-spec-review` in compact mode:
 
 ```
 Read .claude/plugin-path.txt to get PLUGIN_DIR (if absent, use §1a resolver), then
-Read $PLUGIN_DIR/skills/icea-review/SKILL.md and run it against the current branch
-diff and the ICEA document identified in Step 1. Produce a compact verdict only —
-omit the full detail report at this stage.
+Read $PLUGIN_DIR/skills/pr-spec-review/SKILL.md and run it against the current branch
+diff. Scope: ICEA + Tech Spec when an approved `ADO-{ID}-*.techspec.md` exists for this
+ADO ID, else `--icea-only`. Output: `--compact` (verdict block only — omit the four-part
+report at this stage).
 ```
 
 **Based on the verdict:**
 
 | Verdict | Action |
 |---|---|
-| ✅ READY FOR REVIEW | Proceed to Step 3 |
-| ⚠️ NEEDS WORK BEFORE REVIEW | Carry warnings forward to Step 6 prompt — non-blocking |
-| ❌ BLOCKED | Stop entirely. Do not proceed to findings gate or ADO prompt. |
+| ✅ PASS | Proceed to Step 2b |
+| ⚠️ WARN | Carry warnings forward to Step 6 prompt — non-blocking |
+| ❌ FAIL | Stop entirely. Do not proceed to secrets/findings gate or ADO prompt. |
 
-**On BLOCKED:**
+**On FAIL:**
 
 ```
 ❌ PR CREATION BLOCKED — ICEA compliance check failed
 
-  {list of Critical findings from icea-review}
+  {list of Critical findings from pr-spec-review}
 
 Required action:
   Fix the above issues OR update the ICEA to cover them before creating the PR.
@@ -183,6 +184,27 @@ PR description and the draft artifact:
 ```
 ⚠️ ICEA compliance check bypassed by developer.
 ```
+
+---
+
+## Step 2b — Secrets gate (hard, non-skippable)
+
+Always runs. No connection required. There is **no** override flag — a pushed credential is
+irreversible; `--skip-icea-check` / `--skip-security-gate` do NOT bypass this gate.
+
+Load `$PLUGIN_DIR/skills/shared/secrets-scan-spec.md` and run its canonical functions verbatim
+against the branch diff (the spec's `pr-create` invocation):
+
+```bash
+changed=$(git diff --name-only <base-branch>..HEAD)
+sens=$(printf '%s\n' "$changed" | scan_sensitive_paths)
+data=$(printf '%s\n' "$changed" | scan_static_dir_paths)
+hits=$(git diff <base-branch>..HEAD | scan_secret_content)
+```
+
+If any of `$sens` / `$hits` / `$data` is non-empty → STOP. Emit the spec's **pr-create** output
+block and do not proceed to the findings gate or ADO prompt. Otherwise carry `Secrets: ✅ clean`
+forward to Step 5.
 
 ---
 
@@ -227,7 +249,8 @@ Step 0.5 — "Azure DevOps" or "GitHub"):
 ```
 📋 Pre-submission summary
   Provider        : <Azure DevOps | GitHub>
-  ICEA compliance : ✅ READY FOR REVIEW  (or ⚠️ N warnings)
+  Spec compliance : ✅ PASS  (or ⚠️ N warnings)   ← pr-spec-review --compact
+  Secrets         : ✅ clean
   Open findings   : N Critical/High across all ledgers  (or: ✅ None)
 
 Connect to <provider> and submit the PR, or save a PR draft for manual submission?
@@ -373,7 +396,13 @@ curl -s --ssl-no-revoke -4 -w "\n%{http_code}" -X POST \
     "workItemRefs": [{"id": "{work-item-id}"}]
   }'
 ```
-- HTTP 201 → extract `.pullRequestId` — proceed to Step 9.
+- HTTP 201 → extract `.pullRequestId` — record the ADO↔PR link in the governance audit trail
+  (best-effort, never blocks), then proceed to Step 9:
+  ```bash
+  node .claude/hooks/audit-append.cjs "{\"event\":\"pr.linked\",\"ado\":\"${ADO_ID}\",\"pr_id\":${PR_ID},\"repo\":\"{repo}\",\"result\":\"created\",\"source\":\"pr-create\"}" 2>/dev/null || true
+  ```
+  This link lets the reconcile step (in /sprint-metrics) later attach the ADO-verified
+  lead/product approver votes to this ADO id.
 - HTTP 409 (PR already exists) → print the conflict message and stop.
 - Any other status → extract `.message`, show error, suggest `$PLUGIN_DIR/skills/pr-create/references/ado-api-guide.md`.
 
@@ -499,7 +528,8 @@ Open this URL in a browser — source branch, target branch, and title will be p
 
 | Check | Result |
 |---|---|
-| ICEA compliance | <verdict> |
+| Spec compliance (pr-spec-review) | <verdict> |
+| Secrets gate | <✅ clean> |
 | Open Critical/High findings | <N across all ledgers, or: None> |
 
 <If accepted-risk dismissals exist:>
@@ -583,7 +613,7 @@ results are the only sources of truth; never bypass a failing gate silently (sub
 ## Source file consent
 
 This skill is **Category B** — it reads git diffs directly (Steps 1–2) and
-invokes `icea-review` which may request source file access under its own Category B
+invokes `pr-spec-review` which may request source file access under its own Category B
 gate. `pr-create` does not open additional source files beyond the diff.
 
 See `$PLUGIN_DIR/skills/shared/source-file-consent.md` for the full consent spec.
@@ -603,9 +633,10 @@ immigration identifiers, or other B1–B7 categories without acknowledgement.
 
 - NEVER store, echo, or log the credential value (PAT / token) at any point
 - ALWAYS detect the git remote provider (Step 0.5) before any submit; `{provider} = other` is draft-only
-- NEVER produce a PR artifact (submitted or draft) without running Steps 2 and 3 first
-- NEVER skip the compliance check or findings gate — both run on both paths
-- NEVER proceed past a BLOCKED icea-review verdict unless `--skip-icea-check` is present
+- NEVER produce a PR artifact (submitted or draft) without running Steps 2, 2b, and 3 first
+- NEVER skip the compliance check, secrets gate, or findings gate — all run on both paths
+- NEVER proceed past a FAIL pr-spec-review verdict unless `--skip-icea-check` is present
+- NEVER bypass the secrets gate (Step 2b) — it has no override flag
 - NEVER default the connect/draft question — wait for explicit developer input
 - NEVER write the draft artifact with a partial path — both Release ID and Sprint ID required
 - NEVER create the PR without explicit "yes" at Step 7 confirmation

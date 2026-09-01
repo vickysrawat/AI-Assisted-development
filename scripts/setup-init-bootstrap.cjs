@@ -184,8 +184,12 @@ const HOOK_FILES = [
   // Always-node (not shell-dependent)
   'check-settings-secrets.cjs',
   'context-budget-tech-write.cjs',
+  'script-review-gate.cjs',
+  'audit-append.cjs',
+  'audit-prompt.cjs',
   'validate-ledgers.py',
   'validate-pr-compliance.py',
+  'validate-audit.py',
 ];
 
 // SYNC WITH: commands/gitignore-sync.md Step 1 — BASE array must be identical.
@@ -215,6 +219,10 @@ const GITIGNORE_BASE = [
   'prod-readiness/',                    // regenerable point-in-time reports
   'temp/',
   '.claude/plugin-path.txt',
+  // Per-machine identity cache written by /session-start (git email, AD UPN, ADO principalName).
+  // Machine-local like plugin-path.txt — never shared. The audit shards under .claude/audit/
+  // are intentionally NOT listed here: they must be committed for the append-only CI check.
+  '.claude/session-context.json',
   // S14: the module skeleton is a transient build artifact — .claude/graph/ is otherwise
   // committed, so this dotfile must be explicitly excluded.
   '.claude/graph/.module-skeleton.json',
@@ -953,6 +961,17 @@ function stepWireSettings(manifest, shellType) {
       if (settings.hooks.Stop.length === 0) delete settings.hooks.Stop;
     }
 
+    // ── UserPromptSubmit: audit-prompt (always node — governance-verb audit trail) ──
+    const auditPromptWired = settings.hooks.UserPromptSubmit.some(
+      h => h.hooks && h.hooks.some(x => x.command && x.command.includes('audit-prompt.cjs'))
+    );
+    if (!auditPromptWired) {
+      settings.hooks.UserPromptSubmit.push({
+        hooks: [{ type: 'command', command: 'node .claude/hooks/audit-prompt.cjs' }],
+      });
+      wired = true;
+    }
+
     // ── PostToolUse: memory-log ───────────────────────────────────────────────────
     if (!settings.hooks.PostToolUse) settings.hooks.PostToolUse = [];
     const expectedMemLogCmd = hookCmd('memory-log', shellType);
@@ -974,7 +993,7 @@ function stepWireSettings(manifest, shellType) {
     settings.customInstructions = 'Response style: suppress preambles and plan-restatement before tool calls. When writing to existing files, show only a unified diff (changed lines + 3 lines of context) rather than the full file content. When writing new files, show the full content. Never echo generated file content to chat if the content is also being written to disk.';
   }
   atomicWrite(settingsPath, JSON.stringify(settings, null, 2));
-  console.log('  ✓ settings.json: PreToolUse (icea-floor + secret-guard + script-review-gate + context-budget-tech-write) + UserPromptSubmit (memory-capture) + PostToolUse (memory-log) hooks '
+  console.log('  ✓ settings.json: PreToolUse (icea-floor + secret-guard + script-review-gate + context-budget-tech-write) + UserPromptSubmit (memory-capture + audit-prompt) + PostToolUse (memory-log) hooks '
     + (NO_HOOKS ? 'skipped (--no-hooks)' : (wired ? 'added' : 'already present')));
   console.log('  ✓ settings.json: autoMemoryEnabled '
     + (autoMemSet ? 'set to false (Dream owns repo memory/)' : 'left as-is (developer override)'));
@@ -1605,6 +1624,7 @@ function printSummary(manifest) {
     console.log('  📋 Add to your ADO pipeline (server-side authoritative gates — ADR 0009):');
     console.log('       - script: python3 .claude/hooks/validate-ledgers.py');
     console.log('       - script: python3 .claude/hooks/validate-pr-compliance.py');
+    console.log('       - script: python3 .claude/hooks/validate-audit.py');
     console.log('     Then make this pipeline a required Build Validation in branch policy.');
   }
   console.log('');

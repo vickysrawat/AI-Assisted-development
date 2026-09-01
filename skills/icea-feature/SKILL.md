@@ -329,10 +329,16 @@ Initial content:
 # AI Audit Trail — {Feature Name}
 ADO #{ADO_ID} · Release {RELEASE_ID} · Sprint {SPRINT_ID}
 
-| # | Date | Event | Triggered by | Summary |
-|---|---|---|---|---|
-| 1 | {YYYY-MM-DD} | Plan generated | SAVE PLAN | {one-line summary of plan scope} |
+| # | Date | User | Event | Triggered by | Summary |
+|---|---|---|---|---|---|
+| 1 | {YYYY-MM-DD} | {actor} | Plan generated | SAVE PLAN | {one-line summary of plan scope} |
 ```
+
+`{actor}` is the resolved identity — get it once with:
+```bash
+ACTOR=$(node -e "const i=require('.claude/hooks/audit-append.cjs').resolveIdentity();console.log(i.verified_actor||i.os_user||'UNRESOLVED')" 2>/dev/null || echo "UNRESOLVED")
+```
+Use `$ACTOR` for the User cell in every row you append below.
 
 Confirm and immediately proceed to Step 5:
 ```
@@ -389,6 +395,12 @@ Populate from the plan automatically — never re-ask answered questions:
 | Assumptions | Acceptance: Assumptions |
 | Risks + Pre-mortem | Acceptance: Risks & Pre-Mortem |
 | Dependencies | Acceptance: Dependencies |
+| Open Questions | Acceptance: Open Questions (product/stakeholder items only — unresolved ones block Sign-Off at approval) |
+
+Seed the **Context: Constraint Context** table (no direct plan source) from the authorization
+model (`architecture-security.md`), documented NFR/compliance limits (`architecture-deployment.md`
+› Non-Functional Requirements & Constraints), and active project rules (e.g. Dapper-only data
+access). If none apply, write "None identified."
 
 Remaining gaps ([?]) should only be system-context items not answerable
 from the plan — change tier, specific components, auth policy, error messages.
@@ -518,9 +530,14 @@ Append to the AI audit trail file:
 ```bash
 AUDIT_FILE="docs/Release${RELEASE_ID}/Sprint${SPRINT_ID}/UserStory${ADO_ID}/ADO-${ADO_ID}-{feature}.ai-audit.md"
 ```
-Append row:
+Append row (include the resolved `$ACTOR` in the User cell):
 ```
-| {next #} | {YYYY-MM-DD} | ICEA drafted | SAVE ICEA | Critic: {PASS/PASS WITH NOTES/REVISE+ACCEPT} |
+| {next #} | {YYYY-MM-DD} | {actor} | ICEA drafted | SAVE ICEA | Critic: {PASS/PASS WITH NOTES/REVISE+ACCEPT} |
+```
+If this save used `SAVE ICEA ADO-{ADO_ID} ACCEPT` (critic REVISE overridden), also record the
+outcome in the governance audit trail:
+```bash
+node .claude/hooks/audit-append.cjs "{\"event\":\"gate.bypass\",\"action\":\"SAVE ICEA ACCEPT\",\"ado\":\"${ADO_ID}\",\"result\":\"granted\",\"source\":\"icea-feature\",\"detail\":\"critic REVISE overridden\"}" 2>/dev/null || true
 ```
 
 Confirm and immediately proceed to Step 8:
@@ -648,10 +665,10 @@ selection or tech spec generation:
 
 | Token | ⛔ Hard stop message |
 |---|---|
-| `err_missing` | "`.claude/dream-init-state.json` not found. Run `/dream-init` to initialise the project, then re-run `TECH ADO-{ID}`." |
-| `err_malformed` | "`.claude/dream-init-state.json` contains invalid JSON — do NOT run `/dream-init` (risks overwriting config). Open the file and fix the syntax error, then re-run `TECH ADO-{ID}`." |
+| `err_missing` | "`.claude/dream-init-state.json` not found. Run `/setup-init` to initialise the project, then re-run `TECH ADO-{ID}`." |
+| `err_malformed` | "`.claude/dream-init-state.json` contains invalid JSON — do NOT run `/setup-init` (risks overwriting config). Open the file and fix the syntax error, then re-run `TECH ADO-{ID}`." |
 | `err_permission` | "`.claude/dream-init-state.json` exists but cannot be read. Check file permissions, then re-run `TECH ADO-{ID}`." |
-| `err_empty` | "`.claude/dream-init-state.json` has no detected stacks. Run `/graph-sync` to re-detect, or `/dream-init` if the project was never fully initialised." |
+| `err_empty` | "`.claude/dream-init-state.json` has no detected stacks. Run `/graph-sync` to re-detect, or `/setup-init` if the project was never fully initialised." |
 
 Select overlay based on all_stacks (primary ∪ external):
 
@@ -1096,9 +1113,13 @@ docs/Release{RELEASE_ID}/Sprint{SPRINT_ID}/UserStory{ADO_ID}/
    ```bash
    AUDIT_FILE="docs/Release${RELEASE_ID}/Sprint${SPRINT_ID}/UserStory${ADO_ID}/ADO-${ADO_ID}-{feature}.ai-audit.md"
    ```
-   Append row:
+   Append row (include the resolved `$ACTOR` in the User cell):
    ```
-   | {next #} | {YYYY-MM-DD} | Tech Spec drafted | SAVE TECH | Critic: {PASS/PASS WITH NOTES/REVISE+ACCEPT} |
+   | {next #} | {YYYY-MM-DD} | {actor} | Tech Spec drafted | SAVE TECH | Critic: {PASS/PASS WITH NOTES/REVISE+ACCEPT} |
+   ```
+   If this save used `SAVE TECH ADO-{ADO_ID} ACCEPT` (critic REVISE overridden), also log the outcome:
+   ```bash
+   node .claude/hooks/audit-append.cjs "{\"event\":\"gate.bypass\",\"action\":\"SAVE TECH ACCEPT\",\"ado\":\"${ADO_ID}\",\"result\":\"granted\",\"source\":\"icea-feature\",\"detail\":\"critic REVISE overridden\"}" 2>/dev/null || true
    ```
 
 6. Clean up any remaining temp files for this ADO:
@@ -1319,8 +1340,13 @@ transparency). Never name the persona in any artifact — note this is distinct 
 - ALWAYS clean up temp files on SAVE TECH (rm -f temp/ADO-{ID}-icea.md temp/ADO-{ID}-tech.md)
 - ALWAYS run the context budget check at the start of Step 8 before reading any template files
 - ALWAYS write temp/ADO-{ID}-tech-force.flag BEFORE the tech spec write when developer uses FORCE — the Write gate hook requires this sentinel file
-- If developer uses /skip-icea, warn once then proceed:
+- If developer uses /skip-icea: it now REQUIRES a justification. If none was given, ask for the
+  reason and do NOT proceed until answered (the audit-prompt hook injects this reminder too).
+  Once a reason is given, warn once, log the outcome, then proceed:
   "⚠ Skipping ICEA gate. This is not recommended. Proceeding without ICEA."
+  ```bash
+  node .claude/hooks/audit-append.cjs "{\"event\":\"gate.bypass\",\"action\":\"skip-icea\",\"ado\":\"${ADO_ID:-unknown}\",\"result\":\"granted\",\"source\":\"icea-feature\",\"detail\":\"<the developer's justification>\"}" 2>/dev/null || true
+  ```
 
 ---
 

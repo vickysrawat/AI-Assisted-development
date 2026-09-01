@@ -165,12 +165,16 @@ findings tied to a specific section or AC — never vague commentary.
 
 | Dimension | The question the critic asks |
 |---|---|
-| **Conformance** | Does the draft contain every mandatory section and sub-table from `../icea-feature/references/icea-template.md` with the exact headers (Intent fields incl. Measurable Success Metric & Business Impact; User/System/Constraint Context tables; Functional + Non-Functional ACs; Out of Scope; Open Questions; Sign-Off)? Is technical detail placed in the **System Context table** rather than free-form prose? Are Examples in **Given/When/Then table** format with a genuine permission-boundary scenario? A missing or prose-substituted section is a finding — domain richness does not excuse structural drift. |
+| **Conformance** | Does the draft contain every mandatory section defined in `$PLUGIN_DIR/skills/shared/icea-schema.md` (the authoritative section list — do not restate it here), rendered with the headers from `../icea-feature/references/icea-template.md`? Spot-check the load-bearing ones: Intent (**Goal** one-liner, Problem Statement, **Business Impact**, Story, Success Metrics); Context (**Personas** prose, **System Context table**, **Constraint Context table**, Change Tier); Examples in **Given/When/Then table** format incl. the **mandatory Permission Boundary** scenario; Acceptance (Functional + Non-Functional ACs, Out of Scope, Assumptions, **Open Questions**, D-Blocks); Sign-Off. Is technical detail placed in the **System Context table** rather than free-form prose? A missing or prose-substituted section is a finding — domain richness does not excuse structural drift. |
 | **Completeness** | Is any AC vague enough to support two different implementations? Does any field carry a `[?]` that the Intent/Context could actually resolve? |
+| **Relevance** | Does the System Context (or any section) carry rows/detail that don't drive a design decision? Every row must be load-bearing — flag bloat as a finding, not filler. |
 | **Testability** | Is every Example a concrete, verifiable scenario with an observable outcome? Can a QA engineer write one test per Example without guessing? |
 | **B1–B7 coverage** | Does the Intent or Context imply a sensitivity trigger that no AC flags? (e.g. "matter data" implies B-level client-confidentiality handling.) |
 | **Scope** | Does any AC introduce behaviour beyond the stated Intent? Scope creep is a finding, not a feature. |
 | **Decisions (when a D block exists)** | Anti-strawman audit per `$PLUGIN_DIR/skills/shared/icea-decisions-spec.md` §2: is each option genuinely distinct on a trade-off axis, or decoration? Does every option carry a real "Choose this when…" steelman? Does the recommendation cite repo evidence (knowledge-graph locations, memory decisions) rather than best-practice filler? A fork the implementation plainly faces but the D block omits is a finding. Manifest check: does every manifest row trace to an AC/Example/Context/D item, and do rows name concrete diff-matchable paths? |
+
+> Unresolved **Open Questions** (neither answered nor deferred-with-justification) are a
+> Conformance finding — they block Sign-Off per `icea-schema.md` gate 6.
 
 > The **Tech Spec** is critiqued separately by `tech` mode (below) at
 > icea-feature Step 8 — not here. ICEA mode critiques the ICEA draft alone.
@@ -184,12 +188,14 @@ findings tied to a specific section or AC — never vague commentary.
 Verdict: {PASS | PASS WITH NOTES | REVISE}
 
 Concerns ({N}):
-  [Conformance]  Missing System Context, Non-Functional ACs, Open Questions, and
-      Sign-Off sections; technical detail is in prose ("Technical baseline")
-      rather than the System Context table. Examples are not in Given/When/Then
-      table format.
+  [Conformance]  Missing the Goal one-liner and Business Impact in Intent, and the
+      mandatory Permission Boundary example; technical detail is in prose
+      ("Technical baseline") rather than the System Context table. Examples are
+      not in Given/When/Then table format.
   [Completeness] AC-3 — "filter applies to results" does not say whether the
       filter is server-side or client-side. Two valid implementations.
+  [Relevance]    System Context lists three unchanged reference tables that no AC
+      touches — bloat; cut to the rows the work actually changes.
   [Testability]  Example 2 has no observable outcome — "system handles it
       gracefully" cannot be turned into a test assertion.
   [B-coverage]   Context mentions matter timelines (B3) but no AC carries a

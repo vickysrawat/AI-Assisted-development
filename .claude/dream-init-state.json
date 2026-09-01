@@ -1,0 +1,29 @@
+{
+  "dream_init_plugin_version": "3.13.0",
+  "dream_init_last_run": "2026-07-09",
+  "detected_stacks": [
+    "python"
+  ],
+  "deployed_rules": [
+    "javascript-rules.md",
+    "project-rules.md",
+    "python-rules.md",
+    "api-security-rules.md",
+    "auth-rules.md",
+    "backend-base-rules.md",
+    "data-access-rules.md",
+    "observability-rules.md",
+    "rest-api-rules.md",
+    "testing-backend-rules.md"
+  ],
+  "external_dir_snapshot": {
+    "package.json": {
+      "mtime": 1783489913277.2468
+    }
+  },
+  "external_dir_last_sync": "2026-08-11",
+  "repo_type": "JS_LIBRARY",
+  "external_detected_stacks": [],
+  "external_stacks_prompted": false,
+  "shell_type": "node"
+}

@@ -14,8 +14,30 @@
 
 set -u
 
+# Best-effort governance-audit append — never blocks the commit. Values pass via env to avoid
+# any shell/JSON escaping of the justification. Requires Node (always present on the node path).
+audit_bypass() {
+  command -v node >/dev/null 2>&1 || return 0
+  node -e 'try{require(process.cwd()+"/.claude/hooks/audit-append.cjs").appendEvent({event:"gate.bypass",action:"SKIP_FINDINGS_GATE",result:"granted",source:"pre-commit",detail:process.env.FINDINGS_GATE_JUSTIFICATION||""})}catch(e){}' 2>/dev/null || true
+}
+audit_block() { # $1 = action, $2 = detail
+  command -v node >/dev/null 2>&1 || return 0
+  AUDIT_ACTION="$1" AUDIT_DETAIL="$2" node -e 'try{require(process.cwd()+"/.claude/hooks/audit-append.cjs").appendEvent({event:"gate.block",action:process.env.AUDIT_ACTION,result:"blocked",source:"pre-commit",detail:process.env.AUDIT_DETAIL||""})}catch(e){}' 2>/dev/null || true
+}
+
 if [ "${SKIP_FINDINGS_GATE:-0}" = "1" ]; then
-  echo "⚠️  findings-gate: SKIPPED via SKIP_FINDINGS_GATE=1 — record your justification in the commit message" >&2
+  # A bypass must carry a justification — the error message IS the ask (a pre-commit hook
+  # cannot prompt-and-wait interactively).
+  if [ -z "${FINDINGS_GATE_JUSTIFICATION:-}" ]; then
+    echo "" >&2
+    echo "❌ SKIP_FINDINGS_GATE=1 requires a justification." >&2
+    echo "   Set FINDINGS_GATE_JUSTIFICATION=\"reason\" to bypass, e.g.:" >&2
+    echo "   SKIP_FINDINGS_GATE=1 FINDINGS_GATE_JUSTIFICATION=\"hotfix CVE waiver ADO-1234\" git commit ..." >&2
+    echo "" >&2
+    exit 1
+  fi
+  audit_bypass
+  echo "⚠️  findings-gate: SKIPPED via SKIP_FINDINGS_GATE=1 (justification logged to the audit trail)" >&2
   exit 0
 fi
 
@@ -28,6 +50,7 @@ if command -v node >/dev/null 2>&1 && [ -f .claude/hooks/check-settings-secrets.
     echo "" >&2
     echo "Commit blocked by settings-secret-guard. Override (with a written justification" >&2
     echo "in the commit message) via: SKIP_FINDINGS_GATE=1 git commit ..." >&2
+    audit_block "secrets-guard" "staged settings.json"
     exit 1
   fi
 fi
@@ -53,7 +76,8 @@ if [ "$TOTAL" -gt 0 ]; then
   printf "%b\n" "$DETAIL" >&2
   echo "" >&2
   echo "Resolve with /fix FP-xxxxxxxx, dismiss with justification via /dismiss," >&2
-  echo "or override with SKIP_FINDINGS_GATE=1 and a written justification in the commit message." >&2
+  echo "or override with SKIP_FINDINGS_GATE=1 and FINDINGS_GATE_JUSTIFICATION=\"reason\"." >&2
+  audit_block "findings-gate" "$TOTAL open Critical/High"
   exit 1
 fi
 

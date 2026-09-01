@@ -39,6 +39,7 @@ Skills in this tier:
 - `pr-create` (icea-review gate) — auto-compliance check before PR submission
 - `dynamic-scan` — DAST runtime security scanning with OWASP ZAP
 - `critic` — second-pass critique of ICEA drafts and generated code (uses `CRITIC_MODEL`, which falls back to `REVIEW_MODEL`)
+- goal-loop **self-score** (the `rubric-score-schema` scorer run by `goal-loop-spec`, called from icea-implement Step 4b and migration Stage 4) — measuring artefact completion against a rubric is analytical, not generation, so the scorer runs in the review tier. The loop's *regeneration* step uses the **parent skill's generation tier** (icea-implement / migration code-gen), not this tier.
 
 #### `CRITIC_MODEL` — critic override (review sub-tier)
 
@@ -82,6 +83,7 @@ Skills in this tier:
 - `app-readiness` — enterprise/solution architect readiness assessment
 - `plugin-readiness` — AI architect plugin health assessment
 - `bug` — lightweight bug fix flow (inline command)
+- `goal-loop` — cradle-to-grave orchestrator (sequences icea-feature → icea-approve → icea-implement); owns no generation of its own, so it runs in the infrastructure tier while each sequenced skill routes its own tier
 
 ---
 

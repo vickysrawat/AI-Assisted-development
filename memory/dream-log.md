@@ -361,3 +361,19 @@ These were deleted. Watch for more stale v1 references in future sessions.
 ### [capture] [2026-08-28] Architecture decision — keep governance gates orthogonal; add batch Write-Gate approval
 
 ### [capture] [2026-08-28] Task completed — added "Governance gates" table to developer guide (both formats)
+
+### [capture] [2026-08-30] Task completed — SRP follow-up (c): documented /migration + /migration-status in README
+### [capture] [2026-08-30] Plan approved — governance audit trail & actor attribution
+### [capture] [2026-08-30] Architecture decision — audit-trail red-team survivors (identity, sharding, honest scope)
+### [capture] [2026-08-30] Error resolved — setup-init is canonical init; dream-init is legacy (don't update it)
+
+### [capture] [2026-08-30] Task completed — governance audit trail implemented (v3.15.0, via /skip-icea)
+### [capture] [2026-08-30] Error resolved — icea-floor blocks .py writes to _project-deploy/ (Write-tool only); .cjs is unguarded
+### [capture] [2026-08-30] Architecture decision — SKIP_FINDINGS_GATE=1 also skips secrets check (pre-existing hole, flagged not fixed)
+
+### [capture] [2026-08-30] Architecture decision — ICEA schema v1.1 (prompt-engineering principles + critic-drift repair)
+### [capture] [2026-08-30] Error resolved — critic Conformance drifted because it restated the ICEA section list inline
+
+### [capture] [2026-08-31] Plan approved — bounded gated goal-loop capability
+
+### [capture] [2026-08-31] Task completed — bounded gated goal-loop shipped

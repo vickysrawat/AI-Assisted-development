@@ -75,29 +75,18 @@ COMMANDS.forEach(c => {
   // Must have description in frontmatter
   content.includes('description:') ? ok(`${c}: has description`) : bad(`${c}: has description in frontmatter`);
 
-  // Commands that use scope flags must not have {% if args %}
-  if (['code-review','security-review'].includes(c)) {
-    !content.includes('{% if args %}')
-      ? ok(`${c}: no broken {% if args %} template`)
-      : bad(`${c}: has broken {% if args %} template — flags will not work`, `Rewrite ${c}.md to use SCOPE_FLAG pattern`);
-    content.includes('SCOPE_FLAG')
-      ? ok(`${c}: uses SCOPE_FLAG pattern`)
-      : bad(`${c}: missing SCOPE_FLAG — --full will be ignored`);
-    content.includes('--area')
-      ? ok(`${c}: --area flag defined`)
-      : bad(`${c}: --area flag missing`);
-    content.includes('--continue')
-      ? ok(`${c}: --continue flag defined`)
-      : bad(`${c}: --continue flag missing`);
+  // code-review and security-review are now thin commands → their skills own scope + announce
+  // (Step 0 + scope-flags-spec.md) and, for code-review, Phase D. Each just asserts delegation;
+  // the scope-flag / Phase D / three-pass contracts are validated in the skills + shared specs.
+  if (c === 'code-review') {
+    content.includes('skills/code-review/SKILL.md')
+      ? ok('code-review: delegates to the code-review skill')
+      : bad('code-review: missing code-review-skill delegation');
   }
-
-  // security-review must reference the skill
   if (c === 'security-review') {
-    content.includes('source file scan') ? ok('security-review: has scan announcement') : bad('security-review: missing scan announcement');
-    content.includes('SKILL.md') ? ok('security-review: references skill SKILL.md') : bad('security-review: missing skill reference');
-    content.includes('SKIP THE CACHE') || content.includes('skip the cache')
-      ? ok('security-review: --full cache-bypass instruction present')
-      : bad('security-review: --full cache-bypass instruction missing');
+    content.includes('skills/security/SKILL.md')
+      ? ok('security-review: delegates to the security skill')
+      : bad('security-review: missing security-skill delegation');
   }
 });
 
@@ -164,14 +153,14 @@ SKILLS.forEach(s => {
   if (!content.startsWith('---')) { bad(`${s}: has YAML frontmatter`); }
 
   // Review skills must reference source-file-consent
-  if (['icea-review','pr-spec-review'].includes(s)) {
+  if (['pr-spec-review'].includes(s)) {
     content.includes('source-file-consent')
       ? ok(`${s}: references source-file-consent spec`)
       : bad(`${s}: missing source-file-consent reference`);
   }
 
   // Review skills must reference business-context-severity
-  if (['code-review','icea-review','security','pr-spec-review'].includes(s)) {
+  if (['code-review','security','pr-spec-review'].includes(s)) {
     content.includes('business-context-severity')
       ? ok(`${s}: references business-context-severity`)
       : bad(`${s}: missing business-context-severity reference`, `Add business context override check to ${s}/SKILL.md`);
@@ -246,14 +235,6 @@ if (exists('skills/code-review/SKILL.md')) {
     : bad('code-review: find command scopes to ./src');
 }
 
-// icea-review checks
-if (exists('skills/icea-review/references/review-checks.md')) {
-  const rc = read('skills/icea-review/references/review-checks.md');
-  rc.includes('Business Context')
-    ? ok('icea-review/review-checks: Business Context check present')
-    : bad('icea-review/review-checks: Business Context check missing');
-}
-
 // ── 6. Rules files ────────────────────────────────────────────────────────────
 console.log('\n▶ Rules (_project-deploy/rules/)');
 // dotnet-rules.md → csharp-dotnet-rules.md, nodejs-rules.md → nodejs-typescript-rules.md (3.6.0 rename)
@@ -273,9 +254,10 @@ if (exists('_project-deploy/rules/project-rules.md')) {
 }
 
 // ── 7. setup-init completeness ────────────────────────────────────────────────
-console.log('\n▶ setup-init completeness (commands/setup-init.md)');
-if (exists('commands/setup-init.md')) {
-  const di = read('commands/setup-init.md');
+// setup-init is a thin command → skills/setup-init/SKILL.md holds the procedure.
+console.log('\n▶ setup-init completeness (skills/setup-init/SKILL.md)');
+if (exists('skills/setup-init/SKILL.md')) {
+  const di = read('skills/setup-init/SKILL.md');
   // 3.6.0: stubs are deployed by setup-init-bootstrap.cjs, not a bash loop in setup-init.md
   di.includes('setup-init-bootstrap.cjs')
     ? ok('setup-init: references bootstrap script for stub/hook deployment')
@@ -433,6 +415,57 @@ console.log('\n▶ Architecture templates (skills/architect/templates/)');
   markerBad === 0
     ? ok('all templates start with <!-- TEMPLATE --> marker')
     : bad(`all templates start with <!-- TEMPLATE --> marker (${markerBad} missing)`, 'Add <!-- TEMPLATE --> as line 1 of every architecture template');
+}
+
+// ── Deploy-stub delegation integrity (_project-deploy/commands/) ───────────────
+// Every deployed stub must delegate to something that actually exists, or the
+// project-local /X invokes nothing. Three accepted patterns:
+//   1. <skill>[ai-assisted-development:]X</skill>  → X registered in plugin.json + skills/X/SKILL.md on disk
+//   2. Read the full command at `commands/X.md` …   → commands/X.md exists
+//   3. …$PLUGIN_DIR/skills/X/SKILL.md…              → skills/X/SKILL.md on disk
+// This guards against the broken-stub class (deployed /X pointing at a non-existent skill).
+console.log('\n▶ Deploy-stub delegation integrity (_project-deploy/commands/)');
+{
+  const pj = readJson('.claude-plugin/plugin.json');
+  const regSkills = new Set(pj.components?.skills || []);
+  const deployDir = '_project-deploy/commands';
+  if (!exists(deployDir)) {
+    bad('_project-deploy/commands/ exists', 'Create the deploy-stub folder');
+  } else {
+    let broken = 0, checked = 0;
+    fs.readdirSync(path.join(ROOT, deployDir)).filter(f => f.endsWith('.md')).forEach(f => {
+      const body = read(`${deployDir}/${f}`);
+      const skill = body.match(/<skill>(?:ai-assisted-development:)?([a-z0-9-]+)<\/skill>/);
+      const cmdDeleg = body.match(/command at `commands\/([a-z0-9-]+)\.md`/);
+      const skillPath = body.match(/skills\/([a-z0-9-]+)\/SKILL\.md/);
+      if (skill) {
+        checked++;
+        const n = skill[1];
+        if (!regSkills.has(n) || !exists(`skills/${n}/SKILL.md`)) {
+          broken++;
+          bad(`${f}: <skill> "${n}" is not a registered on-disk skill`,
+              `Register skills/${n}/SKILL.md in plugin.json components.skills, or use command-delegation (Read commands/${n}.md)`);
+        }
+      } else if (cmdDeleg) {
+        checked++;
+        const n = cmdDeleg[1];
+        if (!exists(`commands/${n}.md`)) {
+          broken++;
+          bad(`${f}: command-delegation target commands/${n}.md is missing`,
+              `Create commands/${n}.md or fix the deploy-stub reference`);
+        }
+      } else if (skillPath) {
+        checked++;
+        const n = skillPath[1];
+        if (!exists(`skills/${n}/SKILL.md`)) {
+          broken++;
+          bad(`${f}: skill-path target skills/${n}/SKILL.md is missing`,
+              `Create skills/${n}/SKILL.md or fix the deploy-stub reference`);
+        }
+      }
+    });
+    if (broken === 0) ok(`all ${checked} delegating deploy stubs resolve to a registered skill or existing command`);
+  }
 }
 
 // ── Summary ───────────────────────────────────────────────────────────────────

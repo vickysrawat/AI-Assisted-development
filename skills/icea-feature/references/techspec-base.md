@@ -1,5 +1,7 @@
 # Tech Spec Base Template
 # Framework-agnostic sections — used by all stacks.
+# Conforms to skills/shared/techspec-schema.md — that spec is the normative source for
+# required sections + validation gates; this file is the fill-in form.
 # Framework-specific sections (files changed, implementation details,
 # API contract, auth pattern) are defined in the overlay template for
 # each stack. Step 8 selects the overlay from detected_stacks.

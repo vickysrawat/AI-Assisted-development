@@ -1,7 +1,8 @@
 ---
 name: pr-spec-review
 description: >
-  Review a Pull Request against a functional specification or ICEA document.
+  Review a Pull Request against the approved ICEA and Tech Spec — the single
+  spec-compliance engine (also invoked by pr-create's and checkin's gates).
   Use this skill whenever a user wants to check a PR against a spec, validate
   that code changes match requirements, generate a traceability matrix between
   PR changes and spec requirements, or produce a gaps/risks report for a PR.
@@ -16,10 +17,37 @@ description: >
 
 # PR Spec Review Skill
 
-_Skill version: 1.1 · Last changed: 2026-08-27 · Plugin compatibility: ≥1.14.0 · Consent: B_
-Reviews a Pull Request against a functional specification and produces four
-structured outputs: Spec Compliance Check, Code Review Against Spec,
-Traceability Matrix, and Gaps/Risks Report.
+_Skill version: 1.2 · Last changed: 2026-08-28 · Plugin compatibility: ≥1.14.0 · Consent: B_
+The single spec-compliance engine. Reviews a Pull Request against the approved
+**ICEA** (acceptance criteria) and **Tech Spec** (design / coverage / D-option
+fidelity), producing either a full four-part report (Spec Compliance Check, Code
+Review Against Spec, Traceability Matrix, Gaps/Risks Report) or a compact gate
+verdict. Two dials — **scope** (`--icea-only` vs the ICEA+Tech default) and
+**output** (`--compact` vs full report) — let the same engine back three callers:
+standalone review (full report) and the `pr-create` / `checkin` gates (compact).
+Requirement structure comes from `skills/shared/icea-schema.md` +
+`skills/shared/techspec-schema.md`; diff↔requirement mapping from
+`skills/shared/traceability-mapping-spec.md`.
+
+---
+
+## Scope & output modes
+
+Two independent dials. Both default to the standalone-reviewer setting; gate callers
+override them.
+
+| Dial | Values | Default | Set by |
+|---|---|---|---|
+| **Scope** | ICEA + Tech Spec  ·  `--icea-only` (ACs only) | ICEA + Tech Spec (when a Tech Spec exists; else auto-falls back to ICEA-only) | caller flag |
+| **Output** | full 4-part report  ·  `--compact` (verdict block) | full report | caller flag |
+
+- `--icea-only` — restrict to acceptance-criteria compliance (use before a Tech Spec is
+  approved). `icea-review` is a thin alias for `pr-spec-review --icea-only`.
+- `--compact` — emit only the **Compact verdict** block (see end of skill). Used by
+  `pr-create`'s pre-submit gate and `checkin`'s Check B.
+- Note: this skill deliberately does **not** use `--full` — that flag means "scan all files,
+  ignore cache" for file-scanner skills (`scope-flags-spec.md`); here full scope is simply the
+  default. `--icea-only` and `--compact` are registered as skill-local extensions in that spec.
 
 ---
 
@@ -77,11 +105,21 @@ table below, in priority order.
 
 ### Spec input
 
+The canonical spec is the approved **ICEA + Tech Spec** for the branch's ADO ID.
+Resolve in this priority order:
+
 | How provided          | Action                                              |
 |-----------------------|-----------------------------------------------------|
-| File path             | Read the file (or all `.md`/`.txt`/`.pdf` in a folder) |
+| `spec=<path>` argument | Read the file (or all `.md`/`.txt`/`.pdf` in a folder) |
 | Pasted text           | Use directly                                        |
-| Not provided          | Ask: "Please provide the spec file path or paste the spec text." |
+| Auto-discover (default)| Extract `ADO-{ID}` from the branch, then glob the story folder: `docs/Release*/Sprint*/UserStory{ID}/ADO-{ID}-*.icea.md` (required) and `…/ADO-{ID}-*.techspec.md` (optional). |
+| Not found             | Ask: "Please provide the spec file path or paste the spec text." |
+
+**Scope resolution:** if a `.techspec.md` is found and `--icea-only` is NOT set →
+**full** scope (ICEA + Tech Spec). If the Tech Spec is absent OR `--icea-only` is set →
+**ICEA-only** scope (state the fallback reason). Announce which mode ran. Validate the
+discovered docs against `icea-schema.md` / `techspec-schema.md` — a doc missing a required
+section is itself a finding.
 
 ### PR / diff input
 
@@ -155,6 +193,17 @@ Before comparing, extract a numbered list of requirements from the spec:
 Group requirements by feature area if the spec has sections. Keep this list
 in working memory — you will reference it throughout the review.
 
+When the spec is the project ICEA/Tech Spec, use the schema-defined IDs rather than
+re-numbering:
+- **ICEA** → each `AC-F{n}` / `AC-NF{n}` (`icea-schema.md`) is a requirement. Out-of-Scope
+  items are the allow-list for the scope-creep direction.
+- **Tech Spec** (full scope) → each **AC Coverage Matrix** row (`techspec-schema.md`) is a
+  *design* requirement: the diff must touch the file the matrix promised for that AC, and
+  the change must be consistent with the ICEA's selected **D-options**.
+
+Build the diff↔requirement correspondence with `skills/shared/traceability-mapping-spec.md`
+(both directions). Do not restate its status vocabulary or evidence rules here.
+
 ---
 
 ## Step 3 — Produce the Review Report
@@ -169,6 +218,18 @@ Read `$PLUGIN_DIR/skills/pr-spec-review/references/output-format.md` for the exa
 | 2 — Code Review Against Spec | Line-level findings where code diverges from spec |
 | 3 — Traceability Matrix | Table: Spec req → PR file(s)/lines → Status → Risk |
 | 4 — Gaps & Risks Report | GAP = spec ambiguity; RISK = implementation concern |
+
+### Tech Spec design compliance (full scope only)
+
+When the Tech Spec is in scope, additionally verify (fold results into Parts 1–4):
+- **Coverage-matrix vs diff** — every AC→File promise in the matrix is honoured by the actual
+  diff; a promised file that did not change is a ⚠️/❌ finding.
+- **D-option fidelity** — the implementation matches the ICEA's selected D-options
+  (`icea-decisions-spec.md`); undocumented drift is a High finding.
+- **Test-case presence** — ACs whose Tech-Spec test cases are absent from the diff are flagged.
+
+Parts 1 (compliance) and 3 (matrix) are produced via `traceability-mapping-spec.md`; Parts 2
+(line-level divergences) and 4 (gaps/risks) are this skill's own analysis on top of that map.
 
 ---
 
@@ -212,9 +273,36 @@ For full argument reference and tips (multiple spec files, large PRs), see
 
 ---
 
+## Compact verdict output (`--compact`)
+
+When `--compact` is set, suppress the four-part report and emit only this block — the form
+`pr-create`'s gate and `checkin`'s Check B consume:
+
+```
+━━━ Spec Compliance (compact) — ADO #{ID} ━━━
+  Scope   : {ICEA + Tech Spec | ICEA-only (reason)}
+  ACs     : {n} total · {c} covered · {m} missing · {u} unclear
+  Design  : {coverage ok | k matrix gaps} · D-options: {ok | drift}   ← full scope only
+  Verdict : {✅ PASS | ⚠ WARN | ❌ FAIL — reason}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+Verdict rule:
+- ❌ **FAIL** — ≥1 AC MISSING, or any Critical/High design finding (matrix gap / D-option drift).
+- ⚠️ **WARN** — only Medium/Low deviations; all ACs covered or explicitly out of scope.
+- ✅ **PASS** — all ACs covered, no Critical/High findings.
+
+The caller decides whether WARN blocks (checkin: warn-only; pr-create: developer prompt).
+
+---
+
 ## Reference Files
 
 - `$PLUGIN_DIR/skills/pr-spec-review/references/output-format.md` — Exact report format with examples for all
   four parts. Read before writing output.
 - `$PLUGIN_DIR/skills/pr-spec-review/references/usage-guide.md` — Invocation patterns, argument reference, tips
   for large PRs and multiple spec files.
+- `$PLUGIN_DIR/skills/shared/icea-schema.md` — normative ICEA structure (requirement source, `--icea-only`).
+- `$PLUGIN_DIR/skills/shared/techspec-schema.md` — normative Tech Spec structure (coverage matrix, D-options).
+- `$PLUGIN_DIR/skills/shared/traceability-mapping-spec.md` — diff↔requirement mapping for Parts 1 & 3.
+- `$PLUGIN_DIR/skills/shared/scope-flags-spec.md` — registers the `--icea-only` / `--compact` extensions.

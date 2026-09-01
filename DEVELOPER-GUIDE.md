@@ -159,6 +159,21 @@ Add the command name (without `/`) to `components.commands`.
 
 Create `_project-deploy/commands/<command-name>.md` and update `setup-init` to deploy it.
 
+### Single-responsibility signals (SRP)
+
+One skill = one responsibility; a command is a thin stub that delegates to a skill or script.
+`plugin-readiness` (domain AI-5) scans for these drift signals — watch for them when authoring:
+
+1. **Two personas in one SKILL.md** — hard signal; split the skill (one persona each).
+2. **Two distinct artifact types with independent schemas** — hard signal; separate skills.
+3. **Stage-gated sub-phases that re-enter at different steps** — that's a pipeline; use an
+   orchestrator + per-step skills (the `migration` model).
+4. **SKILL.md > ~600 lines** — soft tripwire; inspect for signals 1–3.
+5. **A command that embeds procedure instead of delegating** — move the logic into a backing
+   `skills/<name>/SKILL.md` (see `pr-create.md` / `checkin.md` as the thin-stub model).
+
+These are guidance, not a CI lint (yet). Signals 1–3 are real violations; 4–5 mean "go look".
+
 ---
 
 ## Shared primitives layer

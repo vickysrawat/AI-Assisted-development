@@ -712,9 +712,9 @@ table.cmp tr:last-child td{border-bottom:none}
       <div class="palcol"><h3>Plan &amp; spec</h3><code>icea-feature</code> <code>icea-approve</code> <code>icea-implement</code> <code>icea-revise</code> <code>icea-status</code> <code>ado-tasks</code> <code>bug</code> <code>critic</code></div>
       <div class="palcol"><h3>Quality &amp; security</h3><code>code-review</code> <code>security-review</code> <code>dynamic-scan</code> <code>checkin</code> <code>fix</code> <code>dismiss</code></div>
       <div class="palcol"><h3>Orientation</h3><code>graph-sync</code> <code>graph-viz</code> <code>explain</code> <code>update-arch</code> <code>session-start</code> <code>sync-dirs</code></div>
-      <div class="palcol"><h3>Memory (Dream)</h3><code>dream</code> <code>dream-health</code> <code>dream-audit</code> <code>dream-rollback</code> <code>dream-status</code></div>
+      <div class="palcol"><h3>Memory (Dream)</h3><code>dream</code> <code>dream-health</code> <code>dream-audit</code> <code>dream-rollback</code></div>
       <div class="palcol"><h3>Delivery &amp; metrics</h3><code>pr-describe</code> <code>pr-create</code> <code>pr-spec-review</code> <code>icea-review</code> <code>sprint-metrics</code> <code>token-analysis</code></div>
-      <div class="palcol"><h3>Setup &amp; docs</h3><code>dream-init</code> <code>dream-sync</code> <code>gitignore-sync</code> <code>product-docs</code> <code>app-readiness</code> <code>plugin-readiness</code></div>
+      <div class="palcol"><h3>Setup &amp; docs</h3><code>setup-init</code> <code>setup-sync</code> <code>setup-status</code> <code>gitignore-sync</code> <code>product-docs</code> <code>app-readiness</code> <code>plugin-readiness</code></div>
     </div>
     <p class="muted" style="text-align:center;margin-top:14px">Most also auto-trigger by keyword — "build", "review this PR", "is this secure?".</p>
   </div>
@@ -782,13 +782,13 @@ table.cmp tr:last-child td{border-bottom:none}
 
 <!-- 30 SETUP -->
 <section class="slide" data-title="Setup & extensibility"
- data-notes="Getting started and staying current. dream-init: one-time setup — architect Q&A, seeds cache + token-graph, deploys stubs and stack rules, populates architecture docs, generates the graph, writes the managed .gitignore block. dream-status: read-only 20-item health check. dream-sync: re-provision after a plugin upgrade via docs/migrations. Rules deploy per detected stack. 45 ADRs document the why. Forkable — org/project live in config.json.">
+ data-notes="Getting started and staying current. setup-init: one-time setup — architect Q&A, seeds cache + token-graph, deploys stubs and stack rules, populates architecture docs, generates the graph, writes the managed .gitignore block. setup-status: read-only 20-item health check. setup-sync: re-provision after a plugin upgrade via docs/migrations. Rules deploy per detected stack. 45 ADRs document the why. Forkable — org/project live in config.json.">
   <div class="slide-head"><span class="dot"></span><h2>Turn it on, keep it fresh</h2></div>
   <div class="body">
     <div class="grid c3">
-      <div class="card accent"><div class="ico">🚀</div><h3>/dream-init</h3><p>One-time: architect Q&amp;A, cache seed, stubs, rules, graph, <code>.gitignore</code>.</p></div>
-      <div class="card accent"><div class="ico">🩺</div><h3>/dream-status</h3><p>Read-only 20-item health check.</p></div>
-      <div class="card accent"><div class="ico">🔄</div><h3>/dream-sync</h3><p>Re-provision after upgrade via <code>docs/migrations/</code>.</p></div>
+      <div class="card accent"><div class="ico">🚀</div><h3>/setup-init</h3><p>One-time: architect Q&amp;A, cache seed, stubs, rules, graph, <code>.gitignore</code>.</p></div>
+      <div class="card accent"><div class="ico">🩺</div><h3>/setup-status</h3><p>Read-only 20-item health check.</p></div>
+      <div class="card accent"><div class="ico">🔄</div><h3>/setup-sync</h3><p>Re-provision after upgrade via <code>docs/migrations/</code>.</p></div>
     </div>
     <p class="muted" style="text-align:center;margin-top:16px">Stack-aware rules · 45 ADRs record the "why" · forkable via <code>config.json</code>.</p>
   </div>

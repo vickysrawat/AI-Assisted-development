@@ -11,7 +11,7 @@
 #        skill Q1 matrix. Python is a target from Node.js (nodejs→python) and React a target from
 #        Angular (angular→react); Python-as-source and java/dotnet→python have no mapping refs yet.
 # Last updated: keep this file updated when conventions change
-# Plugin version: 3.14.0 (update this line after setup-init or plugin upgrade)
+# Plugin version: 3.15.0 (update this line after setup-init or plugin upgrade)
 
 ---
 
@@ -63,6 +63,13 @@ share one prompt). The gate holds even after an approved ICEA, a passing critic,
 confirmation, and regardless of urgency. Full artefact-timing table + rationale:
 `skills/shared/write-gate-spec.md`.
 
+A large, already-reviewed multi-file plan may instead be approved once with
+`APPROVE ALL ADO-{ID}` — a standing Write-Gate approval for the current plan/ADO that STILL
+streams each diff + path before writing (it removes the per-file pause, not the visibility);
+`REVOKE ALL ADO-{ID}` cancels it. Gates stay orthogonal: `/skip-icea` = Feature Gate only;
+secrets and findings gates are never blanket-skippable. Batch semantics + orthogonality
+table: `skills/shared/write-gate-spec.md`.
+
 ---
 
 ## 0a. Keyword Handlers — recognised in any session, any message
@@ -83,6 +90,8 @@ Recognised globally, no /command needed. ADO ID is case-insensitive (`ADO-1847`,
 | `TECH ADO-{ID}` | Invoke icea-feature skill — cross-session recovery entry at Step 8 (draft Tech Spec from saved ICEA on disk; skip context budget check; reads icea-feature SKILL.md including EPIC branch before proceeding) |
 | `APPROVE ADO-{ID}` | Run icea-approve skill for that ADO ID |
 | `APPROVE ADO-{ID} Story-{N}` | Run icea-approve skill for that story |
+| `APPROVE ALL ADO-{ID}` | Grant standing Write-Gate approval for the current plan/ADO — subsequent source/config writes proceed without a per-file pause, but each diff + path is still shown. Does NOT skip Feature/secrets/findings gates. Scope: this session + this ADO only. |
+| `REVOKE ALL ADO-{ID}` | Cancel a standing `APPROVE ALL` — return to per-file `APPROVE ADO-{ID}` |
 | `IMPLEMENT ADO-{ID}` | Run icea-implement skill for that ADO ID |
 | `IMPLEMENT ADO-{ID} Story-{N}` | Run icea-implement skill for that story |
 | `REVISE ADO-{ID}` | Run icea-revise skill for that ADO ID |
@@ -90,7 +99,7 @@ Recognised globally, no /command needed. ADO ID is case-insensitive (`ADO-1847`,
 | `BUG ADO-{ID} — {description}` | Log bug entry to tracker for that ADO ID |
 | `MIGRATE ADO-{ID}` | Run migration skill for that ADO ID |
 | `MIGRATE RESUME ADO-{ID} [BACKEND\|FRONTEND]` | Resume migration from checkpoint (Stage 4 cluster resume) |
-| `MIGRATE STATUS ADO-{ID}` | Show current migration phase and checkpoint for that ADO ID |
+| `MIGRATE STATUS ADO-{ID}` | Run the `migration-status` skill (`/migration-status`) — render the migration checkpoint (phase · stage-gates · clusters · next action) for that ADO ID. Read-only. |
 | `MIGRATE OPTIONS ADO-{ID}` | Resume/regenerate Stage 0.5 target-options analysis — re-enters at Step 0.3; requires source confirmed; skip context budget check |
 | `MIGRATE INVENTORY ADO-{ID}` | Resume/regenerate Stage 0.6 source behavioral inventory — re-enters after Step 0.4; requires source confirmed; skip context budget check |
 | `MIGRATE ARCH ADO-{ID}` | Resume/regenerate Stage 1 architecture docs — re-enters migration at Step 1.2; skip context budget check |

@@ -1,5 +1,40 @@
 ## [Unreleased]
 
+### Added — bounded, gated goal-loop (`/goal-loop`) + AC self-scoring
+- New shared engine `skills/shared/goal-loop-spec.md` and its I/O contract
+  `skills/shared/rubric-score-schema.md` define a **bounded, gated** goal-loop:
+  generate → self-score an artefact against a rubric → revise, capped by a hard
+  iteration ceiling (+ optional token budget) and a diminishing-returns guard. The
+  loop operates only on in-context, unwritten artefacts and **exits AT a human gate**
+  (Write Gate / migration stage gate) — it never writes to disk and never issues
+  `APPROVE`. Escalation reuses the critic's `ACCEPT AS-IS / GUIDE / HALT` vocabulary.
+- The one genuinely new capability is a **self-scoring agent** (review-tier,
+  Category C, ephemeral): per-criterion `PASS/FAIL/PARTIAL` + mandatory evidence +
+  a **deterministically-derived** `percentDone` + a `blocking` list. It measures
+  *completion*; the critic still measures *quality* — the two are kept orthogonal.
+- New `skills/goal-loop/SKILL.md` + `/goal-loop` command: a **thin cradle-to-grave
+  orchestrator** that sequences the existing `icea-feature` → `icea-approve` →
+  `icea-implement`, stopping at every SAVE/APPROVE gate and self-approving nothing
+  (Feature-Gate integrity). It owns none of those skills' logic.
+- `icea-implement` gains **Step 4b** — the AC self-scoring loop between the Step 4a
+  critic and the Step 5 Write Gate; the two share one iteration budget (1 iter =
+  regenerate → critic → score) to avoid nested loops. Unmet ACs on `ACCEPT AS-IS`
+  are carried into the WRITE PENDING prompt.
+- `migration` Stage 4 gains a **per-cluster completeness score** (Step 4.4a) that
+  generalises the immediate `RETRY CLUSTER` STOP into a bounded auto-retry (max 2),
+  plus a Stage-4 completion percentage shown alongside the `APPROVE MIGRATION` gate.
+  Loop progress persists under a new optional `goalLoop` block in `checkpoint-schema.md`
+  (orchestrator is the single writer).
+- **Design boundary (recorded):** the goal-loop runs only on rubric-*consuming*
+  artefacts (implementation code, cluster output). The ICEA and Tech Spec *define*
+  the rubric, so they are never self-scored (circular) — they keep the critic's
+  bounded auto-revise.
+- Registration: `goal-loop` added to `plugin.json` commands + skills;
+  `goal-loop-spec` + `rubric-score-schema` added to `plugin.json` shared; consent
+  row (`goal-loop` = C) in `source-file-consent.md`; model-routing entries (scorer =
+  review tier, orchestrator = infra tier); README + shared README rows; deploy stub;
+  `tests/skill-scenarios/goal-loop.yaml`.
+
 ### Fixed — stale flat `docs/icea/` ICEA paths across commands, skills, and docs
 - Several commands/skills still located the ICEA at the legacy flat `docs/icea/ADO-{ID}-*.md` —
   a path that does not exist since the move to `docs/Release{R}/Sprint{S}/UserStory{ID}/`
