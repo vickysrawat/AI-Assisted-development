@@ -1,7 +1,5 @@
 ---
 paths: ["**/*.svelte", "**/routes/**", "**/lib/**"]
-detect:
-  dependencies: ["svelte"]
 ---
 
 # Svelte / SvelteKit Ecosystem Rules — Applied to all Svelte projects

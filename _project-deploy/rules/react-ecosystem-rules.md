@@ -1,8 +1,5 @@
 ---
 paths: ["**/*.tsx", "**/*.jsx", "**/components/**", "**/hooks/**"]
-detect:
-  dependencies: ["react"]
-  excludeIfDependencies: ["next", "@remix-run/react"]
 ---
 
 # React Ecosystem Rules — Applied to all React projects

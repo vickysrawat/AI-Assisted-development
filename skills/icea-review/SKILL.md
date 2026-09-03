@@ -31,7 +31,7 @@ the shared specs it references — this skill holds no independent review logic.
    - **output** = full four-part report by default; if the caller passed `--compact`, emit the
      compact verdict block instead (this is the form `checkin`'s Check B consumes).
 3. pr-spec-review auto-discovers the ICEA for the branch's ADO ID, builds the diff↔AC map via
-   `traceability-mapping-spec.md`, applies business-context (B1–B7) severity, and produces the
+   `traceability-mapping-spec.md`, applies business-context (B-series) severity, and produces the
    report + verdict. Pass through any `spec=`, `pr=`, or `diff=` arguments unchanged.
 
 ## Why an alias, not a merge
@@ -46,5 +46,5 @@ the SRP refactor and `scope-flags-spec.md` (which registers `--icea-only`).
 - Hold NO independent compliance logic — always delegate to `pr-spec-review --icea-only`.
 - Do not restate the status vocabulary, checks, or report format here — they live in
   `pr-spec-review` + `traceability-mapping-spec.md` + `icea-schema.md` + `business-context-severity.md`.
-- Business-context (B1–B7) severity escalation is applied by the engine per
+- Business-context (B-series) severity escalation is applied by the engine per
   `skills/shared/business-context-severity.md` and is non-waivable.

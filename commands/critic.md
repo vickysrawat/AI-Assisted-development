@@ -1,5 +1,5 @@
 ---
-description: Run the critic as a standalone pass against an ICEA draft or generated code. Phase argument selects the mode — `icea` critiques a spec for completeness, testability, B1–B7 coverage, and scope; `code` critiques implementation for ICEA traceability, simplicity, rules compliance, decision transparency, and hidden assumptions. With no phase, infers from context.
+description: Run the critic as a standalone pass against an ICEA draft or generated code. Phase argument selects the mode — `icea` critiques a spec for completeness, testability, B-series coverage, and scope; `code` critiques implementation for ICEA traceability, simplicity, rules compliance, decision transparency, and hidden assumptions. With no phase, infers from context.
 argument-hint: "[icea | code] [ADO-<id>]   e.g.  /critic icea ADO-1847   ·   /critic code"
 ---
 

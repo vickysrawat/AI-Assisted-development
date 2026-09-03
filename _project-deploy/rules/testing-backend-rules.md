@@ -1,7 +1,5 @@
 ---
 paths: ["**/*.test.*", "**/*.spec.*", "**/tests/**", "**/test/**"]
-detect:
-  always: false
 ---
 
 # Testing Backend Rules — Test strategy, structure, and ICEA coverage

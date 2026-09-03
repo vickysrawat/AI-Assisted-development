@@ -79,7 +79,7 @@ flowchart LR
 
 ## Data Exchanged
 
-> What data crosses each boundary (and any B1–B7 sensitivity).
+> What data crosses each boundary (and any B-series sensitivity).
 > Flag PII / privileged matter data leaving the add-in or the document.
 
 > ⚠ Could not determine — needs manual input

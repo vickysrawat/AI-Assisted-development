@@ -84,56 +84,69 @@ Status:
 
 ### 1c — .claude/rules/
 
-`project-rules.md` is mandatory — it must always be present. Stack-specific rules
-are checked against what the project's stack signals say should be there.
+`project-rules.md` is mandatory — it must always be present. Stack-specific rules are
+verified against the **deploy manifest** (`.claude/rules/_deploy-manifest.json`), the
+authoritative record of what the scored detector deployed (ADR 0059). No stack→filename
+guessing — every rule is named by its `stack_key` (`${stack_key}-rules.md`).
 
 ```bash
 # project-rules.md is always required
 ls .claude/rules/project-rules.md 2>/dev/null && echo "EXISTS project-rules.md" || echo "MISSING project-rules.md"
 
-# Detect which stack rules SHOULD be present, then verify each one.
-# Prefer the cached stack list setup-init wrote; fall back to a tree scan only if the
-# state file is absent. Canonical stack->rule table: skills/shared/plugin-path-resolution.md §2
-STACKS="$(node -e 'try{const s=JSON.parse(require("fs").readFileSync(".claude/dream-init-state.json","utf8"));process.stdout.write((s.detected_stacks||[]).join(" "));}catch(e){}' 2>/dev/null)"
-
-if [ -n "$STACKS" ]; then
-  case " $STACKS " in *" dotnet "*)          HAS_DOTNET=1;;           *) HAS_DOTNET=0;;           esac
-  case " $STACKS " in *" dotnet_framework "*) HAS_DOTNET_FRAMEWORK=1;; *) HAS_DOTNET_FRAMEWORK=0;; esac
-  case " $STACKS " in *" angular "*)          HAS_ANGULAR=1;;          *) HAS_ANGULAR=0;;          esac
-  case " $STACKS " in *" nodejs "*)           HAS_NODEJS=1;;           *) HAS_NODEJS=0;;           esac
-  case " $STACKS " in *" javascript "*)       HAS_JAVASCRIPT=1;;       *) HAS_JAVASCRIPT=0;;       esac
-  case " $STACKS " in *" java "*)             HAS_JAVA=1;;             *) HAS_JAVA=0;;             esac
-  case " $STACKS " in *" python "*)           HAS_PYTHON=1;;           *) HAS_PYTHON=0;;           esac
-else
-  # Fallback: no cached state — scan the tree. (Cannot distinguish dotnet_framework /
-  # javascript here; the cache path above carries that detail.)
-  HAS_DOTNET=$(find . -name "*.csproj" -o -name "*.sln" -maxdepth 4 2>/dev/null | head -1 | grep -q "." && echo 1 || echo 0)
-  HAS_DOTNET_FRAMEWORK=0
-  HAS_ANGULAR=$(ls angular.json 2>/dev/null && echo 1 || find . -name "angular.json" -maxdepth 3 2>/dev/null | head -1 | grep -q "." && echo 1 || echo 0)
-  HAS_NODEJS=$(node -e "try{const p=require('./package.json');const d=Object.assign({},p.dependencies,p.devDependencies);if(!d['@angular/core'])console.log('1')}catch(e){}" 2>/dev/null || echo 0)
-  HAS_JAVASCRIPT=0
-  HAS_JAVA=$({ find . -name "pom.xml" -maxdepth 3 2>/dev/null | xargs grep -l "spring-boot" 2>/dev/null; find . -name "build.gradle*" -maxdepth 3 2>/dev/null | xargs grep -l "org.springframework.boot" 2>/dev/null; } | head -1 | grep -q "." && echo 1 || echo 0)
-  HAS_PYTHON=$(find . \( -name "*.py" -o -name "requirements.txt" -o -name "pyproject.toml" \) -maxdepth 3 2>/dev/null | head -1 | grep -q "." && echo 1 || echo 0)
-fi
-
-[ "$HAS_DOTNET"           = "1" ] && { ls .claude/rules/dotnet-rules.md           2>/dev/null && echo "EXISTS dotnet-rules.md"           || echo "MISSING dotnet-rules.md"; }
-[ "$HAS_DOTNET_FRAMEWORK" = "1" ] && { ls .claude/rules/dotnet-framework-rules.md 2>/dev/null && echo "EXISTS dotnet-framework-rules.md" || echo "MISSING dotnet-framework-rules.md"; }
-[ "$HAS_ANGULAR"          = "1" ] && { ls .claude/rules/angular-rules.md          2>/dev/null && echo "EXISTS angular-rules.md"          || echo "MISSING angular-rules.md"; }
-[ "$HAS_NODEJS"           = "1" ] && { ls .claude/rules/nodejs-rules.md           2>/dev/null && echo "EXISTS nodejs-rules.md"           || echo "MISSING nodejs-rules.md"; }
-[ "$HAS_JAVASCRIPT"       = "1" ] && { ls .claude/rules/javascript-rules.md       2>/dev/null && echo "EXISTS javascript-rules.md"       || echo "MISSING javascript-rules.md"; }
-[ "$HAS_JAVA"             = "1" ] && { ls .claude/rules/java-rules.md             2>/dev/null && echo "EXISTS java-rules.md"             || echo "MISSING java-rules.md"; }
-[ "$HAS_PYTHON"           = "1" ] && { ls .claude/rules/python-rules.md           2>/dev/null && echo "EXISTS python-rules.md"           || echo "MISSING python-rules.md"; }
+# Verify each rule the manifest says was deployed is present on disk; flag developer-edited
+# rules (on-disk hash diverges from .claude/rules/.hashes).
+node -e '
+const fs=require("fs");
+let man;try{man=JSON.parse(fs.readFileSync(".claude/rules/_deploy-manifest.json","utf8"));}catch(e){
+  console.log("NO_MANIFEST — run /setup-sync to (re)deploy rules with the scored detector"); process.exit(0);}
+const rec={};try{for(const l of fs.readFileSync(".claude/rules/.hashes","utf8").split(/\r?\n/)){const m=l.match(/^([0-9a-f]{64})\s+(.+)$/);if(m)rec[m[2]]=m[1];}}catch(e){}
+const crypto=require("crypto");
+for(const f of (man.deployed_rules||[])){
+  if(!fs.existsSync(".claude/rules/"+f)){console.log("MISSING "+f);continue;}
+  let tag="EXISTS";
+  try{const h=crypto.createHash("sha256").update(fs.readFileSync(".claude/rules/"+f)).digest("hex");
+    if(rec[f]&&h!==rec[f])tag="EDITED";}catch(e){}
+  console.log(tag+" "+f);
+}
+for(const f of (man.skipped_developer_edited||[])) console.log("EDITED(protected) "+f);
+console.log("THRESHOLD "+(man.threshold!=null?man.threshold:"?")+" REPO_TYPE "+(man.repo_type||"?"));
+' 2>/dev/null
 ```
 
 Status:
-- `project-rules.md` present AND all expected stack rules present → ✅ Green
-- `project-rules.md` present, some expected stack rules missing → ⚠️ Amber — run /setup-init to deploy missing rules
+- `project-rules.md` present AND every manifest rule present → ✅ Green
+- Some manifest rule MISSING → ⚠️ Amber — run /setup-sync to redeploy
+- `EDITED` rules → ℹ️ Blue — developer-customised (protected; not a failure)
+- `NO_MANIFEST` (pre-ADR-0059 install) → ⚠️ Amber — run /setup-sync to regenerate with the scored detector
 - `project-rules.md` missing → ❌ Red — run /setup-init
 
 Include in output report line:
 ```
   .claude/rules/                     {✅ / ⚠️ / ❌}   project-rules + {N stack rules} ({list of deployed files})
 ```
+
+### 1c-bis — .NET version detection freshness (v3.19.0)
+
+For .NET projects, verify the per-project version spread is present and not stale. `versions[]` is
+best-effort — it can drift when a csproj/props changes after the last detect.
+```bash
+node -e '
+const fs=require("fs"),path=require("path"),cp=require("child_process");
+let s;try{s=JSON.parse(fs.readFileSync(".claude/dream-init-state.json","utf8"));}catch(e){console.log("NO_STATE");process.exit(0);}
+const g=(s.generations||{}).dotnet;
+if(!g){console.log("N/A (not .NET)");process.exit(0);}
+if(!Array.isArray(g.versions)){console.log("STALE — no versions[] (pre-3.19 detect); run /setup-sync to backfill");process.exit(0);}
+// fingerprint drift: recompute vs stored generations_meta.buildfile_fingerprint
+let cur="";try{cur=JSON.parse(cp.execFileSync("node",[process.env.PLUGIN_DIR+"/scripts/repo-detect.cjs","--root=.","--json"],{encoding:"utf8"})).meta.buildfile_fingerprint||"";}catch(e){}
+const stored=(s.generations_meta||{}).buildfile_fingerprint||"";
+console.log(cur&&stored&&cur!==stored?("STALE — build files changed since last detect (run /setup-sync); primary "+g.version):("FRESH — primary "+g.version+", "+g.versions.length+" project(s)"+(g.heterogeneous?" (mixed)":"")));
+' 2>/dev/null
+```
+Status:
+- `FRESH` → ✅ Green — spread present and fingerprint matches
+- `STALE — no versions[]` → ⚠️ Amber — pre-3.19 detect; run `/setup-sync` to backfill the spread
+- `STALE — build files changed` → ⚠️ Amber — run `/setup-sync` (or `/graph-sync`) to refresh detection
+- `N/A (not .NET)` → not applicable
 
 ---
 
@@ -854,10 +867,10 @@ Recommended actions:
 ## Business context severity
 
 This skill does not perform security or compliance reviews. If output from this
-skill surfaces data that may trigger B1–B7 sensitivity (see
+skill surfaces data that may trigger B-series sensitivity (see
 `$PLUGIN_DIR/skills/shared/business-context-severity.md`), flag it to the developer. Do not
 silently process or display attorney-client privileged matter data, immigration
-identifiers, or other B1–B7 categories without acknowledgement.
+identifiers, or other B-series categories without acknowledgement.
 
 ---
 

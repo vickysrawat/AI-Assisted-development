@@ -54,7 +54,7 @@ Status: DRAFT | ✅ Approved
    `icea-decisions-spec.md`) must be selected before the ICEA is saved. `None.` is valid.
 2. **No silent assumptions** — ambiguity is an `unverified` Assumption, never a guess.
 3. **Pre-mortem required** for stories touching auth, payments, or irreversible data changes.
-4. **B1–B7 sensitivity** — any AC/Example touching business-sensitive data
+4. **B-series sensitivity** — any AC/Example touching business-sensitive data
    (`business-context-severity.md`) is flagged; the critic escalates coverage gaps.
 5. **Out of Scope ≥ 3** and **Edge Cases ≥ 2** — completeness floors.
 6. **Open Questions resolved before ✅ Approved** — every ICEA Open Question is answered, or

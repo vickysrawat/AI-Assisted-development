@@ -182,7 +182,7 @@ Load core references — read `.claude/plugin-path.txt` to get PLUGIN_DIR
 Read $PLUGIN_DIR/skills/code-review/references/checkers.md
 Read $PLUGIN_DIR/skills/code-review/references/output-format.md
 Read $PLUGIN_DIR/skills/code-review/references/analysis-rules.md
-Read $PLUGIN_DIR/skills/shared/business-context-severity.md
+Read .claude/business-context.md if it exists (project-local resolved B-series); otherwise read $PLUGIN_DIR/skills/shared/business-context-severity.md
 ```
 
 Load language-specific checkers for detected stack:
@@ -197,6 +197,15 @@ Load language-specific checkers for detected stack:
 
 If a file's language has no specific checker file, use universal categories from
 `checkers.md` alone.
+
+**Per-project .NET generation/version (mixed solutions).** For a `.cs` file, resolve which project
+it belongs to via `.claude/dream-init-state.json` → `generations.dotnet.versions[]` (match by
+`path`), and apply checkers for **that project's** `generation`: a `dotnet-framework` project gets
+the Framework/WCF/EF6 lens (in `checkers-dotnet.md`), a `dotnet-modern` project the modern lens —
+do NOT apply legacy-.NET findings to a modern project (or vice-versa) just because the repo is
+mixed. Where a checker is version-gated ("changed in .NET 9", "added in .NET 8"), gate on the
+project's `tfm`. If the file's project is absent from `versions[]`, fall back to the repo-level
+`name` (coarse) — best-effort.
 
 Report scope:
 ```
@@ -268,7 +277,7 @@ Phase D coverage: .cs → SecurityCodeScan 5.6.7 ✓ · .config → webconfig-ch
 "No deterministic findings" and "not deterministically scanned" must never be confusable.
 
 **Dedup gate:** Phase D findings feed the three passes as a compact list — Pass 1/2/3 MUST NOT
-re-report a Phase D finding. The model may ANNOTATE one (B1–B7 severity, probable-FP note) but NEVER
+re-report a Phase D finding. The model may ANNOTATE one (B-series severity, probable-FP note) but NEVER
 delete or suppress it — suppression is `/dismiss` with a human justification (`phase-d-spec.md §6`).
 
 ---
@@ -507,7 +516,7 @@ Delete `.claude/code-review-checkpoint.json` on successful completion.
 | `$PLUGIN_DIR/skills/shared/checkpoint-schema.md` | Checkpoint schema |
 | `$PLUGIN_DIR/skills/shared/fingerprint-spec.md` | Fingerprint generation |
 | `$PLUGIN_DIR/skills/shared/ledger-schema.md` | Ledger format and reconciliation |
-| `$PLUGIN_DIR/skills/shared/business-context-severity.md` | B1-B7 override triggers |
+| `$PLUGIN_DIR/skills/shared/business-context-severity.md` | B-series override triggers |
 | `$PLUGIN_DIR/skills/shared/source-file-consent.md` | Consent category enforcement |
 | `$PLUGIN_DIR/skills/shared/dismissed-findings-reconciliation.md` | Rule 5 dismissed finding handling |
 | `$PLUGIN_DIR/skills/shared/graph-index-schema.md` / `graph-module-schema.md` | Knowledge graph for --area |

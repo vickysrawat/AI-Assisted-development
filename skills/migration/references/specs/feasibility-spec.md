@@ -14,12 +14,24 @@ Identifies risks, effort, and blockers before any code is written.
 
 **Generated from:** Source analysis + loaded stack/mapping reference files + approved architecture docs.
 
+**Posture-aware (per cluster/project).** Breaking-change analysis MUST branch on each project's
+generation (from the source `versions[].generation` spread + `mode.source_version`/`target_version`):
+`dotnet-modern`→ **Upgrade** (cumulative net-core removals over `(source, target]` from
+`dotnet-upgrade.md`); `dotnet-framework`→ **Re-platform** (parity mapping `dotnet-framework-to-dotnet.md`
+— the removal-delta model does NOT apply). A mixed source runs both postures per-cluster. Flag a
+≥3-major version delta (Upgrade posture) as a stage-the-upgrade YELLOW/RED. See stage-2 Step 2.0b.
+
 ### Honesty Rules (enforced)
 
 - NEVER classify a component as GREEN without verification. UNKNOWN is honest; GREEN is a commitment.
 - Every RED item MUST have at least one resolution option. If there is genuinely no path, mark BLOCKER.
 - "Compiles" ≠ "behaves identically" — call out behavioral risk on every YELLOW and RED item.
 - Dependency verification: run the appropriate outdated-package command. If unavailable, mark UNKNOWN.
+- **Integration classification:** an external dependency whose Kind/Transport/Auth is not
+  ground-truth-verified (§8 Integration Inventory row still `UNVERIFIED`, per
+  `specs/integration-verification-spec.md`) is `UNKNOWN`/RED with a resolution option — never assessed
+  on an assumed Kind. Misclassifying an in-process DB as a service (or NTLM as Kerberos) invalidates
+  the whole effort estimate for that dependency.
 
 ### Behavioral Risk Scale
 
@@ -103,6 +115,14 @@ If command fails or unavailable: classify all unverified packages as UNKNOWN.
 | Package | Current ver | Target status | Action |
 |---|---|---|---|
 | {package} | {ver} | Supported / Replacement: X / Deprecated / UNKNOWN | Upgrade / Replace / Verify |
+
+**External integrations (beyond package versions).** Mirror the Stage 0.6 §8 Integration Inventory —
+one row per external dependency, carrying its ground-truth evidence. A row whose `Verification status`
+is `UNVERIFIED` is RED/UNKNOWN here (never rated on an assumed Kind):
+
+| Integration | Kind (verified) | Evidence (PROV: config/assembly/WSDL) | Target approach | Verification status | Risk |
+|---|---|---|---|---|---|
+| {e.g. WallBuilder} | WCF basicHttpBinding/Transport/NTLM | PROV:Web.config#L120 | CoreWCF client / regenerate from WSDL | VERIFIED / UNVERIFIED / DEFERRED(task) | {MEDIUM/HIGH/BLOCKER} |
 
 **## 7. Architecture Alignment**
 

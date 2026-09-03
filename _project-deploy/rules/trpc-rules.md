@@ -1,7 +1,5 @@
 ---
 paths: ["**/trpc/**", "**/server/api/**", "**/*.ts", "**/*.tsx"]
-detect:
-  dependencies: ["@trpc/client", "@trpc/server"]
 ---
 
 # tRPC Rules — Applied to all tRPC projects

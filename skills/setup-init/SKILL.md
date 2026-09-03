@@ -340,6 +340,9 @@ This marks deploy_rules done in the manifest — no separate LLM step needed.
 
 Step 0.5 (deployment questionnaire) still requires APPROVED reply.
 Step 7-2 writes graph.json then calls graph-extract-edges.js for EXTRACTED edges.
+Architect also invokes business-context-generation.md (identify domain + jurisdiction,
+ground the B-series, write .claude/business-context.md under its own APPROVED gate; sets
+the CLAUDE.md `Domain:` line + dream-init-state.json `domain`).
 ```
 Wait for architect to complete. Mark `generate_architecture` done in manifest.
 

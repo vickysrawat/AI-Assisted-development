@@ -1,8 +1,5 @@
 ---
 paths: ["**/*.cs", "**/Migrations/**", "**/Data/**"]
-detect:
-  dependencies: ["EntityFramework"]
-  excludeIfDependencies: ["Microsoft.EntityFrameworkCore"]
 ---
 
 > ⚠️ LEGACY — MAINTENANCE ONLY. Entity Framework 6 is in maintenance mode.

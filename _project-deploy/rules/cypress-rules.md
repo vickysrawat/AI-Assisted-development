@@ -1,7 +1,5 @@
 ---
 paths: ["cypress.config.*", "**/cypress/**", "**/*.cy.ts", "**/*.cy.js"]
-detect:
-  dependencies: ["cypress"]
 ---
 
 # Cypress Rules — Applied to all Cypress E2E test projects

@@ -4,7 +4,7 @@ _Part of the `migration` skill. Loaded and dispatched by the orchestrator
 (`skills/migration/SKILL.md`) — not a standalone/registered skill. Continues from Stage 4._
 
 **Persona:** [SE] Elena Fischer — Senior Software Engineer. **Model tier:** `${REVIEW_MODEL:-claude-sonnet-4-6}` (golden-master harness) / `${ICEA_MODEL:-claude-opus-4-8}` (test authoring).
-**Checkpoint:** single source of truth (schema 1.9). Characterization tests are Write-Gated (`APPROVE MIGRATION ADO-{ID}`).
+**Checkpoint:** single source of truth (schema 1.10). Characterization tests are Write-Gated (`APPROVE MIGRATION ADO-{ID}`).
 
 ---
 
@@ -29,8 +29,14 @@ recordings from SOURCE (Step 2) now; then AFTER Step 6.1, replay against the bui
 and write `docs/.../ADO-{ADO_ID}-golden-master-report.md` (Step 4). The replay harness is a script —
 the LLM writes it and reads the summary, no LLM during the run.
 
-- If the source cannot be run: SKIP capture and record `⚠ No external oracle — parity is INFERRED
-  only` in the report and the checkpoint `decision_log`. Do NOT claim behavioral parity.
+- If the tool cannot self-run the source, **ask the developer for a running source base URL** and
+  capture against it (Step 1 `mode = provided-url`) — the strongest available oracle for APIs the AI
+  can't launch (WCF/IIS/Windows-auth). Probe reachability first; multi-scheme source auth
+  (Bearer/API-key/cookie/NTLM) from env/interactive only — never persist credentials. Persist
+  `decision_log.golden_master` (mode/url/auth_scheme/coverage — scheme only, no secret).
+- ONLY if neither self-run nor a reachable URL is available: SKIP capture and record `⚠ No external
+  oracle — parity is INFERRED only` in the report and the checkpoint `decision_log`. Do NOT claim
+  behavioral parity; the Stage 6 as-built audit is then the required compensating control.
 - Any `drift` on a HIGH-risk item or any `error` → carry to the Stage 6 completion gate: the
   migration is NOT COMPLETE until each is explained (linked to a feasibility RED/YELLOW) or
   explicitly accepted with a recorded reason.
@@ -105,12 +111,13 @@ Read $PLUGIN_DIR/skills/migration/references/specs/frontend-parity-spec.md
 - **Tier 1 — manual parity session (ALWAYS runs, no source dependency):** generated at **Step 6.4**
   (see there). This is the primary, human-dispositioned parity gate.
 - **Tier 2 — advisory automated oracle (opportunistic):** if the source frontend can be driven live
-  **with a backend**, **capture now** (spec Step 2) the semantic projection per GM-verifiable UI
-  feature-ID — a normalized ARIA snapshot (discovery layer) + verbatim url/text/network outcomes
-  (assertion layer), via role/text locators. **Defer replay to after the Step 6.1 build** (same
-  capture-now/replay-later split as golden-master). If the source can't be driven live, record
-  `⚠ No frontend oracle — parity is manual/INFERRED only (Tier 1)` in the report + checkpoint
-  `decision_log` (merge) and rely on Tier 1.
+  **with a backend** — either the tool serves it, or the developer supplies a **running source
+  frontend URL** (the UI analogue of golden-master's `provided-url` mode) — **capture now** (spec
+  Step 2) the semantic projection per GM-verifiable UI feature-ID — a normalized ARIA snapshot
+  (discovery layer) + verbatim url/text/network outcomes (assertion layer), via role/text locators.
+  **Defer replay to after the Step 6.1 build** (same capture-now/replay-later split as golden-master).
+  If the source can't be driven live and no URL is provided, record `⚠ No frontend oracle — parity is
+  manual/INFERRED only (Tier 1)` in the report + checkpoint `decision_log` (merge) and rely on Tier 1.
 
 **Never diff DOM markup or pixels — semantic projection only** (ARIA · URL · visible text · network ·
 validation messages). Drift is **ADVISORY**: it is dispositioned by a human in the Tier-1 session,

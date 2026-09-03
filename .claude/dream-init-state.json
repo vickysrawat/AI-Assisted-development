@@ -21,9 +21,9 @@
       "mtime": 1783489913277.2468
     }
   },
-  "external_dir_last_sync": "2026-08-11",
+  "external_dir_last_sync": "2026-09-03",
   "repo_type": "JS_LIBRARY",
   "external_detected_stacks": [],
   "external_stacks_prompted": false,
-  "shell_type": "node"
+  "shell_type": "bash"
 }

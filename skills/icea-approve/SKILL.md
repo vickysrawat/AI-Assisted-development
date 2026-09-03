@@ -2,7 +2,7 @@
 
 _Skill version: 1.0 · Last changed: 2026-07-07 · Consent: C_
 
-> **Business context severity:** approves ICEAs whose acceptance criteria carry B1–B7
+> **Business context severity:** approves ICEAs whose acceptance criteria carry B-series
 > sensitivity flags — see `$PLUGIN_DIR/skills/shared/business-context-severity.md`.
 
 ## Purpose

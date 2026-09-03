@@ -47,7 +47,7 @@ flowchart LR
 
 ## Data Exchanged
 
-> What data crosses each boundary (and any B1–B7 sensitivity — see
+> What data crosses each boundary (and any B-series sensitivity — see
 > `business-context-severity.md`). Flag PII / privileged data leaving the system.
 
 > ⚠ Could not determine — needs manual input

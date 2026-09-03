@@ -78,6 +78,34 @@ agents return scores and never write it (`single-writer-assumption.md`).
 `icea-implement` runs its Step 4b loop within a single turn and does **not** persist
 a `goalLoop` block — a dropped implementation loop simply re-runs from Step 4.
 
+### Migration `mode` block (`schema_version` 1.11)
+
+The `migration` checkpoint (`.claude/migration-checkpoint.json`) carries a `mode` object seeded at
+Stage 0.4. It is **merge-written** (overwrite only with provided non-empty values), so a resume that
+re-runs Step 0.4 never drops a previously-recorded field.
+
+```json
+{
+  "schema_version": "1.11",
+  "mode": {
+    "graph": true,
+    "track": "backend | frontend | upgrade",
+    "source_token": "dotnet | dotnet_framework | java | nodejs | angular | react",
+    "target_token": "dotnet | angular | react | java-spring | python",
+    "source_version": "net8.0 | 4.8 | null",
+    "target_version": "net10.0 | null"
+  }
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `mode.source_version` | string \| null | Detected SOURCE .NET version (primary TFM from the source `versions[]` spread / `repo-detect --json`); `null` for non-.NET or unresolved |
+| `mode.target_version` | string \| null | Chosen TARGET .NET version (Q1b, allow-list `net8.0`/`net9.0`/`net10.0`); `null` until chosen / non-.NET target |
+
+New in 1.11 (from 1.10): `mode.source_version`, `mode.target_version`, and merge-write semantics for
+`mode`. A resumed pre-1.11 checkpoint simply gains these fields (defaulted absent → treated as null).
+
 ---
 
 ## Field definitions

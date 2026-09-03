@@ -32,8 +32,10 @@ project defaults below.
 
 ## Business context severity
 
-ICEA acceptance criteria carry B1–B7 sensitivity flags where relevant (immigration IDs,
-privileged matter data, vulnerable-client data). See `$PLUGIN_DIR/skills/shared/business-context-severity.md`.
+ICEA acceptance criteria carry B-series sensitivity flags where relevant (per the project's
+resolved triggers — e.g. regulated identifiers, confidential records, safety-endangering data).
+See the resolved B-series — `.claude/business-context.md` if it exists, otherwise
+`$PLUGIN_DIR/skills/shared/business-context-severity.md`.
 
 ## Invocation
 
@@ -412,7 +414,7 @@ With the ICEA draft still in context (nothing written yet), run the critic:
 Read .claude/plugin-path.txt to get PLUGIN_DIR (if absent, use §1a resolver), then
 Read $PLUGIN_DIR/skills/critic/SKILL.md and execute it with mode = icea, source = internal.
 ```
-The critic evaluates conformance, completeness, testability, B1–B7 coverage,
+The critic evaluates conformance, completeness, testability, B-series coverage,
 scope, and (when a D block exists) decision quality — Category C, no source files
 read. On a `REVISE` verdict, follow the critic's bounded auto-revise loop
 (regenerate the ICEA draft in context, re-critique, max 2 retries). Only on

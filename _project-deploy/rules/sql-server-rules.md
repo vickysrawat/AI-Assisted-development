@@ -1,7 +1,5 @@
 ---
 paths: ["**/*.sql", "**/migrations/**", "**/db/**"]
-detect:
-  dependencies: ["mssql", "Microsoft.Data.SqlClient", "System.Data.SqlClient", "pyodbc", "tedious"]
 ---
 
 # SQL Server Rules — T-SQL dialect, Azure SQL, and SQL Server-specific patterns

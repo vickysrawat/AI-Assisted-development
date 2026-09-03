@@ -1,7 +1,5 @@
 ---
 paths: ["**/*.css", "**/*.pcss"]
-detect:
-  files: ["**/*.css", "**/*.pcss"]
 ---
 
 # CSS Rules — Applied to all plain CSS files

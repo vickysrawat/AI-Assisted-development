@@ -5,7 +5,7 @@ _Part of the `migration` skill. Loaded and dispatched by the orchestrator
 _Heavy — the orchestrator dispatches one subagent per cluster on isolated branches; agents RETURN a ClusterResult, the orchestrator merges + records status in `clusters{}`._
 
 **Persona:** [SE] Elena Fischer — Senior Software Engineer. **Model tier:** `${ICEA_MODEL:-claude-opus-4-8}`.
-**Checkpoint:** single source of truth (schema 1.9); the orchestrator is its single writer — cluster
+**Checkpoint:** single source of truth (schema 1.10); the orchestrator is its single writer — cluster
 agents do not write it. Per-cluster status → `clusters{}` ({status, tier, branch, date, feature_ids}).
 
 ---

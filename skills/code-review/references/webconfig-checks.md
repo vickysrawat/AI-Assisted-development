@@ -29,7 +29,7 @@ Notes:
 - WC005/WC015 overlap with the existing secrets scan in `checkin` Check C —
   fingerprints here use the WCxxx ID so reconciliation keeps them distinct;
   do not double-gate the same line.
-- B1–B7 escalation applies: any WC finding on an app handling privileged or
+- B-series escalation applies: any WC finding on an app handling privileged or
   immigration data escalates one severity band (Phase P annotates, per the
   disagreement protocol).
 - All findings: `Source: deterministic (webconfig-checks 1.0)`.

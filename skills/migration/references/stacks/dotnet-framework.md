@@ -60,6 +60,29 @@ CoreWCF does NOT support: WSDualHttpBinding, MSMQ, full WS-Security, distributed
 
 ---
 
+## Integration-extraction checklist (Stage 0 / 0.6 — ground truth, not inference)
+
+Classify every external dependency from the **host config, the referenced assembly, and the service
+metadata/WSDL** — never from the consumer's interface name (`specs/integration-verification-spec.md`).
+The concrete rules (learned from ADO-9999, where RiskMgmt-as-DB was misread as WCF and WallBuilder's
+NTLM+2-endpoint reality was misread as Kerberos):
+
+- **No `<client>` endpoint for a dependency + a `DbContext`/`<connectionStrings>` entry ⇒ in-process
+  direct-DB, NOT a service call.** (`RiskManagementDataMart` was EF6 direct-DB, not a WCF proxy.)
+- **A `ClientBase<T>` / `<client><endpoint>` ⇒ a real WCF client** — capture the binding's
+  `security mode`, `clientCredentialType`, and `maxReceivedMessageSize` (transport truth).
+  (`WallBuilder` = `basicHttpBinding` + Transport + NTLM, 50 MB, two endpoints — not Kerberos.)
+- **A KE `*Wrapper` / `*Resource` type is an abstraction** — its methods are NOT the raw service
+  operations; resolve the referenced assembly (or `?singleWsdl`) to find the real contract before
+  asserting it. (WallBuilder's 4-method wrapper hid a 116/181-operation Intapp SOAP contract.)
+- **Formatting / ID helpers (`FormatHelper.*`, employee-ID / client-matter formats)** often live in a
+  referenced common assembly (e.g. `KE.Common.Helpers`) — resolve it before asserting formats; do not
+  infer the format from a call site.
+- If the backing source / WSDL is unreachable, record an **unavailable-ground-truth gap** (inventory
+  §11) and mark the Integration Inventory row `UNVERIFIED` — it blocks `APPROVE INVENTORY`.
+
+---
+
 ## Incremental Migration Pattern (Strangler Fig + YARP)
 
 For large apps that cannot be migrated in one sprint:

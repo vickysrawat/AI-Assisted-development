@@ -131,7 +131,7 @@ Read `.claude/plugin-path.txt` to get PLUGIN_DIR (if absent, resolve via
 `skills/shared/plugin-path-resolution.md §1a`), then:
 ```
 Read $PLUGIN_DIR/skills/app-readiness/references/ado-pipelines-api.md
-Read $PLUGIN_DIR/skills/shared/business-context-severity.md
+Read .claude/business-context.md if it exists (project-local resolved B-series); otherwise read $PLUGIN_DIR/skills/shared/business-context-severity.md
 Read $PLUGIN_DIR/skills/shared/source-file-consent.md
 Read $PLUGIN_DIR/skills/shared/scope-flags-spec.md
 ```
@@ -369,7 +369,7 @@ ls security/ 2>/dev/null | sort -r | head -3
 
 Load the most recent HTML report and extract:
 - Unresolved Critical findings → **blocking** regardless of other scores
-- Unresolved B1–B7 business context findings → **blocking**
+- Unresolved B-series business context findings → **blocking**
 - Unresolved High findings → reduces max score to 3
 - Secrets management strategy (from deployment context)
 
@@ -405,13 +405,13 @@ Read the `## SPA Authentication` section of `architecture-deployment.md`.
 | All protected routes guarded | Every route has `canActivate: [MsalGuard]` or equivalent | High — unauthenticated users can access UI shell |
 | Token attached via interceptor | `MsalInterceptor` or custom interceptor in `app.config.ts` | High — some API calls may be unauthenticated |
 | Silent token refresh | `acquireTokenSilent` with `InteractionRequiredAuthError` fallback | Medium — broken UX and 401 errors after token expiry |
-| Token storage | `sessionStorage` (not `localStorage`) | Amber (High if B1–B7 data) — XSS persistence risk |
+| Token storage | `sessionStorage` (not `localStorage`) | Amber (High if B-series data) — XSS persistence risk |
 | Full logout | `logoutRedirect()` clears Entra ID session | Medium — SSO session persists after logout |
 | Content Security Policy | CSP meta tag in `index.html` | Medium (High if `localStorage` tokens) |
 
-If `AUTH_SPA_LOCAL_STORAGE` is true and the application handles B1–B7 data →
-escalate token storage finding to **Critical** via business context override B1/B2.
-A persisted Entra ID token for attorney-client matter data is a breach enabler.
+If `AUTH_SPA_LOCAL_STORAGE` is true and the application handles B-series data →
+escalate token storage finding to **Critical** via a business context override.
+A persisted Entra ID token guarding regulated or confidential data is a breach enabler.
 
 Score 1: No security scan ever run, or Critical unresolved findings.
 Score 2: Security scan run but High findings unresolved, OR Entra ID configured but
@@ -421,8 +421,8 @@ Score 4: Score 3 + Managed Identity for service-to-service, no Client Secrets in
          MSAL session storage on frontend.
 Score 5: Score 4 + Conditional Access (MFA), penetration test done, CA policies documented.
 
-**Always apply B1–B7 business context severity from `$PLUGIN_DIR/skills/shared/business-context-severity.md`.**
-Any unresolved B1–B7 finding is a blocker regardless of CVSS score.
+**Always apply B-series business context severity from `$PLUGIN_DIR/skills/shared/business-context-severity.md`.**
+Any unresolved B-series finding is a blocker regardless of CVSS score.
 
 ---
 
@@ -499,9 +499,11 @@ Score 5: Score 4 + E2E tests for critical paths, flaky tests tracked and resolve
 
 ## Step 6 — Apply business context severity
 
-Before determining the verdict, apply B1–B7 from `$PLUGIN_DIR/skills/shared/business-context-severity.md`
-to every finding. Any finding touching attorney-client data, immigration identifiers,
-active case timelines, vulnerable client data, or real PII in a static directory
+Before determining the verdict, apply the resolved B-series triggers —
+`.claude/business-context.md` if it exists, otherwise
+`$PLUGIN_DIR/skills/shared/business-context-severity.md` — to every finding. Any finding
+touching a resolved B-series trigger (regulated/confidential data, regulated identifiers,
+irreversible time-sensitive harm, safety-endangering data, or real PII in a static directory)
 is a blocker regardless of its domain score.
 
 ---
@@ -513,7 +515,7 @@ is a blocker regardless of its domain score.
 | ✅ **Production ready** | All 8 domains ≥ 3. No domain at 1. No unresolved Critical security findings. |
 | ⚠️ **Conditionally ready** | EA-2, EA-3, EA-4, EA-8 all ≥ 3. Other domains may be at 2. Document exceptions. |
 | 🔶 **Not ready** | Any critical domain (EA-2, EA-3, EA-4, EA-8) < 3, OR more than 3 domains at 2. |
-| 🔴 **Blocked** | Any domain at 1, OR unresolved Critical security finding, OR unresolved B1–B7 finding, OR no ADO pipeline. |
+| 🔴 **Blocked** | Any domain at 1, OR unresolved Critical security finding, OR unresolved B-series finding, OR no ADO pipeline. |
 
 Critical domains: EA-2 (Resilience), EA-3 (Observability), EA-4 (Security), EA-8 (Tests).
 
@@ -551,6 +553,6 @@ Report structure:
 - NEVER invent metric values or pipeline states — if an API call fails, mark that check as ❓ Unknown
 - NEVER score a domain higher than the evidence supports
 - NEVER skip EA-4 (Security) because a recent scan was not found — score it 1 or 2 and flag as blocking
-- NEVER skip B1–B7 business context check
+- NEVER skip B-series business context check
 - NEVER read source files in --quick mode
 - NEVER proceed without deployment context — require the architect skill to be run first

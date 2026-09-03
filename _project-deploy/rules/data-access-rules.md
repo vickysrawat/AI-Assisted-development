@@ -1,7 +1,5 @@
 ---
 paths: ["**/repositories/**", "**/data/**", "**/db/**", "**/persistence/**"]
-detect:
-  always: false
 ---
 
 # Data Access Rules — HOW to access data (patterns, abstractions, connection management)

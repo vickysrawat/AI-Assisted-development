@@ -171,7 +171,7 @@ Load these on demand — do not load both upfront if only one document was reque
 ## Business context severity
 
 This skill does not perform security or compliance reviews. If output from this
-skill surfaces data that may trigger B1–B7 sensitivity (see
+skill surfaces data that may trigger B-series sensitivity (see
 `$PLUGIN_DIR/skills/shared/business-context-severity.md`), flag it to the developer. Do not
 silently process or display attorney-client privileged matter data, immigration
-identifiers, or other B1–B7 categories without acknowledgement.
+identifiers, or other B-series categories without acknowledgement.

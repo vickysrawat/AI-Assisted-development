@@ -622,10 +622,10 @@ See `$PLUGIN_DIR/skills/shared/source-file-consent.md` for the full consent spec
 
 ## Business context severity
 
-If output from this skill surfaces data that may trigger B1–B7 sensitivity
+If output from this skill surfaces data that may trigger B-series sensitivity
 (see `$PLUGIN_DIR/skills/shared/business-context-severity.md`), flag it to the developer.
 Do not silently process or display attorney-client privileged matter data,
-immigration identifiers, or other B1–B7 categories without acknowledgement.
+immigration identifiers, or other B-series categories without acknowledgement.
 
 ---
 

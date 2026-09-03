@@ -13,7 +13,7 @@ description: >
 _Skill version: 2.0 · Last changed: 2026-07-08 · Consent: C_
 
 > **Business context severity:** infrastructure skill — no security findings. See
-> `$PLUGIN_DIR/skills/shared/business-context-severity.md` for the B1–B7 model it does not trigger.
+> `$PLUGIN_DIR/skills/shared/business-context-severity.md` for the B-series model it does not trigger.
 
 ## Purpose
 
@@ -146,6 +146,7 @@ These are enforced by `scripts/setup-teardown.cjs` — not just documented.
 
 - NEVER remove `memory/` — it is always developer property.
 - NEVER remove CLAUDE.md entirely — only strip plugin-managed sections.
+- NEVER remove `.claude/business-context.md` — it is developer-tuned domain policy (like architecture docs).
 - NEVER remove `.claude/rules/` files not listed in `deployed_rules[]`.
 - NEVER remove `.git/hooks/pre-commit` if its content differs from the plugin hook.
 - ALWAYS dry-run before any filesystem change (Step 2 is mandatory).

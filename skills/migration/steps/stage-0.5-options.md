@@ -4,7 +4,7 @@ _Part of the `migration` skill. Loaded and dispatched by the orchestrator
 (`skills/migration/SKILL.md`) — not a standalone/registered skill. Cross-session resume: `MIGRATE OPTIONS ADO-{ID}`._
 
 **Persona:** [SA] Rafael Mendes — Solution Architect. **Model tier:** `${ICEA_MODEL:-claude-opus-4-8}`.
-**Checkpoint:** single source of truth (schema 1.9); the approval is persisted as
+**Checkpoint:** single source of truth (schema 1.10); the approval is persisted as
 `stage_gates.options_approved = true` when the Step 0.4 checkpoint is written (or merged in place if a
 checkpoint already exists).
 

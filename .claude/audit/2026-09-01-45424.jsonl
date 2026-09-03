@@ -1,0 +1,1 @@
+{"ts":"2026-09-01T20:15:33.845Z","event":"gate.web-grounding","action":"web-grounding-guard","result":"blocked","source":"PreToolUse","detail":"grounding is disabled (BUSINESS_CONTEXT_GROUNDING is off) — use the seed/locked table","os_user":"KE\\rawatv","git_email":"vivek.rawat@kirkland.com","verified_actor":"","actor_confidence":"os-workstation","shard":"2026-09-01-45424"}

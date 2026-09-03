@@ -106,7 +106,11 @@ const SHARED = [
   // domain-map-spec.md was retired in v3.0.0 (ADR 0038) — validate.py check 9 errors if it exists
   'single-writer-assumption.md',
   'model-routing-spec.md',
+  'runtime-generation-spec.md',
   'business-context-severity.md',
+  'business-context-presets.md',
+  'business-context-grounding.md',
+  'business-context-generation.md',
   'source-file-consent.md',
 ];
 SHARED.forEach(f => {
@@ -126,13 +130,45 @@ if (exists('skills/shared/scope-flags-spec.md')) {
   s.includes('find .')        ? ok('scope-flags-spec: canonical find command present') : bad('scope-flags-spec: canonical find command missing');
 }
 
-// Business context spec must have B1-B7
+// Business context spec is domain-neutral (v2.0): a variable-length B-series, not a fixed
+// B1-B7. Assert the model is intact (floor principle + a B-series with at least B1) and the
+// project-local resolution pointer. The verbatim legal B1-B7 now lives in the presets file.
 if (exists('skills/shared/business-context-severity.md')) {
   const b = read('skills/shared/business-context-severity.md');
-  ['B1','B2','B3','B4','B5','B6','B7'].forEach(trigger => {
-    b.includes(trigger) ? ok(`business-context-severity: ${trigger} defined`) : bad(`business-context-severity: ${trigger} missing`);
-  });
+  b.includes('B1') ? ok('business-context-severity: B-series defined (B1 present)') : bad('business-context-severity: B-series missing (no B1)');
+  /B-?series/i.test(b) ? ok('business-context-severity: B-series framing present') : bad('business-context-severity: B-series framing missing');
   (b.includes('floor, not a ceiling') || b.includes('floors, not ceilings')) ? ok('business-context-severity: floor principle stated') : bad('business-context-severity: floor principle missing');
+  b.includes('.claude/business-context.md') ? ok('business-context-severity: project-local resolution pointer present') : bad('business-context-severity: project-local resolution pointer missing');
+}
+
+// The verbatim-locked `legal` preset must preserve the original B1-B7 (regression safety).
+if (exists('skills/shared/business-context-presets.md')) {
+  const p = read('skills/shared/business-context-presets.md');
+  ['B1','B2','B3','B4','B5','B6','B7'].forEach(t => {
+    p.includes(t) ? ok(`business-context-presets: legal ${t} preserved`) : bad(`business-context-presets: legal ${t} missing (regression)`);
+  });
+  /verbatim-locked/i.test(p) ? ok('business-context-presets: legal marked verbatim-locked') : bad('business-context-presets: legal not marked verbatim-locked');
+}
+
+// Tech-stack detection must be aware of the .slnx (XML) solution format across every mirror
+// of the .NET detection ladder — repo-detect.cjs, external-stack-detection.cjs, and the two
+// architect Step-1 bash ladders. Removing .slnx from any one re-opens the exit-3 gap on a
+// modern .NET repo. (Guards ADR modern-format resilience; regression fixture: tests/repo-detect.test.cjs.)
+[
+  'scripts/repo-detect.cjs',
+  'scripts/external-stack-detection.cjs',
+  'skills/architect/SKILL.md',
+].forEach(f => {
+  if (!exists(f)) { bad(`slnx-detect: ${f} missing`); return; }
+  read(f).includes('.slnx')
+    ? ok(`slnx-detect: ${f} is .slnx-aware`)
+    : bad(`slnx-detect: ${f} missing .slnx awareness — modern .NET solution format will fail detection`);
+});
+// repo-detect.cjs must carry the graceful .cs fallback (unknown packaging → DOTNET_API).
+if (exists('scripts/repo-detect.cjs')) {
+  read('scripts/repo-detect.cjs').includes("anyFileDeep('.cs')")
+    ? ok('slnx-detect: repo-detect.cjs has graceful .cs fallback')
+    : bad('slnx-detect: repo-detect.cjs missing graceful .cs fallback for unknown packaging formats');
 }
 
 // ── 5. Skills ─────────────────────────────────────────────────────────────────
@@ -253,6 +289,42 @@ if (exists('_project-deploy/rules/project-rules.md')) {
   pr.includes('Do not assume')         ? ok('project-rules: Do not assume rule present')         : bad('project-rules: Do not assume rule missing');
 }
 
+// ── ADR 0059: scored stack-key detection & rule deployment ─────────────────────
+console.log('\n▶ Stack-key detection (ADR 0059)');
+// (a) No rule file may carry `detect:` frontmatter — detection lives only in stack-signals.cjs.
+if (typeof require('fs').readdirSync === 'function' && exists('_project-deploy/rules')) {
+  const rd = require('fs').readdirSync('_project-deploy/rules').filter(f => f.endsWith('.md'));
+  const withDetect = rd.filter(f => /^detect:/m.test(read('_project-deploy/rules/' + f)));
+  withDetect.length === 0
+    ? ok('rules: no `detect:` frontmatter (moved to stack-signals.cjs)')
+    : bad('rules: still carry `detect:` frontmatter — ' + withDetect.join(', '));
+}
+// (b) stack-signals.cjs exists and every stack_key maps to an existing rule file (convention).
+if (exists('scripts/stack-signals.cjs')) {
+  ok('scripts/stack-signals.cjs exists');
+  let S = null; try { S = require('../scripts/stack-signals.cjs'); } catch (e) { bad('stack-signals.cjs failed to load: ' + e.message); }
+  if (S && Array.isArray(S.STACK_SIGNALS_TABLE)) {
+    const keyToFile = k => (k === 'project-rules' ? 'project-rules.md' : k + '-rules.md');
+    const backendCaps = ['backend-base','rest-api','auth','api-security','data-access','testing-backend','observability'];
+    const allKeys = new Set([...S.STACK_SIGNALS_TABLE.map(e => e.stack_key), ...backendCaps]);
+    const missing = [...allKeys].filter(k => !exists('_project-deploy/rules/' + keyToFile(k)));
+    missing.length === 0 ? ok('stack-signals: every stack_key has a rule file') : bad('stack-signals: keys without a rule file — ' + missing.join(', '));
+    // no orphan rule files (every -rules.md maps to a known key)
+    const known = new Set([...allKeys].map(keyToFile));
+    const orphans = require('fs').readdirSync('_project-deploy/rules').filter(f => f.endsWith('-rules.md') && !known.has(f));
+    orphans.length === 0 ? ok('stack-signals: no orphan rule files') : bad('stack-signals: rule files with no stack_key — ' + orphans.join(', '));
+    // prune denylist present
+    const ps = S.PRUNE_DIRS || new Set();
+    ['bin','obj','node_modules'].every(d => ps.has(d)) ? ok('stack-signals: PRUNE_DIRS covers bin/obj/node_modules') : bad('stack-signals: PRUNE_DIRS missing build/vendor dirs');
+  }
+} else bad('scripts/stack-signals.cjs missing');
+// (c) repo-detect emits detection; bootstrap consumes it + writes manifest/.hashes.
+if (exists('scripts/repo-detect.cjs')) {
+  const rdc = read('scripts/repo-detect.cjs');
+  rdc.includes('stack-signals') && rdc.includes('state.detection')
+    ? ok('repo-detect: computes + writes scored detection') : bad('repo-detect: missing scored detection wiring');
+}
+
 // ── 7. setup-init completeness ────────────────────────────────────────────────
 // setup-init is a thin command → skills/setup-init/SKILL.md holds the procedure.
 console.log('\n▶ setup-init completeness (skills/setup-init/SKILL.md)');
@@ -271,9 +343,9 @@ if (exists('skills/setup-init/SKILL.md')) {
   bs.includes('file-cache.json') && bs.includes('token-graph.json')
     ? ok('setup-init-bootstrap: seeds file-cache.json and token-graph.json')
     : bad('setup-init-bootstrap: cache/token-graph seeding missing');
-  bs.includes('deployed_rules') || bs.includes('detect')
-    ? ok('setup-init-bootstrap: frontmatter-discovery rule deployment present')
-    : bad('setup-init-bootstrap: frontmatter-discovery rule deployment missing');
+  bs.includes('deployed_rules') && bs.includes('state.detection') && bs.includes('_deploy-manifest.json')
+    ? ok('setup-init-bootstrap: scored deploy present (reads detection, writes deployed_rules + manifest)')
+    : bad('setup-init-bootstrap: scored rule deployment wiring missing (ADR 0059)');
 }
 
 // ── 8. Test scenario coverage ─────────────────────────────────────────────────

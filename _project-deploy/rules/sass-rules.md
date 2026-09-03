@@ -1,7 +1,5 @@
 ---
 paths: ["**/*.scss", "**/*.sass"]
-detect:
-  dependencies: ["sass", "node-sass", "dart-sass"]
 ---
 
 # Sass / SCSS Rules — Applied to all Sass files

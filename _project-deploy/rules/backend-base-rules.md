@@ -1,7 +1,5 @@
 ---
 paths: ["**/*.cs", "**/*.ts", "**/*.py", "**/*.java"]
-detect:
-  always: false
 ---
 
 # Backend Base Rules — Universal guardrails for all backend projects

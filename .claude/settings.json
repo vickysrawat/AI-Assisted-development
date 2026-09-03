@@ -6,15 +6,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/icea-floor.cjs"
-          }
-        ]
-      },
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
             "command": "node .claude/hooks/check-settings-secrets.cjs --hook"
           }
         ]
@@ -36,17 +27,27 @@
             "command": "node .claude/hooks/context-budget-tech-write.cjs"
           }
         ]
-      }
-    ],
-    "UserPromptSubmit": [
+      },
       {
+        "matcher": "WebSearch|WebFetch",
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/memory-capture.cjs"
+            "command": "node .claude/hooks/web-grounding-guard.cjs --hook"
           }
         ]
       },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/icea-floor.sh"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
       {
         "hooks": [
           {
@@ -62,6 +63,14 @@
             "command": "node .claude/hooks/audit-prompt.cjs"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/memory-capture.sh"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -70,12 +79,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/memory-log.cjs"
+            "command": "bash .claude/hooks/memory-log.sh"
           }
         ]
       }
     ]
   },
   "customInstructions": "Response style: suppress preambles and plan-restatement before tool calls. When writing to existing files, show only a unified diff (changed lines + 3 lines of context) rather than the full file content. When writing new files, show the full content. Never echo generated file content to chat if the content is also being written to disk.",
-  "autoMemoryEnabled": false
+  "autoMemoryEnabled": false,
+  "env": {
+    "BUSINESS_CONTEXT_GROUNDING": "on"
+  }
 }

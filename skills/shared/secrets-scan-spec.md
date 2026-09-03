@@ -73,13 +73,13 @@ any of `placeholder|changeme|example|sample|dummy|redacted|todo|tbd|none|null`.
 
 ---
 
-## 4. Data-in-static-directory escalation (B1–B7)
+## 4. Data-in-static-directory escalation (B-series)
 
 Real entity data committed to a web-served static directory (`public/`, `wwwroot/`,
 `assets/`, `dist/`, `static/`) is a **Critical** finding under business-context severity
-(`business-context-severity.md` B1–B7) — static dirs are publicly served, so this is data
+(`business-context-severity.md` B-series) — static dirs are publicly served, so this is data
 exposure, not just hygiene. Applies to `*.json`/`*.csv`/`*.sql`/`*.xlsx` added under those
-paths containing what looks like real records (emails, names, IDs, matter numbers).
+paths containing what looks like real records (emails, names, IDs, account/case/record numbers).
 
 ```bash
 STATIC_DIR_RE='(^|/)(public|wwwroot|assets|dist|static)/.*\.(json|csv|sql|xlsx|xml)$'
@@ -142,7 +142,7 @@ hits=$(git diff "$base".."HEAD" | scan_secret_content)
 |---|---|---|
 | `sens` | sensitive files staged/added | ❌ hard fail (blocks) |
 | `hits` | secret value shapes / key=value pairs in content | ❌ hard fail (blocks) |
-| `data` | real data under a static-served dir | ❌ Critical (B1–B7), blocks |
+| `data` | real data under a static-served dir | ❌ Critical (B-series), blocks |
 
 ---
 
@@ -156,7 +156,7 @@ C. Secrets  ❌ FAIL
     Fix: git reset HEAD {file} && echo "{file}" >> .gitignore
   Secret pattern         : {file}:{line} — {matched shape}
     Fix: remove the value; use an env var or settings.local.json
-  Data in static dir     : {file} — real entity data (Critical, B1–B7)
+  Data in static dir     : {file} — real entity data (Critical, B-series)
     Fix: git reset HEAD {file} && git rm {file}
          (purge history if previously committed: git filter-repo --path {file} --invert-paths)
 ```

@@ -4,7 +4,7 @@ _Part of the `migration` skill. Loaded and dispatched by the orchestrator
 (`skills/migration/SKILL.md`) — not a standalone/registered skill. Cross-session resume: `MIGRATE ARCH ADO-{ID}`._
 
 **Persona:** [SA] Rafael Mendes — Solution Architect. **Model tier:** `${ICEA_MODEL:-claude-opus-4-8}`.
-**Checkpoint:** single source of truth (schema 1.9); on `APPROVE ARCHITECTURE` merge
+**Checkpoint:** single source of truth (schema 1.10); on `APPROVE ARCHITECTURE` merge
 `stage_gates.architecture_approved = true`, `phase = "Stage 2"`, and populate `decision_log`.
 
 ---
@@ -85,6 +85,14 @@ Generate the following documents. Each one is written as a complete, standalone 
 All diagrams MUST be in Mermaid format — no inline ASCII art, no described diagrams.
 Each architectural component MUST have an ADR section.
 
+**Design-time banner (REQUIRED — every one of the five docs opens with it).** These docs are written
+*before any code exists* — they are intent, not fact. Stamp the very first line of each doc:
+```
+> Design-time (pre-implementation) — will be reconciled against the generated code at Stage 6.
+> As-built source of truth after Stage 6: `.claude/architecture/*` (see asbuilt-reconciliation-spec.md).
+```
+Stage 6 replaces this with a supersession banner once reconciliation runs (`asbuilt-reconciliation-spec.md`).
+
 **ADR format (required for every significant component):**
 ```markdown
 ### [Component Name]
@@ -128,7 +136,10 @@ Sections:
 
 Sections:
 1. Data Strategy — data access approach (Dapper / EF Core / JPA) with ADR
-2. Entity Map — key domain entities from source, how they map to target
+2. Entity Map — key domain entities from source, how they map to target. **Add a B-series
+   column** (M3): mark each entity/field that matches a resolved B-series trigger (from the
+   target's `.claude/business-context.md`), so the rewrite is required to preserve its
+   protection (encryption, parameterized access, authorization, audit trail).
 3. Entity Relationship Diagram — Mermaid ER diagram:
    ```mermaid
    erDiagram

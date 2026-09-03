@@ -15,7 +15,7 @@ description: >
 _Skill version: 1.0 · Last changed: 2026-07-07 · Consent: C_
 
 > **Business context severity:** infrastructure skill — no security findings. See
-> `$PLUGIN_DIR/skills/shared/business-context-severity.md` for the B1–B7 model it does not trigger.
+> `$PLUGIN_DIR/skills/shared/business-context-severity.md` for the B-series model it does not trigger.
 
 ## Purpose
 Re-provision an existing project after a plugin upgrade. Reads the provisioned
@@ -254,41 +254,37 @@ node {PLUGIN_DIR}/scripts/setup-init-bootstrap.cjs --mode sync
 
 ---
 
-## Step 3 — Re-deploy missing rule files
+## Step 3 — Re-run scored detection + rule deployment (ADR 0059)
 
-Read `deployed_rules` from `.claude/dream-init-state.json` — this is the exact list
-of rule files deployed during `setup-init`. Restore any that are missing from
-`.claude/rules/` without re-running detection (detection is an init-time operation).
+Rule deployment is driven by the scored `detection` object in `.claude/dream-init-state.json`.
+setup-sync **re-runs detection and the scored deploy** so a project picks up corrected
+signals (e.g. the `.slnx`/generation/pruning fixes) and any newly added rules — it no longer
+just re-copies the old `deployed_rules[]` list.
 
 ```bash
-node -e "
-const fs   = require('fs');
-const path = require('path');
-const PLUGIN_RULES = '$PLUGIN_DIR/_project-deploy/rules';
-let state = {};
-try { state = JSON.parse(fs.readFileSync('.claude/dream-init-state.json', 'utf8')); } catch(e) {}
-const deployedRules = state.deployed_rules || [];
-if (!deployedRules.length) {
-  console.log('  ⚠ deployed_rules[] is empty — run /setup-init to detect and deploy rules');
-  process.exit(0);
-}
-let restored = 0, alreadyPresent = 0;
-for (const filename of deployedRules) {
-  const src  = path.join(PLUGIN_RULES, filename);
-  const dest = path.join('.claude', 'rules', filename);
-  if (fs.existsSync(dest)) { alreadyPresent++; continue; }
-  if (!fs.existsSync(src)) { console.log('  ⚠ rule not found in plugin: ' + filename); continue; }
-  fs.copyFileSync(src, dest);
-  console.log('  ✓ restored .claude/rules/' + filename);
-  restored++;
-}
-console.log('  Rules: ' + restored + ' restored, ' + alreadyPresent + ' already present');
-"
+# 1. (Re)detect — refresh the scored `detection` object. Needed for pre-ADR-0059 installs that
+#    have no `detection` in state, and to pick up detector improvements. --force overwrites.
+node "$PLUGIN_DIR/scripts/repo-detect.cjs" --force --root=.
+
+# 2. Re-run the scored, hash-tracked deploy (reads state.detection; honors .claude/rules/.hashes,
+#    so developer-edited rules are protected, not clobbered; writes _deploy-manifest.json).
+node "$PLUGIN_DIR/scripts/setup-init-bootstrap.cjs" --mode post-detect --repo-type "$(node -e 'try{process.stdout.write(JSON.parse(require("fs").readFileSync(".claude/dream-init-state.json","utf8")).repo_type||"")}catch(e){}')"
 ```
 
-> **Note:** To pick up newly added rule files (e.g. a new ecosystem rule added
-> to the plugin since last init), run `/setup-init` rather than `/setup-sync`.
-> setup-sync restores the exact original set; setup-init re-runs full detection.
+Report the deploy summary (deployed / customised-protected counts + threshold) from the
+bootstrap output.
+
+> **v3.19.0 — version-spread backfill (Shared, automatic here).** The `--force` re-detect above now
+> also backfills `generations.dotnet.versions[]` / `packages` / `generations_meta` for pre-3.19
+> projects (safe, no rule change). **Track-A per-project rule scoping stays OFF** unless
+> `PER_PROJECT_RULES=1` / `per_project_rules:true` — when OFF the deploy is byte-identical to before.
+> If enabling, run the deploy once with `PER_PROJECT_RULES_DRYRUN=1` first to preview the scoped-path
+> plan + the one-time `.hashes` body-hash re-baseline before applying.
+
+> **Dropping wrong rules:** re-deploy is idempotent-**add** — it (re)writes the correct set and
+> the manifest, but does NOT delete rules that are no longer detected (avoids clobbering
+> possibly developer-edited files). To remove stale rules from a mis-provisioned project, run
+> `/setup-teardown --rules` then re-run `/setup-sync` (or `/setup-init`). See migration 028.
 
 ---
 

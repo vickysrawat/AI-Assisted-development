@@ -1,6 +1,13 @@
 # Parity Mapping: .NET Core / .NET 5–8 → .NET 10
 
-_Loaded when source = `dotnet` (NET Core/5-8) and target = .NET 10 upgrade._
+_Loaded when source = `dotnet` (NET Core/5-8) and target = a modern .NET upgrade._
+
+> **Scope — modern→modern only.** This file covers **net-core → net-core** version upgrades, where
+> the breaking-change set is the cumulative removals over `(source, target]`. It does NOT apply to
+> **.NET Framework → .NET** — that is a *re-platform* (System.Web→ASP.NET Core, Web.config→
+> appsettings, WCF→CoreWCF/gRPC), covered by `dotnet-framework-to-dotnet.md`. For a **mixed** source
+> (some Framework projects, some modern), apply this file per-cluster to the modern projects and the
+> parity file to the Framework projects (posture is per-project — see the migration feasibility step).
 
 ---
 
@@ -102,7 +109,7 @@ dotnet list package --vulnerable   # also check for security vulnerabilities
 Packages most commonly needing major version bumps:
 | Package | Common upgrade notes |
 |---|---|
-| `Microsoft.EntityFrameworkCore.*` | Major version must match .NET version (EF Core 8 for .NET 8, EF Core 9 for .NET 9+). Check breaking changes per version — see `shared/ef6-to-efcore.md` for EF Core behavioral differences. |
+| `Microsoft.EntityFrameworkCore.*` | EF Core's target framework is a **minimum, not a match** — pick an EF Core major whose min-TFM ≤ your target TFM (and ≥ your current). EF Core major need **not** equal the .NET major — e.g. **EF Core 9 runs on net8**. Support-matrix: **EF Core 8 → net8.0 (LTS)** · **EF Core 9 → net8.0 (STS)** · **EF Core 10 → net10.0 (LTS)**. Check breaking changes per major crossed — see `shared/ef6-to-efcore.md`. |
 | `Swashbuckle.AspNetCore` | v6 → v7 has breaking config changes. Alternatively migrate to `Microsoft.AspNetCore.OpenApi` (.NET 9+). |
 | `Microsoft.AspNetCore.Authentication.JwtBearer` | Package version must match SDK version. |
 | `Serilog.AspNetCore` | Generally backward-compatible; check changelog. |

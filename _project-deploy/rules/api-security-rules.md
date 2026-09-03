@@ -1,7 +1,5 @@
 ---
 paths: ["**/middleware/**", "**/filters/**", "**/interceptors/**", "**/controllers/**"]
-detect:
-  always: false
 ---
 
 # API Security Rules — Attack surface, OWASP top 10, and defence in depth

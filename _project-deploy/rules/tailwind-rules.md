@@ -1,7 +1,5 @@
 ---
 paths: ["**/*.html", "**/*.tsx", "**/*.jsx", "**/*.vue", "**/*.svelte", "**/*.astro"]
-detect:
-  dependencies: ["tailwindcss"]
 ---
 
 # Tailwind CSS Rules — Applied to all Tailwind projects

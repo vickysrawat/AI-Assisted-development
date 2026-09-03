@@ -1,7 +1,5 @@
 ---
 paths: ["**/*.astro", "**/pages/**", "**/layouts/**", "**/components/**"]
-detect:
-  dependencies: ["astro"]
 ---
 
 # Astro Ecosystem Rules — Applied to all Astro projects

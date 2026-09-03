@@ -1,5 +1,34 @@
 ## [Unreleased]
 
+### Added — migration hardening: integration ground-truth + as-built fidelity (v3.18.0)
+- **Integration ground-truth verification (input side).** Stage 0 now extracts external-integration
+  evidence from the host config (`<system.serviceModel>`/`<client>`/`<connectionStrings>`) and
+  referenced assemblies — never inferring transport/binding/auth from consumer code. New
+  `skills/migration/references/specs/integration-verification-spec.md` defines a ground-truth-verified
+  **Integration Inventory** (source-inventory §8); every row is a Review-Focus item and an `UNVERIFIED`
+  row blocks `APPROVE INVENTORY`. New checkpoint gate `stage_gates.integrations_verified`. Encodes the
+  ADO-9999 lesson (RiskMgmt in-process-DB misread as WCF; WallBuilder NTLM/2-endpoint misread as
+  Kerberos): **citation ≠ interpretation**.
+- **As-built reconciliation (output side).** New **gated** Stage 6 Step 6.5 runs `architect` +
+  `/graph-sync` on the generated code (`.claude/architecture/*` becomes the as-built source of truth),
+  diffs design intent vs. generated code (endpoints/authz/deps/config), writes
+  `ADO-{ID}-asbuilt-reconciliation.md`, and stamps the Stage 1 docs superseded. New
+  `skills/migration/references/specs/asbuilt-reconciliation-spec.md`; new gate
+  `stage_gates.asbuilt_reconciled` blocks MIGRATION COMPLETE. Declarative-mechanical audit for
+  .NET/Java/Angular; labeled `NOT mechanically verified` fallback for Node/React/Python. When
+  golden-master is SKIPPED, this is the **required compensating control**. Encodes the ADO-9999 lesson
+  (57-vs-49 endpoints, phantom role): **design-time ≠ as-built**.
+- **Golden-master provided-URL capture.** When the tool cannot self-run the source, golden-master now
+  prompts for a **developer-provided running source base URL**, probes reachability, and captures
+  against it — the strongest available oracle for WCF/IIS/Windows-auth APIs the AI can't launch. SKIP
+  (inferred-only parity) becomes a true last resort. Multi-scheme source auth (Bearer/JWT · API-key ·
+  cookie · NTLM) from env/interactive — **credentials never persisted** (scheme only). Recorded in
+  `decision_log.golden_master`, surfaced by `/migration-status`. Dev/test instance only. (Seed data
+  stays a source-environment precondition — never fabricated.)
+- **Checkpoint schema 1.9 → 1.10** — two new stage-gates, backward-safe merge (resumed pre-1.10
+  checkpoints gain both gates defaulted `false`). `/migration-status` renders them. Migration note:
+  `docs/migrations/029-3.18.0.md`.
+
 ### Added — bounded, gated goal-loop (`/goal-loop`) + AC self-scoring
 - New shared engine `skills/shared/goal-loop-spec.md` and its I/O contract
   `skills/shared/rubric-score-schema.md` define a **bounded, gated** goal-loop:

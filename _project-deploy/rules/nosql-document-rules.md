@@ -1,7 +1,5 @@
 ---
 paths: ["**/models/**", "**/repositories/**", "**/db/**"]
-detect:
-  dependencies: ["mongodb", "mongoose", "@azure/cosmos", "cosmosdb", "dynamoose", "@aws-sdk/client-dynamodb"]
 ---
 
 # NoSQL Document Rules — Document database design and query patterns

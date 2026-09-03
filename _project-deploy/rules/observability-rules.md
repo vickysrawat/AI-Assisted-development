@@ -1,7 +1,5 @@
 ---
 paths: ["**/logging/**", "**/telemetry/**", "**/middleware/**", "**/filters/**"]
-detect:
-  always: false
 ---
 
 # Observability Rules — Structured logging, distributed tracing, metrics, and health checks

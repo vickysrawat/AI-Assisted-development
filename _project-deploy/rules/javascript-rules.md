@@ -1,8 +1,5 @@
 ---
 paths: ["**/*.js", "**/*.mjs", "**/*.cjs", "**/scripts/**", "**/src/**"]
-detect:
-  files: ["**/*.js", "**/*.mjs", "**/*.cjs"]
-  excludeIfDependencies: ["typescript"]
 ---
 
 # JavaScript Rules — Applied to vanilla JS / ES2015+ files

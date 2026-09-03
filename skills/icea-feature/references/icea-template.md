@@ -95,7 +95,7 @@ the signal.}
 | {an unauthorised / under-privileged actor} | {attempts the action} | {access denied — observable outcome; no data leak} |
 
 {Every ICEA must define at least one permission-boundary scenario — what happens when an
-actor without rights attempts the behaviour. Ties to B1–B7 sensitivity handling.}
+actor without rights attempts the behaviour. Ties to B-series sensitivity handling.}
 
 ---
 

@@ -1,7 +1,5 @@
 ---
 paths: ["playwright.config.*", "**/e2e/**", "**/*.spec.ts"]
-detect:
-  dependencies: ["@playwright/test", "playwright"]
 ---
 
 # Playwright Rules — Applied to all Playwright E2E test projects

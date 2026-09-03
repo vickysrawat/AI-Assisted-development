@@ -185,6 +185,7 @@ const HOOK_FILES = [
   'check-settings-secrets.cjs',
   'context-budget-tech-write.cjs',
   'script-review-gate.cjs',
+  'web-grounding-guard.cjs',
   'audit-append.cjs',
   'audit-prompt.cjs',
   'validate-ledgers.py',
@@ -937,6 +938,28 @@ function stepWireSettings(manifest, shellType) {
       wired = true;
     }
 
+    // ── PreToolUse: web-grounding-guard (always node — not shell-dependent) ─────────
+    // Deterministic backstop for business-context regulatory grounding: blocks any
+    // WebSearch/WebFetch (main agent OR bc-searcher subagent) whose query carries project
+    // identifiers/code/PII. Only gates in a grounding context; passthrough otherwise.
+    const webGuardWired = settings.hooks.PreToolUse.some(
+      h => h.hooks && h.hooks.some(x => x.command && x.command.includes('web-grounding-guard.cjs'))
+    );
+    if (!webGuardWired) {
+      settings.hooks.PreToolUse.push({
+        matcher: 'WebSearch|WebFetch',
+        hooks: [{ type: 'command', command: 'node .claude/hooks/web-grounding-guard.cjs --hook' }],
+      });
+      wired = true;
+    }
+
+    // ── env: BUSINESS_CONTEXT_GROUNDING kill-switch (default on; firm may set to "off") ─
+    if (!settings.env) settings.env = {};
+    if (typeof settings.env.BUSINESS_CONTEXT_GROUNDING === 'undefined') {
+      settings.env.BUSINESS_CONTEXT_GROUNDING = 'on';
+      wired = true;
+    }
+
     // ── UserPromptSubmit: memory-capture ─────────────────────────────────────────
     // additionalContext is only valid on UserPromptSubmit and PostToolUse — not Stop.
     if (!settings.hooks.UserPromptSubmit) settings.hooks.UserPromptSubmit = [];
@@ -1649,27 +1672,9 @@ const ARCH_TEMPLATE_FOLDER = {
   'VSTO':             'vsto',
 };
 
-// Layer 3 backend language files — trigger Layer 1 (backend-only) rule deployment
-const BACKEND_LAYER3_RULES = new Set([
-  'csharp-dotnet-rules.md',
-  'csharp-framework48-rules.md',
-  'csharp-vsto-rules.md',
-  'nodejs-typescript-rules.md',
-  'python-rules.md',
-  'java-rules.md',
-]);
-
-// Stack signal map — which canonical stack keys each rule signals (per plugin-path-resolution §2)
-const STACK_SIGNALS = {
-  'csharp-dotnet-rules.md':     ['dotnet', 'csharp'],
-  'csharp-framework48-rules.md':['dotnet', 'csharp'],
-  'csharp-vsto-rules.md':       ['vsto', 'dotnet', 'csharp'],
-  'nodejs-typescript-rules.md': ['nodejs'],
-  'java-rules.md':              ['java'],
-  'python-rules.md':            ['python'],
-  'angular-rules.md':           ['angular'],
-  'react-ecosystem-rules.md':   ['react'],
-};
+// BACKEND_LAYER3_RULES + STACK_SIGNALS were removed in ADR 0059 — the backend-bloc `implies`
+// and the stack_key/coarse-stack mapping now live in scripts/stack-signals.cjs (single source
+// of truth). detected_stacks is derived by repo-detect from the scored detection.
 
 async function mainPostDetect() {
   if (!REPO_TYPE) {
@@ -1763,168 +1768,196 @@ function stepPreCopyArchTemplates(manifest) {
   if (manifest) markStep(manifest, 'preCopyArchTemplates', { repoType: REPO_TYPE, folder, composed: copied, skipped });
 }
 
-// ── Q2: stepDeployRules ───────────────────────────────────────────────────────────
-// Reads each rule file's detect: frontmatter and applies 4-layer selection logic,
-// then copies matching rules to .claude/rules/. Mirrors the logic previously done
-// by the LLM in setup-init Step 4 — fully deterministic, no LLM needed.
+// ── Q2: stepDeployRules (ADR 0059 — scored stack_key deployment) ───────────────────
+// Reads the scored `detection` object produced by repo-detect (repo-detect owns ALL
+// detection logic now; rule files carry no `detect:` frontmatter). Deployment is a dumb
+// pipeline: collect stack_keys at/above the confidence threshold → convention lookup
+// (`${stack_key}-rules.md`) → hash-tracked copy → _deploy-manifest.json. No project walk,
+// no frontmatter parsing here.
 
 function stepDeployRules(manifest) {
-  const rulesDir   = path.join(PLUGIN_DIR, '_project-deploy', 'rules');
-  const destDir    = path.join(PROJECT_ROOT, '.claude', 'rules');
-  const npmDepsPath = path.join(PROJECT_ROOT, '.claude', '_npm-deps.json');
+  const rulesDir  = path.join(PLUGIN_DIR, '_project-deploy', 'rules');
+  const destDir   = path.join(PROJECT_ROOT, '.claude', 'rules');
+  const statePath = path.join(PROJECT_ROOT, '.claude', 'dream-init-state.json');
 
   if (!fs.existsSync(rulesDir)) {
     console.log('  — rules: plugin rules dir not found — skipped');
     return;
   }
 
+  let state = {};
+  try { state = JSON.parse(fs.readFileSync(statePath, 'utf8')); } catch(e) {}
+  const detection = state.detection;
+  if (!detection) {
+    console.log('  — rules: no scored detection in dream-init-state.json — run repo-detect first; skipped');
+    return;
+  }
+
+  // Threshold (default 0.6; override via env RULE_DEPLOY_THRESHOLD).
+  const THRESHOLD = (() => { const t = parseFloat(process.env.RULE_DEPLOY_THRESHOLD || ''); return (t >= 0 && t <= 1) ? t : 0.6; })();
+
+  // Collect every stack_key at/above threshold across all categories (no dedup cleverness).
+  const keys = new Set(['project-rules']);   // project-rules always deploys
+  const nearMiss = [];
+  for (const cat of Object.keys(detection)) {
+    if (!Array.isArray(detection[cat])) continue;   // skip non-category fields (e.g. a generations map)
+    for (const e of (detection[cat] || [])) {
+      if (typeof e.confidence === 'number' && e.confidence >= THRESHOLD) keys.add(e.stack_key);
+      else if (e.stack_key) nearMiss.push(e.stack_key + '@' + e.confidence);
+    }
+  }
+
   fs.mkdirSync(destDir, { recursive: true });
 
-  let npmDeps = [];
-  try { npmDeps = JSON.parse(fs.readFileSync(npmDepsPath, 'utf8')); } catch(e) {}
-
-  const ruleFiles = fs.readdirSync(rulesDir).filter(f => f.endsWith('.md')).sort();
-  const deployed = [], skipped = [];
-  let backendLayer3Deployed = false;
-  const detectedStacks = new Set();
-
-  // Pass 1: Layer 0 (always) + Layer 3 (files/dependencies)
-  for (const file of ruleFiles) {
-    const content = fs.readFileSync(path.join(rulesDir, file), 'utf8');
-    const fm = parseRuleFrontmatter(content);
-    if (!fm) continue;
-    const d = fm.detect || {};
-
-    // Layer 0: always: true
-    if (d.always === true) {
-      deployRule(rulesDir, destDir, file, deployed, skipped);
-      continue;
-    }
-
-    // Layer 1: always: false — handled in Pass 2
-    if (d.always === false && !d.files && !d.dependencies) continue;
-
-    // Layer 3a: files
-    if (d.files && d.files.length > 0) {
-      const fileHit    = d.files.some(p => globExistsInProject(PROJECT_ROOT, p));
-      const exclFile   = (d.excludeIfFiles || []).some(p => globExistsInProject(PROJECT_ROOT, p));
-      const exclDep    = (d.excludeIfDependencies || []).some(dep => npmDeps.includes(dep));
-      if (fileHit && !exclFile && !exclDep) {
-        deployRule(rulesDir, destDir, file, deployed, skipped);
-        if (BACKEND_LAYER3_RULES.has(file)) backendLayer3Deployed = true;
-        for (const s of (STACK_SIGNALS[file] || [])) detectedStacks.add(s);
-      }
-      continue;
-    }
-
-    // Layer 3b: dependencies
-    if (d.dependencies && d.dependencies.length > 0) {
-      const depHit  = d.dependencies.some(dep => npmDeps.includes(dep));
-      const exclDep = (d.excludeIfDependencies || []).some(dep => npmDeps.includes(dep));
-      if (depHit && !exclDep) {
-        deployRule(rulesDir, destDir, file, deployed, skipped);
-        if (BACKEND_LAYER3_RULES.has(file)) backendLayer3Deployed = true;
-        for (const s of (STACK_SIGNALS[file] || [])) detectedStacks.add(s);
-      }
-    }
-  }
-
-  // Pass 2: Layer 1 (always: false, no other conditions) — backend-only rules
-  if (backendLayer3Deployed) {
-    for (const file of ruleFiles) {
-      const content = fs.readFileSync(path.join(rulesDir, file), 'utf8');
-      const fm = parseRuleFrontmatter(content);
-      if (!fm) continue;
-      const d = fm.detect || {};
-      if (d.always !== false || d.files || d.dependencies) continue;
-      deployRule(rulesDir, destDir, file, deployed, skipped);
-    }
-  }
-
-  // Update dream-init-state.json
-  const statePath = path.join(PROJECT_ROOT, '.claude', 'dream-init-state.json');
+  // Hash-tracked overwrite (mirrors skills .hashes): re-deploy the managed baseline, but if an
+  // on-disk rule diverges from the last-deployed hash (developer edit), warn + skip — never clobber.
+  const hashesPath = path.join(destDir, '.hashes');
+  const recorded = {};
   try {
-    let state = {};
-    try { state = JSON.parse(fs.readFileSync(statePath, 'utf8')); } catch(e) {}
-    state.detected_stacks = [...detectedStacks];
-    state.deployed_rules  = [...new Set([...deployed, ...skipped])];
-    state.repo_type       = REPO_TYPE;
-    atomicWrite(statePath, JSON.stringify(state, null, 2));
+    for (const line of fs.readFileSync(hashesPath, 'utf8').split(/\r?\n/)) {
+      // Accept both whole-file (`<hex>  file`) and Track-A body-hash (`body:<hex>  file`) entries.
+      const m = line.match(/^(body:)?([0-9a-f]{64})\s+(.+)$/); if (m) recorded[m[3]] = (m[1] || '') + m[2];
+    }
   } catch(e) {}
 
-  // Clean up npm deps — no longer needed after rules are deployed
-  try { if (fs.existsSync(npmDepsPath)) fs.unlinkSync(npmDepsPath); } catch(e) {}
+  // Track-A feature flag (default OFF → the loop below is byte-identical to pre-Track-A).
+  const PER_PROJECT = process.env.PER_PROJECT_RULES === '1' || state.per_project_rules === true;
+  const DRYRUN = process.env.PER_PROJECT_RULES_DRYRUN === '1';
+  const fwGlobs = PER_PROJECT ? frameworkGlobsFromState(state) : [];
+  const scopedPaths = {};        // file → generated paths (for the manifest)
+  const dryPlan = [];
+
+  // stack_key → rule filename. project-rules is the baseline (project-rules.md, not
+  // project-rules-rules.md); every other key follows the `${key}-rules.md` convention.
+  const keyToFile = k => (k === 'project-rules' ? 'project-rules.md' : k + '-rules.md');
+
+  const deployed = [], skippedEdited = [], missing = [];
+  const updatedHashes = {};
+  for (const key of [...keys].sort()) {
+    const file = keyToFile(key);
+    const src  = path.join(rulesDir, file);
+    if (!fs.existsSync(src)) { missing.push(key); continue; }
+    const srcHash = crypto.createHash('sha256').update(fs.readFileSync(src)).digest('hex');
+    const dest = path.join(destDir, file);
+
+    // ── Track-A scoped path (ON + a framework overlay rule + framework dirs exist) ──
+    // Regenerate the managed `paths:` block to the framework project dirs; protect the BODY only
+    // (paths are managed, body is developer-owned). This handles the whole-file→body-hash
+    // RE-BASELINE transparently: a pristine file (body == source body) is rewritten+re-hashed even
+    // though its old whole-file hash won't match; a real body edit is preserved.
+    if (PER_PROJECT && SCOPED_RULE_KEYS.has(key) && fwGlobs.length) {
+      const srcText = fs.readFileSync(src, 'utf8');
+      const newText = withScopedPaths(srcText, fwGlobs);
+      if (fs.existsSync(dest)) {
+        const destText = fs.readFileSync(dest, 'utf8');
+        if (ruleBody(destText) !== ruleBody(srcText)) {           // developer edited the BODY → preserve
+          console.log('    ⚠ rule body customised by developer — skipped (protected): ' + file);
+          skippedEdited.push(file); updatedHashes[file] = recorded[file] || bodyHash(destText); continue;
+        }
+      }
+      if (DRYRUN) { dryPlan.push(file + ' → paths ' + JSON.stringify(fwGlobs)); updatedHashes[file] = recorded[file] || bodyHash(srcText); continue; }
+      try { atomicWrite(dest, newText); deployed.push(file); scopedPaths[file] = fwGlobs; updatedHashes[file] = bodyHash(srcText); }
+      catch(e) { console.log('    ⚠ scoped rule write failed: ' + file + ' — ' + e.message); }
+      continue;
+    }
+
+    // ── Default path (OFF, or a non-scoped rule) — byte-identical to pre-Track-A ──
+    if (fs.existsSync(dest)) {
+      const destHash = crypto.createHash('sha256').update(fs.readFileSync(dest)).digest('hex');
+      if (destHash !== srcHash && recorded[file] && destHash !== recorded[file]) {
+        // manifest may be null in the post-detect path — print directly, never warn(null).
+        console.log('    ⚠ rule customised by developer — skipped (protected): ' + file);
+        skippedEdited.push(file); updatedHashes[file] = recorded[file]; continue;
+      }
+    }
+    try { fs.copyFileSync(src, dest); deployed.push(file); updatedHashes[file] = srcHash; }
+    catch(e) { console.log('    ⚠ rule copy failed: ' + file + ' — ' + e.message); }
+  }
+
+  // .claude/rules/.hashes (plugin-owned entries only)
+  const hashLines = Object.entries(updatedHashes).map(([f, h]) => h + '  ' + f);
+  atomicWrite(hashesPath, hashLines.join('\n') + (hashLines.length ? '\n' : ''));
+
+  // _deploy-manifest.json — audit trail (overwrite is otherwise silent)
+  atomicWrite(path.join(destDir, '_deploy-manifest.json'), JSON.stringify({
+    threshold: THRESHOLD,
+    mode: PER_PROJECT ? 'per-project' : 'repo-wide',
+    stack_keys: deployed.map(f => f.replace(/-rules\.md$/, '')),
+    deployed_rules: deployed,
+    skipped_developer_edited: skippedEdited,
+    scoped_paths: Object.keys(scopedPaths).length ? scopedPaths : undefined,
+    near_miss: nearMiss,
+    repo_type: state.repo_type || null,
+  }, null, 2));
+
+  if (DRYRUN && dryPlan.length) {
+    console.log('  ℹ per-project rules DRY-RUN (no scoped files written):');
+    for (const line of dryPlan) console.log('      ' + line);
+  }
+
+  // Keep deployed_rules[] in state — setup-teardown --rules iterates it. detected_stacks +
+  // repo_type are owned by repo-detect; do not touch here.
+  try {
+    let st = {}; try { st = JSON.parse(fs.readFileSync(statePath, 'utf8')); } catch(e) {}
+    st.deployed_rules = [...new Set([...(Array.isArray(st.deployed_rules) ? st.deployed_rules : []), ...deployed, ...skippedEdited])];
+    atomicWrite(statePath, JSON.stringify(st, null, 2));
+  } catch(e) {}
+
+  // Clean up the legacy npm-deps sidecar if a pre-detect step left one.
+  try { const p = path.join(PROJECT_ROOT, '.claude', '_npm-deps.json'); if (fs.existsSync(p)) fs.unlinkSync(p); } catch(e) {}
 
   const preview = deployed.slice(0, 3).join(', ') + (deployed.length > 3 ? ', …' : '');
-  console.log('  ✓ rules        : ' + deployed.length + ' deployed'
-    + (skipped.length ? ', ' + skipped.length + ' already existed' : '')
+  console.log('  ✓ rules        : ' + deployed.length + ' deployed (threshold ' + THRESHOLD + ')'
+    + (skippedEdited.length ? ', ' + skippedEdited.length + ' customised (protected)' : '')
     + (deployed.length ? ' [' + preview + ']' : ''));
+  if (missing.length) console.log('    ℹ no rule file for keys: ' + missing.join(', '));
 
   if (manifest) {
-    markStep(manifest, 'deployRules', { deployed: deployed.length, skipped: skipped.length, rules: deployed });
-    markLLMItemDone(manifest, 'deploy_rules', 'deployed by bootstrap Phase 2 (' + deployed.length + ' rules)');
+    markStep(manifest, 'deployRules', { deployed: deployed.length, skippedEdited: skippedEdited.length, rules: deployed });
+    markLLMItemDone(manifest, 'deploy_rules', 'deployed by bootstrap Phase 2 (' + deployed.length + ' rules, threshold ' + THRESHOLD + ')');
   }
 }
 
-function deployRule(rulesDir, destDir, file, deployed, skipped) {
-  const dest = path.join(destDir, file);
-  if (fs.existsSync(dest)) { skipped.push(file); return; }
-  try { fs.copyFileSync(path.join(rulesDir, file), dest); deployed.push(file); }
-  catch(e) {}
+// deployRule / parseRuleFrontmatter / globExistsInProject / walkAndMatch were removed in
+// ADR 0059 — detection + the pruned project walk now live in scripts/stack-signals.cjs
+// (consumed by repo-detect), and stepDeployRules reads the scored `detection` from state.
+
+// ── Track-A scoped-deploy helpers (per-project rule `paths`; feature-flagged) ──────────
+// Framework overlay rules (the MINORITY) get their `paths:` frontmatter regenerated to the
+// framework project dirs (scope-by-exception); everything else deploys verbatim. Developer-edit
+// protection for a rewritten rule compares the BODY only (paths are a managed block).
+const SCOPED_RULE_KEYS = new Set(['csharp-framework48', 'ef6', 'wcf', 'ado-net-legacy']);
+
+// Strict LEADING-frontmatter split — a `---` inside the body (markdown rule) never mis-parses.
+function splitFrontmatter(text) {
+  if (!/^---\r?\n/.test(text)) return { fm: null, body: text };
+  const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+  return m ? { fm: m[1], body: text.slice(m[0].length) } : { fm: null, body: text };
 }
-
-// ── Q3: Frontmatter + glob helpers ────────────────────────────────────────────────
-
-function parseRuleFrontmatter(content) {
-  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  if (!match) return null;
-  const yaml = match[1];
-  const detect = {};
-
-  const alwaysM = yaml.match(/^\s*always:\s*(true|false)/m);
-  if (alwaysM) detect.always = alwaysM[1] === 'true';
-
-  const parseArr = str => str.split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
-
-  const filesM     = yaml.match(/^\s*files:\s*\[([^\]]*)\]/m);
-  if (filesM) detect.files = parseArr(filesM[1]);
-
-  const depsM      = yaml.match(/^\s*dependencies:\s*\[([^\]]*)\]/m);
-  if (depsM) detect.dependencies = parseArr(depsM[1]);
-
-  const exclDepsM  = yaml.match(/^\s*excludeIfDependencies:\s*\[([^\]]*)\]/m);
-  if (exclDepsM) detect.excludeIfDependencies = parseArr(exclDepsM[1]);
-
-  const exclFilesM = yaml.match(/^\s*excludeIfFiles:\s*\[([^\]]*)\]/m);
-  if (exclFilesM) detect.excludeIfFiles = parseArr(exclFilesM[1]);
-
-  return { detect };
+function ruleBody(text) { return splitFrontmatter(text).body; }
+function bodyHash(text) { return 'body:' + crypto.createHash('sha256').update(ruleBody(text)).digest('hex'); }
+// Rebuild the file with `paths:` set to `globs`, preserving any other frontmatter lines + the body verbatim.
+function withScopedPaths(srcText, globs) {
+  const { fm, body } = splitFrontmatter(srcText);
+  const pathsLine = 'paths: [' + globs.map(g => JSON.stringify(g)).join(', ') + ']';
+  let fmText;
+  if (fm == null) fmText = pathsLine;
+  else {
+    let found = false;
+    const out = fm.split(/\r?\n/).map(l => /^paths\s*:/.test(l) ? (found = true, pathsLine) : l);
+    if (!found) out.unshift(pathsLine);
+    fmText = out.join('\n');
+  }
+  return '---\n' + fmText + '\n---\n' + body;
 }
-
-function globExistsInProject(root, pattern) {
-  // Convert glob pattern to a RegExp that matches relative paths.
-  // Only supports the * and ** wildcards used in rule frontmatter.
-  const regexStr = pattern
-    .replace(/[.+^${}()|[\]\\]/g, '\\$&')  // escape regex special chars (preserves escaped dots)
-    .replace(/\*\*\//g, '(.+\/)?')           // **/ = optional path prefix (zero or more dirs)
-    .replace(/\*\*/g, '.*')                  // ** anywhere else = any characters
-    .replace(/\*/g, '[^/]*');                // * = any chars except path separator
-  const regex = new RegExp(regexStr);
-  return walkAndMatch(root, root, regex, 4);
-}
-
-function walkAndMatch(root, dir, regex, depth) {
-  if (depth < 0) return false;
-  try {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
-      const abs = path.join(dir, entry.name);
-      const rel = path.relative(root, abs).replace(/\\/g, '/');
-      if (entry.isFile() && regex.test(rel)) return true;
-      if (entry.isDirectory() && depth > 0 && walkAndMatch(root, abs, regex, depth - 1)) return true;
-    }
-  } catch(e) {}
-  return false;
+// Framework project dirs → repo-root-relative `{dir}/**` globs (scope-by-exception overlay).
+function frameworkGlobsFromState(state) {
+  const gen = (state.generations || {}).dotnet || {};
+  const dirs = (gen.versions || []).filter(v => {
+    const g = v.generations || v.generation; const arr = Array.isArray(g) ? g : [g];
+    return arr.includes('dotnet-framework');
+  }).map(v => v.path).filter(Boolean);
+  return [...new Set(dirs)].map(d => d === '.' ? '**' : (d.replace(/\/+$/, '') + '/**'));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────

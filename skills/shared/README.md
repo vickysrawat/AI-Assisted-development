@@ -23,7 +23,7 @@ rather than inventing its own conventions.
 | `model-routing-spec.md` | all generation and review skills | Model routing tiers, env vars, defaults |
 | `personas-spec.md` | all skills | Expert Persona roster (the role lens a skill reasons through), per-skill assignments, and guardrails — orthogonal to model routing |
 | `source-file-consent.md` | all skills | Consent categories and gate format for source file access |
-| `business-context-severity.md` | all review skills | B1–B7 business severity override triggers |
+| `business-context-severity.md` | all review skills | B-series business severity override triggers |
 | `findings-gate.md` | pr-create, checkin | Canonical bash functions and output blocks for Critical/High open findings detection across all three ledgers |
 | `dismissed-findings-reconciliation.md` | code-review, security, dynamic-scan | Canonical Rule 5 — dismissed finding reconciliation on re-scan: keep dismissed if file unchanged; re-open with verify flag if code changed since dismissal date |
 | `vcs-detect-spec.md` | gitignore-sync, setup-init, setup-status | Detect Git vs TFVC and select the authoritative ignore file (.gitignore / .tfignore); managed-entry block and TFVC translation rules |

@@ -113,7 +113,7 @@ Document the data and settings model for this VSTO add-in.
   properties, named ranges, or defined names, document each with its purpose.
 - **External Data** — if the add-in calls external APIs or databases, document the
   data exchanged: entity names, key fields, ownership.
-- **Sensitive Data** — identify any PII, credentials, or B1–B7 sensitive data handled.
+- **Sensitive Data** — identify any PII, credentials, or B-series sensitive data handled.
 
 Every fact from source. Undetectable → `> ⚠ Could not determine — needs manual input`.
 

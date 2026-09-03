@@ -1,8 +1,5 @@
 ---
 paths: ["**/*.ts", "**/*.tsx"]
-detect:
-  files: ["tsconfig.json"]
-  dependencies: ["typescript"]
 ---
 
 # TypeScript Rules — Applied to all TypeScript files

@@ -1,8 +1,5 @@
 ---
 paths: ["**/*.vue", "**/composables/**", "**/stores/**"]
-detect:
-  dependencies: ["vue"]
-  excludeIfDependencies: ["nuxt"]
 ---
 
 # Vue Ecosystem Rules — Applied to all Vue 3 projects

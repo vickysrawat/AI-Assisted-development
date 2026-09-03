@@ -125,7 +125,7 @@ resilience policies, message-queue/event/SDK usages, and any SOAP/gRPC clients.
 - **Resilience & Failure Behavior** — per-dependency timeout, retry/backoff, circuit breaker
   (from code). The **"on failure — what happens"** and **SLA/ownership** are usually human
   knowledge — if not in code, write `> ⚠ Could not determine — needs manual input`.
-- **Data Exchanged** — what crosses each boundary; flag B1–B7 sensitive data leaving the system.
+- **Data Exchanged** — what crosses each boundary; flag B-series sensitive data leaving the system.
 
 Never invent timeouts, SLAs, or owners. Extract only what code shows; flag the rest.
 
@@ -143,7 +143,7 @@ handlers, and resource-based checks.
 - **Business Rules Gating Actions** — rules beyond role checks (ownership, tenancy). Usually
   human knowledge — flag with `> ⚠ Could not determine — needs manual input`.
 - **Secrets Handling (summary)** — only what the application code does; cross-link deployment.md.
-- **Sensitive Data Handling** — which endpoints/tables carry B1–B7 data and how it is protected.
+- **Sensitive Data Handling** — which endpoints/tables carry B-series data and how it is protected.
 
 Do NOT invent authorization rules or claim protections not present in code — flag gaps.
 

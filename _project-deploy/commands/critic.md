@@ -9,7 +9,7 @@ If the argument is `--help` or `?help`, output the following block verbatim and 
 /critic — Run the critic as a standalone pass on an ICEA spec or generated code.
 
 Arguments:
-  icea [ADO-<id>]    Critique an ICEA draft for completeness, testability, and B1–B7 coverage.
+  icea [ADO-<id>]    Critique an ICEA draft for completeness, testability, and B-series coverage.
                      ADO id is optional — inferred from the branch name if omitted.
   code [ADO-<id>]    Critique staged/changed source files for ICEA traceability, simplicity,
                      rules compliance, decision transparency, and hidden assumptions.

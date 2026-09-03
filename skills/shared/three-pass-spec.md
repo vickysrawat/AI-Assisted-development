@@ -145,7 +145,7 @@ Persona P4: sees Pass 1 + P1 + P2 + P3 findings
 All personas are subordinate to:
 - `personas-spec.md` guardrails (lens not roleplay, no assumptions)
 - `CLAUDE.md` section 3 (do not assume — stop and ask when ambiguous)
-- `business-context-severity.md` (B1-B7 override triggers)
+- `business-context-severity.md` (B-series override triggers)
 
 Personas never name themselves in findings. Findings never say "As an attacker,
 I would..." — they cite evidence and describe risk.
@@ -272,5 +272,5 @@ languages not present in the codebase.
 - **Persona cap is mandatory.** Each persona: max 5 findings. Pass 3: max 7.
   Quality over quantity.
 - **Business severity overrides apply to all passes.** Per
-  `business-context-severity.md`, B1-B7 triggers raise severity regardless of
+  `business-context-severity.md`, B-series triggers raise severity regardless of
   which pass found the issue.

@@ -1,6 +1,6 @@
 # Spec: MIGRATION-REPORT.md
 
-_Loaded by migration SKILL.md at Stage 6.5 (final verification step)._
+_Loaded by migration SKILL.md at Stage 6.6 (final report step, after the Step 6.5 as-built reconciliation)._
 _Defines the format for the migration completion report._
 
 ---
@@ -80,7 +80,35 @@ Playwright report: `playwright-report/index.html`
 | Application has no Infrastructure dependency | {PASS / FAIL / DEFERRED} | |
 | No circular dependencies | {PASS / FAIL / DEFERRED} | |
 
-**## 8. Residual Risks**
+**## 8. As-Built Reconciliation**
+
+Design-intent (Stage 1 docs) vs. the code that was actually generated (Step 6.5 audit). Full detail in
+`ADO-{ADO_ID}-asbuilt-reconciliation.md`.
+
+| Field | Value |
+|---|---|
+| Audit mode | {MECHANICAL (.NET/Java/Angular) · PARTIAL — {areas} NOT mechanically verified} |
+| Divergences | {N} — {N HIGH} · {N MEDIUM} · {N INFORMATIONAL} |
+| Endpoints (design vs as-built) | {57 vs 49} |
+| Roles (documented vs enforced) | {list phantom/missing} |
+| As-built source of truth | `.claude/architecture/*` (regenerated from generated code) |
+| Report | `ADO-{ADO_ID}-asbuilt-reconciliation.md` |
+
+All HIGH/BLOCKER divergences must be `explained` or `accepted` before MIGRATION COMPLETE.
+
+**## 9. Integration Verification**
+
+External-dependency classifications, ground-truth-verified at Stage 0.6
+(`integration-verification-spec.md`) and cross-checked against generated clients at Step 6.5.
+
+| Integration | Kind (verified) | Evidence | Verification status | As-built match? |
+|---|---|---|---|---|
+| {e.g. WallBuilder} | WCF basicHttpBinding/Transport/NTLM | PROV:Web.config#L120 | VERIFIED | yes |
+| {e.g. RiskMgmtDataMart} | DB (in-process EF6) | PROV:Web.config#L88 | VERIFIED | yes |
+
+Any `UNVERIFIED`/`DEFERRED(task)` row or fail-loud stub is listed as an open blocker here.
+
+**## 10. Residual Risks**
 
 Known risks that exist in the migrated application and should be monitored:
 
@@ -88,7 +116,7 @@ Known risks that exist in the migrated application and should be monitored:
 |---|---|---|---|
 | {e.g. EF Core lazy loading not enabled} | Low | Explicit .Include() used throughout | Dev team |
 
-**## 9. Deferred Items**
+**## 11. Deferred Items**
 
 Work explicitly deferred during migration — must be tracked and completed:
 
@@ -96,7 +124,7 @@ Work explicitly deferred during migration — must be tracked and completed:
 |---|---|---|---|
 | {e.g. Fitness tests} | Developer chose "Defer" at Stage 0 | ADO-{N} | Medium |
 
-**## 10. Manual Review Items**
+**## 12. Manual Review Items**
 
 Items flagged by cluster agents requiring human review:
 
@@ -104,10 +132,10 @@ Items flagged by cluster agents requiring human review:
 |---|---|---|---|
 | {file path} | {line} | {reason from agent's manual_review field} | {ClusterName} |
 
-**## 11. Post-Migration Checklist**
+**## 13. Post-Migration Checklist**
 
-- [ ] `/setup-init` run in target directory — {target} stack rules deployed
-- [ ] `/graph-sync` run in target directory — knowledge graph built
+- [x] `architect` + `/graph-sync` run at Step 6.5 — `.claude/architecture/*` + graph built from generated code (as-built SoT)
+- [ ] `ADO-{ADO_ID}-asbuilt-reconciliation.md` reviewed — all HIGH divergences resolved/accepted
 - [ ] `appsettings.Development.json` populated with real values
 - [ ] Visual verification checklist completed
 - [ ] Source project at {SOURCE_PATH} removed from additionalDirectories

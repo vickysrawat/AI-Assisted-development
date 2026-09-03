@@ -1,8 +1,19 @@
 # Spec: Phase 1 Architecture Documents
 
 _Loaded by migration SKILL.md at Stage 1 start. Defines the required format and content for all
-five permanent target application architecture documents. After Stage 1 documents are written,
+five target application architecture documents. After Stage 1 documents are written,
 this spec leaves context — Stage 4 cluster agents do not use it._
+
+---
+
+## Source-of-truth ownership (design-time vs. as-built)
+
+These five documents are the **design/decision record** — written *before any code exists*, so they are
+intent, not fact. They are **not** the as-built source of truth. After Stage 6 as-built reconciliation,
+**`.claude/architecture/*` (built by `architect` from the generated code) is the as-built source of
+truth**; these docs are stamped superseded and kept for provenance
+(`specs/asbuilt-reconciliation-spec.md`). Because of this, every doc MUST carry the design-time banner
+at creation (below) so it is never mistaken for as-built at any point.
 
 ---
 
@@ -12,6 +23,9 @@ Generate ALL five documents in a single pass. Write each to:
 `docs/Release{R}/Sprint{S}/UserStory{ADO_ID}/{DOCUMENT_NAME}`
 
 **Non-negotiable rules:**
+- Every doc opens with the **design-time banner** (first line):
+  `> Design-time (pre-implementation) — will be reconciled against the generated code at Stage 6.`
+  `> As-built source of truth after Stage 6: .claude/architecture/* (see asbuilt-reconciliation-spec.md).`
 - ALL diagrams MUST be Mermaid. No described diagrams, no ASCII art.
 - Every significant architectural component MUST have an ADR section.
 - All decisions are proposed by the AI based on source analysis. Ask the developer ONLY when genuinely ambiguous — not to validate obvious choices.

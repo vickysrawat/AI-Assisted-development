@@ -4,8 +4,9 @@ _Part of the `migration` skill. Loaded and dispatched by the orchestrator
 (`skills/migration/SKILL.md`) — not a standalone/registered skill. Cross-session resume: `MIGRATE INVENTORY ADO-{ID}`._
 
 **Persona:** [SA] Rafael Mendes — Solution Architect. **Model tier:** `${ICEA_MODEL:-claude-opus-4-8}`.
-**Checkpoint:** single source of truth (schema 1.9); on `APPROVE INVENTORY` merge
-`stage_gates.inventory_approved = true`, `phase = "Stage 1"`.
+**Checkpoint:** single source of truth (schema 1.10); on `APPROVE INVENTORY` merge
+`stage_gates.inventory_approved = true` (and `stage_gates.integrations_verified = true` when no §8
+Integration Inventory row is `UNVERIFIED`), `phase = "Stage 1"`.
 
 ---
 
@@ -18,7 +19,20 @@ posture: **mechanical port = Light** (feature/endpoint catalog to seed golden-ma
 
 ```
 Read $PLUGIN_DIR/skills/migration/references/specs/source-inventory-spec.md
+Read $PLUGIN_DIR/skills/migration/references/specs/integration-verification-spec.md
 ```
+
+**M2 — carry the domain source→target.** The migrated target has the SAME business domain as
+the source. Invoke `$PLUGIN_DIR/skills/shared/business-context-generation.md` against the SOURCE
+(inventory/architecture) to identify the domain + jurisdiction and seed the TARGET's
+`.claude/business-context.md` under its own `APPROVED` gate. If the SOURCE already has a
+`.claude/business-context.md`, carry it forward verbatim instead of re-deriving. This makes the
+target's B-series match the source's regulatory reality rather than the neutral fallback.
+
+**M3 — tag B-series-touching features.** In the inventory, flag every feature/endpoint that
+handles data matching a resolved B-series trigger. These flags drive: the Entity Map B-series
+column (Stage 1), the golden-master severity weighting (Stage 5/6), and "must preserve
+encryption / parameterized queries / access control / audit" constraints through the rewrite.
 
 **Preconditions — fresh source graph (posture-scoped).** The scope manifest, coverage denominator,
 and decomposition units all derive from the SOURCE knowledge graph, so:
@@ -66,9 +80,11 @@ extracted in one accumulating context. Mirror the Stage 4 cluster model:
   INFERRED / high-risk) Given/When/Then with verbatim outcomes. A fresh context per cluster = full
   read budget per cluster, so each agent can actually read the lines it cites.
 - **Orchestrator owns everything cross-cutting** — §1 roll-ups, §4 actor map, §7 cross-cluster entity
-  relationships, §8 integrations, §9 auth/authz, and the consolidated §11 — which a slice-scoped agent
-  cannot see. It also assigns the global `F-NN` IDs post-collection (parallel agents must NOT
-  self-assign — collision) and runs a stitch pass for features that span clusters.
+  relationships, §8 the **Integration Inventory** (built from the Stage 0 config/assembly/WSDL
+  ground-truth evidence — never inferred from consumer code, per
+  `specs/integration-verification-spec.md`), §9 auth/authz, and the consolidated §11 — which a
+  slice-scoped agent cannot see. It also assigns the global `F-NN` IDs post-collection (parallel agents
+  must NOT self-assign — collision) and runs a stitch pass for features that span clusters.
 - **Per-fragment trace-verify-before-merge:** run
   `$PLUGIN_DIR/tests/migration-validation/verify-inventory-trace.cjs` on each returned fragment
   against that cluster's assigned file set BEFORE merging it into the index (the script ships with
@@ -115,8 +131,9 @@ write to `stacks/*.md` directly from a migration run — promotion is `/dream`'s
 
 ### Stage 0.6 Gate
 Present the gate banner from the spec and STOP. The reviewer dispositions the **Review Focus** set
-(all INFERRED business rules, all high-risk/high-impact features, all §10 stakeholder questions, and
-all open Gaps Report items) in the document, then replies `APPROVE INVENTORY ADO-{ADO_ID}`.
+(all INFERRED business rules, **every §8 Integration Inventory row** — an `UNVERIFIED` row blocks
+approval, all high-risk/high-impact features, all §10 stakeholder questions, and all open Gaps Report
+items) in the document, then replies `APPROVE INVENTORY ADO-{ADO_ID}`.
 
 - **rewrite-from-spec:** approval is REQUIRED and BLOCKS Stage 1 — the architecture is designed FROM
   the approved inventory.
@@ -125,7 +142,10 @@ all open Gaps Report items) in the document, then replies `APPROVE INVENTORY ADO
   (may proceed to Stage 1 without `APPROVE INVENTORY`).
 
 On `APPROVE INVENTORY ADO-{ADO_ID}`: update the checkpoint (merge) with
-`stage_gates.inventory_approved = true` and `phase = "Stage 1"`.
+`stage_gates.inventory_approved = true` and `phase = "Stage 1"`. Also set
+`stage_gates.integrations_verified = true` **only when no §8 Integration Inventory row is
+`UNVERIFIED`** (`DEFERRED(task)` rows — tracked ADO task — are allowed); otherwise leave it `false`
+and the row(s) must be dispositioned before approval.
 
 ---
 

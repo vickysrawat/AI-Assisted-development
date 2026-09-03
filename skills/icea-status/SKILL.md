@@ -3,7 +3,7 @@
 _Skill version: 1.0 · Last changed: 2026-07-07 · Consent: C_
 
 > **Business context severity:** reports status only — no security findings. See
-> `$PLUGIN_DIR/skills/shared/business-context-severity.md` for the B1–B7 model it does not trigger.
+> `$PLUGIN_DIR/skills/shared/business-context-severity.md` for the B-series model it does not trigger.
 
 ## Purpose
 Show the current state of all ICEA files for an ADO ID and tell the developer

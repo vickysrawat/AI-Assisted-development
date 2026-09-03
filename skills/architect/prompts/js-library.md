@@ -134,7 +134,7 @@ config, third-party SDKs, and any browser/runtime integrations.
 - **Resilience & Failure Behavior** — per-dependency timeout, retry, and UI fallback on failure
   (from code). The **"on failure — what the user sees"** and **SLA/ownership** are usually human
   knowledge — if not in code, write `> ⚠ Could not determine — needs manual input`.
-- **Data Exchanged** — what crosses each boundary; flag B1–B7 sensitive data.
+- **Data Exchanged** — what crosses each boundary; flag B-series sensitive data.
 
 Never invent timeouts, SLAs, or owners. Extract only what code shows; flag the rest.
 
@@ -151,7 +151,7 @@ wrappers, auth context/interceptors, token storage, and any role/permission chec
   guard/wrapper/interceptor). Note where the UI only *hides* vs actually *enforces* (server does).
 - **Business Rules Gating Actions** — role/permission-driven UI gating; flag human-knowledge gaps.
 - **Secrets Handling (summary)** — token storage (session vs local), no secrets in the bundle.
-- **Sensitive Data Handling** — B1–B7 data rendered/stored client-side and how it is protected.
+- **Sensitive Data Handling** — B-series data rendered/stored client-side and how it is protected.
 
 Do NOT claim the client enforces security the server must — flag "UI-only" gating explicitly.
 

@@ -15,8 +15,10 @@ INDEPENDENT oracle: recorded from the real source, replayed against the target, 
 Applicability:
 - HTTP APIs (any source/target): record request→response pairs. STRONGEST signal.
 - Pure functions / batch jobs: record input→output fixtures.
-- If the source cannot be run (no build, no data): DEGRADE to inferred characterization tests
-  and LOG that no external oracle was captured — never claim behavioral parity silently.
+- If the tool cannot self-run the source: capture against a developer-provided **running instance URL**
+  (Step 1, mode `provided-url`) — the strongest available oracle. Only when neither self-run nor a
+  reachable URL is available: DEGRADE to inferred characterization tests and LOG that no external oracle
+  was captured — never claim behavioral parity silently.
 
 The migration posture (Stage 0.5) selects the oracle basis:
 - port / re-architecture → oracle is the running SOURCE app (this spec, full flow).
@@ -32,21 +34,72 @@ report (the approved inventory itself stays immutable — see Step 4).
 
 ---
 
-## Step 1 — Can the source run?
+## Step 1 — Is a source oracle reachable?
 
-Confirm the source builds and starts, and whether seed/test data exists.
+> **Can't self-run ≠ no oracle.** A *running* source is the strongest oracle. If the tool cannot launch
+> the source itself but the source is **reachable at a developer-provided URL** (a dev/test instance the
+> developer has running — common for WCF/IIS/Windows-auth services the AI can't start), capture from
+> that. SKIP (inferred-only parity) is a **last resort**, valid only when neither self-run nor a
+> reachable URL is available.
 
-Decision:
-- Source runs + has seed/test data → full golden-master capture (Step 2).
-- Source runs, no data → capture a smoke subset from whatever endpoints respond; mark coverage
-  PARTIAL.
-- Source does NOT run → SKIP capture; emit and record in the report:
-  `⚠ No external oracle captured — behavioral parity is INFERRED only (characterization tests).`
+Confirm whether the source builds and starts, whether seed/test data exists, and — if the tool cannot
+start it — whether the developer can point at an already-running instance.
 
-Record the decision and the reason in the checkpoint `decision_log` (do not overwrite existing
-fields — merge).
+Decision (ordered strongest-first — take the first that applies):
+1. **Source self-runnable by the tool + has seed/test data** → full golden-master capture (Step 2).
+2. **Source self-runnable, no data** → capture a smoke subset from whatever endpoints respond; coverage
+   `PARTIAL`.
+3. **Source NOT self-runnable, but reachable at a provided base URL** → ask the developer for the
+   source base URL, **probe reachability**, and capture against it (Step 2). Coverage `FULL` if its
+   datastore has data, else `PARTIAL` (smoke). This is **preferred over SKIP**.
+   ```bash
+   # Reachability probe — a health/any endpoint on the provided instance (dev/test only)
+   curl -sf --max-time 5 "{SOURCE_BASE_URL}/{health-or-any-known-endpoint}" >/dev/null \
+     && echo "✅ source reachable @ {SOURCE_BASE_URL}" \
+     || echo "❌ not reachable — fall through to SKIP"
+   ```
+   **Dev/test instance only.** If the URL is not `localhost`/loopback or contains `prod`, warn loudly
+   and require explicit confirmation before capturing (real responses carry real PII — masking rules in
+   Step 2 apply).
+4. **Neither self-runnable nor a reachable URL** → **SKIP** capture (last resort); emit and record in
+   the report:
+   `⚠ No external oracle captured — behavioral parity is INFERRED only (characterization tests).`
+   **When SKIPPED, the Stage 6 mechanical as-built audit becomes the REQUIRED compensating control**
+   (`specs/asbuilt-reconciliation-spec.md`) — a SKIPPED golden-master otherwise leaves NO structural
+   net. **External integrations are the highest-risk unverified set** in this case (transport type is
+   invisible at the I/O boundary even when GM runs) — they must be ground-truth-verified at Stage 0.6
+   (`specs/integration-verification-spec.md`) and covered by the Stage 6 manual gate before
+   `MIGRATION COMPLETE`.
+
+Record the decision in the checkpoint (merge, do not overwrite existing fields) as
+`decision_log.golden_master = { mode: "self-run" | "provided-url" | "skipped", source_base_url,
+auth_scheme, reachable, coverage }`. **NEVER store credentials or tokens** — persist the auth *scheme*
+only (the secret lives in an env var / interactive input, never on disk).
 
 ## Step 2 — Record from SOURCE
+
+**Capture target.** For `mode = self-run`, launch the source locally and record against it (as before).
+For **`mode = provided-url`**, the harness targets `decision_log.golden_master.source_base_url`
+directly — **no build/start**; the Step-1 reachability probe stands in for the health check. Everything
+downstream (recordings, normalization, `feature_id` linkage) is identical — only the HTTP base changes.
+
+**Source authentication (multi-scheme).** Acquire auth for the SOURCE per the scheme detected in the
+Stage 0 auth/integration analysis (this mirrors the target-side token acquisition at Stage 6.2, but for
+the source). **Credentials come from env vars / an interactive prompt ONLY — never persisted** to the
+checkpoint or fixtures; only the *scheme* is recorded.
+```bash
+# Bearer / JWT
+curl -sf -H "Authorization: Bearer $SRC_TOKEN" "$SRC_URL/api/..."
+# API key header
+curl -sf -H "X-Api-Key: $SRC_API_KEY" "$SRC_URL/api/..."
+# Session cookie (login once, reuse the jar; jar is a temp file, git-ignored, deleted after capture)
+curl -sf -c /tmp/gm-cookies.txt -d "$SRC_LOGIN_BODY" "$SRC_URL/login" && \
+curl -sf -b /tmp/gm-cookies.txt "$SRC_URL/api/..."
+# NTLM / Windows-auth (classic internal WCF/IIS services)
+curl -sf --ntlm -u "$SRC_USER:$SRC_PASS" "$SRC_URL/api/..."
+```
+Mask every credential/PII value in the persisted fixture (the normalization rules below already require
+this); a live source returns real data, so masking is mandatory, not optional.
 
 **Worklist — drive from the Stage 0.6 inventory, in priority order:** (1) INFERRED behaviours marked
 `GM-verifiable` — reproducing them promotes INFERRED→OBSERVED; (2) HIGH-risk / RED items; (3) gaps
@@ -104,6 +157,8 @@ reads the summary, exactly like the Playwright flow.
 ## Step 4 — Report + gate
 
 Write `docs/.../ADO-{ADO_ID}-golden-master-report.md`:
+- Oracle basis: `self-run` | `captured from running source @ {source_base_url}` | `SKIPPED (inferred)`
+  (from `decision_log.golden_master.mode`).
 - Coverage: N recordings / M source behaviours (FULL | PARTIAL | NONE), each mapped to a `feature_id`.
 - Verdicts: match / drift / error counts.
 - Every `drift`/`error` MUST link to its inventory `feature_id`/`gap_id` and a feasibility RED/YELLOW
@@ -122,13 +177,19 @@ observable output) are OUT of golden-master scope; never mark them verified here
 
 Gate: any `drift` on a HIGH-risk item (or any `error`) → STOP, report to the developer, and do
 NOT mark the migration COMPLETE. `match` on all HIGH/MEDIUM items, or explicitly accepted drift
-with a recorded reason, is required to proceed to the completion banner.
+with a recorded reason, is required to proceed to the completion banner. **If GM was SKIPPED**, the
+Stage 6 as-built reconciliation (`stage_gates.asbuilt_reconciled`) must have run and passed as the
+compensating control before the completion banner — it is not optional in that case.
 
 ---
 
 ## Hard rules
 
 - NEVER claim behavioral parity without a captured oracle — say "INFERRED" if none was captured.
+- Capture from a REACHABLE running source (provided URL) before falling back to SKIP/inferred parity —
+  can't-self-run ≠ no oracle. SKIP is a last resort (neither self-run nor a reachable URL).
+- NEVER persist source credentials/tokens — env var / interactive only; record the auth *scheme* only.
+  Capture only against a dev/test instance; a prod-looking URL requires explicit confirmation.
 - The oracle is recorded from SOURCE, replayed against TARGET — never the reverse.
 - Normalizations are part of the contract — show them in the report.
 - Replay execution is 100% OS process (script), zero LLM tokens during the run.

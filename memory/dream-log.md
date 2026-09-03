@@ -377,3 +377,27 @@ These were deleted. Watch for more stale v1 references in future sessions.
 ### [capture] [2026-08-31] Plan approved — bounded gated goal-loop capability
 
 ### [capture] [2026-08-31] Task completed — bounded gated goal-loop shipped
+
+### [capture] [2026-09-02] Architecture decision — citation ≠ interpretation: integrations need ground-truth verification (ADO-9999)
+### [capture] [2026-09-02] Architecture decision — design-time ≠ as-built: reconciliation gate before MIGRATION COMPLETE (ADO-9999)
+### [capture] [2026-09-02] Task completed — migration hardening v3.18.0 (checkpoint schema 1.9→1.10, 2 new gates)
+
+### [capture] [2026-09-02] Architecture decision — golden-master: can't-self-run ≠ no oracle (provided-URL capture)
+
+### [capture] [2026-09-02] Task completed — setup-init .NET version detection is coarse (dotnet-modern) not per-version
+
+### [capture] [2026-09-02] Architecture decision — making migration .NET-version-aware (net8/9/10) — scoped approach
+### [capture] [2026-09-02] Error resolved — .NET lifecycle facts: net10 is LTS, not STS
+
+### [capture] [2026-09-02] Approach abandoned — version-aware migration scope had a fatal source-detection gap
+### [capture] [2026-09-02] Error resolved — detection gaps + wrong .NET facts in version-aware scope
+
+### [capture] [2026-09-03] Task completed — P1-Shared .NET detection engine implemented + verified
+### [capture] [2026-08-25] Architecture decision — /bug must persist approved spec BEFORE writing fix code
+
+### [capture] [2026-09-03] Error resolved — set-based gate must be Track-A-flag-gated (mixed-repo regression)
+### [capture] [2026-09-03] Task completed — Track B (migration version-awareness) implemented over shared engine
+### [capture] [2026-08-25] Architecture decision — /bug must persist approved spec BEFORE writing fix code
+
+### [capture] [2026-09-03] Task completed — Track A rule engine + full version-aware .NET plan implemented
+### [capture] [2026-08-25] Architecture decision — /bug must persist approved spec BEFORE writing fix code

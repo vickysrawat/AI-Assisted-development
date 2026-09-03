@@ -1,7 +1,5 @@
 ---
 paths: ["**/*.cs", "**/ThisAddIn.cs", "**/Ribbon*.cs", "**/ThisWorkbook.cs", "**/ThisDocument.cs"]
-detect:
-  files: ["**/ThisAddIn.cs", "**/ThisWorkbook.cs", "**/ThisDocument.cs"]
 ---
 
 # VSTO / C# Rules — Applied to Visual Studio Tools for Office projects

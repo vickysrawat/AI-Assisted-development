@@ -231,8 +231,8 @@ cacheLocation: 'localStorage'
 cacheLocation: 'sessionStorage'
 ```
 Flag `localStorage` as Amber with the XSS persistence note. If the application
-handles B1–B7 data, escalate to High — a persisted token for attorney-client matter
-data is a meaningful credential.
+handles B-series data, escalate to High — a persisted token guarding regulated or
+confidential data is a meaningful credential.
 
 **Logout — must clear Entra ID session, not just local cache**
 ```typescript

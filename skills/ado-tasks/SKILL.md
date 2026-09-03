@@ -254,10 +254,10 @@ docs, and the codebase are the only sources of truth; a persona's "experience" i
 ## Business context severity
 
 This skill does not perform security or compliance reviews. If output from this
-skill surfaces data that may trigger B1–B7 sensitivity (see
+skill surfaces data that may trigger B-series sensitivity (see
 `$PLUGIN_DIR/skills/shared/business-context-severity.md`), flag it to the developer. Do not
 silently process or display attorney-client privileged matter data, immigration
-identifiers, or other B1–B7 categories without acknowledgement.
+identifiers, or other B-series categories without acknowledgement.
 
 ---
 

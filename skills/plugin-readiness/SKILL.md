@@ -140,7 +140,7 @@ grep "Status.*Fixed\|Status.*Open" CodeReviews/code-review-ledger.md 2>/dev/null
 
 echo "=== Security reports ==="
 ls security/ 2>/dev/null | sort -r | head -3
-# Check for B1-B7 override annotations in most recent report
+# Check for B-series override annotations in most recent report
 grep -l "Override reason\|business override\|B[1-7]" security/*.html 2>/dev/null | head -1
 
 echo "=== gitignore coverage ==="
@@ -261,7 +261,7 @@ Score 5: Score 4 + memory entries have high confidence scores, stale entries pru
 
 ### AI-4: Governance rails
 
-Evidence: ICEA content under docs/Release*/Sprint*/UserStory*/, code-review ledger, security report B1–B7 annotations, PR patterns.
+Evidence: ICEA content under docs/Release*/Sprint*/UserStory*/, code-review ledger, security report B-series annotations, PR patterns.
 
 | Check | Evidence signal |
 |---|---|
@@ -269,13 +269,13 @@ Evidence: ICEA content under docs/Release*/Sprint*/UserStory*/, code-review ledg
 | ICEA files cover recent ADO items | File count > 0 and files modified recently |
 | Code review findings are getting Fixed | Ledger shows Fixed entries, not only Open accumulation |
 | Security scan run recently | security/ has a report from < 30 days |
-| B1–B7 override annotations present | At least one finding shows business context override |
+| B-series override annotations present | At least one finding shows business context override |
 | PR compliance in use | pr-describe/pr-create used (infer from ICEA file recency) |
 
 Score 1: No ICEA files, no code review ledger, no security scan.
 Score 2: ICEA files exist but sparse — most ADO items have no ICEA.
 Score 3: ICEA files present for most recent items. Security scan < 30 days old.
-Score 4: Score 3 + ledger shows Fixed findings, B1–B7 overrides observed.
+Score 4: Score 3 + ledger shows Fixed findings, B-series overrides observed.
 Score 5: Score 4 + ICEA compliance rate visible in sprint-metrics, governance improving.
 
 ---
@@ -311,7 +311,7 @@ grep -c "file-cache.json\|--area\|--changed" \
 | graph-index-schema.md + graph-module-schema.md (per-module fingerprint) | ✓ |
 | scope-flags-spec.md (--area, --continue, cache-aware) | ✓ |
 | source-file-consent.md present | ✓ |
-| business-context-severity.md B1–B7 complete | ✓ |
+| business-context-severity.md B-series complete | ✓ |
 | All review skills reference consent spec | ✓ |
 | Cache-aware scanning in security and code-review | ✓ |
 
@@ -378,10 +378,10 @@ Score 5: Score 4 + --area workflow adopted by all developers, session budget mon
 ## Step 3 — Apply business context severity
 
 Even for AI/plugin findings — if the plugin's failure to enforce governance results in
-real client data being exposed or privilege being breached, that is a B1–B7 finding.
+real client data being exposed or privilege being breached, that is a B-series finding.
 
 Specific trigger: if AI-4 (Governance) shows no security scan and the application
-handles B1–B7 data → that is a blocking finding.
+handles B-series data → that is a blocking finding.
 
 ---
 
@@ -392,7 +392,7 @@ handles B1–B7 data → that is a blocking finding.
 | ✅ **Plugin ready** | All 6 domains ≥ 3 AND the enforcement floor is installed and current (setup-status check 1p green) or formally declined with a recorded opt-out. |
 | ⚠️ **Conditionally ready** | AI-1 and AI-4 ≥ 3. AI-2, AI-3, AI-5, AI-6 may be at 2. |
 | 🔶 **Not ready** | AI-1 (Infrastructure) or AI-4 (Governance) < 3, OR the enforcement floor is absent without a recorded opt-out (check 1p red). |
-| 🔴 **Blocked** | Any domain at 1, OR security scan never run on a B1–B7 application. |
+| 🔴 **Blocked** | Any domain at 1, OR security scan never run on a B-series application. |
 
 Critical domains: AI-1 (Infrastructure health), AI-4 (Governance rails).
 A "ready" verdict with no mechanical floor would be exactly the kind of
@@ -421,6 +421,6 @@ Report structure:
 ## Hard Rules
 
 - NEVER read application source files — only plugin state files
-- NEVER score AI-4 above 2 if no security scan has been run on a B1–B7 application
+- NEVER score AI-4 above 2 if no security scan has been run on a B-series application
 - NEVER skip the business context check in Step 3
 - NEVER invent memory health scores — compute from file sizes and log dates

@@ -1,7 +1,5 @@
 ---
 paths: ["**/prisma/**", "**/db/**", "**/*.prisma", "**/schema/**"]
-detect:
-  dependencies: ["@prisma/client", "drizzle-orm"]
 ---
 
 # Prisma / Drizzle Rules — Applied to all JS/TS ORM projects

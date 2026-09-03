@@ -209,12 +209,13 @@ Result:
 
 ---
 
-## Step 5b — Business context severity review
+## Step 5b — Business context severity review (B-series)
 
-Before computing the verdict, load `$PLUGIN_DIR/skills/shared/business-context-severity.md` and
-apply all B1–B7 override triggers to every finding from Checks A, B, and C.
+Before computing the verdict, load the resolved B-series triggers — `.claude/business-context.md`
+if it exists, otherwise `$PLUGIN_DIR/skills/shared/business-context-severity.md` — and apply
+every B-series override trigger to every finding from Checks A, B, and C.
 
-If any finding touches a B1–B7 trigger → escalate to Critical. State the trigger.
+If any finding touches a B-series trigger → escalate to Critical. State the trigger.
 Any business-Critical finding is a ❌ FAIL that blocks the commit.
 This check cannot be skipped.
 

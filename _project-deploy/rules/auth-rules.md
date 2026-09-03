@@ -1,7 +1,5 @@
 ---
 paths: ["**/auth/**", "**/middleware/**", "**/guards/**", "**/filters/**"]
-detect:
-  always: false
 ---
 
 # Auth Rules — Authentication and Authorisation (AuthN + AuthZ)

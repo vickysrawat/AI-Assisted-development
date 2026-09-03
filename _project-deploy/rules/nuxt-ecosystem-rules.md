@@ -1,7 +1,5 @@
 ---
 paths: ["**/*.vue", "**/pages/**", "**/server/**", "**/composables/**"]
-detect:
-  dependencies: ["nuxt"]
 ---
 
 # Nuxt Ecosystem Rules — Applied to all Nuxt 3 projects

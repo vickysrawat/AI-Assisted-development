@@ -1,7 +1,5 @@
 ---
 paths: ["**/cache/**", "**/redis/**", "**/caching/**"]
-detect:
-  dependencies: ["ioredis", "redis", "node-cache", "django-redis", "redis-py", "Microsoft.Extensions.Caching.StackExchangeRedis", "StackExchange.Redis"]
 ---
 
 # Caching Rules — Cache patterns, TTL discipline, and invalidation strategy

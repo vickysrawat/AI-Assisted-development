@@ -2,7 +2,7 @@
 
 _Skill version: 1.0 · Last changed: 2026-07-07 · Consent: B_
 
-> **Business context severity:** implements ICEAs whose acceptance criteria carry B1–B7
+> **Business context severity:** implements ICEAs whose acceptance criteria carry B-series
 > sensitivity flags — see `$PLUGIN_DIR/skills/shared/business-context-severity.md`.
 
 ## Purpose
@@ -126,6 +126,16 @@ Follow the Tech Spec exactly — do not deviate or invent.
 Read `.claude/architecture/architecture.md` for the stack. If absent,
 fall back to the `# Stack:` line in `CLAUDE.md`. Generate only layers
 the project actually has.
+
+**Per-project .NET generation/version (authoritative — do NOT rely on the coarse `name`).**
+For a .NET target file, read `.claude/dream-init-state.json` → `generations.dotnet.versions[]`
+and match the project the file belongs to (by `path`). Key generation on **that project's**
+`generation` (a `dotnet-framework` project → Framework idioms; `dotnet-modern` → modern), NOT the
+repo-level `name` — a mixed solution has both. Cap generated C# to the project's `tfm` LangVersion
+(**net8→C# 12 · net9→C# 13 · net10→C# 14**); for a **multi-target** project use the LOWEST tfm
+(lowest-common-denominator so it compiles on all targets). If the file's project is absent from
+`versions[]` or its csproj mtime is newer than `generations_meta.detected_at`, re-parse that one
+csproj for a fresh TFM rather than trusting the snapshot (best-effort freshness).
 
 Generate in dependency order:
 

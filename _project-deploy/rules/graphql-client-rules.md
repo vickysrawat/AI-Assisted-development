@@ -1,8 +1,5 @@
 ---
 paths: ["**/*.tsx", "**/*.ts", "**/graphql/**", "**/*.graphql"]
-detect:
-  dependencies: ["@apollo/client", "graphql"]
-  excludeIfDependencies: ["apollo-server-core", "@apollo/server"]
 ---
 
 # GraphQL Client Rules — Applied to all Apollo Client / frontend GraphQL projects

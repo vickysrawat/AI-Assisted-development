@@ -178,7 +178,7 @@ Load the core references — read `.claude/plugin-path.txt` to get PLUGIN_DIR
 Read $PLUGIN_DIR/skills/security/references/pass1-patterns.md
 Read $PLUGIN_DIR/skills/security/references/output-formats.md
 Read $PLUGIN_DIR/skills/security/references/cross-cutting-principles.md
-Read $PLUGIN_DIR/skills/shared/business-context-severity.md
+Read .claude/business-context.md if it exists (project-local resolved B-series); otherwise read $PLUGIN_DIR/skills/shared/business-context-severity.md
 ```
 
 Load language-specific patterns for detected stack:
@@ -456,7 +456,7 @@ Delete `.claude/security-checkpoint.json` on successful completion.
 | `$PLUGIN_DIR/skills/shared/checkpoint-schema.md` | Checkpoint schema |
 | `$PLUGIN_DIR/skills/shared/fingerprint-spec.md` | Fingerprint generation |
 | `$PLUGIN_DIR/skills/shared/ledger-schema.md` | Ledger format and reconciliation |
-| `$PLUGIN_DIR/skills/shared/business-context-severity.md` | B1-B7 override triggers |
+| `$PLUGIN_DIR/skills/shared/business-context-severity.md` | B-series override triggers |
 | `$PLUGIN_DIR/skills/shared/source-file-consent.md` | Consent category enforcement |
 | `$PLUGIN_DIR/skills/shared/dismissed-findings-reconciliation.md` | Rule 5 dismissed finding handling |
 | `$PLUGIN_DIR/skills/shared/graph-index-schema.md` / `graph-module-schema.md` | Knowledge graph for --area |

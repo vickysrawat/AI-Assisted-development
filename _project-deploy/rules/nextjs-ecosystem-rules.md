@@ -1,7 +1,5 @@
 ---
 paths: ["**/app/**", "**/pages/**", "**/*.tsx", "**/components/**"]
-detect:
-  dependencies: ["next"]
 ---
 
 # Next.js Ecosystem Rules — Applied to all Next.js projects

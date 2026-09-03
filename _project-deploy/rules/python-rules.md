@@ -1,7 +1,5 @@
 ---
 paths: ["**/*.py", "**/routers/**", "**/services/**", "**/models/**"]
-detect:
-  files: ["**/*.py", "requirements.txt", "pyproject.toml"]
 ---
 
 # Python Rules — Applied to all .py files

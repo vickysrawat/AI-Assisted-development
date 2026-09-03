@@ -1,7 +1,5 @@
 ---
 paths: ["**/graphql/**", "**/*.graphql", "**/*.gql", "**/resolvers/**", "**/schema/**"]
-detect:
-  dependencies: ["apollo-server-core", "@apollo/server", "graphql", "@nestjs/graphql", "strawberry-graphql", "graphene"]
 ---
 
 # GraphQL Server Rules — Schema design, resolvers, and API serving

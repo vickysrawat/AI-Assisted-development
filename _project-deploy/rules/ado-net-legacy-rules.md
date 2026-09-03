@@ -1,8 +1,5 @@
 ---
 paths: ["**/*.cs", "**/Data/**", "**/Repositories/**"]
-detect:
-  dependencies: ["System.Data"]
-  files: ["**/*.cs"]
 ---
 
 > ⚠️ LEGACY — MAINTENANCE ONLY. These are dated ADO.NET patterns found in older codebases.

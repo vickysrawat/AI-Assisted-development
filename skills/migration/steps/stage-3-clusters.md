@@ -4,7 +4,7 @@ _Part of the `migration` skill. Loaded and dispatched by the orchestrator
 (`skills/migration/SKILL.md`) — not a standalone/registered skill. Cross-session resume: `MIGRATE CLUSTERS ADO-{ID}`._
 
 **Persona:** [SA] Rafael Mendes — Solution Architect. **Model tier:** `${ICEA_MODEL:-claude-opus-4-8}`.
-**Checkpoint:** single source of truth (schema 1.9); on `APPROVE MIGRATION` (skeleton Write Gate) merge
+**Checkpoint:** single source of truth (schema 1.10); on `APPROVE MIGRATION` (skeleton Write Gate) merge
 `stage_gates.migration_approved = true`, `phase = "Stage 4"`. Per-cluster status lives in `clusters{}`.
 
 ---
@@ -277,7 +277,7 @@ exists from Step 0.4 (do NOT clobber the accumulated `decision_log`). On `APPROV
 ADO-{ADO_ID}` set `stage_gates.migration_approved = true`. The merged result is:
 ```json
 {
-  "schema_version": "1.9",
+  "schema_version": "1.10",
   "ado_id": "{ADO_ID}",
   "source_path": "{SOURCE_PATH}",
   "phase": "Stage 4",
@@ -287,7 +287,9 @@ ADO-{ADO_ID}` set `stage_gates.migration_approved = true`. The merged result is:
     "architecture_approved": true,
     "feasibility_approved": true,
     "migration_approved": true,
-    "stage4_started": false
+    "stage4_started": false,
+    "integrations_verified": true,
+    "asbuilt_reconciled": false
   },
   "mode": {
     "graph": true,

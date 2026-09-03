@@ -16,11 +16,12 @@ _Load in Step 0e before beginning analysis._
   - Low: code quality issues, unreachable code, redundant checks, missing decision comments (`MISSING_DECISION_COMMENT`)
 
 - **Business context override (mandatory — applies to every finding)**:
-  After assigning technical severity, apply the business override check from
-  `$PLUGIN_DIR/skills/shared/business-context-severity.md`. If the finding touches attorney-client
-  data, immigration identifiers, active case timelines, vulnerable client data,
-  breach notification obligations, physical safety data, or PII in a static directory
-  → escalate to Critical regardless of technical score. Report both scores and state
-  the override trigger (B1–B7). This check is not optional.
+  After assigning technical severity, apply the business override check using the resolved
+  B-series triggers — `.claude/business-context.md` if it exists, otherwise
+  `$PLUGIN_DIR/skills/shared/business-context-severity.md`. If the finding touches any resolved
+  B-series trigger (e.g. regulated/confidential data, regulated individual identifiers,
+  irreversible time-sensitive harm, breach-notification obligations, safety-endangering data,
+  or PII in a static directory) → escalate to Critical regardless of technical score. Report
+  both scores and state the override trigger. This check is not optional.
 
 ---

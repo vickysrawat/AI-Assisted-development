@@ -66,7 +66,8 @@ for (var i = 0; i < externalDirs.length; i++) {
 
   // .NET — scan csproj files once, reuse for both checks
   var csprojFiles = findFiles(dir, function(n) { return n.endsWith('.csproj'); });
-  var hasSln = findFiles(dir, function(n) { return n.endsWith('.sln'); }, 1).length > 0;
+  // Extension-tolerant: .sln AND .slnx (the XML solution format).
+  var hasSln = findFiles(dir, function(n) { return n.endsWith('.sln') || n.endsWith('.slnx'); }, 1).length > 0;
 
   if (csprojFiles.length || hasSln) {
     // VSTO: Microsoft.Office.Tools / Interop, VSTO project GUID, or TargetApplication element.

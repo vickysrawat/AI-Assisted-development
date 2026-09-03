@@ -21,7 +21,7 @@ Effort tier: **low** (infrastructure, deterministic structure). Use `--effort me
 only when module layout has significantly changed and boundaries are ambiguous.
 
 **Consent (Category B):** graph-sync reads entry-point and source files to derive
-module content and dependency edges. It is plugin infrastructure with no B1–B7
+module content and dependency edges. It is plugin infrastructure with no B-series
 business sensitivity of its own (see `skills/shared/business-context-severity.md` for
 the severity model it does not trigger), but it still announces the source read per
 `skills/shared/source-file-consent.md` before reading beyond the graph files.

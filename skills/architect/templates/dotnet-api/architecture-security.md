@@ -54,7 +54,7 @@ flowchart LR
 
 ## Sensitive Data Handling
 
-> Which endpoints/tables carry B1–B7 data (see `business-context-severity.md`), and how
+> Which endpoints/tables carry B-series data (see `business-context-severity.md`), and how
 > it is protected in transit / at rest / in logs.
 
 > ⚠ Could not determine — needs manual input

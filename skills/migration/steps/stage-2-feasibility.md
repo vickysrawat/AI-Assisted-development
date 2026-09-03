@@ -5,7 +5,7 @@ _Part of the `migration` skill. Loaded and dispatched by the orchestrator
 _Heavy, non-interactive — the orchestrator dispatches this stage as a subagent (context discarded on return)._
 
 **Persona:** [SA] Rafael Mendes — Solution Architect. **Model tier:** `${REVIEW_MODEL:-claude-sonnet-4-6}`.
-**Checkpoint:** single source of truth (schema 1.9); on `APPROVE FEASIBILITY` merge
+**Checkpoint:** single source of truth (schema 1.11); on `APPROVE FEASIBILITY` merge
 `stage_gates.feasibility_approved = true`, `phase = "Stage 3"`, set `decision_log.red_items`/`yellow_count`.
 
 ---
@@ -62,6 +62,23 @@ map each feature ID to GREEN/YELLOW/RED and record the feature ID against each i
 re-scanning the source. The inventory is the source-behavior lens; this feasibility is the
 migration-difficulty lens over the same features.
 
+### Step 2.0b — Determine migration POSTURE (per cluster/project)
+
+Breaking-change analysis is **posture-dependent** — do NOT apply the net-core removal-delta model to
+a .NET Framework source. Read `mode.source_version` / `mode.target_version` and the source
+`versions[].generation` spread (from Stage 0.1 / the source `generations.dotnet`). Assign posture
+**per cluster/project** by that project's generation — a mixed source is genuinely both:
+
+| Project generation | Posture | Breaking-change source |
+|---|---|---|
+| `dotnet-modern` (net-core/5+) | **Upgrade** | `dotnet-upgrade.md` — cumulative removals over `(source_version, target_version]` |
+| `dotnet-framework` (net4x) | **Re-platform** | `dotnet-framework-to-dotnet.md` parity mapping (System.Web→ASP.NET Core, WCF→CoreWCF/gRPC, Web.config→appsettings). `source_version` (4.x) is context only, NOT a removal index |
+| multi-target (SET) | Both — confirm with developer per cluster | union; treat conservatively (LCD) |
+
+**Version-delta early-warning (Upgrade posture only):** if `target_version` major − `source_version`
+major ≥ 3 (e.g. net6→net10), raise a YELLOW/RED "large version delta — cumulative breaking changes
+across N majors; consider staging the upgrade (e.g. →net8 LTS first)". Record the delta count.
+
 Write `docs/.../ADO-{ADO_ID}-migration-feasibility.md` (planning doc, no Write Gate).
 
 ### Honesty rules
@@ -73,6 +90,13 @@ Write `docs/.../ADO-{ADO_ID}-migration-feasibility.md` (planning doc, no Write G
 ### Behavioral risk scale
 INFORMATIONAL · MEDIUM · HIGH · BLOCKER
 Worst-case rule: component rating = worst sub-item rating.
+
+**M5 — regulatory constraints from the resolved B-series.** Read the target's
+`.claude/business-context.md` (seeded in Stage 0.5/0.6). Any regulatory frame it cites
+(e.g. HIPAA/PCI/data-residency/FIPS/at-rest-encryption) that the candidate target stack does
+not clearly satisfy is a first-class **RED** (or **BLOCKER** if unresolvable) feasibility item —
+e.g. "target must support at-rest encryption + data residency for this domain". Do not defer
+regulatory fit to post-migration.
 
 ### Document sections
 

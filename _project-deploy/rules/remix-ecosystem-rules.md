@@ -1,7 +1,5 @@
 ---
 paths: ["**/routes/**", "**/app/**", "**/*.tsx"]
-detect:
-  dependencies: ["@remix-run/react"]
 ---
 
 # Remix Ecosystem Rules — Applied to all Remix projects

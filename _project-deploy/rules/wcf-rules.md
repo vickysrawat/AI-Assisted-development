@@ -1,8 +1,5 @@
 ---
 paths: ["**/*.svc", "**/*.cs", "**/ServiceContracts/**", "**/DataContracts/**"]
-detect:
-  files: ["**/*.svc"]
-  dependencies: ["System.ServiceModel"]
 ---
 
 > ⚠️ LEGACY — MAINTENANCE ONLY. WCF is in maintenance mode as of .NET 5+.

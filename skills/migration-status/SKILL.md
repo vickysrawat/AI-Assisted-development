@@ -46,6 +46,12 @@ try{
 Legacy checkpoint (`schema_version` absent or `< 1.9`): render what exists; if `stage_gates`/`mode`
 are absent, show "legacy checkpoint — limited detail" and recommend `MIGRATE RESUME ADO-{ID}`.
 
+Pre-1.10 checkpoint (`schema_version < 1.10` but `≥ 1.9`): the `integrations_verified` /
+`asbuilt_reconciled` gate keys will be absent — render both as ⬜ (not yet reached), not "undefined".
+Both are gated: `integrations_verified` is granted at Stage 0.6 (`APPROVE INVENTORY`, when no
+Integration Inventory row is `UNVERIFIED`); `asbuilt_reconciled` is granted by the Stage 6 as-built
+reconciliation step before `MIGRATION COMPLETE`.
+
 ## Step 3 — Render the status block
 
 ```
@@ -60,6 +66,7 @@ are absent, show "legacy checkpoint — limited detail" and recommend `MIGRATE R
   Stage gates:
     {✅|⬜} Options       {✅|⬜} Inventory     {✅|⬜} Architecture
     {✅|⬜} Feasibility   {✅|⬜} Migration     {Stage 4 started: yes|no}
+    {✅|⬜} Integrations verified   {✅|⬜} As-built reconciled
 
   Clusters ({done}/{total} done):
     {for each in clusters{}}  {✅|⏳|❌} {name}  · tier {tier} · {branch or "—"} · {date or "—"}
@@ -68,6 +75,7 @@ are absent, show "legacy checkpoint — limited detail" and recommend `MIGRATE R
   Contract: hash {contract_hash or "—"} · v{contract_version}
   Decisions: auth {decision_log.auth|—} · data {decision_log.data_access|—} · cloud {decision_log.cloud|—}
   Feasibility: {decision_log.red_items.length} RED · {decision_log.yellow_count} YELLOW
+  Oracle: {decision_log.golden_master.mode: self-run | provided-url @ {source_base_url} | skipped | —}
 
   ▶ Next: {resume keyword from Step 2}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

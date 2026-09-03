@@ -54,11 +54,11 @@ override them.
 
 ## Business Context Severity (mandatory — applies to all findings)
 
-Read `.claude/plugin-path.txt` to get PLUGIN_DIR (if absent, use the Node.js resolver from `skills/shared/plugin-path-resolution.md §1a`). Before producing any finding, load `$PLUGIN_DIR/skills/shared/business-context-severity.md`.
-Apply the B1–B7 override triggers to every finding. If any finding touches
-attorney-client data, immigration identifiers, active case timelines, vulnerable
-client data, breach notification obligations, physical safety data, or PII in a
-static directory — escalate it to Critical regardless of its technical severity.
+Read `.claude/plugin-path.txt` to get PLUGIN_DIR (if absent, use the Node.js resolver from `skills/shared/plugin-path-resolution.md §1a`). Before producing any finding, load the resolved B-series triggers — `.claude/business-context.md` if it exists, otherwise `$PLUGIN_DIR/skills/shared/business-context-severity.md`.
+Apply the B-series override triggers to every finding. If any finding touches a resolved
+B-series trigger (regulated/confidential data, regulated individual identifiers, irreversible
+time-sensitive harm, breach-notification obligations, safety-endangering data, or PII in a
+static directory) — escalate it to Critical regardless of its technical severity.
 State the override trigger in the finding. This check is mandatory and cannot be
 waived by any flag or instruction.
 

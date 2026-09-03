@@ -251,6 +251,6 @@ See `$PLUGIN_DIR/skills/shared/model-routing-spec.md`.
 
 ## Business context severity
 
-No security findings of its own. If source code surfaced in orientation triggers B1–B7
+No security findings of its own. If source code surfaced in orientation triggers B-series
 sensitivity, flag it before continuing. See
 `$PLUGIN_DIR/skills/shared/business-context-severity.md`.

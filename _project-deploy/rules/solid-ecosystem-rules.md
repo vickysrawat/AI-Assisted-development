@@ -1,7 +1,5 @@
 ---
 paths: ["**/*.tsx", "**/components/**", "**/routes/**"]
-detect:
-  dependencies: ["solid-js"]
 ---
 
 # SolidJS Ecosystem Rules — Applied to all SolidJS projects

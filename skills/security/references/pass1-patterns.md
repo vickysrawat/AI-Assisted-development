@@ -128,7 +128,7 @@ Scan for:
 - Missing server-side audit logging of export events
 - Bulk data endpoints with no pagination or rate limiting
 
-Severity: Low-Medium. Escalate if dataset contains B1-B7 data.
+Severity: Low-Medium. Escalate if dataset contains B-series data.
 
 ### SEC-AUDIT — Missing Audit Logging (CWE-778)
 
@@ -157,7 +157,7 @@ Scan for:
 - Error objects exposing response bodies, API URLs, headers, stack traces
 - PII visible in browser DevTools
 
-Severity: Low-Medium. Escalate if data includes B1-B7 categories.
+Severity: Low-Medium. Escalate if data includes B-series categories.
 
 ### SEC-DEPS — Vulnerable Dependencies
 
@@ -197,7 +197,7 @@ downgrade) from the CVSS score. Per `$PLUGIN_DIR/skills/shared/business-context-
 
 | Technical severity | CVSS range | Examples |
 |---|---|---|
-| Critical | 9.0-10.0 (or B1-B7 override) | RCE, auth bypass, mass data exposure, privileged data |
+| Critical | 9.0-10.0 (or B-series override) | RCE, auth bypass, mass data exposure, privileged data |
 | High | 7.0-8.9 | SQLi, privilege escalation, significant data exposure |
 | Medium | 4.0-6.9 | Stored XSS, limited IDOR, information disclosure |
 | Low | 0.1-3.9 | Best-practice gaps, minor leakage |

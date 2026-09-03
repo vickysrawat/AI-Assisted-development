@@ -1,11 +1,11 @@
 {
   "schemaVersion": "1",
-  "pluginVersion": "3.13.0",
-  "pluginDir": "C:\\Users\\rawatv\\.claude\\plugins\\cache\\KirklandAndEllis-marketplace\\ai-assisted-development\\3.13.0",
-  "mode": "sync",
+  "pluginVersion": "3.18.0",
+  "pluginDir": "C:\\Users\\rawatv\\OneDrive - Kirkland\\Desktop\\Vivek\\Learning\\AI Learning\\Agentic Engineering\\Plugin\\AI-Assisted-development",
+  "mode": "init",
   "projectRoot": "C:\\Users\\rawatv\\OneDrive - Kirkland\\Desktop\\Vivek\\Learning\\AI Learning\\Agentic Engineering\\Plugin\\AI-Assisted-development",
-  "startedAt": "2026-08-11T18:26:53.520Z",
-  "completedAt": "2026-08-11T18:27:38.870Z",
+  "startedAt": "2026-09-03T21:35:35.663Z",
+  "completedAt": "2026-09-03T21:36:23.665Z",
   "status": "complete",
   "vcs": "git",
   "operations": {
@@ -28,17 +28,15 @@
     "wireLocalSettings": {
       "status": "done",
       "added": [
-        "Bash(node \"C:\\\\Users\\\\rawatv\\\\.claude\\\\plugins\\\\cache\\\\KirklandAndEllis-marketplace\\\\ai-assisted-development\\\\3.13.0\\\\scripts\\\\*.cjs\"*)",
-        "Bash(node.exe \"C:\\\\Users\\\\rawatv\\\\.claude\\\\plugins\\\\cache\\\\KirklandAndEllis-marketplace\\\\ai-assisted-development\\\\3.13.0\\\\scripts\\\\*.cjs\"*)",
-        "Bash(grep:*)",
-        "Edit(memory/*.md)"
+        "Bash(node \"C:\\\\Users\\\\rawatv\\\\OneDrive - Kirkland\\\\Desktop\\\\Vivek\\\\Learning\\\\AI Learning\\\\Agentic Engineering\\\\Plugin\\\\AI-Assisted-development\\\\scripts\\\\*.cjs\"*)",
+        "Bash(node.exe \"C:\\\\Users\\\\rawatv\\\\OneDrive - Kirkland\\\\Desktop\\\\Vivek\\\\Learning\\\\AI Learning\\\\Agentic Engineering\\\\Plugin\\\\AI-Assisted-development\\\\scripts\\\\*.cjs\"*)"
       ],
-      "scriptsDir": "C:\\Users\\rawatv\\.claude\\plugins\\cache\\KirklandAndEllis-marketplace\\ai-assisted-development\\3.13.0\\scripts"
+      "scriptsDir": "C:\\Users\\rawatv\\OneDrive - Kirkland\\Desktop\\Vivek\\Learning\\AI Learning\\Agentic Engineering\\Plugin\\AI-Assisted-development\\scripts"
     },
     "deployStubs": {
       "status": "done",
-      "deployed": 38,
-      "skipped": 0,
+      "deployed": 0,
+      "skipped": 38,
       "failed": []
     },
     "deployHooks": {
@@ -61,15 +59,20 @@
         "memory-log.cjs",
         "check-settings-secrets.cjs",
         "context-budget-tech-write.cjs",
+        "script-review-gate.cjs",
+        "web-grounding-guard.cjs",
+        "audit-append.cjs",
+        "audit-prompt.cjs",
         "validate-ledgers.py",
-        "validate-pr-compliance.py"
+        "validate-pr-compliance.py",
+        "validate-audit.py"
       ],
       "failed": [],
       "hashesWritten": true
     },
     "writePluginPath": {
       "status": "done",
-      "path": "C:/Users/rawatv/.claude/plugins/cache/KirklandAndEllis-marketplace/ai-assisted-development/3.13.0"
+      "path": "C:/Users/rawatv/OneDrive - Kirkland/Desktop/Vivek/Learning/AI Learning/Agentic Engineering/Plugin/AI-Assisted-development"
     },
     "deployProjectSkills": {
       "status": "done",
@@ -92,10 +95,10 @@
     },
     "wireSettings": {
       "status": "done",
-      "alreadyWired": true,
+      "alreadyWired": false,
       "noHooks": false,
       "autoMemSet": false,
-      "shellType": "node"
+      "shellType": "bash"
     },
     "wireUserSettings": {
       "status": "done",
@@ -137,7 +140,7 @@
       "vcs": "git",
       "file": ".gitignore",
       "result": "updated",
-      "entriesWritten": 17,
+      "entriesWritten": 18,
       "tfvcDetected": false
     },
     "externalDirScan": {
@@ -160,6 +163,51 @@
       "unresolved": []
     }
   },
-  "needsLLMPopulation": [],
-  "warnings": []
+  "needsLLMPopulation": [
+    {
+      "id": "init_claude_md",
+      "order": 1,
+      "skill": "/init",
+      "status": "done",
+      "description": "CLAUDE.md existed with project content"
+    },
+    {
+      "id": "resolve_git_bash_paths",
+      "order": 2,
+      "skill": "interactive",
+      "status": "done",
+      "description": "no unresolved git/bash placeholders remain in CLAUDE.md"
+    },
+    {
+      "id": "verify_external_dirs",
+      "order": 3,
+      "skill": "interactive",
+      "status": "done",
+      "description": "no external directories found — nothing to verify"
+    },
+    {
+      "id": "generate_architecture",
+      "order": 4,
+      "skill": "architect",
+      "status": "pending",
+      "description": "Run architect skill — generates architecture docs; Step 7-2 calls graph-extract-edges.js"
+    },
+    {
+      "id": "build_knowledge_graph",
+      "order": 5,
+      "skill": "graph-sync",
+      "status": "pending",
+      "description": "Run graph-sync — refines graph.json, re-runs graph-extract-edges.js for EXTRACTED edges"
+    },
+    {
+      "id": "deploy_rules",
+      "order": 6,
+      "skill": "bootstrap-phase-2",
+      "status": "pending",
+      "description": "Deployed by bootstrap Phase 2 (called from architect Step 1 after repo type detection)"
+    }
+  ],
+  "warnings": [
+    "pre-commit: pre-commit.backup already existed; your current hook was preserved to pre-commit.local.bak before installing the plugin hook — reconcile manually if it was intentional."
+  ]
 }

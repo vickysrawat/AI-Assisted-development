@@ -1,8 +1,5 @@
 ---
 paths: ["**/*.sql", "**/migrations/**", "**/schema/**"]
-detect:
-  files: ["**/*.sql"]
-  dependencies: ["mssql", "pg", "mysql2", "Npgsql", "Microsoft.Data.SqlClient", "psycopg2", "asyncpg", "pyodbc"]
 ---
 
 # SQL Relational Rules — WHAT you access: schema design, query craft, and migration discipline

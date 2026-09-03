@@ -1,7 +1,5 @@
 ---
 paths: ["**/*.ts", "**/*.tsx", "**/services/**", "**/api/**"]
-detect:
-  dependencies: ["react", "vue", "@angular/core", "svelte", "solid-js", "next", "nuxt", "astro"]
 ---
 
 # REST Client Rules — Applied to all frontend REST API consumption

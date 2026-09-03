@@ -3,7 +3,7 @@ name: critic
 description: >
   A second-pass critic that evaluates generated artefacts before they are
   written to disk. Runs in three modes: ICEA mode critiques an ICEA draft for
-  completeness, testability, B1–B7 coverage, and scope-vs-Intent; TECH mode
+  completeness, testability, B-series coverage, and scope-vs-Intent; TECH mode
   critiques a Tech Spec draft for ICEA↔design traceability, coverage-matrix
   completeness, and D-option fidelity; CODE mode critiques generated
   implementation code for ICEA traceability, simplicity, rules compliance,
@@ -55,12 +55,12 @@ If that file is missing, fall back to the project defaults below.
 
 ## Business context sensitivity
 
-Read `.claude/plugin-path.txt` to get PLUGIN_DIR (if absent, use the Node.js resolver from `skills/shared/plugin-path-resolution.md §1a`). Before critiquing, read `$PLUGIN_DIR/skills/shared/business-context-severity.md`. The critic
-checks whether B1–B7 triggers that apply to the artefact have been handled —
+Read `.claude/plugin-path.txt` to get PLUGIN_DIR (if absent, use the Node.js resolver from `skills/shared/plugin-path-resolution.md §1a`). Before critiquing, read the resolved B-series triggers — `.claude/business-context.md` if it exists, otherwise `$PLUGIN_DIR/skills/shared/business-context-severity.md`. The critic
+checks whether the B-series triggers that apply to the artefact have been handled —
 in ICEA mode, whether the relevant ACs carry the correct sensitivity flag; in
 code mode, whether the generated code actually implements the protection the
-flag requires (e.g. never logging A-Numbers, validating role before returning
-matter data, encrypting at rest).
+flag requires (e.g. never logging regulated identifiers, validating role before
+returning confidential records, encrypting at rest).
 
 ---
 
@@ -169,7 +169,7 @@ findings tied to a specific section or AC — never vague commentary.
 | **Completeness** | Is any AC vague enough to support two different implementations? Does any field carry a `[?]` that the Intent/Context could actually resolve? |
 | **Relevance** | Does the System Context (or any section) carry rows/detail that don't drive a design decision? Every row must be load-bearing — flag bloat as a finding, not filler. |
 | **Testability** | Is every Example a concrete, verifiable scenario with an observable outcome? Can a QA engineer write one test per Example without guessing? |
-| **B1–B7 coverage** | Does the Intent or Context imply a sensitivity trigger that no AC flags? (e.g. "matter data" implies B-level client-confidentiality handling.) |
+| **B-series coverage** | Does the Intent or Context imply a sensitivity trigger that no AC flags? (e.g. regulated or confidential records imply B-level confidentiality handling.) |
 | **Scope** | Does any AC introduce behaviour beyond the stated Intent? Scope creep is a finding, not a feature. |
 | **Decisions (when a D block exists)** | Anti-strawman audit per `$PLUGIN_DIR/skills/shared/icea-decisions-spec.md` §2: is each option genuinely distinct on a trade-off axis, or decoration? Does every option carry a real "Choose this when…" steelman? Does the recommendation cite repo evidence (knowledge-graph locations, memory decisions) rather than best-practice filler? A fork the implementation plainly faces but the D block omits is a finding. Manifest check: does every manifest row trace to an AC/Example/Context/D item, and do rows name concrete diff-matchable paths? |
 

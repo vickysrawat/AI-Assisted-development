@@ -205,6 +205,10 @@ function scopeRules() {
     const rel = path.join('.claude', 'rules', f).replace(/\\/g, '/');
     if (exists(rel)) items.push({ rel, display: rel, type: 'file' });
   }
+  // ADR 0059: also remove the deploy bookkeeping so a subsequent /setup-sync re-derives cleanly.
+  for (const meta of ['.claude/rules/.hashes', '.claude/rules/_deploy-manifest.json']) {
+    if (exists(meta)) items.push({ rel: meta, display: meta, type: 'file' });
+  }
   return { items, warnings };
 }
 
@@ -251,6 +255,11 @@ function scopeFull() {
         warnings.push(`${d}/ preserved — not removed (run /graph-sync or /update-arch to regenerate)`);
       }
     }
+  }
+  // Developer-tuned domain policy is never removed (like architecture docs) — preserved by
+  // omission from every removal scope; surface it so the preservation is explicit.
+  if (exists('.claude/business-context.md')) {
+    warnings.push('.claude/business-context.md preserved — developer-tuned domain policy (run `SET DOMAIN` to regenerate)');
   }
 
   // CLAUDE.md plugin section stripping

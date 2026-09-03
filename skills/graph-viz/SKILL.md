@@ -19,7 +19,7 @@ Effort tier: **low** (deterministic transform of `graph.json` to HTML).
 
 **Consent (Category C):** reads `.claude/graph/graph.json` (and the `.stale` flag) only —
 never application source. No source-file gate applies. See
-`skills/shared/source-file-consent.md`; this skill has no B1–B7 business sensitivity
+`skills/shared/source-file-consent.md`; this skill has no B-series business sensitivity
 (`skills/shared/business-context-severity.md`).
 
 **Write-silent rule:** write `graph.html` directly to disk; confirm with a one-line

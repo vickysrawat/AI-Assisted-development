@@ -1,8 +1,5 @@
 ---
 paths: ["**/*.cs", "**/Controllers/**", "**/Services/**", "**/Repositories/**", "**/App_Start/**"]
-detect:
-  files: ["**/*.csproj"]
-  dependencies: ["System.Web", "Microsoft.AspNet.Mvc", "Microsoft.AspNet.WebApi.Core"]
 ---
 
 > ⚠️ LEGACY — MAINTENANCE ONLY. Do not use these patterns for new features or new services.

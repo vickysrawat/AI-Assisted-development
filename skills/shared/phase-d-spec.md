@@ -106,7 +106,7 @@ run's capability set are carried forward unchanged with `last-seen` untouched.
 
 ## 6. Disagreement protocol (deterministic vs probabilistic)
 
-- The model may ANNOTATE a deterministic finding (B1–B7 severity escalation,
+- The model may ANNOTATE a deterministic finding (B-series severity escalation,
   probable-false-positive note with reasoning) — it may NEVER delete or
   suppress one. Suppression goes through /dismiss with a human justification.
 - Deterministic findings are cheap to fix or cheap to dismiss — do not spend

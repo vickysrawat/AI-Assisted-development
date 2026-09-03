@@ -5,13 +5,16 @@
 #
 # Stack: <set per repo — e.g. ".NET 8+ / C# · Angular 17+ · Node.js · Azure DevOps">
 #        setup-init / architect populate this from the detected repo type.
+# Domain: <business domain, identified at setup by business-context-generation.md — e.g.
+#          legal / healthcare / fintech / ecommerce / govtech / generic. Drives the
+#          project-local B-series in .claude/business-context.md. Re-run with `SET DOMAIN`.>
 #        Supported backends: .NET Core · ASP.NET Framework 4.x · Java/Spring Boot · Python (FastAPI/Django/Flask) · Node.js
 #        Supported frontends: Angular · React. Tracking: Azure DevOps.
 #        NOTE: migration source/target support is a SUBSET of stack support — see the migration
 #        skill Q1 matrix. Python is a target from Node.js (nodejs→python) and React a target from
 #        Angular (angular→react); Python-as-source and java/dotnet→python have no mapping refs yet.
 # Last updated: keep this file updated when conventions change
-# Plugin version: 3.15.0 (update this line after setup-init or plugin upgrade)
+# Plugin version: 3.18.0
 
 ---
 
@@ -97,6 +100,7 @@ Recognised globally, no /command needed. ADO ID is case-insensitive (`ADO-1847`,
 | `REVISE ADO-{ID}` | Run icea-revise skill for that ADO ID |
 | `STATUS ADO-{ID}` | Run icea-status skill for that ADO ID |
 | `BUG ADO-{ID} — {description}` | Log bug entry to tracker for that ADO ID |
+| `SET DOMAIN` | Run `business-context-generation.md` — infer/confirm business domain + jurisdiction, ground the B-series in cited regulatory frameworks, write `.claude/business-context.md` (own `APPROVED` gate; idempotent; architect-independent). Also sets the CLAUDE.md `Domain:` line + `dream-init-state.json` `domain`. Use for first-time setup outside architect, a domain pivot, or backfill. |
 | `MIGRATE ADO-{ID}` | Run migration skill for that ADO ID |
 | `MIGRATE RESUME ADO-{ID} [BACKEND\|FRONTEND]` | Resume migration from checkpoint (Stage 4 cluster resume) |
 | `MIGRATE STATUS ADO-{ID}` | Run the `migration-status` skill (`/migration-status`) — render the migration checkpoint (phase · stage-gates · clusters · next action) for that ADO ID. Read-only. |

@@ -1,7 +1,5 @@
 ---
 paths: ["**/*.java", "**/controller/**", "**/service/**", "**/repository/**"]
-detect:
-  files: ["pom.xml", "build.gradle", "build.gradle.kts"]
 ---
 
 # Java / Spring Boot Rules — Applied to all .java files

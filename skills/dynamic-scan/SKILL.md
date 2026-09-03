@@ -18,10 +18,12 @@ Docker, driven by the ZAP **Automation Framework** (a single YAML plan). This sk
 the dynamic (DAST) counterpart to the static `security` skill (SAST). They share scope
 flags, model routing, consent rules, and business-context severity.
 
-> **Business-context severity**: All findings produced by this skill are re-rated using
-> `$PLUGIN_DIR/skills/shared/business-context-severity.md`. A runtime finding that exposes immigration
-> IDs, privileged matter data, or vulnerable-client data is escalated to Critical even
-> when ZAP's own risk rating is lower. Apply the B1–B7 overrides before writing the report.
+> **Business-context severity**: All findings produced by this skill are re-rated using the
+> resolved B-series triggers — `.claude/business-context.md` if it exists, otherwise
+> `$PLUGIN_DIR/skills/shared/business-context-severity.md`. A runtime finding that exposes data
+> matching a B-series trigger (regulated identifiers, confidential records, safety-endangering
+> data) is escalated to Critical even when ZAP's own risk rating is lower. Apply the B-series
+> overrides before writing the report.
 
 > **Source-file consent**: This skill is Category A for the live scan itself (the user
 > invoked `/dynamic-scan`), but reading application source to map a finding back to a
@@ -343,7 +345,7 @@ pip-audit -f json
    `alertFilter` job. See `$PLUGIN_DIR/skills/dynamic-scan/references/baseline-tuning.md`. Keep noise (missing headers on
    static assets, CSP-on-JSON-API) out of the report so the signal stays trusted.
 3. **Severity**: translate ZAP risk → CVSS/CWE using `$PLUGIN_DIR/skills/dynamic-scan/references/severity-mapping.md`, then
-   apply the B1–B7 business overrides from `$PLUGIN_DIR/skills/shared/business-context-severity.md`.
+   apply the B-series business overrides — from `.claude/business-context.md` if it exists, otherwise `$PLUGIN_DIR/skills/shared/business-context-severity.md`.
 4. **Diff**: if `--diff` given, compare against the previous `dynamic-scan/` report and show
    only NEW findings — the "did this PR introduce a vulnerability?" signal.
 

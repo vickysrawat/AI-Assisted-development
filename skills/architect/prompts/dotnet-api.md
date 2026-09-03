@@ -12,10 +12,14 @@ project-level files for this pass.
 
 Populate architecture.md completely, filling every section:
 
-**Technology Stack** — read all .csproj files and extract: framework version,
-auth library, data access library, database driver, logging library, config
-provider, API documentation library, health check library, test frameworks,
-CI/CD tooling, containerization. Present as a table.
+**Technology Stack** — prefer the already-computed `.claude/dream-init-state.json` →
+`generations.dotnet` (avoids re-parsing): its `versions[]` gives the **per-project runtime**
+(`path` · `tfm` · `role` · `generation`) and `version` the primary; `packages` gives NuGet versions.
+Present a **Runtime** table with ONE ROW PER PROJECT (path · TFM · role) when `heterogeneous` is
+true — do NOT collapse a mixed solution to a single runtime. If the state entry is missing/stale
+(no `versions[]`, or a csproj newer than `generations_meta.detected_at`), fall back to reading the
+.csproj files directly. Also extract: auth library, data access library, database driver, logging,
+config provider, API docs library, health checks, test frameworks, CI/CD, containerization.
 
 **Solution Structure** — list every project in the solution with its folder
 path and a one-line statement of its responsibility. Include test projects.
@@ -150,7 +154,7 @@ email, third-party APIs), and any SOAP/gRPC clients.
   (Polly `WaitAndRetry`, `HttpClient.Timeout`), circuit breaker. The **"on failure — what
   happens"** column and **SLA/ownership** are usually human knowledge — if not in code,
   write `> ⚠ Could not determine — needs manual input`.
-- **Data Exchanged** — what data crosses each boundary; flag any B1–B7 sensitive data
+- **Data Exchanged** — what data crosses each boundary; flag any B-series sensitive data
   leaving the system (see `business-context-severity.md`).
 
 Never invent timeouts, SLAs, or owners. Extract only what code shows; flag the rest.
@@ -173,7 +177,7 @@ and actions, `IAuthorizationHandler`/requirement classes, and any resource-based
   human knowledge — flag with `> ⚠ Could not determine — needs manual input`.
 - **Secrets Handling (summary)** — only what the application code does (KeyVault client,
   config providers, no secrets in source); cross-link `architecture-deployment.md`.
-- **Sensitive Data Handling** — which endpoints/tables carry B1–B7 data and how it is
+- **Sensitive Data Handling** — which endpoints/tables carry B-series data and how it is
   protected in transit/at rest/in logs.
 
 Do NOT invent authorization rules or claim protections not present in code — flag gaps.

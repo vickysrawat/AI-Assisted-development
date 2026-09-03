@@ -1,7 +1,5 @@
 ---
 paths: ["**/*.sql", "**/migrations/**", "**/db/**"]
-detect:
-  dependencies: ["pg", "Npgsql", "asyncpg", "psycopg2", "psycopg", "@neondatabase/serverless"]
 ---
 
 # PostgreSQL Rules — PostgreSQL-specific dialect and feature usage

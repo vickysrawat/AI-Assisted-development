@@ -1,7 +1,5 @@
 ---
 paths: ["**/*.ts", "**/*.html", "**/components/**", "**/services/**"]
-detect:
-  dependencies: ["@angular/core"]
 ---
 
 # Angular Rules — Applied to all Angular files

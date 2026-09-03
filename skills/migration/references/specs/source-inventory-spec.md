@@ -171,6 +171,8 @@ Status: ⏳ AWAITING REVIEW   (→ APPROVE INVENTORY ADO-{ADO_ID} once the Revie
 ### 2. Review Focus & How to Disposition (the gate mechanics)
 The reviewer MUST disposition every item in these categories before `APPROVE INVENTORY`:
 - every **INFERRED** business rule (§6),
+- every **Integration Inventory row** (§8) — an `UNVERIFIED` row (Kind/Transport/Auth not
+  ground-truth-verified) stays `Pending` and blocks approval (`specs/integration-verification-spec.md`),
 - every feature rated **RED** migration-risk (once §Feasibility exists) or flagged high-impact,
 - every item in **§10** (stakeholder questions),
 - every open **GAP** in the Gaps Report (§11).
@@ -214,8 +216,21 @@ Validation, pricing/tax/eligibility, and workflow/state-machine transitions — 
 ### 7. Data & Entities
 Entities, key relationships, constraints; PII fields flagged (names/shapes only, values masked).
 
-### 8. Integrations & External Contracts
-External services, queues, third-party APIs, and their observable contracts.
+### 8. Integrations & External Contracts — the Integration Inventory (ground-truth-verified)
+External services, queues, third-party APIs, DBs, and in-process libraries, classified against
+**ground-truth artifacts** (host config, referenced assembly, service metadata/WSDL) — never from the
+consumer's interface name. One row per external dependency; full schema, evidence rule, and stub
+policy in `specs/integration-verification-spec.md`.
+
+```
+| Name | Kind {WCF|REST|gRPC|DB|in-process-lib|queue|file} | Transport evidence (PROV: config/assembly/WSDL) | Binding+Auth (evidence) | Endpoints per env | Contract source {WSDL|assembly|none} | Backing source available? {y/n} | Verification status {VERIFIED|UNVERIFIED|DEFERRED(task)} | Notes |
+```
+
+**Evidence rule (tier interaction).** An integration's `Kind`/`Transport`/`Auth` is **STATIC only when
+ground-truth-verified** against a config/assembly/WSDL artifact; otherwise it is **INFERRED** and
+carries mandatory Review-Focus. A wrapper type's method names are never the raw service operations.
+**Every Integration Inventory row is a Review-Focus item** (§2): an `UNVERIFIED` row stays `Pending`
+and BLOCKS `APPROVE INVENTORY`; `DEFERRED(task)` is allowed only with a tracked ADO task.
 
 ### 9. Cross-cutting
 Auth mechanism, authorization model (roles/policies), error contract, audit/logging, i18n.
@@ -256,7 +271,12 @@ which items are human-verify-only.
 Records the human dispositions (who / when / item → status / correction notes). This is the
 evidence that the gate was met. `APPROVE INVENTORY ADO-{ADO_ID}` stamps it. After Stage 5.0, an
 **append-only "Stage 5.0 verification results"** block is added here (GM-verified / gap-resolved /
-drifted feature-IDs) — the ONLY post-approval addition; §5 confidence and §11 stay exactly as signed.
+drifted feature-IDs). At **Stage 6**, an **append-only "Stage 6 as-built reconciliation"** note is
+also added — the §1/§3 `covered/total` endpoint & role counts reconciled against the *generated* code
+(e.g. design 57 vs as-built 49 endpoints; roles enforced vs. documented), linking
+`ADO-{ADO_ID}-asbuilt-reconciliation.md`. These two blocks are the ONLY post-approval additions; §5
+confidence and §11 stay exactly as signed — the reconciliation is recorded, never rewritten into the
+signed baseline (`specs/asbuilt-reconciliation-spec.md`).
 
 ### 14. Traceability Contract
 The feature IDs (F-01…) are the spine: each flows forward to a Stage 1 architecture component, a
@@ -272,13 +292,15 @@ Stage-4 agent can trace the behaviours its cluster must preserve back to their f
 SOURCE BEHAVIORAL INVENTORY — ADO-{ADO_ID}
   Coverage: {N/M endpoints · N/M entities · clusters deep/light/skipped}
   Confidence: OBSERVED {n} · STATIC {n} · INFERRED {n}
-  Review Focus (must disposition): {k} inferred rules · {k} high-risk features · {k} stakeholder questions · {k} open gaps
+  Review Focus (must disposition): {k} inferred rules · {k} integration rows ({k} UNVERIFIED) · {k} high-risk features · {k} stakeholder questions · {k} open gaps
   Verdict: {READY FOR REVIEW | PARTIAL | LOW-CONFIDENCE}
 
 Open ADO-{ADO_ID}-source-inventory.md, disposition the Review Focus items, then reply
 APPROVE INVENTORY ADO-{ADO_ID}.  (rewrite-from-spec: this BLOCKS Stage 1 architecture.)
 ```
-On approval: set `stage_gates.inventory_approved = true`. For **rewrite-from-spec**, Stage 1
+On approval: set `stage_gates.inventory_approved = true`, and set
+`stage_gates.integrations_verified = true` **only when no §8 Integration Inventory row is
+`UNVERIFIED`** (`DEFERRED(task)` rows are allowed). For **rewrite-from-spec**, Stage 1
 architecture is designed FROM the approved inventory. For port/re-architecture the inventory informs
 feasibility + seeds golden-master but does not block — a **mechanical port** may proceed to Stage 1
 **without** `APPROVE INVENTORY` (the light catalog still seeds golden-master); only rewrite-from-spec

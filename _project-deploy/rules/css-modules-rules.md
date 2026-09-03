@@ -1,7 +1,5 @@
 ---
 paths: ["**/*.module.css", "**/*.module.scss"]
-detect:
-  files: ["**/*.module.css", "**/*.module.scss"]
 ---
 
 # CSS Modules Rules — Applied to all CSS Module files

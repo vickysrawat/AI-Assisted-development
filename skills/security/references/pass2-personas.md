@@ -80,9 +80,9 @@ Does NOT look for:
 - Missing TLS (covered by Pass 1 SEC-DATA)
 - Console logging (covered by Pass 1 SEC-CONSOLE)
 
-Evidence rule: Every finding must identify the specific data type (e.g., "client
-names", "A-Numbers", "case status") and the specific code path where protection
-is missing. General "PII is not encrypted" findings without a specific flow are
+Evidence rule: Every finding must identify the specific data type (e.g., "customer
+names", "government IDs", "account status" — per the resolved B-series triggers) and the
+specific code path where protection is missing. General "PII is not encrypted" findings without a specific flow are
 not acceptable.
 
 Max findings: 5
@@ -159,7 +159,7 @@ Each persona finding follows this format:
 Persona: P{N} ({persona name})
 Severity: {Critical | High | Medium | Low}
 CVSS v3.1: {score} ({vector}) — if applicable
-Business severity: {override if different} — cite B1-B7 trigger
+Business severity: {override if different} — cite B-series trigger
 CWE: {CWE-ID} — if applicable
 
 {Plain prose: what the code does, why it's a problem, who is affected.

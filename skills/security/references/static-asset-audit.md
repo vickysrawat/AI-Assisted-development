@@ -150,10 +150,11 @@ For every `.json` file in a static-serving directory, read and classify:
 
 **Signals of real entity data (CRITICAL regardless of quantity):**
 - Personal names (firstName, lastName, fullName)
-- Government-issued IDs (A-Numbers, passport numbers, SSNs, visa numbers)
-- Case/matter identifiers tied to real individuals
-- Attorney-client communications or matter descriptions
-- Medical, financial, immigration, or legal records
+- Government-issued IDs (passport numbers, SSNs, national/registration numbers, and any
+  domain-specific identifiers named in the resolved B-series triggers)
+- Case/record/account identifiers tied to real individuals
+- Regulated or professionally-confidential communications or record descriptions
+- Medical, financial, or other regulated records
 - Email addresses, phone numbers, physical addresses
 - Any field whose value looks like a real person's data
 
@@ -173,7 +174,7 @@ CRITICAL — {plain English title}
 
 Severity  : CRITICAL
 CVSS v3.1 : {score} ({vector})
-Business sev.: Critical (override: privileged/PII data + B1-B7 triggers)
+Business sev.: Critical (override: privileged/PII data + B-series triggers)
 File      : {path}  — publicly accessible at http://[server]/{filename}
 OWASP     : A02 Cryptographic Failures / A01 Broken Access Control
 CWE       : CWE-312 Cleartext Storage of Sensitive Information
@@ -202,6 +203,6 @@ Remediation — IMMEDIATE:
 - **NEVER downgrade from CRITICAL** because the app is "internal" or "behind a VPN".
 - **ALWAYS raise before Pass 1** — do not bury in a list of Medium findings.
 - **ALWAYS include the git history purge step.**
-- For this project: any data involving client names, matter numbers, A-Numbers,
-  or attorney-client content is attorney-client privileged. Severity does not
-  decrease because the data set is small.
+- Any data matching a resolved B-series trigger (see `.claude/business-context.md`, or the
+  neutral fallback) is business-Critical. Severity does not decrease because the data set is
+  small.

@@ -31,7 +31,7 @@ T3 if ANY of:
     (paths matching the auth module in the knowledge graph)
   - adds or modifies a public API endpoint
   - adds a new external dependency (package manifest changes)
-  - touches data-handling code flagged B1–B7 in business-context-severity.md
+  - touches data-handling code flagged B-series in business-context-severity.md
   - modifies database schema or migrations
 
 T1 if ALL of:

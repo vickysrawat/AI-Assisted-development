@@ -617,8 +617,10 @@ find . -name "packages.config" -maxdepth 3 2>/dev/null | head -1 | grep -q "." &
 find . -name "*.csproj" -maxdepth 3 2>/dev/null | xargs grep -l "Microsoft.NET.Sdk.Web" 2>/dev/null | head -1 | grep -q "." && \
   ls -d */Views 2>/dev/null | grep -q "." && echo "ASPNET_MVC"
 
-# .NET Web API (SDK-style csproj, no Views)
-find . -name "*.sln" -maxdepth 2 2>/dev/null | head -1 | grep -q "." && echo "DOTNET_API"
+# .NET Web API (SDK-style csproj, no Views). Extension-tolerant: .sln AND .slnx (XML
+# solution format), plus *.csproj/*.fsproj/*.vbproj; falls back to any *.cs source tree.
+find . \( -name "*.sln" -o -name "*.slnx" -o -name "*.csproj" -o -name "*.fsproj" -o -name "*.vbproj" \) -maxdepth 3 2>/dev/null | head -1 | grep -q "." && echo "DOTNET_API"
+find . -name "*.cs" -maxdepth 4 2>/dev/null | head -1 | grep -q "." && echo "DOTNET_API"   # graceful fallback for unknown packaging formats
 ```
 
 Hold the detected type as `REPO_TYPE`. For Python, if more than one framework
@@ -993,7 +995,7 @@ find "$DIR" \( -name "ThisAddIn.cs" -o -name "ThisWorkbook.cs" -o -name "ThisDoc
 find "$DIR" -name "packages.config" -maxdepth 4 2>/dev/null | head -1 | grep -q "." && echo "ASPNET_FRAMEWORK"
 find "$DIR" -name "*.csproj" -maxdepth 4 2>/dev/null | xargs grep -l "Microsoft.NET.Sdk.Web" 2>/dev/null | head -1 | grep -q "." && \
   ls -d "$DIR"/*/Views 2>/dev/null | grep -q "." && echo "ASPNET_MVC"
-find "$DIR" \( -name "*.csproj" -o -name "*.sln" \) -maxdepth 3 2>/dev/null | head -1 | grep -q "." && echo "DOTNET_API"
+find "$DIR" \( -name "*.csproj" -o -name "*.fsproj" -o -name "*.vbproj" -o -name "*.sln" -o -name "*.slnx" \) -maxdepth 3 2>/dev/null | head -1 | grep -q "." && echo "DOTNET_API"
 ```
 
 Take the first match as `EXT_REPO_TYPE`. If nothing matches, set `EXT_REPO_TYPE=UNKNOWN`.
@@ -1086,10 +1088,49 @@ are the only sources of truth; document what is actually there, never what a per
 ## Business context severity
 
 This skill does not perform security or compliance reviews. If output from this
-skill surfaces data that may trigger B1–B7 sensitivity (see
+skill surfaces data that may trigger B-series business-context sensitivity (see
 `$PLUGIN_DIR/skills/shared/business-context-severity.md`), flag it to the developer. Do not
-silently process or display attorney-client privileged matter data, immigration
-identifiers, or other B1–B7 categories without acknowledgement.
+silently process or display regulated/confidential data or regulated individual identifiers
+(the resolved B-series triggers for this project) without acknowledgement.
+
+---
+
+## Step — Business context (domain policy) · thin caller
+
+After the architecture docs are populated (so `architecture-data.md` is available) and before
+handoff, **invoke the business-context generation module** to produce the project's
+domain-tailored severity policy:
+
+```
+Read $PLUGIN_DIR/skills/shared/business-context-generation.md and execute it in full,
+passing the architecture read from this run as the codebase input.
+```
+
+This skill owns no generation logic — the module is the single owner (SRP). It identifies the
+domain (infer + confirm), grounds the B-series in cited regulatory frameworks, and writes
+`.claude/business-context.md` under its own `APPROVED` gate. It is idempotent — if the file is
+already populated it offers refresh, never clobbers. Re-runnable independently via `SET DOMAIN`.
+
+---
+
+## Step — Runtime generation confidence (consent-gated syntax fallback) · ADR 0059
+
+`repo-detect` resolves each language's runtime generation from **manifests only** (offline, no
+consent) into `state.generations` + nested `detection.<cat>[].generation`
+(see `$PLUGIN_DIR/skills/shared/runtime-generation-spec.md`). When a language's
+`generation.confidence` is **low** (manifest missing/stale — e.g. the runtime was upgraded but
+`python_requires` / `engines.node` was never bumped), optionally raise it here:
+
+1. Read `state.generations` from `.claude/dream-init-state.json`. For each entry with
+   `confidence < 0.6`, offer the developer a **Category B** source scan (per
+   `$PLUGIN_DIR/skills/shared/source-file-consent.md` — announce files, get consent).
+2. On consent, scan for the language's syntax markers (per runtime-generation-spec.md
+   §"Consent-gated syntax fallback") and re-stamp the entry with the raised confidence +
+   syntax evidence. Never silent; never scans without consent.
+
+This is optional and additive — it only sharpens a low-confidence manifest result. Rule
+deployment already ran on the manifest result; generation is consumed downstream by migration
+and (for .NET) rule gating.
 
 ---
 

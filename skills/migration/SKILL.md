@@ -11,9 +11,9 @@ description: >
 
 # Skill: migration — orchestrator
 
-_Skill version: 2.0 · Last changed: 2026-08-28 · Plugin compatibility: ≥3.14.0 · Consent: A_
+_Skill version: 2.1 · Last changed: 2026-09-02 · Plugin compatibility: ≥3.14.0 · Consent: A_
 
-> **Related specs:** any risk/finding severity language in feasibility or verification output uses `skills/shared/business-context-severity.md`; source-read consent per `skills/shared/source-file-consent.md`.
+> **Related specs:** any risk/finding severity language in feasibility or verification output uses the resolved B-series triggers — the TARGET's `.claude/business-context.md` if it exists, otherwise `skills/shared/business-context-severity.md`. The target inherits the source's domain: Stage 0.5/0.6 invokes `skills/shared/business-context-generation.md` (M2) to seed the target's `.claude/business-context.md`. Source-read consent per `skills/shared/source-file-consent.md`.
 
 > ⚠ **Feature Gate bypass**: This skill generates implementation code without a prior ICEA.
 > The architecture documents produced in Stage 1 serve as the governance substitute.
@@ -101,7 +101,7 @@ Each `MIGRATE *` keyword resumes cross-session; the orchestrator loads the step 
 | Stage 3 · `MIGRATE CLUSTERS` | `steps/stage-3-clusters.md` | `APPROVE MIGRATION ADO-{ID}` (skeleton Write Gate) | inline |
 | Stage 4 · `MIGRATE RESUME [BACKEND\|FRONTEND]` · `RETRY CLUSTER {name}` | `steps/stage-4-migration.md` | — | **subagents** (per cluster, worktree) |
 | Stage 5 | `steps/stage-5-tests.md` | `APPROVE MIGRATION ADO-{ID}` (characterization tests) | inline |
-| Stage 6 | `steps/stage-6-verification.md` | completion gate (Step 6.4) | inline |
+| Stage 6 | `steps/stage-6-verification.md` | completion gate (Step 6.4 parity · Step 6.5 as-built reconciliation) | inline |
 | any · `MIGRATE STATUS ADO-{ID}` | → `/migration-status` (read-only projection) | — | inline |
 
 Stage gates advance the checkpoint: on each `APPROVE …`, the step file merges the checkpoint
@@ -109,7 +109,7 @@ Stage gates advance the checkpoint: on each `APPROVE …`, the step file merges 
 
 ## Checkpoint — the single source of truth
 
-`.claude/migration-checkpoint.json` (**schema 1.9**) is written at Step 0.4 and merged at each gate.
+`.claude/migration-checkpoint.json` (**schema 1.10**) is written at Step 0.4 and merged at each gate.
 It is the resume anchor for every `MIGRATE *` keyword, the Stage 1–3 context-budget checks, and the
 parallel Stage-4 subagents. It is gitignored runtime state (`skills/shared/checkpoint-schema.md`
 covers the never-commit rule). Human status is a **computed projection** — `/migration-status` (or
@@ -155,8 +155,11 @@ NEVER skip Stage 0.5 target-options analysis except for a pure `dotnet` version 
 NEVER begin Stage 1 for a rewrite-from-spec posture without an APPROVED Stage 0.6 inventory.
 NEVER present an INFERRED inventory item as a confirmed requirement; NEVER fabricate §10 "Cannot Be Derived" items.
 NEVER drop or guess code you couldn't resolve statically — log it in the inventory Gaps Report (§11) with `file:line`.
+NEVER classify an integration's transport/binding/auth/type from the consumer's interface name — verify against host config (`Web.config`/`app.config` `<system.serviceModel>`/`<connectionStrings>`), the referenced assembly, or service metadata/WSDL (`references/specs/integration-verification-spec.md`).
+`PROV:` proves the citation exists, not that its interpretation is correct — any INFERRED item touching integration, auth, or security must be ground-truth-verified (or dispositioned with evidence at Stage 0.6) before it can inform the target design.
 NEVER skip Stage 1 architecture design — the architecture docs are the governance substitute for ICEA.
-NEVER report MIGRATION COMPLETE with unexplained HIGH-risk golden-master drift; label parity INFERRED if the source can't run.
+Design-time ≠ as-built — Stage 1 docs are pre-implementation intent; MIGRATION COMPLETE requires the Stage 6 as-built reconciliation pass (`stage_gates.asbuilt_reconciled = true`, `references/specs/asbuilt-reconciliation-spec.md`). When golden-master is SKIPPED, the mechanical as-built audit is the compensating control.
+NEVER report MIGRATION COMPLETE with unexplained HIGH-risk golden-master drift; capture from a reachable running source (developer-provided URL) before falling back to inferred parity — label parity INFERRED only if the source can't self-run AND no reachable instance was provided.
 NEVER run a target's build/test/serve toolchain without loading its execution profile from `references/strategies/{target_token}.md`; missing / `STATUS: not-implemented` → STOP (no cross-stack fallback).
 NEVER generate target code from a `MATURITY: ⚠ Unverified` profile without the developer's explicit go-ahead.
 ALWAYS invoke plugin-shipped scripts via the resolved `$PLUGIN_DIR` — never a bare relative path (CWD is the TARGET).
@@ -168,6 +171,6 @@ NEVER read source files from `.` (TARGET) — always read from SOURCE_PATH.
 A full-stack migration is TWO coordinated single-track runs — a `backend` run that PUBLISHES the contract, then a separate `frontend` run that CONSUMES it.
 A `frontend` run calls the API only through the generated client and never edits the contract.
 ALWAYS check the consumed integration-contract hash before every cluster in a `frontend` run (Step 4.3a).
-ALWAYS run `/setup-init` and `/graph-sync` in the current directory at Stage 6 completion.
+ALWAYS run `architect` + `/graph-sync` (via `/setup-init`) on the generated target as the GATED Stage 6 as-built reconciliation step — before the MIGRATION COMPLETE banner, not as a post-completion suggestion. `.claude/architecture/*` (built by architect from generated code) is the as-built source of truth; the Stage 1/3 migration docs are the design/decision record and are stamped as superseded at reconciliation.
 The checkpoint is the single source of truth — the orchestrator is its single writer; dispatched agents return results, they do not write it.
 The Stage-4 goal-loop scores completeness only (never merges, never `APPROVE`s, never crosses the stage gate) and bounds cluster auto-retries at maxIterations 2 before falling back to `RETRY CLUSTER`.

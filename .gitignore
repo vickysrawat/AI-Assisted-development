@@ -55,21 +55,24 @@ tests/results/
 
 
 
+
 # === ai-assisted-development (managed) ===
 .claude/settings.local.json
 .claude/security-checkpoint.json
 .claude/code-review-checkpoint.json
 .claude/file-cache.json
+.claude/dream-init-state.json
 memory/health.html
+CodeReviews/*
 !CodeReviews/code-review-ledger.md
+security/*
 !security/security-ledger.md
+dynamic-scan/*
 !dynamic-scan/dynamic-scan-ledger.md
 token-analysis/
 prod-readiness/
 temp/
 .claude/plugin-path.txt
-# Per-machine identity cache (git email, AD UPN, ADO principalName) written by /session-start.
-# The audit shards under .claude/audit/ are intentionally NOT ignored — they must be committed
-# for the append-only CI check (validate-audit.py).
 .claude/session-context.json
+.claude/graph/.module-skeleton.json
 # === end ai-assisted-development ===

@@ -1,7 +1,5 @@
 ---
 paths: ["**/*.ts", "**/routes/**", "**/middleware/**", "**/controllers/**", "**/services/**"]
-detect:
-  dependencies: ["express", "fastify", "hono", "@nestjs/core"]
 ---
 
 # Node.js / TypeScript Backend Rules — Applied to all Node.js backend services

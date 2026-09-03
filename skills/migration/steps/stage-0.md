@@ -5,7 +5,7 @@ _Part of the `migration` skill. Loaded and dispatched by the orchestrator
 
 **Persona:** [SA] Rafael Mendes — Solution Architect (orchestrator persona map · personas-spec.md).
 **Model tier:** `${ICEA_MODEL:-claude-opus-4-8}`.
-**Checkpoint:** single source of truth (`.claude/migration-checkpoint.json`, schema 1.9); this step
+**Checkpoint:** single source of truth (`.claude/migration-checkpoint.json`, schema 1.10); this step
 seeds it at Step 0.4 — never clobbering `decision_log`/`clusters`.
 
 > Stage 0.5 (Target Options Analysis, invoked before Q1 in Step 0.3) is its own step file:
@@ -109,6 +109,29 @@ try{const s=JSON.parse(require("fs").readFileSync(process.argv[1]+"/.claude/drea
 process.stdout.write((s.detected_stacks||[]).join(" "));}catch(e){}' -- "{SOURCE_PATH}" 2>/dev/null)"
 ```
 
+**Detect the SOURCE .NET version spread (read-first, compute-as-fallback).** The migration needs
+the source's per-project .NET generation/TFM to drive posture (Stage 2) and the target-version
+constraint (Q1). Prefer the source's already-computed `generations.dotnet` (fast path); if the
+source has no plugin state or the entry lacks `versions[]`, compute it on the fly with
+`repo-detect --json` (recompute, **never writes** to the source). Skip this for non-.NET sources.
+```bash
+DOTNET_GEN="$(node -e '
+const fs=require("fs");const src=process.argv[1];const plugin=process.argv[2];
+try{const s=JSON.parse(fs.readFileSync(src+"/.claude/dream-init-state.json","utf8"));
+  const g=(s.generations||{}).dotnet;
+  if(g&&Array.isArray(g.versions)){process.stdout.write(JSON.stringify(g));process.exit(0);}
+}catch(e){}
+try{const {execFileSync}=require("child_process");
+  const out=execFileSync("node",[plugin+"/scripts/repo-detect.cjs","--root="+src,"--json"],{encoding:"utf8"});
+  const j=JSON.parse(out);process.stdout.write(JSON.stringify((j.generations||{}).dotnet||{}));
+}catch(e){process.stdout.write("");}' -- "{SOURCE_PATH}" "$PLUGIN_DIR" 2>/dev/null)"
+```
+Parse `DOTNET_GEN` (may be empty for non-.NET): `version` (primary), `versions[]` (per-project
+`path`/`role`/`tfm`/`generation`), `heterogeneous`. Hold these for the panel, Q1 (target ≥ source),
+and Stage 2 (per-cluster posture). If empty or a project's `tfm` is `null`, fall back to a direct
+`grep -r "TargetFramework" {SOURCE_PATH} --include="*.csproj"` and show `unknown` — ask the developer
+to confirm rather than proceeding silently.
+
 Read source knowledge graph:
 ```bash
 node -e '
@@ -148,6 +171,28 @@ grep -r "WebSecurityConfigurerAdapter\|SecurityFilterChain\|AddAuthentication\|p
   "{SOURCE_PATH}" --include="*.java" --include="*.cs" --include="*.js" --include="*.ts" -l 2>/dev/null | head -5
 ```
 
+**Extract external-integration ground truth (do NOT infer from consumer code — read the authoritative
+artifacts).** This seeds the Integration Inventory that Stage 0.6 must fill and verify per
+`references/specs/integration-verification-spec.md`. For .NET sources, read the host config directly:
+```bash
+# WCF service clients: endpoint addresses, bindings, and their security/credential/message-size (transport truth)
+grep -rniE "<client>|<endpoint |<binding|security mode=|clientCredentialType=|maxReceivedMessageSize=|protocolMapping" \
+  "{SOURCE_PATH}" --include="Web.config" --include="app.config" --include="*.config" 2>/dev/null | head -40
+# Direct-DB dependencies: a <connectionStrings> entry with NO matching <client> endpoint ⇒ in-process, not a service
+grep -rniE "<add name=|connectionString=|providerName=" \
+  "{SOURCE_PATH}" --include="Web.config" --include="app.config" --include="*.config" 2>/dev/null | head -40
+# Referenced assemblies that may hide the real contract (KE *Wrapper/*Resource, common helpers, DbContext)
+grep -rniE "<ProjectReference|<Reference Include=|<PackageReference" \
+  "{SOURCE_PATH}" --include="*.csproj" --include="*.vbproj" 2>/dev/null | head -40
+```
+Interpretation rules (per `references/stacks/dotnet-framework.md`): a `<client><endpoint>` ⇒ real WCF
+client (capture `binding` + `security mode`/`clientCredentialType`/`maxReceivedMessageSize`); a
+`<connectionStrings>` entry with a `DbContext` and NO `<client>` endpoint ⇒ **in-process direct-DB**,
+not a service call; a KE `*Wrapper`/`*Resource` type is an abstraction — resolve the backing
+`<ProjectReference>`/`<Reference>` (or `?singleWsdl`) to find the real contract before asserting it.
+Record each as **evidence** (`PROV: config/assembly/WSDL`), not inference. If the backing source/WSDL
+is unreachable, record an unavailable-ground-truth gap (carried to the inventory Gaps Report §11).
+
 Estimate source size:
 ```bash
 find "{SOURCE_PATH}" -type f \( -name "*.cs" -o -name "*.java" -o -name "*.ts" -o -name "*.js" \) \
@@ -159,10 +204,12 @@ find "{SOURCE_PATH}" -type f \( -name "*.cs" -o -name "*.java" -o -name "*.ts" -
 SOURCE APPLICATION ANALYSIS — {SOURCE_PATH}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Stack:           {STACKS} ({app type description})
+  Runtime:         {for .NET: primary {version} · {N} projects{; if heterogeneous: mixed TFMs {list}}{; if any framework project: ⚠ mixed .NET Framework + modern} | non-.NET: n/a}
   Modules:         {count} ({bounded context count} bounded contexts{, N hub modules})
   Source files:    {size estimate}
   Data layer:      {detected: JPA/Hibernate | EF6 | Dapper | Sequelize | none}
   Authentication:  {detected patterns | not detected}
+  Integrations:    {N WCF client endpoints · N connection strings · N referenced assemblies to resolve | none detected}
   Knowledge graph: {available: N modules | not available — heuristic mode}
   Arch docs:       {available | not available}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -194,10 +241,21 @@ MISSING tools required for the migration = BLOCKER. Report before asking target 
 
 ### Step 0.3 — Ask target questions (minimal)
 
+**Supported target .NET versions (allow-list — the ONE place to extend when onboarding a new .NET).**
+`net8.0` (LTS, EOL Nov 10 2026) · `net9.0` (STS, EOL May 12 2026) · `net10.0` (LTS, ~Nov 2028).
+A pick outside this list (e.g. a future `net11.0`, or a version whose breaking-change / C# LangVersion
+content does not yet exist) is a **hard STOP** — do not fabricate a parity table:
+```
+❌ Target .NET {version} is not supported yet (no verified breaking-change / LangVersion content).
+Supported targets: net8.0 (LTS) · net9.0 (STS) · net10.0 (LTS).
+To add one: extend the allow-list + its C# LangVersion cap + breaking-change section in dotnet-upgrade.md.
+```
+
 **Before Q1 — run Stage 0.5 (Target Options Analysis) unless this is a `dotnet` version upgrade.**
-For a version upgrade (source token `dotnet` → .NET 10 upgrade) there is no genuine target
-choice: skip to Q2 (target is fixed); `options_approved` is recorded `true` when the checkpoint is
-written at Step 0.4. Otherwise:
+For a `dotnet` version upgrade Stage 0.5 is skipped (there is no cross-stack target *platform*
+choice), but there IS still a target **.NET version** choice — present it directly at Q1b below.
+`options_approved` is recorded `true` when the checkpoint is written at Step 0.4. Otherwise (a
+cross-stack migration to .NET):
 ```
 Read $PLUGIN_DIR/skills/migration/references/specs/target-options-spec.md
 ```
@@ -225,14 +283,31 @@ an unverified parity table is worse than none.
 ```
 Stop completely. No fallback — do not fabricate a parity table for an unmapped stack.
 
+Present the target platform per detected source (the `.NET {V}` version `{V}` is chosen at Q1b):
+
 | Source | Options |
 |---|---|
-| `dotnet_framework` | .NET 10 MVC · .NET 10 Web API · .NET 10 Blazor · .NET 10 Worker |
-| `dotnet` | .NET 10 upgrade |
+| `dotnet_framework` | .NET {V} MVC · .NET {V} Web API · .NET {V} Blazor · .NET {V} Worker |
+| `dotnet` | .NET {V} upgrade |
 | `java` | .NET Core Web API · .NET Core MVC |
 | `dotnet` → Java | Java Spring Boot |
 | `nodejs` | .NET Core Web API · Java Spring Boot · Python FastAPI |
 | `angular` + `nodejs` | Backend run: .NET Core Web API (nodejs→.NET) · Frontend run: Angular (react/angular→Angular) OR React (angular→React) |
+
+**Q1b — Target .NET version** (any migration whose target is .NET — both `dotnet` upgrade and
+`*→.NET`). Present the supported allow-list with lifecycle, **pre-selecting the latest LTS**:
+```
+Which .NET version should the target be?
+  (A) net10.0  — LTS, supported ~Nov 2028   ← recommended (latest LTS)
+  (B) net9.0   — STS, supported to May 2026
+  (C) net8.0   — LTS, supported to Nov 2026
+```
+Rules: the target is **LLM-confirmed, never silent** (per "do not assume"). For a `dotnet` upgrade
+constrain **target ≥ source** (offering a version ≤ the detected source primary is a no-op — drop it).
+Validate the pick against the supported allow-list above (else the hard STOP). For a
+`dotnet_framework`→.NET or other→.NET run, fold the version into the Stage 0.5 recommendation and
+confirm it here. Record the choice as `mode.target_version` (Step 0.4). It flows to Stage 1
+(arch runtime + C# LangVersion cap net8→C#12 / net9→C#13 / net10→C#14) and Stage 3 (cluster standards).
 
 **Full-stack = TWO coordinated single-track runs, not one invocation.** Migrate the **backend first**
 (a normal single-track run — it *publishes* the API contract at completion), then run a **separate
@@ -299,37 +374,47 @@ are the resolved stack tokens; `source_file_count`/`source_module_count` from th
 and graph counts.
 
 > **Script transparency** (per `rules/project-rules.md`) — this `node -e` block:
-> 1. **What it does:** writes/updates `.claude/migration-checkpoint.json` with the Stage-0
->    identifiers, `mode`, and seed `decision_log`; sets `phase:"Stage 0.6"` and seeds `stage_gates`
->    (`options_approved` true, the rest false). If a checkpoint already exists it MERGES (keeps any existing `decision_log`/
->    `clusters`), never clobbers.
+> 1. **What it does:** writes/updates `.claude/migration-checkpoint.json` from a single JSON payload.
+>    Sets `schema_version:"1.11"`, the Stage-0 identifiers, and seed `decision_log`; sets
+>    `phase:"Stage 0.6"` and seeds `stage_gates` (`options_approved` true, the rest false). **`mode` is
+>    MERGED** (`{...existing, ...provided}`), never rebuilt — so `source_version`/`target_version` (and
+>    any prior mode field) survive a resume that re-runs Step 0.4. Existing `decision_log`/`clusters`
+>    and already-granted gates are preserved; a resumed pre-1.11 checkpoint gains new gates/fields defaulted.
 > 2. **What it touches:** only `.claude/migration-checkpoint.json` (creates `.claude/` if absent).
 > 3. **What it does NOT do:** no network calls, no git operations, no reads of source files, no
 >    writes anywhere else.
 > 4. **APIs used:** Node.js `fs.readFileSync`, `fs.mkdirSync`, `fs.writeFileSync`, `JSON`.
-> 5. **How to verify:** `cat .claude/migration-checkpoint.json` — confirm `schema_version:"1.9"`,
->    `phase:"Stage 0.6"`, `stage_gates.options_approved:true` (and `inventory_approved:false`), and
->    your Stage-0 answers under `mode`/`decision_log`.
+> 5. **How to verify:** `cat .claude/migration-checkpoint.json` — confirm `schema_version:"1.11"`,
+>    `phase:"Stage 0.6"`, `stage_gates.options_approved:true`, and `mode.source_version` /
+>    `mode.target_version` present alongside your other Stage-0 answers under `mode`/`decision_log`.
 
 ```bash
 node -e '
 const fs=require("fs");
 const p=".claude/migration-checkpoint.json";
 let c={};try{c=JSON.parse(fs.readFileSync(p,"utf8"));}catch(e){}
-const [ado,src,graph,track,st,tt,fileCount,modCount,auth,cloud]=process.argv.slice(1);
+const payload=JSON.parse(process.argv[1]);
 const dl=c.decision_log||{};
-c.schema_version="1.9";
-c.ado_id=ado; c.source_path=src; c.phase=c.phase&&c.ado_id===ado?c.phase:"Stage 0.6";
+c.schema_version="1.11";
+c.ado_id=payload.ado; c.source_path=payload.src; c.phase=c.phase&&c.ado_id===payload.ado?c.phase:"Stage 0.6";
 c.stage_gates=c.stage_gates||{options_approved:true,inventory_approved:false,architecture_approved:false,feasibility_approved:false,migration_approved:false,stage4_started:false};
-c.mode={graph:graph==="true",track,source_token:st,target_token:tt};
+if(c.stage_gates.integrations_verified===undefined)c.stage_gates.integrations_verified=false;
+if(c.stage_gates.asbuilt_reconciled===undefined)c.stage_gates.asbuilt_reconciled=false;
+c.mode=c.mode||{}; const pm=payload.mode||{};   // MERGE (P7) — overwrite only with provided NON-EMPTY values
+for(const k of Object.keys(pm)){ if(pm[k]!==null&&pm[k]!==undefined&&pm[k]!=="") c.mode[k]=pm[k]; }  // a resume passing null never clobbers a stored version
 c.contract_version=c.contract_version||1; c.contract_hash=c.contract_hash||"";
-c.decision_log={auth:dl.auth||auth||"",data_access:dl.data_access||"",architecture:dl.architecture||"",cloud:dl.cloud||cloud||"",red_items:dl.red_items||[],yellow_count:dl.yellow_count||0,source_file_count:Number(fileCount)||0,source_module_count:Number(modCount)||0};
+const ds=payload.decision_seed||{};
+c.decision_log={auth:dl.auth||ds.auth||"",data_access:dl.data_access||"",architecture:dl.architecture||"",cloud:dl.cloud||ds.cloud||"",red_items:dl.red_items||[],yellow_count:dl.yellow_count||0,source_file_count:Number(ds.source_file_count)||dl.source_file_count||0,source_module_count:Number(ds.source_module_count)||dl.source_module_count||0,golden_master:dl.golden_master||null};
 c.clusters=c.clusters||{};
 fs.mkdirSync(".claude",{recursive:true});
 fs.writeFileSync(p,JSON.stringify(c,null,2));
 console.log("✅ Checkpoint written — phase:",c.phase,"schema:",c.schema_version);
-' -- "{ADO_ID}" "{SOURCE_PATH}" "{graph true|false}" "{backend|frontend|upgrade}" "{source-token}" "{target-token}" "{source_file_count}" "{source_module_count}" "{proposed auth intent|}" "{Q2 cloud}"
+' -- '{"ado":"{ADO_ID}","src":"{SOURCE_PATH}","mode":{"graph":{true|false},"track":"{backend|frontend|upgrade}","source_token":"{source-token}","target_token":"{target-token}","source_version":{"detected source primary TFM as JSON string, or null"},"target_version":{"Q1b choice as JSON string, or null"}},"decision_seed":{"auth":"{proposed auth intent|}","cloud":"{Q2 cloud}","source_file_count":{N},"source_module_count":{N}}}'
 ```
+> The final arg is a single JSON payload — the LLM fills the `{…}` placeholders. `source_version`/
+> `target_version` are JSON strings (e.g. `"net8.0"`) or `null` (non-.NET / not yet chosen); `graph`
+> is a JSON boolean; the counts are JSON numbers. `mode` is merged, so re-running Step 0.4 on resume
+> never drops a previously-recorded version.
 
 Confirm `.claude/migration-checkpoint.json` is covered by the ignore file (checkpoint files are
 never committed — see `$PLUGIN_DIR/skills/shared/checkpoint-schema.md`). If it is NOT ignored,

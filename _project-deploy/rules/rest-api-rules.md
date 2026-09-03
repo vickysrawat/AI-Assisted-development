@@ -1,7 +1,5 @@
 ---
 paths: ["**/routes/**", "**/controllers/**", "**/api/**", "**/endpoints/**"]
-detect:
-  always: false
 ---
 
 # REST API Rules — HTTP API design and serving conventions

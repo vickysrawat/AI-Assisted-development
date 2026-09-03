@@ -1,7 +1,5 @@
 ---
 paths: ["**/*"]
-detect:
-  always: true
 ---
 
 # Project Rules — Applied to all files
