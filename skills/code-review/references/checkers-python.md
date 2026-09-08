@@ -1,4 +1,4 @@
-# Coverity Checkers — Python (FastAPI / Django / Flask)
+# Static Analysis Checkers — Python (FastAPI / Django / Flask)
 
 ## TAINTED_* — Data Flow (Python)
 

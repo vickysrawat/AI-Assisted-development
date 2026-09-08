@@ -1,4 +1,4 @@
-<!-- documents-plugin-version: 3.0.0 -->
+<!-- documents-plugin-version: 3.20.0 -->
 
 # ai-assisted-development — Architecture Whitepaper
 
@@ -7,16 +7,16 @@
 | | |
 |---|---|
 | **Plugin** | `ai-assisted-development` |
-| **Version at writing** | 2.6.0 |
+| **Version at writing** | 3.20.0 |
 | **Author** | Product Engineering |
 | **Audience** | Engineering leadership, platform/AI architects, plugin maintainers |
-| **Companion docs** | [README.md](README.md) · [DEVELOPER-GUIDE.md](DEVELOPER-GUIDE.md) · [docs/adr/](docs/adr/) (37 decision records) |
+| **Companion docs** | [README.md](README.md) · [DEVELOPER-GUIDE.md](DEVELOPER-GUIDE.md) · [docs/adr/](docs/adr/) (59 decision records) |
 
 ---
 
 ## Abstract
 
-This paper explains why the `ai-assisted-development` plugin was built, how it evolved from a single approval gate into a layered governance framework, the architectural decisions that shaped it, and the concrete engineering problems encountered along the way. The plugin extends Claude Code with a spec-driven workflow (ICEA), a mechanical enforcement floor, a persistent memory system, cache-aware code/security/DAST scanning, and a codebase knowledge graph — all built on one thesis: **in AI-assisted development, every material change must trace back to a named human who took responsibility for it.** The design record is unusually complete — 37 Architecture Decision Records and a full changelog — which lets this paper cite the *why* behind each choice rather than reconstruct it.
+This paper explains why the `ai-assisted-development` plugin was built, how it evolved from a single approval gate into a layered governance framework, the architectural decisions that shaped it, and the concrete engineering problems encountered along the way. The plugin extends Claude Code with a spec-driven workflow (ICEA), a mechanical enforcement floor, a persistent memory system, cache-aware code/security/DAST scanning, and a codebase knowledge graph — all built on one thesis: **in AI-assisted development, every material change must trace back to a named human who took responsibility for it.** The design record is unusually complete — 59 Architecture Decision Records and a full changelog — which lets this paper cite the *why* behind each choice rather than reconstruct it.
 
 ---
 
@@ -67,7 +67,7 @@ The framework states its philosophy explicitly (CLAUDE.md §3), and — notably 
 
 ## 3. How It Was Shaped — An Evolution in Five Movements
 
-The plugin was not designed as it stands today; it accreted, each layer solving a problem exposed by the last. The changelog records the arc from v1.x through v2.6.0.
+The plugin was not designed as it stands today; it accreted, each layer solving a problem exposed by the last. The changelog records the arc from v1.x through v3.20.0.
 
 | Phase | Versions | What was added | Architectural shift |
 |---|---|---|---|
@@ -76,6 +76,7 @@ The plugin was not designed as it stands today; it accreted, each layer solving 
 | **3 — Trust & portability** | v1.26–v1.29 | ICEA-D decisions block + change manifest + **trust-calibration loop**; **VCS-aware** ignore files (TFVC `.tfignore`); **version-drift detection** and `dream-sync` re-provisioning. | Enforcement becomes *measurable and portable.* |
 | **4 — Session independence** | v2.0–v2.2 | **Disk-based ICEA state** and global **keyword handlers** (`APPROVE/IMPLEMENT/REVISE/STATUS ADO-{ID}`); **single-responsibility** split (`icea-feature`/`approve`/`implement`/`revise`/`status`); interactive **plan → draft → save** flow. | *Session-bound* → *session-independent, disk-authoritative workflow.* |
 | **5 — Codebase intelligence** | v2.3–v3.0 | Reliability hardening (path resolution, section detection, mechanical gates); Tech Spec templates; the **codebase knowledge graph** (`.claude/graph/`) with git-hook staleness detection. In **v3.0.0** the graph became the *single* orientation layer (domain-map retired, [ADR 0038](docs/adr/0038-knowledge-graph-orientation.md)) and is now committed rather than gitignored. | Adds a *persistent, incrementally-maintained, version-controlled model of the codebase.* |
+| **6 — Governance depth & migration** | v3.1–v3.19 | A machine-readable `graph.json` sidecar with deterministically-extracted edges ([ADR 0041](docs/adr/0041-deterministic-edge-extraction.md)); a tamper-evident **governance audit trail** (`.claude/audit/`); **domain-aware** business-context severity (B1–B7 generated per project, [ADR 0057](docs/adr/0057-domain-aware-business-context-severity.md)); **scored stack-key** rule deployment ([ADR 0059](docs/adr/0059-scored-stack-key-detection-and-rule-deployment.md)) and **version-aware .NET detection** (per-project `versions[]` spread); the **migration** skill as a staged, gated cross-stack rewrite advisor (Target Options Analysis · golden-master · integration ground-truth · as-built reconciliation); and the bounded, gated **goal-loop**. | Governance becomes *domain-aware, self-auditing, and stack-precise*, and a full cross-stack migration pipeline is added. |
 
 **The throughline:** from *a prompt that suggests a spec* → *a gate that requires one* → *a stateful workflow that survives session boundaries* → *a mechanical floor that holds when prompts don't* → *codebase intelligence that keeps orientation cheap.*
 
@@ -85,15 +86,15 @@ Two of these movements were **reversals of earlier decisions** — the clearest 
 
 ## 4. Architecture — What It Is Now
 
-At 3.0.0 the plugin ships **36 commands, 25 skills, 15 shared specs, 8 stack rules, 4 enforcement hooks**, and **38 ADRs**. These are best understood not as a flat list but as six cooperating layers.
+At 3.20.0 the plugin ships **43 commands, 45 skills, 41 shared specs, ~43 layered stack rules, 2 subagents, 11 runtime hooks + 3 CI validators**, and **59 ADRs**. These are best understood not as a flat list but as six cooperating layers.
 
 ### 4.1 The layered model
 
 ```mermaid
 flowchart TB
   subgraph FOUND["🧱 Foundation — durable, tool-agnostic"]
-    SP["Shared primitives (15)<br/>consent · severity · findings-gate<br/>graph-schemas · scope-flags · routing"]
-    RULES["Stack rules (8)<br/>.NET · Angular · Node · Java · Python…"]
+    SP["Shared primitives (41)<br/>consent · severity · findings-gate<br/>graph-schemas · scope-flags · routing<br/>goal-loop · runtime-generation · checkpoint"]
+    RULES["Stack rules (~43, layered)<br/>.NET · Angular · Node · Java · Python…<br/>+ framework overlays (fw4.8 · ef6 · wcf)"]
     MR["Model-routing tiers<br/>ICEA_MODEL · REVIEW_MODEL · INFRA_MODEL"]
   end
 
@@ -213,13 +214,13 @@ Different work needs different model tiers ([ADR 0023](docs/adr/0023-model-routi
 |---|---|---|---|---|
 | Generation | `ICEA_MODEL` | `claude-opus-4-8` | icea-feature, ado-tasks, pr-describe, product-docs | Specs and code are the most consequential outputs. |
 | Review | `REVIEW_MODEL` | `claude-sonnet-4-6` | code-review, security, icea-review, pr-spec-review, dynamic-scan | Review is analytical pattern-matching; faster, lower timeout risk on long scans. |
-| Infrastructure | `INFRA_MODEL` | `claude-sonnet-4-6` | dream, architect, dream-status, session-start, graph-sync, checkin, fix, … | Operational, no creative generation. |
+| Infrastructure | `INFRA_MODEL` | `claude-sonnet-4-6` | dream, architect, session-start, graph-sync, checkin, fix, goal-loop orchestrator, … | Operational, no creative generation. |
 
 ---
 
-## 5. Architectural Decisions (38 ADRs, Thematically)
+## 5. Architectural Decisions (59 ADRs, Thematically)
 
-The plugin keeps a complete decision record — *"the why must live in the repo, not the maintainer's head… bus-factor insurance."* The 38 ADRs cluster into recognizable pillars:
+The plugin keeps a complete decision record — *"the why must live in the repo, not the maintainer's head… bus-factor insurance."* The 59 ADRs cluster into recognizable pillars:
 
 1. **Spec-driven gates** — ICEA gate ([0001](docs/adr/0001-icea-approval-gate.md)), output-gated enforcement ([0002](docs/adr/0002-output-gated-enforcement.md)), the Write Gate for source/config ([0028](docs/adr/0028-write-gate.md)), disk-based state ([0031](docs/adr/0031-icea-state-model.md)), keyword handlers ([0032](docs/adr/0032-keyword-handler.md)), draft-then-save ([0034](docs/adr/0034-interactive-draft-save-flow.md)), plan-feeds-ICEA ([0035](docs/adr/0035-plan-feeds-icea.md)), the `temp/` rendering aid ([0036](docs/adr/0036-temp-rendering-aid.md)).
 2. **Layered enforcement** — mechanical floor ([0005](docs/adr/0005-mechanical-enforcement-floor.md)), server-side→local reversal ([0009](docs/adr/0009-server-side-authoritative.md)→[0010](docs/adr/0010-local-only-enforcement.md)), behavioural evals ([0021](docs/adr/0021-evals.md)), guide-versioning contract ([0022](docs/adr/0022-guide-versioning.md)).
@@ -229,6 +230,8 @@ The plugin keeps a complete decision record — *"the why must live in the repo,
 6. **Trust, transparency & governance** — memory audit loop ([0007](docs/adr/0007-memory-audit-loop.md)), deprecation policy + bus-factor rule ([0008](docs/adr/0008-deprecation-policy.md)), trust-calibration/earned-autonomy loop ([0011](docs/adr/0011-trust-calibration-loop.md)), source-file consent A/B/C ([0013](docs/adr/0013-source-file-consent.md)), model routing ([0023](docs/adr/0023-model-routing.md)), roadmap-proposals area ([0037](docs/adr/0037-roadmap-proposals-area.md)).
 7. **ICEA workflow lifecycle** — revise-not-overwrite ([0027](docs/adr/0027-icea-rerun-revise-and-reblock.md)), hierarchical folders ([0029](docs/adr/0029-icea-folder-structure.md)), the dedicated `/icea-revise` command ([0030](docs/adr/0030-icea-revise-command.md)), single-responsibility boundaries ([0033](docs/adr/0033-skill-single-responsibility.md)).
 8. **Roadmap (not yet built)** — async checkpoint queue ([0024](docs/adr/0024-async-checkpoint-queue.md), Proposal v0.9): evolving synchronous human gates into asynchronous, provisionally-executed checkpoints while preserving named-decider accountability.
+
+**Post-3.0 decisions (0039–0059)** extend these pillars rather than replace them: the machine-readable `graph.json` sidecar ([0039](docs/adr/0039-graph-json-sidecar.md)) with deterministically-extracted edges ([0041](docs/adr/0041-deterministic-edge-extraction.md)); the CLAUDE.md context budget ([0040](docs/adr/0040-claude-md-context-budget.md)); the architecture doc-set expansion ([0050](docs/adr/0050-architecture-doc-set-expansion.md)); the dream-init bootstrap pattern ([0046](docs/adr/0046-dream-init-bootstrap-pattern.md)) and Node-only canonical plugin state ([0048](docs/adr/0048-node-only-runtime-canonical-plugin-state.md)); the memory-capture Stop hook ([0049](docs/adr/0049-memory-capture-stop-hook.md)); expert-persona role axis ([0047](docs/adr/0047-expert-personas-role-axis.md)); domain-aware business-context severity ([0057](docs/adr/0057-domain-aware-business-context-severity.md)); and scored stack-key detection + rule deployment ([0059](docs/adr/0059-scored-stack-key-detection-and-rule-deployment.md)).
 
 See [docs/adr/README.md](docs/adr/README.md) for the full index.
 
@@ -288,7 +291,7 @@ A structural audit found the plugin's own manifest had drifted from disk: eight 
 1. **Put guarantees at the lowest tier that can hold them.** Judgment in prompts; determinism in hooks and bash gates. Everything load-bearing eventually became mechanical.
 2. **Honesty over overclaim.** When the server-side floor proved undeployable, the design said so ([ADR 0010](docs/adr/0010-local-only-enforcement.md)); when drift detection reported green while unverified, that was named a *dangerous* failure mode ([ADR 0026](docs/adr/0026-version-drift-detection.md)).
 3. **Proportionality prevents gaming.** Mechanical T1/T2/T3 classification means the developer never self-classifies, so "trivial" can't expand to dodge the gate — yet the critic still runs on everything.
-4. **Single source of truth, enforced by a validator.** Shared primitives + structural validation keep 25 skills consistent as the system grows.
+4. **Single source of truth, enforced by a validator.** Shared primitives + structural validation keep 45 skills consistent as the system grows.
 5. **Observability closes the loop.** Citation telemetry, dismissal churn, manifest-deviation events, and usage analytics turn subjective quality questions into measurable ones — and feed earned autonomy and deprecation.
 6. **Durable vs volatile separation.** Tool-agnostic specs (the durable asset) are quarantined from Claude Code wiring (the volatile layer), so the intellectual core survives tooling churn.
 
@@ -296,24 +299,26 @@ A structural audit found the plugin's own manifest had drifted from disk: eight 
 
 ## 8. Current State and Roadmap
 
-**Today (2.6.0).** A mature, self-validating governance framework: the ICEA spine is session-independent and mechanically floored; three scan skills feed audit-trailed ledgers; memory is self-pruning; and a fingerprint-tracked knowledge graph keeps orientation cheap on large repositories. The framework is language-agnostic across .NET, Java/Spring, Python, Node.js, and Angular/React, and VCS-aware across Git and TFVC.
+**Today (3.20.0).** A mature, self-validating governance framework: the ICEA spine is session-independent and mechanically floored; three scan skills feed audit-trailed ledgers; memory is self-pruning; and a fingerprint-tracked knowledge graph keeps orientation cheap on large repositories. Since 3.0 the framework has gained a tamper-evident **governance audit trail**, **domain-aware** B1–B7 severity generated per project, **version-aware .NET detection** (per-project runtime spread) driving scored stack-key rule deployment, a bounded, gated **goal-loop** for AC-driven completion, and a staged, gated **migration** pipeline (Target Options Analysis → golden-master → as-built reconciliation) for cross-stack rewrites. Most recently (3.20.0) it extends past build-time into the **operate/handover lifecycle** — `/operations` generates a master Operational Runbook and `/go-live` generates a Support-Transition Acceptance Checklist, both evidence-derived documentation generators that never fabricate (unknowables become greppable `⚠ TODO`). The framework is language-agnostic across .NET, Java/Spring, Python, Node.js, and Angular/React, and VCS-aware across Git and TFVC.
 
 **On the roadmap.** The most forward-looking design is the **async checkpoint queue** ([ADR 0024](docs/adr/0024-async-checkpoint-queue.md), Proposal v0.9, tracked in [docs/proposals/](docs/proposals/)): evolving human gates from *synchronous interrupts* into *asynchronous checkpoints* — the agent works on provisionally-approved artifacts under strict containment, and a human reviews a queue on their own schedule. It preserves the accountability thesis (every resolution records a named decider) while supporting longer autonomous runs. It graduates from proposal to shared spec the moment a skill begins to consume it.
 
 ---
 
-## Appendix — Component Inventory (v2.6.0)
+## Appendix — Component Inventory (v3.20.0)
 
 | Component | Count | Location |
 |---|---|---|
-| Commands | 36 | `commands/` (+ mirrored stubs in `_project-deploy/commands/`) |
-| Skills | 25 | `skills/<name>/SKILL.md` |
-| Shared specs | 15 | `skills/shared/` |
-| Stack rules | 8 | `_project-deploy/rules/` |
-| Enforcement hooks | 4 | `_project-deploy/hooks/` |
-| Architecture Decision Records | 38 | `docs/adr/` |
-| Enforcement hooks (tiers) | 3 | model instructions · local hooks · CI validators |
+| Commands | 43 | `commands/` (43 mirrored stubs in `_project-deploy/commands/`, one per command) |
+| Skills | 45 | `skills/<name>/SKILL.md` |
+| Shared specs | 41 | `skills/shared/` |
+| Subagents | 2 | plugin agents — `bc-searcher` (web-only) · `bc-synthesizer` (no-web) for business-context grounding |
+| Stack rules | ~43 (layered) | `_project-deploy/rules/` — ecosystem + layered organisation (ADR 0043) incl. framework overlays |
+| Runtime hooks | 11 | `_project-deploy/hooks/` (PreToolUse write-blocker, findings gate, memory-capture, audit, web-grounding guard, …) |
+| CI validators | 3 | `validate-audit.py` · `validate-ledgers.py` · `validate-pr-compliance.py` |
+| Architecture Decision Records | 59 | `docs/adr/` |
+| Enforcement tiers | 3 | model instructions · local hooks · CI validators |
 | Finding ledgers | 3 | code-review · security · dynamic-scan |
-| Roadmap proposals | 1 | `docs/proposals/` |
+| Roadmap proposals | 2 | `docs/proposals/` |
 
-*This whitepaper is grounded in the plugin's own record — the 38 ADRs, the changelog (`CHANGELOG.md` + `docs/changelog-archive/`), and the developer/user guides. Where a claim reflects a decision, the governing ADR is cited so the reasoning can be traced to source.*
+*This whitepaper is grounded in the plugin's own record — the 59 ADRs, the changelog (`CHANGELOG.md` + `docs/changelog-archive/`), and the developer/user guides. Where a claim reflects a decision, the governing ADR is cited so the reasoning can be traced to source.*

@@ -130,7 +130,7 @@ takes priority over a machine-level environment variable.
 
 **Tool wiring is deliberately not documented here** — this spec stays
 tool-agnostic (validator check 26). For how to set these variables in the
-current tooling, see the "Model routing" chapter of `user-guide.html` or
+current tooling, see the "Model routing" chapter of `guides/user-guide.html` or
 the hooks/installation section of `README.md`.
 
 ---

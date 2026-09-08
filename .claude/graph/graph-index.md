@@ -55,7 +55,7 @@ _Generated: 2026-07-18 | Modules: 32 | Structure: domain_
 **setup-teardown** — Removes plugin-managed content from a target project by scope (--full, --skills, --hooks, --rules, --commands, --state). Key files: `skills/setup-teardown/SKILL.md`
 **scripts** — Node.js CJS scripts that handle all mechanical plugin work: bootstrapping, graph edge extraction, plugin state. Key files: `scripts/setup-init-bootstrap.cjs`, `scripts/graph-extract-edges.js`
 **project-deploy** — Canonical deploy sources for all hook files and the gitignore base used in target projects. Key files: `_project-deploy/hooks/icea-floor.sh`
-**code-review** — Coverity-style static analysis with persistent finding tracking across sessions. Key files: `skills/code-review/SKILL.md`
+**code-review** — static code analysis with persistent finding tracking across sessions. Key files: `skills/code-review/SKILL.md`
 **security** — OWASP/CWE security scan with a persistent ledger of findings. Key files: `skills/security/SKILL.md`
 **dynamic-scan** — DAST scan against a running web app/API using OWASP ZAP via Docker. Key files: `skills/dynamic-scan/SKILL.md`
 **dream-rollback** — Reverses a specific Dream consolidation run using the audit trail in memory/dream-log.md. Key files: `skills/dream-rollback/SKILL.md`

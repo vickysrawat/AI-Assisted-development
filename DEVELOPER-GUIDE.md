@@ -12,19 +12,20 @@ starting point.
 2. [How the plugin loads](#how-the-plugin-loads)
 3. [Adding a skill](#adding-a-skill)
 4. [Adding a command](#adding-a-command)
-5. [Shared primitives layer](#shared-primitives-layer)
-6. [Model routing](#model-routing)
-7. [Cache architecture](#cache-architecture)
-8. [Knowledge graph and staleness detection](#knowledge-graph-and-staleness-detection)
-9. [Dream memory system](#dream-memory-system)
-10. [Governance gates](#governance-gates)
-11. [Security conventions](#security-conventions)
-12. [Testing](#testing)
-13. [Releasing a new version](#releasing-a-new-version)
-14. [Updating model defaults](#updating-model-defaults)
-15. [First-time project setup order](#first-time-project-setup-order)
-16. [Fix protocol — making changes without creating new gaps](#fix-protocol--making-changes-without-creating-new-gaps)
-17. [Defined done — release readiness checklist](#defined-done--release-readiness-checklist)
+5. [Multi-stage orchestrator skills (the migration pattern)](#multi-stage-orchestrator-skills-the-migration-pattern)
+6. [Shared primitives layer](#shared-primitives-layer)
+7. [Model routing](#model-routing)
+8. [Cache architecture](#cache-architecture)
+9. [Knowledge graph and staleness detection](#knowledge-graph-and-staleness-detection)
+10. [Dream memory system](#dream-memory-system)
+11. [Governance gates](#governance-gates)
+12. [Security conventions](#security-conventions)
+13. [Testing](#testing)
+14. [Releasing a new version](#releasing-a-new-version)
+15. [Updating model defaults](#updating-model-defaults)
+16. [First-time project setup order](#first-time-project-setup-order)
+17. [Fix protocol — making changes without creating new gaps](#fix-protocol--making-changes-without-creating-new-gaps)
+18. [Defined done — release readiness checklist](#defined-done--release-readiness-checklist)
 
 ---
 
@@ -178,6 +179,57 @@ These are guidance, not a CI lint (yet). Signals 1–3 are real violations; 4–
 
 ---
 
+## Multi-stage orchestrator skills (the migration pattern)
+
+Most skills are a single `SKILL.md`. A few are too large for that — a staged pipeline with
+per-stage personas, human approval gates between stages, and the need to resume after a session
+gap. `migration` is the reference implementation of this shape (it is exactly SRP signal #3 above:
+*stage-gated sub-phases that re-enter at different steps*). Reach for this pattern only when a
+single SKILL.md genuinely cannot hold the work — most skills should stay flat.
+
+### Anatomy (`skills/migration/`)
+
+| Part | Responsibility |
+|---|---|
+| `SKILL.md` — the **thin orchestrator** (~180 lines) | Owns *only* **sequence + stage-gates + checkpoint**: Step 0 (entry/resume), the stage order, the gate keywords, and the dispatch table. Nothing else — no stage procedure lives here. |
+| `steps/stage-*.md` — one file per stage | Each stage's actual procedure: its persona, model tier, reference loads, and steps. The orchestrator loads and runs the step file for the current `phase`. This is where the work lives (9 stage files today: `stage-0` → `stage-6-verification`). |
+| `references/` (`mappings/`, `specs/`, `stacks/`, `strategies/`, `shared/`) | Large reference data loaded **lazily** by the stage that needs it — never at skill start. |
+| `.claude/migration-checkpoint.json` | The single source of truth for resume. Schema is documented in `skills/shared/checkpoint-schema.md`; the checkpoint is **seeded inline** by `steps/stage-0.md` and merged at each gate. |
+
+### The rules that make it work
+
+1. **The orchestrator is the single writer of the checkpoint.** Parallel stage subagents (e.g. the
+   per-cluster Stage-4 agents on worktree branches) return results; the orchestrator merges them.
+   Never write the checkpoint from a step file or subagent directly — two writers is how state corrupts.
+2. **Gates advance the checkpoint, never clobber it.** On each `APPROVE …` the step file merges
+   `stage_gates.<x>_approved = true` and `phase = <next>` **without** touching `decision_log` or
+   `clusters`. Add a new gate with a backward-safe merge (`if (c.stage_gates.x === undefined) c.stage_gates.x = false;`)
+   so a resumed older checkpoint gains it without losing already-granted gates.
+3. **Every step file re-states its own persona and model tier.** A step may run in a fresh subagent
+   with no memory of the orchestrator, so it cannot inherit context — see `skills/shared/personas-spec.md`
+   (SA persona for stages 0–3, SE persona from stage 4).
+4. **Hybrid execution.** Interactive stages (user Q&A) run *inline* in the orchestrator's context;
+   heavy or parallelisable stages (feasibility, per-cluster migration) dispatch to *subagents*, with
+   the checkpoint as the hand-off medium. A subagent cannot do multi-turn user dialogue — keep those
+   stages inline.
+5. **Every stage is cross-session resumable, and status is a separate skill.** Each `MIGRATE …` keyword
+   (registered in CLAUDE.md §0a) re-enters at the matching step; the orchestrator reads the checkpoint's
+   `phase`/`stage_gates` to route. Read-only status projection lives in its **own** skill
+   (`migration-status`) so the orchestrator keeps its single responsibility.
+
+> **Do not hardcode the schema version in prose.** The checkpoint schema evolves (it has bumped
+> several times — `SKILL.md` itself has lagged the real version before). Cite `checkpoint-schema.md`
+> and let the spec carry the number, rather than stamping "schema 1.x" into a guide where it will
+> silently drift. This is the same durable-reference rule as [heading text over section numbers](#fix-protocol--making-changes-without-creating-new-gaps).
+
+### Adding a stage
+
+Add `steps/stage-N-*.md`, a row to the orchestrator's dispatch table in `SKILL.md`, the gate keyword
+to CLAUDE.md §0a (and the `_project-deploy/CLAUDE.md` template), and the new `stage_gates.*` flag via a
+backward-safe merge; document the gate in `checkpoint-schema.md`. Then re-run `node tests/validate.js`.
+
+---
+
 ## Shared primitives layer
 
 `skills/shared/` is the single source of truth for conventions that span multiple skills.
@@ -192,7 +244,7 @@ These are guidance, not a CI lint (yet). Signals 1–3 are real violations; 4–
 
 ### When to promote something to shared/
 
-A spec belongs in `shared/` when **two or more skills** read or write the same artefact or follow the same protocol. Current shared files:
+A spec belongs in `shared/` when **two or more skills** read or write the same artefact or follow the same protocol. The **authoritative, complete list is `plugin.json` → `components.shared`** (41 specs as of v3.20.0); the most-referenced are:
 
 | File | Governs |
 |---|---|
@@ -206,6 +258,15 @@ A spec belongs in `shared/` when **two or more skills** read or write the same a
 | `business-context-severity.md` | B1–B7 business severity override triggers |
 | `findings-gate.md` | Canonical bash functions for Critical/High open findings detection across all three ledgers |
 | `dismissed-findings-reconciliation.md` | Canonical Rule 5 — dismissed finding reconciliation on re-scan (keep dismissed if unchanged; re-open with verify flag if code changed) |
+| `runtime-generation-spec.md` | Per-project .NET runtime detection (v1.1) — `versions[]` spread, generation resolution, PackageReference/CPM package versions, build-file collection |
+| `checkpoint-schema.md` | Migration checkpoint JSON (schema 1.11) — the single source of truth for stage-gate resume |
+| `goal-loop-spec.md` | Bounded, gated goal-loop engine (generate → self-score → revise) with hard iteration ceiling + diminishing-returns guard; exits at a human gate, writes nothing |
+| `rubric-score-schema.md` | I/O contract for the self-scoring agent — per-criterion PASS/FAIL/PARTIAL + evidence + deterministic `percentDone` + `blocking` list |
+| `write-gate-spec.md` | Write-Gate artefact-timing table, batch (`APPROVE ALL`) semantics, gate orthogonality |
+| `business-context-presets.md` / `-grounding.md` / `-generation.md` | Domain-aware B-series — presets (incl. verbatim-locked `legal`), regulatory grounding, and per-project generation into `.claude/business-context.md` |
+| `personas-spec.md` | Expert-persona role axis (SA/SE) used by the migration and readiness skills |
+| `claude-md-budget-spec.md` | CLAUDE.md ~200-line context-budget targets and floor rationale |
+| `dream-reference.md` | Dream entry format, consolidation cadence, promotion cap, topic-file demotion |
 
 > **Proposals vs. live specs.** `skills/shared/` holds only primitives that a
 > shipping skill actually consumes, and every entry there is listed in
@@ -492,12 +553,14 @@ scenarios:
 
 ### Coverage gaps
 
-The following skills currently have no test scenarios and should be added in the next release:
+Most skills now have a `tests/skill-scenarios/<skill>.yaml`. The remaining skills without a
+dedicated scenario file — add them as they gain user-facing behaviour worth asserting:
 
-- `security` — highest-priority given its size and recent pattern additions
-- `architect` — fingerprint writing should be validated
-- `setup-status` — all 12 checks should have a corresponding scenario
-- `token-analysis` — cache miss and delta behaviour
+- `migration-status` — read-only checkpoint projection (stage-gate rendering)
+- `setup-teardown` — dry-run + CONFIRM gate before any removal
+- `graph-create` — internal graph generation invoked by `architect`/`graph-sync`
+- `operations` — runbook generation (assert `⚠ TODO` never-fabricate + no-ICEA/no-Write-Gate)
+- `go-live` — acceptance checklist (assert ledger ingestion + absent-input `⚠ TODO` degradation)
 
 ### CI integration
 
@@ -505,7 +568,7 @@ The following skills currently have no test scenarios and should be added in the
 node tests/runner.js && echo "All scenarios passed"
 ```
 
-Set `ANTHROPIC_API_KEY` as a pipeline secret. The runner uses `claude-sonnet-4-20250514`. Estimated cost: ~$0.02 per full run.
+Set `ANTHROPIC_API_KEY` as a pipeline secret. The runner uses `REVIEW_MODEL` (default `claude-sonnet-4-6`). Estimated cost: ~$0.02 per full run.
 
 ---
 
@@ -664,7 +727,7 @@ when it is skipped: a change to one file creates a stale reference in another.
 
 1. Run the structural validator to confirm you're starting from a clean baseline:
    ```bash
-   python3 tests/validate.py
+   node tests/validate.js
    ```
 2. Read the file you're about to change and note every number, list, or cross-reference it contains.
 
@@ -674,7 +737,7 @@ For every edit, immediately ask: **what else references this data?**
 
 | If you change | Also update |
 |---|---|
-| A stub list (add/remove a command stub) | `commands/setup-init.md` stub table + bash loop + Step 10 summary, `skills/setup-status/SKILL.md` check 1d loop + `N/19` count, `_project-deploy/commands/` |
+| A stub list (add/remove a command stub) | `commands/setup-init.md` stub table + bash loop + Step 10 summary, `skills/setup-status/SKILL.md` check 1d loop + `N/41` count, `_project-deploy/commands/` |
 | A check count or table row count | Every place in the same file that cites the count (score descriptions, report templates, bash comments) |
 | A shared spec (source-file-consent, business-context-severity, graph-index-schema) | Every SKILL.md that references it — run `grep -r "spec-name" skills/` to find all referencing files |
 | An architect template (`skills/architect/templates/`) | Templates are composed from `_shared/` (stack-agnostic base) + `<stack>/` overrides (ADR 0051). Edit the common `decisions`/`integrations`/`security`/`data` files in `_shared/` — **but if you change a file that `dotnet-api` (or a frontend/`js-library` `data.md`) overrides, update that override too** (it won't inherit). Every stack must still compose to 8 files — `node tests/validate.js` enforces this. |
@@ -706,19 +769,19 @@ a manual read of the changed files and their dependents.
 A version is ready to release when all of the following are true:
 
 ```
-[ ] python3 tests/validate.py exits 0 (zero errors)
+[ ] node tests/validate.js exits 0 (zero errors — 270+ structural checks)
 [ ] CHANGELOG.md has an entry for the current plugin.json version
 [ ] CLAUDE.md Plugin version line matches plugin.json
 [ ] All new scan skills (producing finding ledgers) delegate Rule 5 (Dismissed) to dismissed-findings-reconciliation.md — no inline copies
 [ ] All new skills have a row in business-context-severity.md (or reference it)
-[ ] All new commands are in the setup-init stub table AND bash loop AND Step 9 summary
+[ ] All new commands are in the setup-init stub table AND bash loop AND Step 10 summary
 [ ] All new commands have a stub in _project-deploy/commands/
 [ ] All modified shared specs have been grep'd for all referencing skills — all updated
 [ ] No consecutive --- separators in any SKILL.md or command file
 [ ] No hardcoded ADO org in any SKILL.md body (reference files excepted)
 [ ] README.md reflects current command list and feature set
 [ ] DEVELOPER-GUIDE.md reflects current architecture
-[ ] user-guide.html reflects current command list
+[ ] guides/ HTML guides (user-guide, plugin-guide, developer-guide) reflect the current command list
 [ ] node tests/runner.js passes on a sample project (or spot-checked manually)
 ```
 

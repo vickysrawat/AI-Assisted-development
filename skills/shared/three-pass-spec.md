@@ -36,7 +36,7 @@ Pass 3 — FREE-FLOW ADVERSARIAL PASS
 ### Purpose
 
 Apply known, deterministic checker patterns to every in-scope file. These are
-the equivalent of Coverity checkers, Semgrep rules, or OWASP pattern matchers.
+the equivalent of static-analysis checkers, Semgrep rules, or OWASP pattern matchers.
 A finding from Pass 1 is reproducible: the same code always produces the same
 finding.
 

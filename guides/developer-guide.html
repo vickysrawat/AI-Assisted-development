@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- documents-plugin-version: 3.13.0 -->
+<!-- documents-plugin-version: 3.20.0 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -754,7 +754,7 @@
     <div class="nav-brand">
       <div class="nav-brand-label">Plugin Guide</div>
       <div class="nav-brand-title">AI-Assisted Dev</div>
-      <div class="nav-brand-version">Version 3.13.0</div>
+      <div class="nav-brand-version">Version 3.20.0</div>
     </div>
 
     <div class="nav-section-label">Getting Started</div>
@@ -815,6 +815,15 @@
     <a class="nav-item" href="#pr" onclick="setActive(this)">
       <span class="nav-item-dot"></span> Pull requests
     </a>
+    <a class="nav-item" href="#migration" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Migration
+    </a>
+    <a class="nav-item" href="#operations" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Operational runbook
+    </a>
+    <a class="nav-item" href="#go-live" onclick="setActive(this)">
+      <span class="nav-item-dot"></span> Support-transition gate
+    </a>
 
     <div class="nav-section-label" style="margin-top: var(--space-6);">Memory &amp; Graph</div>
     <a class="nav-item" href="#memory" onclick="setActive(this)">
@@ -856,7 +865,7 @@
 
     <!-- HERO -->
     <div class="hero">
-      <div class="hero-kicker">Developer guide · v3.13.0</div>
+      <div class="hero-kicker">Developer guide · v3.20.0</div>
       <h1 class="hero-title">From feature request<br>to working code.</h1>
       <p class="hero-sub">
         Everything the plugin does, in one place — integrate it into your project, drive the
@@ -1412,6 +1421,7 @@
                 </div>
                 <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/icea-feature</span> <span class="cmd-value">ADO-1847 R3 S12</span> — add export to CSV on the report page</pre>
               </div>
+              <div class="callout info"><span class="callout-icon">i</span><span><strong>Prefer to run the whole lifecycle at once?</strong> <code>/goal-loop ADO-{ID}</code> is a thin cradle-to-grave orchestrator that sequences <code>icea-feature</code> &rarr; <code>icea-approve</code> &rarr; <code>icea-implement</code>, stopping at every gate and self-approving nothing. Inside <code>icea-implement</code> it self-scores the generated code against the approved acceptance criteria and iterates until they are met or a hard iteration ceiling is reached &mdash; but it never writes to disk or issues an <code>APPROVE</code> itself. Every write and approval still passes through you.</span></div>
             </div>
           </div>
         </div>
@@ -2138,7 +2148,7 @@ To start implementation:
         <div class="milestone-number" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: var(--ai-gray-400);">Q</div>
         <div>
           <div class="milestone-title">Code review</div>
-          <div class="milestone-desc">A Coverity-style static analysis with persistent tracking, stable fingerprints, and one-command fixes.</div>
+          <div class="milestone-desc">A static code analysis with persistent tracking, stable fingerprints, and one-command fixes.</div>
         </div>
       </div>
       <div class="steps">
@@ -2229,7 +2239,7 @@ To start implementation:
               <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
               <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/security-review</span> <span class="cmd-value">--changed</span></pre>
             </div>
-            <div class="callout info"><span class="callout-icon">i</span><span><strong>Business Context Severity (B1&ndash;B7):</strong> findings that touch sensitive data &mdash; immigration IDs, privileged legal matter, vulnerable-client data &mdash; are escalated (e.g. to Critical) regardless of raw CVSS score.</span></div>
+            <div class="callout info"><span class="callout-icon">i</span><span><strong>Business Context Severity (B1&ndash;B7):</strong> the B-series is <strong>domain-aware</strong> &mdash; generated per project by <code>SET DOMAIN</code>, grounded in the cited regulatory frameworks for the detected domain and jurisdiction (written to <code>.claude/business-context.md</code>). Findings that touch the domain's sensitive data are escalated (e.g. to Critical) regardless of raw CVSS score. Legal is just one preset: for example, a legal project might escalate immigration IDs, privileged legal matter, or vulnerable-client data &mdash; a fintech or healthcare project grounds a different set.</span></div>
             <table class="ref-table">
               <thead><tr><th>Flag</th><th>Scope</th></tr></thead>
               <tbody>
@@ -2449,7 +2459,7 @@ To start implementation:
             <span class="step-chevron">&#8250;</span>
           </div>
           <div class="step-body"><div class="step-body-inner">
-            <p>Creates the PR in Azure DevOps via the REST API, or saves an offline draft when the API is unavailable. It runs the ICEA compliance check and the findings gate before submitting.</p>
+            <p>Creates the PR in Azure DevOps <em>or</em> GitHub via the REST API — the git remote provider is auto-detected — or saves an offline draft when the API is unavailable. It runs the ICEA compliance check and the findings gate before submitting, regardless of the target host.</p>
             <div class="cmd-block">
               <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
               <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/pr-create</span> <span class="cmd-value">ADO-1847</span></pre>
@@ -2470,7 +2480,7 @@ To start implementation:
               <thead><tr><th>Command</th><th>What it does</th></tr></thead>
               <tbody>
                 <tr><td><code>/pr-describe</code></td><td>Generates an ICEA-compliant PR description from the git diff, maps every changed file to an Acceptance Criterion, flags scope creep, and outputs a self-review checklist.</td></tr>
-                <tr><td><code>/pr-create</code></td><td>Creates the PR in Azure DevOps via the REST API (or saves an offline draft); runs the ICEA compliance check and findings gate before submitting.</td></tr>
+                <tr><td><code>/pr-create</code></td><td>Creates the PR in Azure DevOps or GitHub via the REST API (remote auto-detected; or saves an offline draft); runs the ICEA compliance check and findings gate before submitting.</td></tr>
                 <tr><td><code>/pr-spec-review</code></td><td>Reviews an existing PR against a functional spec or ICEA and returns a pass/fail report.</td></tr>
                 <tr><td><code>/ado-tasks</code></td><td>Generates a full ADO task breakdown from an approved ICEA — one task per Acceptance Criterion per active layer, with titles, tags, and estimates.</td></tr>
                 <tr><td><code>/sprint-metrics</code></td><td>Measures ICEA compliance rate, PR rejection rate, and rework hours from ADO after a sprint.</td></tr>
@@ -2479,6 +2489,177 @@ To start implementation:
                 <tr><td><code>/plugin-readiness</code></td><td>Production-readiness assessment for the plugin across six domains.</td></tr>
               </tbody>
             </table>
+          </div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <div class="milestone" id="migration">
+      <div class="milestone-header">
+        <div class="milestone-number" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: var(--ai-gray-400);">MG</div>
+        <div>
+          <div class="milestone-title">Migrate an application to a new stack</div>
+          <div class="milestone-desc">A staged, gated, checkpoint-resumable pipeline that ports a whole application onto a new stack — with a Target Options Analysis up front and Golden-Master behavioral verification at the end.</div>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">A</span>
+            <span class="step-title">Run from inside the empty target folder</span>
+            <span class="step-badge command">/migration</span>
+            <span class="step-chevron">&#8250;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>Create the new (empty) <strong>target</strong> project folder, open Claude Code inside it, and run <code>/migration</code>. Provide the <strong>source</strong> application path when prompted — the skill reads the source read-only and drives everything from the target side. Supported routes: <strong>.NET Framework&nbsp;&rarr;&nbsp;.NET&nbsp;10</strong>, <strong>Java&nbsp;&harr;&nbsp;.NET</strong>, <strong>React&nbsp;+&nbsp;Express&nbsp;&rarr;&nbsp;Angular&nbsp;+&nbsp;.NET</strong>, and <strong>Node.js&nbsp;&rarr;&nbsp;.NET</strong>.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/migration</span> <span class="cmd-value">ADO-1847</span></pre>
+            </div>
+            <div class="callout warning"><span class="callout-icon">i</span><span>Run it from the target folder, not the source. The source is never modified — the migration only writes into the new target repository.</span></div>
+          </div></div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">B</span>
+            <span class="step-title">The staged, gated pipeline</span>
+            <span class="step-badge info">stage gates</span>
+            <span class="step-chevron">&#8250;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>The pipeline advances one stage at a time and <strong>pauses at every stage for an explicit <code>APPROVE&nbsp;&hellip;</code> gate</strong> — it self-approves nothing. Each stage writes a checkpoint so you can stop and resume across sessions.</p>
+            <table class="ref-table">
+              <thead><tr><th>Stage</th><th>What it produces</th><th>Gate</th></tr></thead>
+              <tbody>
+                <tr><td>Source read</td><td>Reads the source app and its knowledge graph to build a behavioral inventory.</td><td><code>APPROVE INVENTORY</code></td></tr>
+                <tr><td>Target Options Analysis</td><td>Weighs viable target designs and recommends one before any code is planned.</td><td><code>APPROVE OPTIONS</code></td></tr>
+                <tr><td>Architecture</td><td>Target architecture docs for the chosen option.</td><td><code>APPROVE ARCHITECTURE</code></td></tr>
+                <tr><td>Feasibility</td><td>Risk/effort feasibility pass against the architecture.</td><td><code>APPROVE FEASIBILITY</code></td></tr>
+                <tr><td>Cluster plan</td><td>Parallel migration clusters derived from the source graph.</td><td rowspan="2"><code>APPROVE MIGRATION</code></td></tr>
+                <tr><td>Per-cluster migration</td><td>Each cluster is ported on its own worktree branch of the target repo, then tests run.</td></tr>
+                <tr><td>Golden-Master + reconciliation</td><td>Golden-Master behavioral verification and an as-built reconciliation against the source.</td><td>&mdash;</td></tr>
+              </tbody>
+            </table>
+            <div class="callout info"><span class="callout-icon">i</span><span>Cluster work happens on isolated worktree branches, so parallel cluster agents never collide. Resume a partially-migrated cluster set with <code>MIGRATE RESUME ADO-{ID} [BACKEND|FRONTEND]</code>.</span></div>
+          </div></div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">C</span>
+            <span class="step-title">Check progress &amp; resume</span>
+            <span class="step-badge command">/migration-status</span>
+            <span class="step-chevron">&#8250;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>The read-only <code>/migration-status</code> skill projects the checkpoint — current phase, stage-gate state, cluster progress, and the next action — without changing anything. Each stage also has a targeted resume keyword (see <a href="#keywords">All Keywords</a>) so you can re-enter a specific stage after a break.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/migration-status</span> <span class="cmd-value">ADO-1847</span></pre>
+            </div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <div class="milestone" id="operations">
+      <div class="milestone-header">
+        <div class="milestone-number" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: var(--ai-gray-400);">OP</div>
+        <div>
+          <div class="milestone-title">Generate the Operational Runbook</div>
+          <div class="milestone-desc">The single document a support engineer opens during an incident — a master runbook derived from the actual codebase, not a wiki page that drifted out of date.</div>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">A</span>
+            <span class="step-title">Produce the runbook from the code</span>
+            <span class="step-badge command">/operations</span>
+            <span class="step-chevron">&#8250;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>Wearing an <strong>SRE</strong> hat, <code>/operations</code> reads the codebase and writes a master <strong>Operational Runbook</strong> to <code>docs/operations/</code> as Markdown, plus a self-contained offline HTML companion you can hand to whoever is on call. It is a <strong>documentation generator</strong> — no ICEA, no Write Gate, no critic — so it runs as a straight read-and-write pass after you consent.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/operations</span></pre>
+            </div>
+            <div class="callout info"><span class="callout-icon">i</span><span>This is a <strong>Category B</strong> action — it reads source to build the runbook, so it asks for consent before scanning.</span></div>
+          </div></div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">B</span>
+            <span class="step-title">What is inside — 16 sections + diagrams</span>
+            <span class="step-badge info">contents</span>
+            <span class="step-chevron">&#8250;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>The runbook is structured as <strong>16 sections</strong> with Mermaid diagrams, built for the moment something is on fire rather than for a leisurely read.</p>
+            <table class="ref-table">
+              <thead><tr><th>Area</th><th>What it gives on-call</th></tr></thead>
+              <tbody>
+                <tr><td>Architecture &amp; dependency map</td><td>Mermaid diagrams of the system and its dependencies, so you know what talks to what.</td></tr>
+                <tr><td>Routine operations</td><td>Deploy, rollback, and restart procedures for day-to-day running.</td></tr>
+                <tr><td>Symptom &rarr; playbook triage</td><td>A triage index that maps an observed symptom to the playbook that fixes it.</td></tr>
+                <tr><td>Failure-mode playbooks</td><td>Step-by-step playbooks for each known failure mode.</td></tr>
+                <tr><td>Backup &amp; DR</td><td>Backup and disaster-recovery procedures.</td></tr>
+                <tr><td>Escalation &amp; incident comms</td><td>Who to escalate to and how to communicate during an incident.</td></tr>
+              </tbody>
+            </table>
+            <div class="callout warning"><span class="callout-icon">i</span><span>Anything the skill cannot determine from the codebase renders as a <code>&#9888; TODO</code> marker — it is <strong>never fabricated</strong>. Fill those in before you rely on the runbook in anger.</span></div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <div class="milestone" id="go-live">
+      <div class="milestone-header">
+        <div class="milestone-number" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: var(--ai-gray-400);">GL</div>
+        <div>
+          <div class="milestone-title">Gate the support transition</div>
+          <div class="milestone-desc">A one-time go / no-go checklist that decides whether an incoming support team is actually ready to take the application — the capstone of the delivery pipeline.</div>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">A</span>
+            <span class="step-title">Derive the acceptance checklist</span>
+            <span class="step-badge command">/go-live</span>
+            <span class="step-chevron">&#8250;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>Wearing an <strong>Enterprise Architect</strong> hat, <code>/go-live</code> generates a <strong>Support-Transition Acceptance Checklist</strong> — a one-time go / no-go gate for the team about to take over support. It ingests the latest <strong>prod-readiness report</strong>, <strong>security ledger</strong>, <strong>code-review ledger</strong>, and <strong>deployment architecture</strong>, then derives the blockers and follow-ups from them. Like <code>/operations</code>, it is a <strong>documentation generator</strong> — no ICEA, no Write Gate, no critic.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/go-live</span></pre>
+            </div>
+            <div class="callout info"><span class="callout-icon">i</span><span>This is a <strong>Category C</strong> action. It auto-links the <a href="#operations">Operational Runbook</a>, so run <code>/operations</code> first for a complete package.</span></div>
+          </div></div>
+        </div>
+        <div class="step">
+          <div class="step-header" onclick="toggleStep(this)">
+            <span class="step-num">B</span>
+            <span class="step-title">Section A blockers, Section B fast-follow</span>
+            <span class="step-badge info">go / no-go</span>
+            <span class="step-chevron">&#8250;</span>
+          </div>
+          <div class="step-body"><div class="step-body-inner">
+            <p>The checklist splits into two parts, both derived from the ingested reports rather than asserted by hand:</p>
+            <table class="ref-table">
+              <thead><tr><th>Section</th><th>Meaning</th></tr></thead>
+              <tbody>
+                <tr><td><strong>Section A</strong> &mdash; go-live blockers</td><td>Items that must be resolved before the support team accepts the application. A no-go until they clear.</td></tr>
+                <tr><td><strong>Section B</strong> &mdash; fast-follow</td><td>Items that can be accepted with a commitment to fix shortly after transition.</td></tr>
+              </tbody>
+            </table>
+            <div class="callout warning"><span class="callout-icon">i</span><span>If an input report is missing, its rows degrade to <code>&#9888; TODO</code> rather than passing silently — a missing prod-readiness report can never be mistaken for a clean bill of health.</span></div>
           </div></div>
         </div>
       </div>
@@ -2708,6 +2889,58 @@ To start implementation:
         <div class="keyword-card" onclick="copyText('BUG ADO-{ID} — {description}')">
           <code>BUG ADO-{ID} — {description}</code>
           <p>Log a bug to the tracker. Written immediately, no approval needed.</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('/goal-loop ADO-{ID}')">
+          <code>/goal-loop ADO-{ID}</code>
+          <p>Thin cradle-to-grave orchestrator — sequences icea-feature &rarr; icea-approve &rarr; icea-implement, stopping at every gate. Self-scores generated code against the approved acceptance criteria but never writes to disk or issues APPROVE.</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('SET DOMAIN')">
+          <code>SET DOMAIN</code>
+          <p>Infer/confirm the business domain and jurisdiction, ground the B1&ndash;B7 severity series in cited regulatory frameworks, and write <code>.claude/business-context.md</code>.</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('MIGRATE ADO-{ID}')">
+          <code>MIGRATE ADO-{ID}</code>
+          <p>Run the staged migration pipeline for that ADO ID. Run from inside the empty target folder.</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('MIGRATE STATUS ADO-{ID}')">
+          <code>MIGRATE STATUS ADO-{ID}</code>
+          <p>Read-only migration-status projection — phase, stage-gates, clusters, next action.</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('MIGRATE RESUME ADO-{ID} [BACKEND|FRONTEND]')">
+          <code>MIGRATE RESUME ADO-{ID} [BACKEND|FRONTEND]</code>
+          <p>Resume migration from the Stage&nbsp;4 cluster checkpoint.</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('MIGRATE OPTIONS ADO-{ID}')">
+          <code>MIGRATE OPTIONS ADO-{ID}</code>
+          <p>Resume/regenerate the Stage&nbsp;0.5 Target Options Analysis.</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('MIGRATE INVENTORY ADO-{ID}')">
+          <code>MIGRATE INVENTORY ADO-{ID}</code>
+          <p>Resume/regenerate the Stage&nbsp;0.6 source behavioral inventory.</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('MIGRATE ARCH ADO-{ID}')">
+          <code>MIGRATE ARCH ADO-{ID}</code>
+          <p>Resume/regenerate the Stage&nbsp;1 target architecture docs.</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('MIGRATE FEAS ADO-{ID}')">
+          <code>MIGRATE FEAS ADO-{ID}</code>
+          <p>Resume/regenerate the Stage&nbsp;2 feasibility pass (requires architecture approved).</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('MIGRATE CLUSTERS ADO-{ID}')">
+          <code>MIGRATE CLUSTERS ADO-{ID}</code>
+          <p>Resume/regenerate the Stage&nbsp;3 cluster specs (requires feasibility approved).</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('APPROVE OPTIONS / INVENTORY / ARCHITECTURE / FEASIBILITY / MIGRATION ADO-{ID}')">
+          <code>APPROVE OPTIONS / INVENTORY / ARCHITECTURE / FEASIBILITY / MIGRATION ADO-{ID}</code>
+          <p>Migration stage-gate approvals — record the gate and continue. Work cross-session, like <code>APPROVE ADO-{ID}</code>.</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('/operations')">
+          <code>/operations</code>
+          <p>Generate the master Operational Runbook from the codebase &mdash; Markdown in <code>docs/operations/</code> plus an offline HTML companion, 16 sections and Mermaid diagrams. Documentation generator; unknowables render as <code>&#9888; TODO</code>.</p>
+        </div>
+        <div class="keyword-card" onclick="copyText('/go-live')">
+          <code>/go-live</code>
+          <p>Generate the Support-Transition Acceptance Checklist &mdash; a one-time go / no-go gate that ingests the prod-readiness, security, and code-review ledgers plus deployment architecture, and auto-links the Operational Runbook.</p>
         </div>
         <div class="keyword-card" onclick="copyText('/skip-icea')">
           <code>/skip-icea</code>
@@ -2955,6 +3188,7 @@ To start implementation:
                 <tr><td><code>INFRA_MODEL</code></td><td>Infrastructure skills (checkin, dismiss, setup)</td></tr>
               </tbody>
             </table>
+            <div class="callout info"><span class="callout-icon">i</span><span>Current defaults: generation routes to <code>claude-opus-4-8</code>; review, critic, and infrastructure route to <code>claude-sonnet-4-6</code>.</span></div>
           </div></div>
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 ICEA-driven development workflow for distributed teams using **Azure DevOps**. Language-agnostic across **.NET 8 · Java/Spring Boot · Python (FastAPI/Django/Flask) · Node.js** backends and **Angular / React** frontends — the active stack is detected per repo and drives detection, generation, review, and scanning.
 
-**Version 3.14.0** — Upgrades the **migration skill** into a rewrite **advisor**. A new **Target Options Analysis** stage (Stage 0.5) analyses the source and recommends 2–3 scored target stacks with a migration posture (mechanical port / re-architecture / rewrite-from-spec), a weighted decision matrix, and a rough order of magnitude — presented as an ADR you approve (`APPROVE OPTIONS ADO-{ID}`) before any target is locked. A new **Golden-Master** stage (Stage 5.0) captures a behavioral oracle from the running source and replays it against the target to catch silent drift. Enforcement gaps closed: real coverage measurement, an implemented integration-contract-hash gate, honest handling of unsupported sources, and a refreshed generation model default (`claude-opus-4-8`). The codebase knowledge graph (`.claude/graph/`) remains the **single codebase-orientation layer**, backed by a machine-readable `graph.json` (typed nodes/edges with confidence) whose **`EXTRACTED` dependency edges are derived deterministically from source imports** by a script rather than the model ([ADR 0041](docs/adr/0041-deterministic-edge-extraction.md)), then projected into the always-loaded index + per-module detail files, with `/graph-viz` for an offline visual map ([ADR 0039](docs/adr/0039-graph-json-sidecar.md)). `CLAUDE.md` is kept lean under a ~200-line context budget ([ADR 0040](docs/adr/0040-claude-md-context-budget.md)), and the plugin version is single-sourced in `.claude-plugin/plugin.json`. See [CHANGELOG.md](CHANGELOG.md) for the full history. **Upgrading from an older version?** Run `/setup-sync`.
+**Version 3.20.0** — Adds two **operational-documentation skills** for the support-handover lifecycle. **`/operations`** generates a master **Operational Runbook** from the codebase — the single document a support engineer opens during an incident — as Markdown (the source of truth, written to `docs/operations/`) plus a self-contained **offline HTML** companion, with 16 sections and Mermaid architecture / triage / escalation diagrams. **`/go-live`** generates a **Support-Transition Acceptance Checklist** — the one-time go/no-go gate an incoming support team uses to accept the app — by ingesting the latest prod-readiness report, the security ledger, and the code-review ledger plus the deployment architecture; missing inputs degrade to greppable `⚠ TODO` rows rather than a silent pass, and nothing is ever fabricated. Both are documentation generators (like `/product-docs`) — no ICEA and no Write Gate. Recent releases also added: **version-aware .NET detection** (a per-project runtime `versions[]` spread so a mixed .NET Framework 4.x + .NET 8/9/10 solution is detected **per project**, with opt-in `PER_PROJECT_RULES` scoping); a bounded, gated **goal-loop** (`/goal-loop`); **migration hardening** (integration ground-truth verification, as-built reconciliation, golden-master provided-URL capture); **scored stack-key rule deployment** ([ADR 0059](docs/adr/0059-scored-stack-key-detection-and-rule-deployment.md)); domain-aware **business-context severity** (`SET DOMAIN`); and a tamper-evident **governance audit trail** under `.claude/audit/`. The codebase knowledge graph (`.claude/graph/`) remains the **single codebase-orientation layer**, backed by a machine-readable `graph.json` (typed nodes/edges with confidence) whose **`EXTRACTED` dependency edges are derived deterministically from source imports** by a script rather than the model ([ADR 0041](docs/adr/0041-deterministic-edge-extraction.md)), then projected into the always-loaded index + per-module detail files, with `/graph-viz` for an offline visual map ([ADR 0039](docs/adr/0039-graph-json-sidecar.md)). `CLAUDE.md` is kept lean under a ~200-line context budget ([ADR 0040](docs/adr/0040-claude-md-context-budget.md)), and the plugin version is single-sourced in `.claude-plugin/plugin.json`. See [CHANGELOG.md](CHANGELOG.md) for the full history. **Upgrading from an older version?** Run `/setup-sync`.
 
 ---
 
@@ -12,8 +12,8 @@ ICEA-driven development workflow for distributed teams using **Azure DevOps**. L
 
 | Command | What it does |
 |---|---|
-| `/ai-assisted-development:setup-init` | One-time project setup. Runs the architect deployment questionnaire, seeds `file-cache.json` and `token-graph.json`, deploys command stubs, `.claude/rules/`, populates `.claude/architecture/` and generates the knowledge graph `.claude/graph/`, ensures `CLAUDE.md` has Dream sections. **New in 3.13.0:** Step 2d asks whether the project depends on services in separate repositories (e.g. a .NET API in its own repo); paths provided are added to `additionalDirectories` and immediately scanned for stack detection — `external_detected_stacks` is populated so `icea-feature` can select the correct multi-layer Tech Spec overlay from the first session. Creates and populates `.gitignore` automatically. Safe to re-run. |
-| `/ai-assisted-development:setup-status` | Read-only health check. Reports green/amber/red on all **20** infrastructure items including `architecture-deployment.md` status and knowledge graph checks. |
+| `/ai-assisted-development:setup-init` | One-time project setup. Runs the architect deployment questionnaire, seeds `file-cache.json` and `token-graph.json`, deploys command stubs, `.claude/rules/`, populates `.claude/architecture/` and generates the knowledge graph `.claude/graph/`, ensures `CLAUDE.md` has Dream sections. Step 2d asks whether the project depends on services in separate repositories (e.g. a .NET API in its own repo); paths provided are added to `additionalDirectories` and immediately scanned for stack detection — `external_detected_stacks` is populated so `icea-feature` can select the correct multi-layer Tech Spec overlay from the first session. Creates and populates `.gitignore` automatically. Safe to re-run. |
+| `/ai-assisted-development:setup-status` | Read-only health check. Reports green/amber/red on all **23** infrastructure checks including `architecture-deployment.md` status, .NET version-detection freshness, and knowledge graph checks. |
 | `/ai-assisted-development:setup-sync` | Re-provision an existing project after a plugin upgrade. Compares the version that provisioned the project against the installed version and applies only the version-sensitive changes (hooks, shared specs, ignore-file managed block, new state/rule files) per `docs/migrations/`, then re-stamps the version. Idempotent; never overwrites your own content. Run when `setup-status` reports **UPGRADE PENDING**. Flags: `--commands` (deploy command stubs only, deterministic), `--reinstall` (push plugin source changes to the installed copy — run from the plugin source directory). Alias: `setup-init --upgrade`. |
 | `/ai-assisted-development:dream` | 6-phase memory consolidation — reads sessions, scores entries, proposes ADD/UPDATE/DELETE with full justification, waits for tiered approval before writing. Includes token-budget guard. |
 | `/ai-assisted-development:dream-health` | Generates `memory/health.html` — browser dashboard with confidence scores, decay curve, promote candidates, and clickable justification panels. |
@@ -21,7 +21,7 @@ ICEA-driven development workflow for distributed teams using **Azure DevOps**. L
 | `/ai-assisted-development:dream-audit` | Quarterly memory quality audit — citation rates, contradiction events, rollback-prone categories. Archives stale topic files (reversibly) and writes audit hints that tune Dream's promotion confidence. |
 | `/ai-assisted-development:session-start` | Zero-cost session warm-up — loads stack, last decision, last fix, and sessions-since-dream in one pass. Surfaces any Red infrastructure items. |
 | `/ai-assisted-development:update-arch` | Targeted refresh of the prose `architecture.md` for changed areas. Use `--deployment` to re-run the deployment questionnaire only. For the module graph, use `/graph-sync`. |
-| `/ai-assisted-development:code-review` | Coverity-style static analysis with persistent cross-run tracking. **Cache-aware** — skips unchanged files. Supports `--changed`, `--pr`, `--full`, `--ci`, `--area` scope flags. Writes to `CodeReviews/`. |
+| `/ai-assisted-development:code-review` | Static code analysis with persistent cross-run tracking. **Cache-aware** — skips unchanged files. Supports `--changed`, `--pr`, `--full`, `--ci`, `--area` scope flags. Writes to `CodeReviews/`. |
 | `/ai-assisted-development:security-review` | Full codebase security review (OWASP/CVSS/CWE). Static asset directory audit runs first. **Cache-aware + lazy language loading**. Same scope flags as code-review. Writes HTML to `security/`. |
 | `/ai-assisted-development:dynamic-scan` | Dynamic (DAST) scan of a **running** app or API with OWASP ZAP via Docker. Runtime counterpart to security-review. Angular / ASP.NET MVC / Web API / Blazor / Razor Pages, plus npm/pip/NuGet dependency audit. Safe passive default; `--full`/`--scope` for gated active scans. Flags: `--url --stack --auth --swagger --deps-only --diff --ci --fail-on`. Writes HTML to `dynamic-scan/` and updates `dynamic-scan/dynamic-scan-ledger.md`. |
 | `/ai-assisted-development:ado-tasks` | Generate a complete Azure DevOps task breakdown from an approved ICEA document. One task per Acceptance Criterion per layer (Angular, .NET, Node.js, DB, QA, Infra) with titles, tags, and effort estimates. Run after ICEA approval and before sprint planning. Argument: `ADO-<id>`. |
@@ -46,6 +46,9 @@ ICEA-driven development workflow for distributed teams using **Azure DevOps**. L
 | `/ai-assisted-development:graph-viz` | Renders the knowledge graph as a self-contained **offline** HTML visualization at `.claude/graph/graph.html` — nodes by type, edges by type/confidence, hub (god) nodes and stale modules flagged, hover shows dependencies and dependents. Reads `graph.json` only (never source); `graph.html` is gitignored. `--3d` uses a locally vendored WebGL library. |
 | `/ai-assisted-development:migration` or `MIGRATE ADO-{ID}` | Staged, gated, checkpoint-resumable stack migration / rewrite advisor. Run from inside the empty TARGET folder; give the source app path when prompted. Nine gated stages — source read → **Target Options Analysis** → architecture → feasibility → cluster plan → per-cluster migration on isolated branches → tests → **golden-master** behavioral verification — each pausing for explicit approval. Supported: .NET Framework→.NET 10 · Java↔.NET · React+Express→Angular+.NET · Node.js→.NET. |
 | `/ai-assisted-development:migration-status` or `MIGRATE STATUS ADO-{ID}` | Read-only. Renders the on-disk migration checkpoint for an ADO ID — current phase, stage-gate progress, per-cluster status, and the exact `MIGRATE *` command to resume. Never writes. |
+| `/ai-assisted-development:goal-loop` | Thin cradle-to-grave orchestrator — sequences `icea-feature` → `icea-approve` → `icea-implement`, stopping at every SAVE/APPROVE gate and self-approving nothing. The only loop-till-done runs inside `icea-implement` Step 4b: it self-scores generated code against the approved acceptance criteria and revises, capped by a hard iteration ceiling (+ optional token budget) and a diminishing-returns guard. Never writes to disk or issues `APPROVE`. Argument: `ADO-<id>`. |
+| `/ai-assisted-development:operations` | Generate a master **Operational Runbook** for the app from the codebase — Markdown (source of truth in `docs/operations/`, grep-discoverable by `app-readiness`) plus a self-contained offline HTML companion. 16 sections with Mermaid architecture / triage / escalation diagrams: environments, routine ops (deploy/rollback/restart/migrations), health/logs/alerts, secrets + rotation, failure-mode playbooks, backup/DR, escalation, incident comms. Documentation generator — no ICEA/Write Gate; every unknowable renders as a greppable `⚠ TODO`. |
+| `/ai-assisted-development:go-live` | Generate a **Support-Transition Acceptance Checklist** — the one-time go/no-go gate an incoming support team uses to accept the app. Capstone that ingests the latest `prod-readiness/` report, `security/` ledger, and `CodeReviews/` ledger (open findings only) plus deployment architecture to derive Section-A blockers and Section-B fast-follow; auto-links the Operational Runbook. Missing inputs degrade to `⚠ TODO` rows — never a silent pass. Documentation generator — no ICEA/Write Gate. |
 
 ### Skills (auto-invoked by keyword)
 
@@ -56,7 +59,7 @@ ICEA-driven development workflow for distributed teams using **Azure DevOps**. L
 | `architect` | "populate architecture docs", "document the architecture", "run architect" | Runs deployment questionnaire first (Step 0.5), then detects repo type, deploys templates, populates `.claude/architecture/`, generates the knowledge graph `.claude/graph/` (index + per-module detail files, each with a SHA-1 entry-point fingerprint). |
 | `ado-tasks` | "break down this story", "create tasks", "generate ADO tasks", "estimate work" | Generates ADO task breakdown from an approved ICEA. One task per AC per layer — Angular, .NET, Node.js, DB, QA, Infra. Never generates without an ICEA. |
 | `pr-describe` | "write PR", "create pull request", "PR description", "ready to merge" | Generates an ICEA-compliant PR description for ADO. Flags scope creep. Always includes a self-review checklist. |
-| `pr-create` | "create PR", "open PR", "raise PR", "submit PR to ADO" | Auto-runs `icea-review` before confirming. Blocked PRs cannot be created unless `--skip-icea-check` is passed (noted in the PR description). |
+| `pr-create` | "create PR", "open PR", "raise PR", "submit PR to ADO or GitHub" | Creates a PR on **Azure DevOps or GitHub** — the git remote provider is auto-detected. Auto-runs `icea-review` before confirming; blocked PRs cannot be created unless `--skip-icea-check` is passed (noted in the PR description). Falls back to saving a PR draft artifact if the connection is skipped. |
 | `pr-spec-review` | "review PR against spec", "spec compliance", "traceability matrix" | Reviews a PR against a spec/ICEA — four outputs: compliance check, code review, traceability matrix, gaps/risks report. Business context overrides mandatory. |
 | `security` | "security", "vulnerability", "CVE", "OWASP", "threat model", "compliance", "is this secure?" | Full-spectrum security: static asset audit, SAST, cloud IaC, threat modeling, compliance, incident response, weekly HTML reports. B1–B7 business severity applied to all findings. |
 | `dynamic-scan` | "dynamic scan", "DAST", "OWASP ZAP", "active/passive scan", "baseline scan", "scan my running app", "fuzz endpoints" | Runtime DAST counterpart to `security`. Runs OWASP ZAP via Docker (Automation Framework) against a live Angular / ASP.NET MVC / Web API / Blazor / Razor Pages target, plus npm/pip/NuGet dependency audit. Safe passive default; gated active scans. Auth-verification gate, route seeding, baseline tuning, run-to-run diff, source-mapped fixes, B1–B7 severity. Writes HTML report and `dynamic-scan/dynamic-scan-ledger.md` with FP-fingerprinted findings — use `/fix FP-xxxxxxxx` to apply remediations. |
@@ -76,6 +79,8 @@ ICEA-driven development workflow for distributed teams using **Azure DevOps**. L
 | `icea-revise` | "REVISE ADO-<id>", "revise the ICEA", "update the tech spec" | Revises an existing ICEA/Tech Spec (feedback, resolved open questions, changed requirements) and re-blocks the code-generation gate until re-approved. Never starts from scratch — redirects to `icea-feature` for new features. |
 | `icea-status` | "STATUS ADO-<id>", "ICEA status", "where is this feature" | Read-only re-entry point: shows ICEA/Tech Spec state, open questions, tracker progress, open bugs, and the exact next action for an ADO ID. |
 | `goal-loop` | "goal loop", "iterate to done", "drive this ADO to done", "/goal-loop ADO-<id>" | Thin cradle-to-grave orchestrator: sequences `icea-feature` → `icea-approve` → `icea-implement`, stopping at every gate and approving nothing on your behalf. The only loop-till-done runs inside `icea-implement` Step 4b, scoring generated code against the approved ACs until met or a hard iteration ceiling. ICEA/Tech Spec are never self-scored — they keep the critic's bounded revise. |
+| `operations` | "generate a runbook", "operational runbook", "on-call guide", "support runbook" | Generates the master Operational Runbook (Markdown + offline HTML) from architecture/config/IaC — SRE persona, generation tier, Category B consent (playbook derivation only). Evidence-derived; unknowables become greppable `⚠ TODO` — never fabricated. |
+| `go-live` | "go-live checklist", "go/no-go", "support handover gate", "acceptance checklist" | Generates the Support-Transition Acceptance Checklist by ingesting the prod-readiness report + security + code-review ledgers + deployment architecture. EA persona, infrastructure tier, Category C (reads reports/ledgers/architecture only — never application source). Auto-links the Operational Runbook. |
 | `setup-sync` | "dream sync", "re-provision after upgrade", "plugin upgrade" | Re-provisions a project after a plugin upgrade — calls the bootstrap script (sync mode) to re-copy hooks and deploy missing stubs, restores missing rules from `deployed_rules[]`, applies migration notes, re-stamps the version. Also runs a **post-sync external stack detection check**: seeds `external_detected_stacks` and `external_stacks_prompted` if absent, detects stacks from existing `additionalDirectories`, or asks the developer for external repo paths if none are configured (once, then suppressed). |
 | `migration` | "migrate", "port to", "rewrite in", "convert this app to", "MIGRATE ADO-<id>" | Orchestrates a staged, gated stack migration (thin orchestrator → per-stage step files; SA persona stages 0–3, SE persona stage 4+). JSON checkpoint is the single source of truth for resume. Never writes generated code without `APPROVE MIGRATION ADO-{ID}`. |
 | `migration-status` | "migration status", "where is the migration", "MIGRATE STATUS ADO-<id>" | Read-only projection of the migration checkpoint — phase, stage-gates, per-cluster table, next-action hint. |
@@ -95,7 +100,7 @@ ICEA-driven development workflow for distributed teams using **Azure DevOps**. L
 
 ## How this plugin evolved
 
-The v1.10.0 feature set reflects continuous iteration driven by three architectural lessons:
+The current feature set reflects continuous iteration driven by three architectural lessons:
 
 **Stateless skills are expensive.** The original plugin treated each skill as an independent unit. Code review re-scanned all 50 files daily even when only 2 changed. The ICEA skill read source files to orient itself. The security skill loaded Python, JS, and Java reference material for a pure C# codebase. The shared primitives layer — the knowledge graph, file-cache, scope flags — reduced daily review token cost by 80–95% after the first baseline run.
 
@@ -126,16 +131,21 @@ The code review and ICEA skills will flag violations — over-engineered abstrac
 
 ## Rules (scoped — auto-loads per file type)
 
-Deployed to `.claude/rules/` by `/setup-init`. Activate automatically when Claude edits a matching file.
+The plugin ships **~44 layered rule files** organised into base languages, ecosystem overlays,
+framework overlays, and cross-cutting concerns ([ADR 0043](docs/adr/0043-ecosystem-and-layered-rule-organisation.md)).
+`/setup-init` does **not** deploy them all — it runs **scored stack-key detection** ([ADR 0059](docs/adr/0059-scored-stack-key-detection-and-rule-deployment.md))
+and deploys only the rule files whose stack crosses the confidence threshold, so a .NET 10 API
+never draws legacy `csharp-framework48`/`ado-net-legacy` rules. Deployed rules activate
+automatically when Claude edits a file matching the rule's `paths` glob.
 
-| Rule file | Activates for | What it enforces |
+| Layer | Example rule files | What they enforce |
 |---|---|---|
-| `project-rules.md` | `**/*` (all files) | Scope control, no hardcoded secrets, no `any` in TypeScript, no `TODO` without ADO item, decision transparency |
-| `dotnet-rules.md` | `**/*.cs` | Clean Architecture, ProblemDetails errors, Azure AD auth, xUnit naming |
-| `angular-rules.md` | `**/*.ts`, `**/*.html` | Standalone components, OnPush, async pipe, WCAG 2.1 AA |
-| `nodejs-rules.md` | `**/services/**`, `**/routes/**` | Zod validation, AppError pattern, Winston logging, no PII in logs |
-| `java-rules.md` | `**/*.java` | Spring Boot layered architecture, Bean Validation, ProblemDetail errors, constructor injection, JUnit 5 naming |
-| `python-rules.md` | `**/*.py` | Type hints + mypy, FastAPI/Django/Flask boundary validation, no eval/exec, pytest naming, no PII in logs |
+| **Always-on** | `project-rules.md` | Scope control, no hardcoded secrets, no `any` in TypeScript, no `TODO` without ADO item, decision transparency |
+| **Base languages** | `csharp-dotnet-rules.md`, `nodejs-typescript-rules.md`, `angular-rules.md`, `java-rules.md`, `python-rules.md`, `javascript-rules.md`, `css-rules.md` | Clean Architecture / ProblemDetails / Azure AD (.NET); standalone components, OnPush, async pipe, WCAG 2.1 AA (Angular); Zod + AppError + no PII in logs (Node); Spring Boot layering + Bean Validation (Java); type hints + mypy + boundary validation (Python) |
+| **Ecosystem overlays** | `react-ecosystem-rules.md`, `nextjs-ecosystem-rules.md`, `nuxt-ecosystem-rules.md`, `remix-ecosystem-rules.md`, `solid-ecosystem-rules.md`, `astro-ecosystem-rules.md`, `sass-rules.md`, `css-modules-rules.md` | Framework-specific conventions layered on top of the base language rule |
+| **Framework overlays (legacy .NET)** | `csharp-framework48-rules.md`, `ef6-rules.md`, `wcf-rules.md`, `ado-net-legacy-rules.md`, `csharp-vsto-rules.md` | Patterns for brownfield .NET Framework 4.x / EF6 / WCF / classic ADO.NET / VSTO code |
+| **Data access** | `data-access-rules.md`, `postgresql-rules.md`, `nosql-document-rules.md`, `prisma-drizzle-rules.md` | Dapper + parameterised SQL (never EF Core/ORM); DB-specific patterns |
+| **Cross-cutting** | `api-security-rules.md`, `auth-rules.md`, `rest-api-rules.md`, `graphql-server-rules.md`, `observability-rules.md`, `caching-rules.md`, `cypress-rules.md`, `playwright-rules.md` | API security, auth, REST/GraphQL contracts, observability, caching, e2e testing |
 
 ---
 
@@ -263,7 +273,7 @@ To bypass in an emergency: add `--skip-icea-check`. The bypass is always noted i
 
 ## Prerequisites — Azure DevOps PAT
 
-The `pr-create` and `sprint-metrics` skills use the ADO REST API and require a PAT:
+The `sprint-metrics` and `app-readiness` skills use the ADO REST API and require a PAT. `pr-create` requires a PAT **only when the remote is Azure DevOps** — for a GitHub remote it uses the `gh` CLI / a GitHub token instead (provider auto-detected):
 
 | Skill | Required scope |
 |---|---|
@@ -354,7 +364,7 @@ Open the project in Claude Code and run:
 This seeds all infrastructure in order:
 
 1. Creates `memory/MEMORY.md` and `dream-log.md`
-2. Deploys **38** command stubs to `.claude/commands/` (all commands include `--help`/`?help` flag for usage discovery)
+2. Deploys **43** command stubs to `.claude/commands/` (one per command; all include a `--help`/`?help` flag for usage discovery)
 3. Deploys scoped rule files to `.claude/rules/`
 4. Appends Dream sections to `CLAUDE.md` (or creates it via `/init`)
 5. Seeds `.claude/file-cache.json`
@@ -370,7 +380,7 @@ After setup, confirm everything is green:
 /ai-assisted-development:setup-status
 ```
 
-This checks all **20** infrastructure items including `architecture-deployment.md` and the knowledge graph.
+This checks all **23** infrastructure checks including `architecture-deployment.md` and the knowledge graph.
 
 ---
 
@@ -390,28 +400,31 @@ Loads stack, last decision, last fix, and sessions-since-dream in one pass. Surf
 /ai-assisted-development:setup-status
 ```
 
-Reports green/amber/red on all 20 infrastructure items:
+Reports green/amber/red on all **23** infrastructure checks (`1a`–`1u`, plus sub-checks `1a-ii` and `1c-bis`):
 
-1. `CLAUDE.md` — exists and has Dream section
-2. `memory/` — both files present
-3. `.claude/rules/` — all rule files deployed
-4. `.claude/commands/` — all 38 command stubs deployed (all have `--help`/`?help` flag)
-5. `.claude/architecture/` — templates populated by architect skill
-6. `.claude/graph/graph-index.md` — exists and not stale (`.claude/graph/.stale` flag)
-7. `architecture-deployment.md` — exists and fully answered
-8. `.claude/file-cache.json` — seeded and valid
-9. `token-analysis/token-graph.json` — seeded and valid
-10. Ignore-file coverage — all generated files protected
-11. Ignore-file sensitive pattern skips — no sensitive paths excluded
-12. Open findings — Critical/High count across all three ledgers
-13. Dream rollback log — no rollback left un-consolidated
-14. Skill usage — top invoked skills from token-graph
-15. Model versions — defaults reviewed within the last 90 days
-16. Plugin version — provisioned version matches installed version
-17. Production readiness reports — app and plugin reports present and fresh
-18. `.claude/graph/graph-index.md` — knowledge graph index exists
-19. Knowledge graph freshness — all module fingerprints current
-20. Graph stale flag — no pending refresh from git hook
+1. `1a` `CLAUDE.md` — exists and has the Dream section
+2. `1a-ii` CLAUDE.md identity placeholders — §2 Azure DevOps org/project resolved
+3. `1b` `memory/` — both files present
+4. `1c` `.claude/rules/` — detected-stack rules deployed (per `_deploy-manifest.json`)
+5. `1c-bis` .NET version-detection freshness — `versions[]`/fingerprint current (v3.19.0)
+6. `1d` `.claude/commands/` — all 43 command stubs deployed (all have `--help`/`?help`)
+7. `1e` `.claude/architecture/` — templates populated by the architect skill (incl. `architecture-deployment.md`)
+8. `1f` `.claude/graph/graph-index.md` — orientation graph present
+9. `1g` `.claude/file-cache.json` — seeded and valid
+10. `1h` `token-analysis/token-graph.json` — seeded and valid
+11. `1i` ignore-file coverage — all generated files protected
+12. `1j` Dream rollback log — no rollback left un-consolidated
+13. `1k` skill usage — top invoked skills from token-graph
+14. `1l` model-version freshness — defaults reviewed within the last 90 days
+15. `1m` production-readiness reports — app and plugin reports present and fresh
+16. `1n` skipped gitignore entries — sensitive-pattern check
+17. `1o` open findings — Critical/High count across all three ledgers
+18. `1p` enforcement-floor integrity — hooks present and wired
+19. `1q` Phase D coverage health
+20. `1r` plugin version drift — provisioned version matches installed
+21. `1s` knowledge graph — `graph-index.md` exists
+22. `1t` knowledge-graph freshness — all module fingerprints current
+23. `1u` knowledge-graph stale flag — no pending refresh from a git hook
 
 ### Production readiness
 
@@ -503,15 +516,16 @@ Never commit `.claude/file-cache.json` or `token-analysis/token-graph.json` from
 ### Structural validator (no API key required)
 
 ```bash
-python3 tests/validate.py
+node tests/validate.js        # primary, Node — 270+ structural checks
+python3 tests/validate.py     # legacy secondary (subset)
 ```
 
-Runs 16 structural consistency checks in under 1 second. Catches stub count mismatches, stale check counts, missing consent table entries, inline spec duplication, and more. Run before every release.
+Runs 270+ structural consistency checks in under a second. Catches stub count mismatches, stale check counts, missing consent table entries, inline spec duplication, deploy-stub delegation drift, stack-key detection gaps, and more. Run before every release.
 
 ### Skill scenario tests
 
 ```bash
-node tests/runner.js                          # all 22 skill scenarios
+node tests/runner.js                          # all skill scenarios (one YAML per skill)
 node tests/runner.js --skill icea-feature     # one skill
 ```
 
@@ -564,6 +578,7 @@ ai-assisted-development/
 │   └── skill-scenarios/                     ← YAML scenario files (all skills covered)
 ├── .gitignore / CLAUDE.md / CHANGELOG.md
 ├── install.ps1 / install.sh
-├── plugin-guide.html                        ← full developer guide
+├── guides/                                  ← HTML guides — plugin-guide.html · user-guide.html · developer-guide.html
+├── DEVELOPER-GUIDE.md                        ← contributor guide (Markdown)
 └── README.md
 ```

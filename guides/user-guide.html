@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- documents-plugin-version: 3.14.0 -->
+<!-- documents-plugin-version: 3.20.0 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>User Guide — ai-assisted-development v3.14.0</title>
+<title>User Guide — ai-assisted-development v3.20.0</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
 
@@ -425,7 +425,7 @@
   <div class="logo">ai-assisted-<em>development</em></div>
   <div class="vsep"></div>
   <div class="hdr-sub">User Guide</div>
-  <div class="hdr-badge">v3.14.0</div>
+  <div class="hdr-badge">v3.20.0</div>
 </header>
 
 <nav id="sidebar">
@@ -468,20 +468,27 @@
     <h1>ai-assisted-development</h1>
     <p>ICEA-driven development workflow for distributed teams using Azure DevOps — language-agnostic across <strong>.NET · Java/Spring Boot · Python · Node.js</strong> backends and Angular / React frontends. Every feature starts with a spec. Every PR is compliance-checked before it opens.</p>
     <div class="hero-chips">
-      <span class="chip">v3.14.0</span>
+      <span class="chip">v3.20.0</span>
       <span class="chip">.NET 8</span>
       <span class="chip">Angular 17+</span>
       <span class="chip">Node.js</span>
       <span class="chip">Java / Spring</span>
       <span class="chip">Python</span>
       <span class="chip">Azure DevOps</span>
-      <span class="chip">12 health checks</span>
+      <span class="chip">23 health checks</span>
     </div>
   </div>
 
   <section style="margin:20px 0 0;padding:16px 20px;background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #f59e0b;border-radius:8px;font-size:14px;line-height:1.6;">
     <strong>What's new since 3.0.0</strong>
     <ul style="margin:8px 0 0;padding-left:20px;">
+      <li><strong>3.20.0</strong> — <strong>Operational docs for support handover.</strong> New <code>/operations</code> generates a master <strong>Operational Runbook</strong> (Markdown + offline HTML, with architecture/triage/escalation diagrams) — the doc a support engineer opens during an incident. New <code>/go-live</code> generates a <strong>Support-Transition Acceptance Checklist</strong> (go/no-go gate) by pulling together your prod-readiness report, security findings, and code-review findings. Both are documentation generators (like product docs) and never invent values — anything unknown shows as a <code>⚠ TODO</code> to fill in.</li>
+      <li><strong>3.19.0</strong> — <strong>Version-aware .NET detection.</strong> A mixed solution (.NET Framework 4.x alongside .NET 8/9/10) is now detected per project, so each project gets the right rules and generation. The migration skill gains a target-version selector (net8/9/10), and an opt-in per-project rule-scoping mode is available for brownfield repos.</li>
+      <li><strong>3.18.0</strong> — <strong>Migration hardening + a new goal-loop.</strong> Migrations now verify external integrations against ground-truth config, reconcile the generated app against the design (as-built), and can capture a golden-master from a running source URL. New <code>/goal-loop</code> drives a feature from ICEA → approve → implement, self-scoring the code against its acceptance criteria until met (stopping at every human gate).</li>
+      <li><strong>3.17.0</strong> — Rule deployment is now driven by scored stack-key detection, so a .NET 10 API never draws legacy framework rules.</li>
+      <li><strong>3.16.0</strong> — Business-context severity (B1–B7) is domain-aware: run <code>SET DOMAIN</code> and the triggers are generated for your domain instead of a hardcoded legal default.</li>
+      <li><strong>3.15.0</strong> — A tamper-evident governance audit trail records gate blocks, bypasses, approvals, and dismissals under <code>.claude/audit/</code>.</li>
+      <li><strong>3.14.0</strong> — The migration skill became a staged rewrite advisor — a Target Options Analysis recommends scored target stacks, and a golden-master replays source behaviour against the target to catch drift.</li>
       <li><strong>3.6.0</strong> — Rules now match your stack automatically from a much larger, layered rule set (frontend frameworks, backend concerns, databases, testing), and each skill reasons through a fitting expert lens. Project setup is faster and more consistent. No change to day-to-day usage.</li>
       <li><strong>3.5.0</strong> — The codebase knowledge graph's dependency links are now computed deterministically from your source's imports (more accurate "what depends on what"); parsing happens locally and never leaves your machine. No change to day-to-day usage.</li>
       <li><strong>3.4.0</strong> — Internal release-tooling: the plugin version is now single-sourced across its files (no more mismatched version numbers between docs). No change to day-to-day usage.</li>
@@ -542,8 +549,8 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
     <p>This command is safe to re-run — all steps are idempotent. It seeds infrastructure in this order:</p>
     <div class="steps">
       <div class="step"><div class="step-n">1</div><div class="step-body"><strong>Creates memory files</strong><p><code>memory/MEMORY.md</code> and <code>memory/dream-log.md</code></p></div></div>
-      <div class="step"><div class="step-n">2</div><div class="step-body"><strong>Deploys command stubs</strong><p>19 stubs to <code>.claude/commands/</code> — makes all plugin commands visible in VS Code's picker</p></div></div>
-      <div class="step"><div class="step-n">3</div><div class="step-body"><strong>Deploys scoped rules</strong><p>6 rule files to <code>.claude/rules/</code> — activate automatically when Claude edits matching file types</p></div></div>
+      <div class="step"><div class="step-n">2</div><div class="step-body"><strong>Deploys command stubs</strong><p>41 stubs to <code>.claude/commands/</code> — makes all plugin commands visible in VS Code's picker</p></div></div>
+      <div class="step"><div class="step-n">3</div><div class="step-body"><strong>Deploys scoped rules</strong><p>Only the rule files matching your detected stack (from a ~44-file layered set) — they activate automatically when Claude edits a matching file type</p></div></div>
       <div class="step"><div class="step-n">4</div><div class="step-body"><strong>Seeds CLAUDE.md</strong><p>Appends Dream sections to an existing <code>CLAUDE.md</code>, or creates one via <code>/init</code></p></div></div>
       <div class="step"><div class="step-n">5</div><div class="step-body"><strong>Seeds caches</strong><p>Empty <code>.claude/file-cache.json</code> and <code>token-analysis/token-graph.json</code> — ready for first scan</p></div></div>
       <div class="step"><div class="step-n">6</div><div class="step-body"><strong>Runs architect skill</strong><p>First runs the <strong>deployment questionnaire</strong> — answers are saved to <code>.claude/architecture/architecture-deployment.md</code> and required by <code>/app-readiness</code>. Then detects repo type, populates <code>.claude/architecture/</code>, and generates the codebase knowledge graph <code>.claude/graph/</code> (index + per-module detail files with fingerprints).</p></div></div>
@@ -606,12 +613,12 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
   <section id="health">
     <h2>Checking plugin health</h2>
     <pre><code>/ai-assisted-development:setup-status</code></pre>
-    <p>Reports ✅ green / ⚠️ amber / ❌ red on 12 infrastructure items. Run any time to check state or diagnose a setup issue.</p>
+    <p>Reports ✅ green / ⚠️ amber / ❌ red on all <strong>23</strong> infrastructure checks. Run any time to check state or diagnose a setup issue — the most important are shown below.</p>
     <div class="health-grid">
       <div class="health-item"><div class="hi-num">01</div><div class="hi-label">CLAUDE.md — exists with Dream section</div></div>
       <div class="health-item"><div class="hi-num">02</div><div class="hi-label">memory/ — both files present</div></div>
-      <div class="health-item"><div class="hi-num">03</div><div class="hi-label">.claude/rules/ — all 6 rules deployed</div></div>
-      <div class="health-item"><div class="hi-num">04</div><div class="hi-label">.claude/commands/ — all 19 stubs deployed</div></div>
+      <div class="health-item"><div class="hi-num">03</div><div class="hi-label">.claude/rules/ — detected-stack rules deployed</div></div>
+      <div class="health-item"><div class="hi-num">04</div><div class="hi-label">.claude/commands/ — all 41 stubs deployed</div></div>
       <div class="health-item"><div class="hi-num">05</div><div class="hi-label">.claude/architecture/ — templates populated</div></div>
       <div class="health-item"><div class="hi-num">06</div><div class="hi-label">knowledge graph — present + fresh (no .stale flag)</div></div>
       <div class="health-item"><div class="hi-num">07</div><div class="hi-label">file-cache.json — seeded and valid</div></div>
@@ -720,7 +727,7 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
   <!-- CODE REVIEW -->
   <section id="code-review">
     <h2>Code review</h2>
-    <p>Coverity-style static analysis with persistent cross-run tracking. Skips unchanged files by default — token cost drops 80–95% on subsequent runs.</p>
+    <p>Static code analysis with persistent cross-run tracking. Skips unchanged files by default — token cost drops 80–95% on subsequent runs.</p>
 
     <div class="flags">
       <div class="flag-row"><span class="flag-name">(no flag)</span><span class="flag-desc">Cache-aware full-project scan — skips files unchanged since last review</span></div>
@@ -819,12 +826,12 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
     <p>Three skills work together to take a branch from ready-to-review to open PR in ADO — or to a saved draft if ADO connectivity is unavailable:</p>
 
     <div class="workflow">
-      <div class="workflow-head">pr-describe → pr-create (compliance always) → submit to ADO or save draft</div>
+      <div class="workflow-head">pr-describe → pr-create (compliance always) → submit to ADO or GitHub, or save draft</div>
       <div class="workflow-body">
         <div class="steps">
           <div class="step"><div class="step-n">1</div><div class="step-body"><strong>Generate a PR description</strong><p>Say "write PR description" or "ready to merge". <code>pr-describe</code> generates an ICEA-compliant description with the compliance checklist pre-filled.</p></div></div>
-          <div class="step"><div class="step-n">2</div><div class="step-body"><strong>Compliance checks — always run</strong><p><code>pr-create</code> runs <code>icea-review</code> and the findings gate against all three ledgers. These checks cannot be skipped regardless of whether you submit to ADO or save a draft. Result: ✅ Ready · ⚠ Needs work · ❌ Blocked.</p></div></div>
-          <div class="step"><div class="step-n">3</div><div class="step-body"><strong>Choose: connect to ADO or save draft?</strong><p>After compliance, <code>pr-create</code> asks which path you want. A ❌ Blocked result skips this question entirely — fix the compliance issue first.</p></div></div>
+          <div class="step"><div class="step-n">2</div><div class="step-body"><strong>Compliance checks — always run</strong><p><code>pr-create</code> runs <code>icea-review</code> and the findings gate against all three ledgers. These checks cannot be skipped regardless of whether you submit to ADO/GitHub or save a draft. Result: ✅ Ready · ⚠ Needs work · ❌ Blocked.</p></div></div>
+          <div class="step"><div class="step-n">3</div><div class="step-body"><strong>Choose: connect to ADO/GitHub or save draft?</strong><p>After compliance, <code>pr-create</code> auto-detects your git remote (Azure DevOps or GitHub) and asks which path you want. A ❌ Blocked result skips this question entirely — fix the compliance issue first.</p></div></div>
           <div class="step"><div class="step-n">4</div><div class="step-body"><strong>Submit or save</strong><p><strong>Connect:</strong> resolves your PAT, enriches the PR title from ADO, shows a confirmation prompt, and submits via REST API. <strong>Draft:</strong> asks for Release ID and Sprint ID, writes a complete artifact to <code>docs/Release&lt;ID&gt;/Sprint&lt;ID&gt;/pr-draft-ADO-&lt;ID&gt;.md</code> with a pre-filled browser submit URL.</p></div></div>
         </div>
       </div>
@@ -897,7 +904,7 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
 
   <!-- KNOWLEDGE GRAPH -->
   <section id="knowledge-graph">
-    <h2>Codebase knowledge graph <span class="tag tag-optional">New v2.6.0</span></h2>
+    <h2>Codebase knowledge graph</h2>
     <p>The plugin maintains a lightweight map of your codebase under <code>.claude/graph/</code>: a <code>graph-index.md</code> listing every module, plus one small detail file per module (each capped at ~400 tokens). Skills read this map for fast orientation instead of scanning source, which keeps token cost down on large repositories.</p>
     <h3>Keeping it fresh</h3>
     <p>Each module records a fingerprint of its entry-point files. A git post-merge hook sets a stale flag when those files change, and <code>setup-status</code> surfaces it. Run the refresh to bring only the changed modules current — untouched modules are skipped:</p>
@@ -918,7 +925,7 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
       <div class="cmd-card"><div class="cmd-name">session-start</div><div class="cmd-title">Session warm-up</div><div class="cmd-desc">Zero-cost context load — stack, last decision, last fix, sessions since /dream.</div></div>
       <div class="cmd-card"><div class="cmd-name">update-arch</div><div class="cmd-title">Architecture refresh</div><div class="cmd-desc">Targeted architecture.md prose refresh for changed areas. Flag: --deployment re-runs the questionnaire. For the module graph, use /graph-sync.</div></div>
       <div class="cmd-card"><div class="cmd-name">graph-sync</div><div class="cmd-title">Knowledge graph refresh</div><div class="cmd-desc">Incrementally refreshes <code>.claude/graph/</code> — regenerates only stale module detail files, detects new modules, restructures flat→domain past 30 modules, clears the stale flag. Flag: --effort low|medium</div></div>
-      <div class="cmd-card"><div class="cmd-name">code-review</div><div class="cmd-title">Static analysis</div><div class="cmd-desc">Cache-aware Coverity-style review. Flags: --changed --pr --full --ci --area</div></div>
+      <div class="cmd-card"><div class="cmd-name">code-review</div><div class="cmd-title">Static analysis</div><div class="cmd-desc">Cache-aware static-analysis-style review. Flags: --changed --pr --full --ci --area</div></div>
       <div class="cmd-card"><div class="cmd-name">security-review</div><div class="cmd-title">Security scan</div><div class="cmd-desc">OWASP/CVSS/CWE with static asset audit first. Same scope flags as code-review.</div></div>
       <div class="cmd-card"><div class="cmd-name">dynamic-scan</div><div class="cmd-title">Dynamic scan (DAST)</div><div class="cmd-desc">OWASP ZAP via Docker against a running app/API. Safe passive default; --full/--scope for gated active scans. Angular/MVC/API/Blazor + dependency audit.</div></div>
       <div class="cmd-card"><div class="cmd-name">bug</div><div class="cmd-title">Bug fix flow</div><div class="cmd-desc">Lightweight ICEA-lite for confirmed bugs. One approval cycle, then the fix.</div></div>
@@ -941,7 +948,11 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
       <div class="cmd-card"><div class="cmd-name">dream-audit</div><div class="cmd-title">Memory quality audit</div><div class="cmd-desc">Quarterly memory health check: flags topic files never cited in sessions, surfaces facts developers contradicted, and feeds rollback history into Dream's confidence scoring. Archives stale memory reversibly. Args: [--days &lt;N&gt;]</div></div>
       <div class="cmd-card"><div class="cmd-name">gitignore-sync</div><div class="cmd-title">Gitignore sync</div><div class="cmd-desc">Ensures .gitignore exists with all plugin-required entries in a managed block — never touches your own lines. Use directly if .gitignore is missing or out of date. Arg: --with-artifacts</div></div>
       <div class="cmd-card"><div class="cmd-name">sync-dirs</div><div class="cmd-title">External directory sync</div><div class="cmd-desc">Re-syncs .claude/settings.local.json additionalDirectories by scanning project manifests for module references outside the solution root. Run after adding a new project reference. Idempotent.</div></div>
-      <div class="cmd-card"><div class="cmd-name">migration</div><div class="cmd-title">Stack migration <span class="tag tag-optional">New v3.14.0</span></div><div class="cmd-desc">Migrate an app to a new stack (.NET Framework→.NET 10, Java↔.NET, React+Express→Angular+.NET, Node.js→.NET). Run from inside the new target folder. Stage 0.5 recommends 2–3 scored target stacks + posture as an ADR (APPROVE OPTIONS ADO-&lt;id&gt;); Stage 5.0 golden-master replays source behaviour against the target. Keywords: MIGRATE ADO-&lt;id&gt; · MIGRATE OPTIONS · MIGRATE STATUS · MIGRATE RESUME.</div></div>
+      <div class="cmd-card"><div class="cmd-name">migration</div><div class="cmd-title">Stack migration <span class="tag tag-optional">hardened v3.18</span></div><div class="cmd-desc">Migrate an app to a new stack (.NET Framework→.NET 10, Java↔.NET, React+Express→Angular+.NET, Node.js→.NET). Run from inside the new target folder. Stage 0.5 recommends 2–3 scored target stacks + posture as an ADR (APPROVE OPTIONS ADO-&lt;id&gt;); a golden-master replays source behaviour against the target; integration ground-truth verification and as-built reconciliation (v3.18) catch misclassified integrations and design-vs-generated drift. v3.19 adds a target-version selector (net8/9/10). Keywords: MIGRATE ADO-&lt;id&gt; · MIGRATE OPTIONS · MIGRATE STATUS · MIGRATE RESUME.</div></div>
+      <div class="cmd-card"><div class="cmd-name">migration-status</div><div class="cmd-title">Migration status</div><div class="cmd-desc">Read-only. Renders the on-disk migration checkpoint for an ADO ID — phase, stage-gate progress, per-cluster status, and the exact MIGRATE command to resume. Keyword: MIGRATE STATUS ADO-&lt;id&gt;.</div></div>
+      <div class="cmd-card"><div class="cmd-name">goal-loop</div><div class="cmd-title">Goal loop <span class="tag tag-optional">New v3.18</span></div><div class="cmd-desc">Cradle-to-grave orchestrator — sequences icea-feature → icea-approve → icea-implement, stopping at every SAVE/APPROVE gate and approving nothing for you. Inside icea-implement it self-scores generated code against the approved acceptance criteria and revises until they are met or a hard iteration ceiling is hit. Never writes to disk or issues APPROVE. Arg: ADO-&lt;id&gt;.</div></div>
+      <div class="cmd-card"><div class="cmd-name">operations</div><div class="cmd-title">Operational runbook <span class="tag tag-optional">New v3.20</span></div><div class="cmd-desc">Generates a master Operational Runbook for the app from the codebase — Markdown (written to docs/operations/) plus a self-contained offline HTML companion. 16 sections with architecture, triage, and escalation diagrams: environments, routine ops (deploy/rollback/restart), health/logs/alerts, secrets + rotation, failure-mode playbooks, backup/DR, incident comms. A documentation generator — no approval gate. Anything unknown renders as a ⚠ TODO, never fabricated.</div></div>
+      <div class="cmd-card"><div class="cmd-name">go-live</div><div class="cmd-title">Support-transition gate <span class="tag tag-optional">New v3.20</span></div><div class="cmd-desc">Generates a Support-Transition Acceptance Checklist — the one-time go/no-go gate an incoming support team uses to accept the app. Pulls together your latest prod-readiness report, security findings, and code-review findings plus the deployment architecture to derive Section A (go-live blockers) and Section B (fast-follow); auto-links the Operational Runbook. Missing inputs show as ⚠ TODO rather than a silent pass. Documentation generator — no approval gate.</div></div>
     </div>
   </section>
 
@@ -957,19 +968,22 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
         <tr><td><code>graph-sync</code></td><td>"refresh knowledge graph", "update graph", "graph is stale", "sync the graph"</td><td>Incremental knowledge-graph refresh — regenerates only stale module detail files, detects new modules, restructures flat→domain past 30 modules, clears the stale flag</td></tr>
         <tr><td><code>ado-tasks</code></td><td>"break down this story", "create tasks", "generate ADO tasks"</td><td>ADO task breakdown from approved ICEA — one task per AC per layer</td></tr>
         <tr><td><code>pr-describe</code></td><td>"write PR", "PR description", "ready to merge"</td><td>ICEA-compliant PR description for ADO with scope-creep check</td></tr>
-        <tr><td><code>pr-create</code></td><td>"create PR", "open PR", "raise PR"</td><td>Auto-compliance gate → confirm → submit to ADO REST API</td></tr>
+        <tr><td><code>pr-create</code></td><td>"create PR", "open PR", "raise PR"</td><td>Auto-compliance gate → confirm → submit to Azure DevOps or GitHub (remote auto-detected), or save a draft artifact</td></tr>
         <tr><td><code>pr-spec-review</code></td><td>"review PR against spec", "traceability matrix"</td><td>PR vs ICEA traceability report: compliance, code review, matrix, gaps</td></tr>
         <tr><td><code>security</code></td><td>"security", "vulnerability", "CVE", "OWASP"</td><td>Full-spectrum security: SAST, static asset audit, IaC, compliance, B1–B7</td></tr>
         <tr><td><code>dynamic-scan</code></td><td>"dynamic scan", "DAST", "OWASP ZAP", "active/passive scan", "scan my running app"</td><td>Runtime DAST via ZAP/Docker against a live app/API; Angular/MVC/Web API/Blazor + dependency audit; B1–B7 severity, source-mapped fixes</td></tr>
         <tr><td><code>app-readiness</code></td><td>"is the app production ready", "app readiness", "go-live readiness"</td><td>8-domain Enterprise Architect assessment — reads architecture-deployment.md for hosting-specific checks</td></tr>
         <tr><td><code>plugin-readiness</code></td><td>"is the plugin production ready", "plugin readiness", "AI governance review"</td><td>6-domain AI Architect assessment — plugin state files only, never source</td></tr>
-        <tr><td><code>setup-status</code></td><td>"setup status", "plugin status", "check setup"</td><td>Read-only 13-check health report including architecture-deployment.md status</td></tr>
+        <tr><td><code>setup-status</code></td><td>"setup status", "plugin status", "check setup"</td><td>Read-only 23-check health report including architecture-deployment.md status and .NET version-detection freshness</td></tr>
         <tr><td><code>dream-rollback</code></td><td>"rollback dream", "undo dream", "restore memory"</td><td>Reverses a specific /dream run using audit trail — auditable and itself reversible</td></tr>
         <tr><td><code>product-docs</code></td><td>"generate product detail", "write user guide", "product documentation"</td><td>Generates Product Detail Document and/or User Guide as self-contained HTML</td></tr>
         <tr><td><code>sprint-metrics</code></td><td>"sprint metrics", "ICEA compliance rate", "how did the sprint go"</td><td>Post-sprint KPIs: ICEA compliance rate, PR rejection rate, rework hours</td></tr>
         <tr><td><code>token-analysis</code></td><td>"analyse token usage", "token cost", "expensive prompts"</td><td>Session token analysis with persistent graph cache and prompt rewrite recommendations</td></tr>
         <tr><td><code>critic</code></td><td>"critique", "second opinion on this spec", "review this before saving", "is this over-engineered"</td><td>Second-pass critic. Auto-runs at three gates before each artefact is written — the ICEA draft (<code>icea-feature</code> Step 5) and Tech Spec draft (Step 8), plus generated code (<code>icea-implement</code> Step 4a); up to 2 auto-retries then surfaces. Also standalone via <code>/critic icea|code</code>. Ephemeral — no ledger.</td></tr>
-        <tr><td><code>migration</code></td><td>"MIGRATE ADO-&lt;id&gt;", "migrate this app to .NET", "rewrite on a new stack"</td><td>Staged stack migration run from the target folder. Stage 0.5 recommends 2–3 scored target stacks + migration posture (port/re-architecture/rewrite-from-spec) as an ADR before Q1; architecture → feasibility → cluster plan → parallel per-cluster migration → golden-master behavioral verification (Stage 5.0). Gated at each stage; checkpoint-resumable.</td></tr>
+        <tr><td><code>migration</code></td><td>"MIGRATE ADO-&lt;id&gt;", "migrate this app to .NET", "rewrite on a new stack"</td><td>Staged stack migration run from the target folder. Stage 0.5 recommends 2–3 scored target stacks + migration posture (port/re-architecture/rewrite-from-spec) as an ADR before Q1; architecture → feasibility → cluster plan → parallel per-cluster migration → golden-master behavioral verification. Integration ground-truth verification and as-built reconciliation (v3.18) plus a target-version selector (v3.19). Gated at each stage; checkpoint-resumable.</td></tr>
+        <tr><td><code>goal-loop</code></td><td>"goal loop", "iterate to done", "drive this ADO to done"</td><td>Thin orchestrator that sequences icea-feature → icea-approve → icea-implement, stopping at every gate and approving nothing for you. The only loop-till-done runs inside <code>icea-implement</code>, self-scoring generated code against the approved acceptance criteria until met or a hard iteration ceiling. ICEA/Tech Spec are never self-scored.</td></tr>
+        <tr><td><code>operations</code></td><td>"generate a runbook", "operational runbook", "on-call guide"</td><td>Generates the master Operational Runbook (Markdown + offline HTML) from architecture/config/IaC. SRE persona; Category B. Evidence-derived — unknowables become ⚠ TODO, never fabricated. A documentation generator (no ICEA/Write Gate).</td></tr>
+        <tr><td><code>go-live</code></td><td>"go-live checklist", "go/no-go", "support handover gate"</td><td>Generates the Support-Transition Acceptance Checklist by ingesting the prod-readiness report + security ledger + code-review ledger + deployment architecture. EA persona; Category C (reads reports/ledgers/architecture only — never source). Auto-links the Operational Runbook.</td></tr>
       </tbody>
     </table></div>
   </section>

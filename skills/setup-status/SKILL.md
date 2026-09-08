@@ -140,6 +140,7 @@ if(!Array.isArray(g.versions)){console.log("STALE — no versions[] (pre-3.19 de
 let cur="";try{cur=JSON.parse(cp.execFileSync("node",[process.env.PLUGIN_DIR+"/scripts/repo-detect.cjs","--root=.","--json"],{encoding:"utf8"})).meta.buildfile_fingerprint||"";}catch(e){}
 const stored=(s.generations_meta||{}).buildfile_fingerprint||"";
 console.log(cur&&stored&&cur!==stored?("STALE — build files changed since last detect (run /setup-sync); primary "+g.version):("FRESH — primary "+g.version+", "+g.versions.length+" project(s)"+(g.heterogeneous?" (mixed)":"")));
+if(g.heterogeneous&&s.per_project_rules!==true)console.log("HINT — mixed .NET: per-project rule scoping available but OFF (set per_project_rules:true; see DEVELOPER-GUIDE.md)");
 ' 2>/dev/null
 ```
 Status:
@@ -153,13 +154,13 @@ Status:
 ### 1d — .claude/commands/ (stubs)
 
 ```bash
-for f in dream.md dream-audit.md dream-health.md setup-init.md dream-rollback.md setup-status.md setup-sync.md security-review.md code-review.md token-analysis.md product-docs.md sprint-metrics.md session-start.md bug.md checkin.md update-arch.md explain.md fix.md app-readiness.md plugin-readiness.md dynamic-scan.md ado-tasks.md icea-feature.md icea-approve.md icea-implement.md icea-revise.md icea-status.md icea-review.md pr-create.md pr-describe.md pr-spec-review.md critic.md gitignore-sync.md dismiss.md sync-dirs.md graph-sync.md graph-viz.md setup-teardown.md; do
+for f in dream.md dream-audit.md dream-health.md setup-init.md dream-rollback.md setup-status.md setup-sync.md security-review.md code-review.md token-analysis.md product-docs.md sprint-metrics.md session-start.md bug.md checkin.md update-arch.md explain.md fix.md app-readiness.md plugin-readiness.md dynamic-scan.md ado-tasks.md icea-feature.md icea-approve.md icea-implement.md icea-revise.md icea-status.md icea-review.md pr-create.md pr-describe.md pr-spec-review.md critic.md gitignore-sync.md dismiss.md sync-dirs.md graph-sync.md graph-viz.md migration.md migration-status.md goal-loop.md setup-teardown.md; do
   ls .claude/commands/$f 2>/dev/null && echo "EXISTS $f" || echo "MISSING $f"
 done
 ```
 
 Status:
-- All 36 exist → ✅ Green
+- All 41 exist → ✅ Green
 - Any missing → ⚠️ Amber — run /setup-init to redeploy
 
 ---
@@ -794,7 +795,7 @@ Include in output report line:
   CLAUDE.md identity                 {✅ / ⚠️}       {§2 values filled | unresolved: Organization, Project, …}
   memory/                            {✅ / ❌}       {detail}
   .claude/rules/                     {✅ / ⚠️}       {N/4 files present}
-  .claude/commands/                  {✅ / ⚠️}       {N/37 stubs deployed}
+  .claude/commands/                  {✅ / ⚠️}       {N/41 stubs deployed}
   .claude/architecture/              {✅ / ⚠️}       {N files, N populated}
   .claude/graph/graph-index.md       {✅ / ⚠️ / ❌}  {N modules | STALE — run /graph-sync | MISSING — run /setup-init}
   architecture-deployment.md        {✅ / ⚠️ / ❌}  {answered: 0 unanswered | MISSING — run /update-arch --deployment}

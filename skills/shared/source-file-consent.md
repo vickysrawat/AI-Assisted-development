@@ -195,6 +195,8 @@ those live in the command reference table below.
 | `dream-rollback` | C | Reads and writes memory files only — never reads source |
 | `setup-status` | C | File system checks only — never reads source content |
 | `app-readiness` | B | Bulk gate before targeted readiness reads |
+| `operations` | B | Steps 1–3 read architecture/config/pipeline + bash signals only; gate before targeted failure-mode playbook source reads (Step 4 only, max 6 files) |
+| `go-live` | C | Reads readiness/security/code-review reports + ledgers + architecture + pipeline only — never application source |
 | `plugin-readiness` | C | Plugin state files only — never reads application source |
 | `critic` | C(internal: icea/tech/code)\|A(code-standalone) | Internal `icea`/`tech`/`code` and standalone `icea` read the in-context artefact + ICEA + architecture docs only (C); standalone code mode announces scope before reading changed files (A) |
 | `dynamic-scan` | A(scan)\|B(finding-map) | Live scan is implicit-consent (A); mapping a finding back to a source file uses the per-file gate (B) |

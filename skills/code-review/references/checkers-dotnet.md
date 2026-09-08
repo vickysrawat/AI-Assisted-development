@@ -1,4 +1,4 @@
-# Coverity Checkers — .NET / C# / ASP.NET / WCF / EF
+# Static Analysis Checkers — .NET / C# / ASP.NET / WCF / EF
 
 ## TAINTED_* — Data Flow (C#)
 

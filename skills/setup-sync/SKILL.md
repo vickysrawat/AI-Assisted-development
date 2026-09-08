@@ -466,5 +466,14 @@ node -e "
 Then run /setup-status to verify all checks are green.
 ```
 
+**Only if a MIXED .NET solution is detected** (`generations.dotnet.heterogeneous === true` in
+`.claude/dream-init-state.json`) **and** `per_project_rules !== true`, append inside the summary box:
+```
+  ℹ Mixed .NET (Framework + modern) — per-project rule scoping is available but OFF. Set
+    "per_project_rules": true in .claude/dream-init-state.json (preview: PER_PROJECT_RULES_DRYRUN=1)
+    to scope WCF/EF6/ADO.NET rules to their own projects. See DEVELOPER-GUIDE.md.
+```
+Skip it for pure-modern / pure-framework / non-.NET repos (no effect there).
+
 > Issue 6: the graph-sync reminder is intentionally a prominent `⚠` line in the summary box,
 > not a trailing note, because a stale graph silently degrades downstream skills.

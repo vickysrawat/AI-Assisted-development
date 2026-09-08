@@ -171,6 +171,22 @@ if (exists('scripts/repo-detect.cjs')) {
     : bad('slnx-detect: repo-detect.cjs missing graceful .cs fallback for unknown packaging formats');
 }
 
+// Migration-owned, stack-neutral source detection (ADR 0060): the detector must exist and wrap
+// repo-detect (engine borrowed, interface owned); Stage 0 must call it instead of the old inline
+// probes; the checkpoint must document the multi-root source_roots. Regression: tests/migration-source-detect.test.cjs.
+if (exists('scripts/migration-source-detect.cjs')) {
+  ok('migration-source-detect: scripts/migration-source-detect.cjs exists');
+  read('scripts/migration-source-detect.cjs').includes('repo-detect.cjs')
+    ? ok('migration-source-detect: wraps repo-detect.cjs (engine borrowed, interface owned)')
+    : bad('migration-source-detect: must wrap repo-detect.cjs, not re-implement detection');
+} else bad('migration-source-detect: scripts/migration-source-detect.cjs missing');
+exists('skills/migration/steps/stage-0.md') && read('skills/migration/steps/stage-0.md').includes('migration-source-detect.cjs')
+  ? ok('migration-source-detect: stage-0 calls the detector')
+  : bad('migration-source-detect: stage-0 does not call migration-source-detect.cjs (stale inline detection?)');
+exists('skills/shared/checkpoint-schema.md') && read('skills/shared/checkpoint-schema.md').includes('source_roots')
+  ? ok('migration-source-detect: checkpoint documents source_roots (multi-root)')
+  : bad('migration-source-detect: checkpoint-schema missing source_roots');
+
 // ── 5. Skills ─────────────────────────────────────────────────────────────────
 console.log('\n▶ Skills (skills/*/SKILL.md)');
 const SKILLS = [

@@ -1,5 +1,5 @@
 ---
-description: Run a Coverity-style code review with persistent tracking. Detects new defects, marks previously-found defects as fixed (with who/when/what from git), and writes HTML + Markdown reports plus a running ledger into the CodeReviews/ folder.
+description: Run a static-analysis code review with persistent tracking. Detects new defects, marks previously-found defects as fixed (with who/when/what from git), and writes HTML + Markdown reports plus a running ledger into the CodeReviews/ folder.
 argument-hint: [--changed | --pr | --full | --ci | path]
 ---
 

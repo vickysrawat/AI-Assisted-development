@@ -56,5 +56,27 @@ check('.fsproj project',         { 'App.fsproj': '<Project/>' },                
 check('.cs-only fallback',       { 'src/Program.cs': 'class P{}' },                                  'DOTNET_API', 0);
 check('empty dir stays UNKNOWN', { 'README.md': '# nothing' },                                       null,         3);
 
+// ── Track-A default-seed (per_project_rules) — mergeState writes state (NOT --dry-run) ──
+function runWrite(root, force) {
+  spawnSync('node', [DETECT, '--root=' + root].concat(force ? ['--force'] : []), { encoding: 'utf8' });
+  try { return JSON.parse(fs.readFileSync(path.join(root, '.claude', 'dream-init-state.json'), 'utf8')); }
+  catch (e) { return {}; }
+}
+// (a) fresh .NET detect → per_project_rules seeded false
+let root = mk({ 'src/Api/Api.csproj': '<Project Sdk="Microsoft.NET.Sdk.Web"><PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup></Project>' });
+let st = runWrite(root, false);
+(st.per_project_rules === false) ? (pass++, console.log('  ✓ default-seed: per_project_rules === false on fresh detect'))
+  : (fail++, console.log('  ✗ default-seed: expected per_project_rules false, got ' + JSON.stringify(st.per_project_rules)));
+fs.rmSync(root, { recursive: true, force: true });
+
+// (b) existing state with per_project_rules:true → NOT clobbered by a --force re-detect
+root = mk({ 'src/Api/Api.csproj': '<Project Sdk="Microsoft.NET.Sdk.Web"><PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup></Project>' });
+fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+fs.writeFileSync(path.join(root, '.claude', 'dream-init-state.json'), JSON.stringify({ per_project_rules: true }));
+st = runWrite(root, true);
+(st.per_project_rules === true) ? (pass++, console.log('  ✓ default-seed: existing per_project_rules:true survives re-detect'))
+  : (fail++, console.log('  ✗ default-seed: developer true was clobbered → ' + JSON.stringify(st.per_project_rules)));
+fs.rmSync(root, { recursive: true, force: true });
+
 console.log(`\n  ${pass} passed · ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

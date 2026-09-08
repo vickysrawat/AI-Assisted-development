@@ -1,5 +1,5 @@
-# Plan — Harden the Migration Skill: As-Built Fidelity & Architecture-Doc Drift
-
+# Plan — Harden the Migration Skill: As-Built Fidelity & Architecture-Doc
+# Status - Implemented
 > Run this in the **plugin repository** (ai-assisted-development, v3.15.0). Paths are relative to the plugin root.
 > Origin: retrospective on the KE.KirklandData migration (ADO-9999), *after* setup-init + the architecture
 > gap analysis surfaced 13 doc-vs-code divergences.

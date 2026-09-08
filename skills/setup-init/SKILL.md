@@ -418,6 +418,16 @@ Next steps:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
+**Only if a MIXED .NET solution was detected** — i.e. `generations.dotnet.heterogeneous === true` in
+`.claude/dream-init-state.json` (Framework + modern projects in one solution) **and**
+`per_project_rules !== true` — append this discoverability line (skip it entirely for pure-modern /
+pure-framework / non-.NET repos, so it never nags where it has no effect):
+```
+ℹ Mixed .NET solution detected (Framework + modern). Per-project rule scoping is available but OFF.
+  To scope framework rules (WCF/EF6/ADO.NET) to only their projects, set "per_project_rules": true
+  in .claude/dream-init-state.json — preview first with PER_PROJECT_RULES_DRYRUN=1. See DEVELOPER-GUIDE.md.
+```
+
 ---
 
 ## Rules

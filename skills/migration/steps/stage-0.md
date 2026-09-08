@@ -102,35 +102,29 @@ if(!dir){try{for(const m of fs.readdirSync(base)){const p=path.join(base,m,"plug
 process.stdout.write(norm(dir));')"
 ```
 
-Read source stack:
-```bash
-STACKS="$(node -e '
-try{const s=JSON.parse(require("fs").readFileSync(process.argv[1]+"/.claude/dream-init-state.json","utf8"));
-process.stdout.write((s.detected_stacks||[]).join(" "));}catch(e){}' -- "{SOURCE_PATH}" 2>/dev/null)"
-```
+**Resolve the SOURCE roots.** The source is the app being migrated FROM — usually `{SOURCE_PATH}`,
+but it may span additional roots (a split repo, or a source registered under
+`additionalDirectories`). Compose a comma-separated `SOURCE_ROOTS` (default: just `{SOURCE_PATH}`;
+add any `additionalDirectories` entries that belong to the source).
 
-**Detect the SOURCE .NET version spread (read-first, compute-as-fallback).** The migration needs
-the source's per-project .NET generation/TFM to drive posture (Stage 2) and the target-version
-constraint (Q1). Prefer the source's already-computed `generations.dotnet` (fast path); if the
-source has no plugin state or the entry lacks `versions[]`, compute it on the fly with
-`repo-detect --json` (recompute, **never writes** to the source). Skip this for non-.NET sources.
+**Detect the source — stack-neutral, multi-root — via the migration-owned detector.** One
+consolidated, stack-agnostic module replaces the old inline stack/version/data-layer/auth/integration/
+size probes (dotnet/dotnet_framework/java/nodejs/python/angular/react as equal citizens). It is
+READ-ONLY on the source, wraps `repo-detect.cjs` per root for stack/version, and never writes to the
+source (no `dream-init-state.json`). See ADR 0060.
 ```bash
-DOTNET_GEN="$(node -e '
-const fs=require("fs");const src=process.argv[1];const plugin=process.argv[2];
-try{const s=JSON.parse(fs.readFileSync(src+"/.claude/dream-init-state.json","utf8"));
-  const g=(s.generations||{}).dotnet;
-  if(g&&Array.isArray(g.versions)){process.stdout.write(JSON.stringify(g));process.exit(0);}
-}catch(e){}
-try{const {execFileSync}=require("child_process");
-  const out=execFileSync("node",[plugin+"/scripts/repo-detect.cjs","--root="+src,"--json"],{encoding:"utf8"});
-  const j=JSON.parse(out);process.stdout.write(JSON.stringify((j.generations||{}).dotnet||{}));
-}catch(e){process.stdout.write("");}' -- "{SOURCE_PATH}" "$PLUGIN_DIR" 2>/dev/null)"
+SRC="$(node "$PLUGIN_DIR/scripts/migration-source-detect.cjs" --roots="{SOURCE_ROOTS}" --json 2>/dev/null)"
 ```
-Parse `DOTNET_GEN` (may be empty for non-.NET): `version` (primary), `versions[]` (per-project
-`path`/`role`/`tfm`/`generation`), `heterogeneous`. Hold these for the panel, Q1 (target ≥ source),
-and Stage 2 (per-cluster posture). If empty or a project's `tfm` is `null`, fall back to a direct
-`grep -r "TargetFramework" {SOURCE_PATH} --include="*.csproj"` and show `unknown` — ask the developer
-to confirm rather than proceeding silently.
+Parse `SRC` (a JSON source descriptor) and hold its fields for the panel, Q1, Stage 0.6, and Stage 2:
+- `primary.token` / `primary.version` → `mode.source_token` / `mode.source_version` (any stack).
+- `stacks[]` → per-project `{token, role, version, generation, projectPath}` — the per-cluster
+  posture inputs for Stage 2 (`.NET` carries per-project TFM/generation, exactly as before).
+- `dataLayer`, `auth[]`, `integrations[]`, `sizeEstimate.files` → the panel fields below.
+- `graphPresent` / `archDocsPresent` → whether the source graph / arch docs exist (loaded next).
+
+If `primary.token` is empty (detector exit 3 = unrecognised source) or a `.NET` project's `version`
+is `null`, do NOT proceed silently — show `unknown` and ask the developer to confirm the source
+stack/version.
 
 Read source knowledge graph:
 ```bash
@@ -157,61 +151,36 @@ Read {SOURCE_PATH}/.claude/architecture/architecture.md        (skip if absent)
 Read {SOURCE_PATH}/.claude/architecture/architecture-deployment.md  (skip if absent)
 ```
 
-Detect data layer:
-```bash
-find "{SOURCE_PATH}" -name "*.edmx" 2>/dev/null | head -3
-find "{SOURCE_PATH}" -name "*DbContext.cs" 2>/dev/null | head -3
-find "{SOURCE_PATH}" -name "pom.xml" | xargs grep -l "spring-data\|jpa\|hibernate" 2>/dev/null | head -3
-find "{SOURCE_PATH}" -type f -name "package.json" | xargs grep -l "typeorm\|sequelize\|prisma" 2>/dev/null | head -3
-```
+**Data layer, authentication, external-integration ground truth, and source size** are already in
+the `SRC` descriptor from the detector above (`dataLayer`, `auth[]`, `integrations[]`,
+`sizeEstimate.files`) — do not re-probe. The `integrations[]` rows are the .NET config ground truth
+(WCF `<client>`/`<endpoint>`, `<connectionStrings>`), read from the host config rather than inferred
+from consumer code, and seed the Integration Inventory that Stage 0.6 verifies per
+`references/specs/integration-verification-spec.md`.
 
-Detect authentication patterns:
-```bash
-grep -r "WebSecurityConfigurerAdapter\|SecurityFilterChain\|AddAuthentication\|passport\|jsonwebtoken" \
-  "{SOURCE_PATH}" --include="*.java" --include="*.cs" --include="*.js" --include="*.ts" -l 2>/dev/null | head -5
-```
-
-**Extract external-integration ground truth (do NOT infer from consumer code — read the authoritative
-artifacts).** This seeds the Integration Inventory that Stage 0.6 must fill and verify per
-`references/specs/integration-verification-spec.md`. For .NET sources, read the host config directly:
-```bash
-# WCF service clients: endpoint addresses, bindings, and their security/credential/message-size (transport truth)
-grep -rniE "<client>|<endpoint |<binding|security mode=|clientCredentialType=|maxReceivedMessageSize=|protocolMapping" \
-  "{SOURCE_PATH}" --include="Web.config" --include="app.config" --include="*.config" 2>/dev/null | head -40
-# Direct-DB dependencies: a <connectionStrings> entry with NO matching <client> endpoint ⇒ in-process, not a service
-grep -rniE "<add name=|connectionString=|providerName=" \
-  "{SOURCE_PATH}" --include="Web.config" --include="app.config" --include="*.config" 2>/dev/null | head -40
-# Referenced assemblies that may hide the real contract (KE *Wrapper/*Resource, common helpers, DbContext)
-grep -rniE "<ProjectReference|<Reference Include=|<PackageReference" \
-  "{SOURCE_PATH}" --include="*.csproj" --include="*.vbproj" 2>/dev/null | head -40
-```
-Interpretation rules (per `references/stacks/dotnet-framework.md`): a `<client><endpoint>` ⇒ real WCF
-client (capture `binding` + `security mode`/`clientCredentialType`/`maxReceivedMessageSize`); a
-`<connectionStrings>` entry with a `DbContext` and NO `<client>` endpoint ⇒ **in-process direct-DB**,
-not a service call; a KE `*Wrapper`/`*Resource` type is an abstraction — resolve the backing
-`<ProjectReference>`/`<Reference>` (or `?singleWsdl`) to find the real contract before asserting it.
-Record each as **evidence** (`PROV: config/assembly/WSDL`), not inference. If the backing source/WSDL
-is unreachable, record an unavailable-ground-truth gap (carried to the inventory Gaps Report §11).
-
-Estimate source size:
-```bash
-find "{SOURCE_PATH}" -type f \( -name "*.cs" -o -name "*.java" -o -name "*.ts" -o -name "*.js" \) \
-  ! -path "*/node_modules/*" ! -path "*/bin/*" ! -path "*/obj/*" | wc -l
-```
+Interpretation rules (per `references/stacks/dotnet-framework.md`) still apply when dispositioning
+each row: a `<client><endpoint>` ⇒ real WCF client (capture `binding` + `security mode`/
+`clientCredentialType`/`maxReceivedMessageSize`); a `<connectionStrings>` entry with a `DbContext`
+and NO `<client>` endpoint ⇒ **in-process direct-DB**, not a service call; a KE `*Wrapper`/`*Resource`
+type is an abstraction — resolve the backing `<ProjectReference>`/`<Reference>` (or `?singleWsdl`) to
+find the real contract before asserting it. Record each as **evidence** (`PROV: config/assembly/
+WSDL`), not inference. If the backing source/WSDL is unreachable, record an unavailable-ground-truth
+gap (carried to the inventory Gaps Report §11).
 
 **Display source analysis:**
 ```
 SOURCE APPLICATION ANALYSIS — {SOURCE_PATH}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Stack:           {STACKS} ({app type description})
-  Runtime:         {for .NET: primary {version} · {N} projects{; if heterogeneous: mixed TFMs {list}}{; if any framework project: ⚠ mixed .NET Framework + modern} | non-.NET: n/a}
-  Modules:         {count} ({bounded context count} bounded contexts{, N hub modules})
-  Source files:    {size estimate}
-  Data layer:      {detected: JPA/Hibernate | EF6 | Dapper | Sequelize | none}
-  Authentication:  {detected patterns | not detected}
-  Integrations:    {N WCF client endpoints · N connection strings · N referenced assemblies to resolve | none detected}
-  Knowledge graph: {available: N modules | not available — heuristic mode}
-  Arch docs:       {available | not available}
+  Source roots:    {SRC.roots joined}
+  Stack:           {SRC.primary.token + other SRC.stacks tokens} ({app type description})
+  Runtime:         {SRC.primary.version; for .NET: per-project TFM/generation from SRC.stacks · {N} projects{; mixed TFMs if >1}{; ⚠ mixed .NET Framework + modern if both dotnet & dotnet_framework present} | non-.NET: primary.version or n/a}
+  Modules:         {count} ({bounded context count} bounded contexts{, N hub modules})   ← from the source graph read above
+  Source files:    {SRC.sizeEstimate.files}
+  Data layer:      {SRC.dataLayer joined | none detected}
+  Authentication:  {SRC.auth joined | not detected}
+  Integrations:    {SRC.integrations: N WCF-client · N direct-DB (with evidence) | none detected}
+  Knowledge graph: {SRC.graphPresent ? available: N modules | not available — heuristic mode}
+  Arch docs:       {SRC.archDocsPresent ? available | not available}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Is this correct? Reply YES to continue or correct what I missed.
 ```
@@ -409,7 +378,7 @@ c.clusters=c.clusters||{};
 fs.mkdirSync(".claude",{recursive:true});
 fs.writeFileSync(p,JSON.stringify(c,null,2));
 console.log("✅ Checkpoint written — phase:",c.phase,"schema:",c.schema_version);
-' -- '{"ado":"{ADO_ID}","src":"{SOURCE_PATH}","mode":{"graph":{true|false},"track":"{backend|frontend|upgrade}","source_token":"{source-token}","target_token":"{target-token}","source_version":{"detected source primary TFM as JSON string, or null"},"target_version":{"Q1b choice as JSON string, or null"}},"decision_seed":{"auth":"{proposed auth intent|}","cloud":"{Q2 cloud}","source_file_count":{N},"source_module_count":{N}}}'
+' -- '{"ado":"{ADO_ID}","src":"{SOURCE_PATH}","mode":{"graph":{true|false},"track":"{backend|frontend|upgrade}","source_token":"{source-token}","target_token":"{target-token}","source_version":{"SRC.primary.version as JSON string (any stack — TFM for .NET, else the stack's version), or null"},"target_version":{"Q1b choice as JSON string, or null"}},"decision_seed":{"auth":"{proposed auth intent|}","cloud":"{Q2 cloud}","source_file_count":{N},"source_module_count":{N}}}'
 ```
 > The final arg is a single JSON payload — the LLM fills the `{…}` placeholders. `source_version`/
 > `target_version` are JSON strings (e.g. `"net8.0"`) or `null` (non-.NET / not yet chosen); `graph`

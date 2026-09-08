@@ -49,8 +49,11 @@ if (!changelog.startsWith(`## [${NEW}]`)) {
   console.log(`  - CHANGELOG.md already has a [${NEW}] entry — left as is`);
 }
 
-// 4. Guide staleness reminder (guides have their own doc lifecycle — not auto-stamped)
-for (const g of ['plugin-guide.html', 'user-guide.html']) {
+// 4. Guide staleness reminder (guides have their own doc lifecycle — not auto-stamped).
+// Glob the guides/ folder so every guide is covered — no hardcoded list to drift.
+let guideFiles = [];
+try { guideFiles = fs.readdirSync('guides').filter(f => f.endsWith('.html')).map(f => 'guides/' + f); } catch (e) { /* no guides/ */ }
+for (const g of guideFiles) {
   if (!fs.existsSync(g)) continue;
   const m = fs.readFileSync(g, 'utf8').match(/documents-plugin-version:\s*([0-9.]+)/);
   const gv = m ? m[1] : 'NONE';

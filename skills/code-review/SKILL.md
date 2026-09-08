@@ -2,7 +2,7 @@
 description: >
   Use when the user asks for a code review, static analysis, code defect review, data flow
   analysis, control flow analysis, null pointer analysis, resource leak detection, concurrency
-  review, or any request mentioning "Coverity", "SAST", "static analysis", "defect density",
+  review, or any request mentioning "SAST", "static analysis", "defect density",
   "CID", "tainted data", or "review my code". Performs deep inter-procedural analysis across
   function boundaries. Stack-agnostic — detects the project's language stack and loads only
   matching checker files. Every finding includes a concrete fix with a corrected code snippet.
@@ -12,14 +12,14 @@ description: >
 
 _Skill version: 2.0 · Last changed: 2026-07-06 · Plugin compatibility: >=1.14.0 · Consent: A_
 
-A Coverity-equivalent static analysis assistant using the **three-pass scan
+A static code analysis assistant using the **three-pass scan
 architecture**. Performs inter-procedural data flow, control flow, null safety,
 resource leak, concurrency, and code quality analysis. Stack-agnostic — detects
 the project's languages and loads only matching checker files.
 
 Every finding is assigned a **CID** (Code Issue Defect), a **checker name**,
 an **event path**, an **impact rating**, and a **concrete fix with a corrected
-code snippet** — matching Coverity's output format.
+code snippet** — matching standard static-analysis output format.
 
 ---
 
@@ -55,7 +55,7 @@ See `$PLUGIN_DIR/skills/shared/model-routing-spec.md` for full routing documenta
 
 ## Persona
 
-Execute as **[SAST] Wen Li — Static Analysis Engineer** (Coverity-style SAST across the project's
+Execute as **[SAST] Wen Li — Static Analysis Engineer** (SAST across the project's
 languages). Optimizes for true positives with concrete fixes; always asks "trace the tainted value —
 where does it actually reach?" Analyses whatever languages the codebase uses (per architecture.md /
 detected_stacks), never assuming one.
@@ -82,7 +82,7 @@ Pass 0 — PHASE D · DETERMINISTIC ANALYZERS  (full /code-review only — skipp
         |
         v
 Pass 1 — STRUCTURED RULE-BASED SCAN
-   Known checker categories (LLM), deduped against Phase D. Coverity-style, concrete fixes.
+   Known checker categories (LLM), deduped against Phase D. Static-analysis-style, concrete fixes.
         |
         v
 Pass 2 — SPECIALIZED PERSONA PASSES
@@ -286,7 +286,7 @@ delete or suppress it — suppression is `/dismiss` with a human justification (
 
 Apply the deterministic checker patterns from `$PLUGIN_DIR/skills/code-review/references/checkers.md` and
 the language-specific checkers to every in-scope file, **deduping against Phase D findings**. This is the
-Coverity-equivalent pass.
+static-analysis-grade pass.
 
 ### What Pass 1 checks
 
@@ -455,7 +455,7 @@ Set Pass: 3.
 
 Generate a self-contained HTML report with:
 1. **Summary** — CID count by severity, scan metadata
-2. **Pass 1 Findings** — Coverity-style findings table with event paths
+2. **Pass 1 Findings** — static-analysis-style findings table with event paths
 3. **Pass 2 Findings** — "Expert Analysis" section, by persona
 4. **Pass 3 Findings** — "Code Quality Hypotheses" section (labeled advisory)
 5. **Summary Table** — CID, Checker, Impact, File, Function, Status

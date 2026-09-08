@@ -1,6 +1,76 @@
 ## [Unreleased]
 
-### Added — migration hardening: integration ground-truth + as-built fidelity (v3.18.0)
+_Nothing yet._
+
+## [3.20.0] — 2026-09-04
+
+### Added — operational documentation skills (`operations` + `go-live`)
+- **`operations` skill + `/operations` command.** Generates a master **Operational Runbook** for
+  the current application straight from the codebase — the single document a support engineer opens
+  during an incident. Output is **Markdown** (the source of truth, written to `docs/operations/`
+  where app-readiness EA-7's `RUNBOOK*` grep discovers it) plus a self-contained **offline HTML
+  companion** (sidebar TOC, print styles; Mermaid rendered via a locally-vendored `mermaid.min.js`
+  if committed to `docs/operations/vendor/`, else shown as source — never a CDN). 16 sections
+  incl. an architecture + dependency **Mermaid** map, environments/resource inventory, access,
+  routine ops (deploy/rollback/restart/migrations, with a deploy-flow diagram), health/logs/alerts,
+  secrets + rotation, a symptom→layer→playbook triage diagram, failure-mode playbooks (each ending
+  in a ✅ confirm-resolved smoke test), backup/DR, escalation + ownership (with an escalation
+  diagram), incident-comms + time-to-declare, support targets, and a maintenance cadence. Generation
+  tier (`ICEA_MODEL`), SRE persona, Category **B** consent (playbook derivation only). Reads no
+  ledgers — the operate-in-prod runbook derives from live-system truth (architecture, config,
+  IaC/pipeline, consent-gated source).
+- **`go-live` skill + `/go-live` command.** Generates a **Support-Transition Acceptance Checklist**
+  — the one-time go/no-go gate an incoming support team uses to accept the app. Capstone consumer of
+  the other skills' outputs: ingests the latest `prod-readiness/` report, the `security/` ledger, and
+  the `CodeReviews/` ledger (open findings only, verbatim FP-ids/CIDs) plus deployment architecture
+  + pipeline state to derive Section-A blockers and Section-B fast-follow. Absent inputs degrade to
+  `⚠ TODO` "unverified" rows (run the relevant skill) — never a silent pass, never a fabricated
+  finding. Auto-links the Operational Runbook. Infrastructure tier (`INFRA_MODEL`), EA persona,
+  Category **C** (reads reports/ledgers/architecture only — never application source).
+- **Never-fabricate discipline.** Both skills adopt the `⚠ TODO` greppable-placeholder convention:
+  any value not traceable to a read source (contacts, expiry dates, URLs, unknown topology) is a
+  literal `⚠ TODO`, and every shell command carries a "⚠ verify against live/CLI" caveat. Both are
+  documentation generators (like `product-docs`): **no ICEA, no Write Gate, no critic gate**.
+- Registered in `plugin.json` (commands + skills), deployed via `_project-deploy/commands/`, and
+  declared in the source-file-consent table (`operations` = B, `go-live` = C).
+
+## [3.19.0] — 2026-09-03
+
+### Added — version-aware .NET detection (per-project runtime spread)
+- **Detection engine.** `resolveDotnetGeneration` now authors a per-project `versions[]` spread
+  (`path`/`role`/`tfm`|`tfms[]`/`generation`|`generations[]`), a representative `version` (highest
+  deployable TFM — `Sdk.Web`/`Sdk.Worker`/`Exe`, excluding tests + netstandard), `heterogeneous`,
+  `generationsPresent`, and a `packages` map (PackageReference + CPM `Directory.Packages.props`).
+  `collectManifest` reads `Directory.Build.props`/`Directory.Packages.props`/`global.json`; effective
+  TFM resolves inline → nearest props → `global.json` (sdk-derived). New `repo-detect --json`
+  recompute-and-print inspection mode (never writes state). Freshness tracked via `generations_meta`
+  (`buildfile_fingerprint` + `detected_at`). See `skills/shared/runtime-generation-spec.md` v1.1.
+- **Migration version-awareness (Track B).** Stage 0 detects the SOURCE .NET spread (read-first from
+  source state → `repo-detect --json` fallback) and shows it in the panel; new **Q1b target-version**
+  selector (net8/net9/net10, default latest LTS, target ≥ source) with a supported-version hard-stop.
+  Stage 2 feasibility branches posture per cluster (modern = upgrade/removal-delta, framework =
+  re-platform/parity) with a ≥3-major-delta warning. EF Core guidance corrected (min-TFM, not a match;
+  EF Core 9 runs on net8); `dotnet-upgrade.md` scoped to modern→modern. Checkpoint bumped
+  **1.10 → 1.11** (`mode.source_version`/`target_version`; `mode` now merge-written).
+- **Per-project rule scoping (Track A — feature-flagged, default OFF).** With `PER_PROJECT_RULES=1`
+  (or `dream-init-state.json` `per_project_rules:true`) rule deploy uses scope-by-exception: framework
+  overlay rules (`csharp-framework48`/`ef6`/`wcf`/`ado-net-legacy`) get their managed `paths:` block
+  regenerated to the framework project dirs; everything else deploys verbatim. Scoped-rule edit
+  protection uses a body-only hash (`body:<hash>` in `.hashes`), so a machine `paths` rewrite is never
+  mistaken for a developer edit. Dry-run via `PER_PROJECT_RULES_DRYRUN=1`. **Flag OFF is byte-identical
+  to pre-3.19.0** (mixed repos keep prior behavior — no legacy-on-modern leak). Consumer skills
+  (`icea-implement`, `code-review`, `architect`) read `versions[]` for per-project generation/version.
+- **Discoverability.** Setup seeds an explicit `"per_project_rules": false` into
+  `.claude/dream-init-state.json`; when a **mixed** .NET solution is detected, setup-init / setup-sync
+  / setup-status surface a one-line notice that the toggle exists. `setup-status` flags "version
+  detection stale — run setup-sync/graph-sync" when `generations.dotnet` lacks `versions[]` or the
+  fingerprint diverges.
+- Backward-safe: no `versions[]` → consumers fall back to the coarse `name`. Migration note:
+  `docs/migrations/030-3.19.0.md`.
+
+## [3.18.0] — 2026-09-03
+
+### Added — migration hardening: integration ground-truth + as-built fidelity
 - **Integration ground-truth verification (input side).** Stage 0 now extracts external-integration
   evidence from the host config (`<system.serviceModel>`/`<client>`/`<connectionStrings>`) and
   referenced assemblies — never inferring transport/binding/auth from consumer code. New
@@ -82,6 +152,52 @@
   Approval` status does not satisfy the floor.
 - Documentation aligned: `skills/shared/README.md`, the pr-describe checklist template,
   `DEVELOPER-GUIDE.md`, `user-guide.html`, and `plugin-guide.html`.
+
+## [3.17.0] — 2026-09-03
+
+### Added — scored stack-key rule deployment (ADR 0059)
+- Rule deployment is now driven by **scored stack-key detection**. The detector (`repo-detect.cjs`
+  + new `scripts/stack-signals.cjs`) emits a `detection` object with confidence scores plus nested
+  runtime generation; `stepDeployRules` deploys only rule files whose `stack_key` crosses the
+  confidence threshold (default 0.6), by the `${stack_key}-rules.md` convention, with hash-tracked
+  overwrite and a `_deploy-manifest.json` audit trail. This fixes wrong-stack deployment (e.g. a
+  .NET 10 API drawing `css`/`javascript`/`ado-net-legacy`/`csharp-framework48` rules).
+- `detect:` frontmatter stripped from all rule files; setup-status now reports rule presence from
+  `_deploy-manifest.json` (fixes the stale-name bug where a correctly-deployed
+  `csharp-dotnet-rules.md` was reported MISSING). `/setup-teardown --rules` now also clears `.hashes`
+  + `_deploy-manifest.json`. Applied by `/setup-sync`. Migration note: `docs/migrations/028-3.17.0.md`.
+
+## [3.16.0] — 2026-09-03
+
+### Added — domain-aware business-context severity
+- The B1–B7 severity triggers are no longer hardcoded to the legal/immigration domain.
+  `skills/shared/business-context-severity.md` is now a domain-neutral **model + variable-length
+  B-series fallback**; project-specific triggers are generated into `.claude/business-context.md` by
+  a new SRP module (`business-context-generation.md`), seeded from `business-context-presets.md` and
+  grounded in cited regulatory frameworks via `business-context-grounding.md`. Review skills resolve
+  **project-local first, plugin fallback**. New `SET DOMAIN` handler runs generation independently of
+  architect. The legal triggers are preserved byte-for-byte as the verbatim-locked `legal` preset.
+- **Enforcement:** regulatory grounding uses two capability-separated subagents (`bc-searcher`
+  web-only / `bc-synthesizer` no-web) plus a deterministic PreToolUse hook (`web-grounding-guard.cjs`)
+  so no project data can leak into a web query. Best-effort with a seed/offline fallback and a
+  `BUSINESS_CONTEXT_GROUNDING` kill-switch. Applied by `/setup-sync` + `SET DOMAIN`. Migration note:
+  `docs/migrations/027-3.16.0.md`.
+
+## [3.15.0] — 2026-08-31
+
+### Added — governance audit trail
+- A queryable, actor-attributed, tamper-evident record of governance events that previously vanished
+  to stderr: gate blocks, gate bypasses/overrides (`APPROVE ALL`, `SAVE … ACCEPT`, `/skip-icea`,
+  `SKIP_FINDINGS_GATE`), approvals, and dismissals. Events are written one-per-line to per-day/per-pid
+  shards under `.claude/audit/*.jsonl`, each stamped with all available identity signals (OS/AD login,
+  git email, PAT-verified ADO principal) plus an explicit `actor_confidence`. `/skip-icea` and
+  `SKIP_FINDINGS_GATE` now **require a justification**.
+- New hooks `audit-append.cjs` / `audit-prompt.cjs` / `validate-audit.py`, wired via
+  `UserPromptSubmit`; `.claude/session-context.json` added to the managed ignore block (the
+  `.claude/audit/` shards are intentionally committed for the append-only check). Tamper-*evidence*
+  requires `validate-audit.py` in the ADO pipeline as a required Build Validation. Also fixes a
+  pre-existing omission (`script-review-gate.cjs` missing from the bootstrap `HOOK_FILES` list).
+  Applied by `/setup-sync`. Migration note: `docs/migrations/026-3.15.0.md`.
 
 ## [3.14.0] — 2026-08-21
 

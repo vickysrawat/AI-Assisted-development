@@ -566,7 +566,8 @@ else:
 # Every guide carries a machine-readable stamp: <!-- documents-plugin-version: X.Y.Z -->
 # A guide more than one MINOR version behind plugin.json is an error (release
 # blocker); exactly one minor behind is a warning (update this release).
-GUIDES = ["user-guide.html", "plugin-guide.html"]
+# Glob the guides/ folder so every guide is covered — no hardcoded list to drift.
+GUIDES = sorted(glob.glob("guides/*.html"))
 def minor_of(v):
     parts = v.split(".")
     return (int(parts[0]), int(parts[1]))

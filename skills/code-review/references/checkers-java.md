@@ -1,4 +1,4 @@
-# Coverity Checkers — Java / Spring Boot / JPA
+# Static Analysis Checkers — Java / Spring Boot / JPA
 
 ## TAINTED_* — Data Flow (Java)
 

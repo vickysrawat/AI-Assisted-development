@@ -69,6 +69,13 @@ a .NET Framework source. Read `mode.source_version` / `mode.target_version` and 
 `versions[].generation` spread (from Stage 0.1 / the source `generations.dotnet`). Assign posture
 **per cluster/project** by that project's generation — a mixed source is genuinely both:
 
+**Stack-neutral posture rule (any source, not just .NET).** Select posture from the tokens first:
+if `mode.source_token` ≠ `mode.target_token` (different stack) → **Re-platform** — drive
+breaking-change analysis from the `{source}-{target}.md` parity mapping (GREEN/YELLOW/RED). If the
+source and target are the **same** stack at a newer version → **Upgrade** — drive from that stack's
+cumulative removal/deprecation deltas. The .NET rows below are the worked example of this rule; a
+non-.NET source is **not** left to improvisation.
+
 | Project generation | Posture | Breaking-change source |
 |---|---|---|
 | `dotnet-modern` (net-core/5+) | **Upgrade** | `dotnet-upgrade.md` — cumulative removals over `(source_version, target_version]` |

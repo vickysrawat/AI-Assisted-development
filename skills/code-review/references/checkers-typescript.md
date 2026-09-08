@@ -1,4 +1,4 @@
-# Coverity Checkers — TypeScript / Angular / Node.js
+# Static Analysis Checkers — TypeScript / Angular / Node.js
 
 ## TAINTED_* — Data Flow (TypeScript / Node.js)
 

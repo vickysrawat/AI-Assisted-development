@@ -47,8 +47,11 @@ check_version() {
 
 check_version "CLAUDE.md"              "[0-9]*\.[0-9]*\.[0-9]*" "CLAUDE.md Plugin version"
 check_version "README.md"              "[0-9]*\.[0-9]*\.[0-9]*" "README.md version"
-check_version "user-guide.html"        "[0-9]*\.[0-9]*\.[0-9]*" "user-guide.html version"
-check_version "plugin-guide.html"      "[0-9]*\.[0-9]*\.[0-9]*" "plugin-guide.html version"
+# All guides live in guides/ — glob so any guide added later is auto-covered (no hardcoded list to drift)
+for _g in "$PLUGIN_DIR"/guides/*.html; do
+  [ -e "$_g" ] || continue
+  check_version "guides/$(basename "$_g")" "[0-9]*\.[0-9]*\.[0-9]*" "guides/$(basename "$_g") version"
+done
 check_version "CHANGELOG.md"           "[0-9]*\.[0-9]*\.[0-9]*" "CHANGELOG.md latest entry"
 
 # Check marketplace.json version
@@ -217,7 +220,7 @@ done
 # ── 11. Developer guide HTML ───────────────────────────────────────────────────
 header "Developer guide HTML"
 
-[ -f "$PLUGIN_DIR/docs/workflow/developer-guide.html" ] && \
+[ -f "$PLUGIN_DIR/guides/developer-guide.html" ] && \
   pass "developer-guide.html exists" || \
   fail "developer-guide.html MISSING"
 
@@ -567,13 +570,12 @@ grep -q "java-rules.*python-rules\|language-coverage-matrix" "$PLUGIN_DIR/README
   fail "README: version blurb still describes v1.16 language features" || \
   pass "README: version blurb updated"
 
-# developer-guide.html must not show old version
-grep -q "Version 2\.1\.0\|Version 2\.2\.0\|Version 2\.3\." "$PLUGIN_DIR/docs/workflow/developer-guide.html" && \
-  fail "developer-guide.html: stale version in nav header" || \
-  pass "developer-guide.html: version header current"
+# developer-guide.html version header is verified positively against the current plugin
+# version by the check_version call near the top of this script — no stale hardcoded-version
+# negative check (a fixed "not 2.x" grep passes even when the guide is frozen at a wrong version).
 
 # developer-guide.html must describe temp/ flow
-grep -q "temp/ADO-{ID}-icea.md\|Ctrl+Shift+V" "$PLUGIN_DIR/docs/workflow/developer-guide.html" && \
+grep -q "temp/ADO-{ID}-icea.md\|Ctrl+Shift+V" "$PLUGIN_DIR/guides/developer-guide.html" && \
   pass "developer-guide.html: temp/ flow and VS Code preview documented" || \
   fail "developer-guide.html: temp/ flow MISSING"
 

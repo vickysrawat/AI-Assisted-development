@@ -401,3 +401,80 @@ These were deleted. Watch for more stale v1 references in future sessions.
 
 ### [capture] [2026-09-03] Task completed — Track A rule engine + full version-aware .NET plan implemented
 ### [capture] [2026-08-25] Architecture decision — /bug must persist approved spec BEFORE writing fix code
+
+### [capture] [2026-09-04] Task completed — v3.19.0 doc cut + deep staleness remediation (all guides)
+### [capture] [2026-09-04] Error resolved — command-stub count: deploy dir is source of truth, NOT setup-status prose
+
+### [capture] [2026-09-04] Architecture decision — documented the migration "thin-orchestrator" skill pattern in DEVELOPER-GUIDE
+
+### [capture] [2026-09-04] Task completed — there are THREE hand-maintained developer guides (docs/workflow one is easy to miss)
+### [capture] [2026-09-04] Error resolved — verify-plugin.sh had a false-confidence NEGATIVE version check for docs/workflow guide
+
+### [capture] [2026-09-04] Approach abandoned — can't auto-edit scripts/*.js: mechanical ICEA floor + self-mod denial both block it
+
+### [capture] [2026-09-04] Task completed — consolidated guides into guides/ + unblocked gated .js via a T1 bug spec
+
+### [capture] [2026-09-04] Task completed — v3.20.0 = two operational-doc skills (operations + go-live)
+
+### [capture] [2026-09-05] Task completed — de-branded "Coverity" → static code analysis across the codebase
+
+### [capture] [2026-09-06] Architecture decision — split migration into THREE isolation-deployable skills, carved on locality
+### [capture] [2026-09-06] Architecture decision — Upgrade skill = LLM ORCHESTRATOR of deterministic tools, not a generative author
+
+### [capture] [2026-09-06] Architecture decision — Rewrite skill T2 (oracle & epistemic honesty): per-cluster Behavioral Assurance Level + hybrid gate
+
+### [capture] [2026-09-06] Architecture decision — Rewrite skill T1 (posture) collapsed by STACK DISTANCE; re-architecture is options-driven
+
+### [capture] [2026-09-06] Architecture decision — Rewrite options analysis carries COST + EFFORT (TCO), with honesty rails against confident-fiction estimates
+
+### [capture] [2026-09-06] Architecture decision — run-cost estimate is WEB-GROUNDED via "resource-shape-first, then price"
+
+### [capture] [2026-09-06] Architecture decision — Rewrite options analysis includes BRING-YOUR-OWN-DESIGN escape hatch (LLM flips proposer→critic)
+
+### [capture] [2026-09-06] Architecture decision — LLM-as-JUDGE is a first-class session-wide layer across all three skills (cross-cutting)
+
+### [capture] [2026-09-06] Architecture decision — judge≠creator MODEL (not just context); capability-parity for high-risk gates
+
+### [capture] [2026-09-06] Architecture decision — add a HIGH-ASSURANCE judge tier (CRITIC_MODEL_MAX) for high-risk gates; do NOT hardcode "Opus 5"
+
+### [capture] [2026-09-06] Architecture decision — high-assurance judge = Opus 4.8 @ MAX EFFORT (available now); different-model PANEL only for top-risk gates
+
+### [capture] [2026-09-06] Architecture decision — Rewrite skill T4 (intake boundary) settled
+
+### [capture] [2026-09-07] Architecture decision — Rewrite T3 (partial): D1 decomposition + interactive/ADR governance, D2 parallelism confirmed
+
+### [capture] [2026-09-07] Architecture decision — Rewrite T3 complete: greenfield-with-intent framing + TWO assurance axes (BAL + enterprise-readiness); D3 staged BAL lifecycle
+
+### [capture] [2026-09-07] Architecture decision — enterprise-readiness SHIFTED LEFT to a first-class staged axis (ERL) parallel to BAL, from intake onward
+
+### [capture] [2026-09-07] Architecture decision — TESTABILITY added as a first-class shift-left DESIGN-FITNESS function (enabler of BAL), gated EARLY not at completion
+
+### [capture] [2026-09-07] Architecture decision — unify quality pillars into ONE first-class DESIGN-QUALITY layer (Simplicity/Readability/Maintainability/Testability), gated design + implementation
+
+### [capture] [2026-09-07] Approach agreed — Design-Quality modeled as an ENABLER layer (not a 3rd grade); Rewrite fully designed
+
+### [capture] [2026-09-07] Architecture decision — shared-substrate governance = vendored-copy + drift-check (two-mode); ONE shared checkpoint schema
+
+### [capture] [2026-09-07] Architecture decision — shared checkpoint schema: ENVELOPE+CORE shared / PAYLOAD skill-owned; one ledger per ADO; skew-safe
+
+### [capture] [2026-09-07] Architecture decision — Replatform skill R1 (intake/overlay) settled; the CORE INVERSION vs Rewrite
+
+### [capture] [2026-09-07] Architecture decision — Replatform R3 (NFR/Well-Architected oracle) settled; symmetric to BAL with a measurability ceiling
+
+### [capture] [2026-09-07] Architecture decision — Replatform R4 (data migration & cutover) settled: LLM plans, HUMAN executes; RUNBOOK model
+
+### [capture] [2026-09-07] Architecture decision — Replatform R2 (cloud-capability decomposition) settled = infra transpose of Rewrite T3
+
+### [capture] [2026-09-07] Architecture decision — Replatform R5 (IaC + execution safety) settled: LLM AUTHORS, HUMAN EXECUTES (uniform family principle); family design COMPLETE
+
+### [capture] [2026-09-07] Architecture decision — future-autonomy FEATURE FLAG + executor seam (default OFF) for Replatform execution
+
+### [capture] [2026-09-07] Approach agreed — implementation sequencing = WALKING-SKELETON (B), Upgrade first, extract substrate at 2nd skill (rule of three)
+
+### [capture] [2026-09-07] Plan approved (in progress) — ADO-9000 Epic scope decisions during icea-feature planning
+
+### [capture] [2026-09-07] Task completed — ADO-9000 plan + ICEA saved; RESUME at TECH ADO-9000 (after /compact or new session)
+
+### [capture] [2026-09-07] Task completed — ADO-9000 Tech Spec SAVED (epic + 3 story specs, 76 SP); RESUME at APPROVE ADO-9000
+
+### [capture] [2026-09-07] Plan approved — ADO-9000 ICEA APPROVED (Feature Gate open); next = IMPLEMENT Story-1 (Upgrade)

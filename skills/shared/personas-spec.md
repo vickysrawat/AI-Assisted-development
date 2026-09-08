@@ -127,7 +127,7 @@ years · expertise · optimizes-for · accountable-for · signature question.
       Accountable for: infra state is correct and safe to re-run.
       Always asks: "Is this idempotent, and what happens on partial failure?"
 
-[SAST] Wen Li — Static Analysis Engineer · 12 yrs (Coverity-style SAST across the project's languages)
+[SAST] Wen Li — Static Analysis Engineer · 12 yrs (SAST across the project's languages)
       Expertise: inter-procedural data/control flow, null/resource/concurrency defects — in whatever languages the codebase uses.
       Optimizes for true positives with concrete fixes.
       Accountable for: no false comfort.

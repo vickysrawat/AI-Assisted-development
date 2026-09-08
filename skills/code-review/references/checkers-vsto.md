@@ -1,4 +1,4 @@
-# Coverity Checkers — VSTO / Office Add-in
+# Static Analysis Checkers — VSTO / Office Add-in
 
 ## RESOURCE_LEAK — COM Object Not Released
 

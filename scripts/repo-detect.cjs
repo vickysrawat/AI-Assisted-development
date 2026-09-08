@@ -265,6 +265,9 @@ function mergeState(type, stacks, detection, generations, meta) {
   if (detection) state.detection = detection;         // NEW scored detection (ADR 0059)
   if (generations) state.generations = generations;   // all-stack runtime generations (sibling)
   if (meta) state.generations_meta = { ...(meta), detected_at: new Date().toISOString() }; // freshness (#3)
+  // Track-A flag — seed the explicit default OFF for already-initialized projects (setup-sync /
+  // re-provision), but NEVER overwrite a developer's explicit true/false.
+  if (!('per_project_rules' in state)) state.per_project_rules = false;
   // Atomic write: tmp → rename (crash-safe).
   const tmp = statePath + '.tmp';
   fs.mkdirSync(path.dirname(statePath), { recursive: true });
@@ -283,7 +286,8 @@ function existingType() {
 // ── Main ──────────────────────────────────────────────────────────────────────
 // --json: reusable "inspect any repo without touching it" primitive (P1-Shared). Always
 // recomputes (bypasses the resume short-circuit), NEVER writes state, prints machine-readable
-// {repo_type, detected_stacks, generations, meta}. Used by migration to detect the SOURCE.
+// {repo_type, detected_stacks, generations, meta}. Owned caller: scripts/migration-source-detect.cjs
+// (the migration skill's stack-neutral source detector wraps this per source root). See ADR 0060.
 if (JSON_OUT) {
   const r = detect();
   // Inspection mode always emits the full per-project spread (no deployment consequence).

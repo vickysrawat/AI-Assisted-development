@@ -40,8 +40,13 @@ if (mk) {
   if (m) hard.push(`marketplace.json embeds a version "${m[0]}" — remove it (version lives in plugin.json)`);
 }
 
-// Guides — independent "which version this doc documents" stamp; warn, don't fail
-for (const g of ['plugin-guide.html', 'user-guide.html']) {
+// Guides — glob the guides/ folder so every guide is covered and none can drift
+// silently by being omitted from a hardcoded list (the bug this replaces).
+let guideFiles = [];
+try {
+  guideFiles = fs.readdirSync('guides').filter(f => f.endsWith('.html')).map(f => 'guides/' + f);
+} catch (e) { /* no guides/ folder — nothing to check */ }
+for (const g of guideFiles) {
   const h = read(g);
   if (!h) continue;
   const m = h.match(/documents-plugin-version:\s*([0-9]+\.[0-9]+\.[0-9]+)/);

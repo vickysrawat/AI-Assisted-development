@@ -23,7 +23,7 @@ instruction sets loaded on invocation from the plugin installation path.
 
 | Command | What it does |
 |---|---|
-| `/code-review` | Coverity-style static analysis; writes HTML + ledger to `CodeReviews/` |
+| `/code-review` | Static code analysis; writes HTML + ledger to `CodeReviews/` |
 | `/security-review` | OWASP/CWE scan; writes HTML + ledger to `security/` |
 | `/dynamic-scan` | DAST scan via OWASP ZAP Docker; writes report to `dynamic-scan/` |
 | `/critic` | Second-pass critic in `icea`, `tech`, or `code` mode |
@@ -73,7 +73,7 @@ instruction sets loaded on invocation from the plugin installation path.
 | `graph-sync` | Incremental graph refresh; calls `graph-extract-edges.js` for EXTRACTED edges |
 | `icea-feature` | Full ICEA drafting gate with critic at Step 5 (icea) and Step 8 (tech) |
 | `security` | SAST scan with OWASP/CWE checkers, ledger, dismiss workflow |
-| `code-review` | Coverity-style analysis with ledger, cache, scope flags |
+| `code-review` | Static code analysis with ledger, cache, scope flags |
 | `dream-rollback` | Reverses dream runs using audit trail in `memory/dream-log.md` |
 | `plugin-readiness` | Plugin health: infra, model routing, memory, governance, skill quality |
 

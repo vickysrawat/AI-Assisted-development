@@ -1110,6 +1110,9 @@ function stepSeedStateFiles(manifest) {
     dream_init_last_run:       today,
     detected_stacks:           [],
     deployed_rules:            [],
+    // Track-A per-project rule scoping — explicit default OFF (discoverable in-state; behaviorally
+    // == absent for the reader). A developer sets true to opt in; setup never clobbers that.
+    per_project_rules:         false,
   });
 
   // file-cache.json — verbatim seed from setup-init Step 6

@@ -90,18 +90,21 @@ re-runs Step 0.4 never drops a previously-recorded field.
   "mode": {
     "graph": true,
     "track": "backend | frontend | upgrade",
-    "source_token": "dotnet | dotnet_framework | java | nodejs | angular | react",
+    "source_token": "dotnet | dotnet_framework | java | nodejs | angular | react | python",
     "target_token": "dotnet | angular | react | java-spring | python",
-    "source_version": "net8.0 | 4.8 | null",
-    "target_version": "net10.0 | null"
+    "source_version": "net8.0 | 4.8 | 3.12 | 20.x | null",
+    "target_version": "net10.0 | null",
+    "source_roots": ["<repo or additionalDirectories path>", "..."]
   }
 }
 ```
 
 | Field | Type | Description |
 |---|---|---|
-| `mode.source_version` | string \| null | Detected SOURCE .NET version (primary TFM from the source `versions[]` spread / `repo-detect --json`); `null` for non-.NET or unresolved |
+| `mode.source_token` | string | Detected SOURCE stack, **any stack** (`SRC.primary.token` from `migration-source-detect.cjs`, per ADR 0060) — not .NET-only |
+| `mode.source_version` | string \| null | Detected SOURCE primary version, **any stack** (`SRC.primary.version` — a TFM for .NET, else the stack's runtime/language version); kept comparable for Q1b (`target ≥ source`) and Stage-2 posture; `null` if unresolved |
 | `mode.target_version` | string \| null | Chosen TARGET .NET version (Q1b, allow-list `net8.0`/`net9.0`/`net10.0`); `null` until chosen / non-.NET target |
+| `mode.source_roots` | string[] (optional) | The SOURCE root(s) scanned by the detector — the repo and/or `additionalDirectories` paths (multi-root). Optional and absent-tolerant (added additively; no `schema_version` bump — a resumed checkpoint without it is valid) |
 
 New in 1.11 (from 1.10): `mode.source_version`, `mode.target_version`, and merge-write semantics for
 `mode`. A resumed pre-1.11 checkpoint simply gains these fields (defaulted absent → treated as null).

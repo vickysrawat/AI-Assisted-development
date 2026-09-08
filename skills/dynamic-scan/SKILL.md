@@ -75,7 +75,7 @@ ZAP setup, scanning, or baseline creation:
    They have no HTTP surface, no routes, no web server, and no URL for ZAP to target.
 
    For security coverage of your VSTO project, use instead:
-     /code-review --full     — static analysis with COM/Office-specific Coverity-style checkers
+     /code-review --full     — static analysis with COM/Office-specific static-analysis checkers
      /security-review        — SAST with VSTO threat patterns (COM trust, ClickOnce, signing)
 ```
 
