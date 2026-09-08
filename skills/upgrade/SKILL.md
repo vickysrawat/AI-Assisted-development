@@ -63,16 +63,18 @@ Detect stack + current version        (shared detection substrate — raven)
   → Classify                          (reject false-upgrades → route to Rewrite)     ← implemented
   → Plan version path                 (multi-hop; LTS ladder / one major at a time)  ← implemented
   → Tool-availability preflight       (probe tool; missing → print install steps, pause) ← implemented
-  → Web-grounded Gap + Risk analysis  (cached, source-verified)                       ⏳ increment 3
-  → Decision-grade REPORT             (feasibility spine; value even if it stops here) ⏳ increment 3
-  → [if proceed] baseline TAG + branch                                                ⏳ increment 4
-  → Run stack tool per hop            (one COMMIT per hop → bisectable)               ⏳ increment 4
-  → LLM residual remediation          (each fix behind the Write Gate)               ⏳ increment 4
-  → Verify vs baseline oracle                                                         ⏳ increment 4
-  → Post-upgrade recommendations      (ladder → Rewrite / Replatform)                ⏳ increment 3
+  → Web-grounded Gap + Risk analysis  (cached, source-verified)                       ← implemented
+  → Decision-grade REPORT             (feasibility spine; value even if it stops here) ← implemented
+  → [if proceed] baseline TAG + branch                                                ← implemented
+  → Run stack tool per hop            (one COMMIT per hop → bisectable)               ← implemented
+  → LLM residual remediation          (each fix behind the Write Gate)               ← implemented
+  → Verify vs baseline oracle                                                         ← implemented
+  → Post-upgrade recommendations      (ladder → Rewrite / Replatform)                ← implemented
 ```
 
-Tool-availability preflight (AC-F2) is implemented in Step 2 below.
+Tool-availability preflight (AC-F2) is implemented in Step 2; grounded gap/risk analysis + the
+decision-grade report (AC-F3) in Steps 3–4; gated execution (baseline tag + branch, commit-per-hop,
+residual remediation, verify) + the inline judge/checkpoint substrate (AC-F9/F10) in Steps 5–8.
 
 ## Step 1 — Intake & classification (implemented — the highest-risk component)
 
@@ -122,6 +124,100 @@ node "$PLUGIN_DIR/scripts/upgrade-tool-preflight.cjs" --stack=<token> --json
 The skill only **prints** install/verify steps for the developer to run; it never installs anything
 and never bundles a tool. Tool absence is a graceful pause, not a failure.
 
+## Step 3 — Web-grounded gap/risk analysis (implemented — AC-F3)
+
+Reached only after Step 1 classified `upgrade` and Step 2 found the tool `available`. Gather the
+breaking-change / deprecation facts for the planned hops. The **LLM grounds; the cache engine tags +
+stores** — the engine makes no network call (see `references/gap-risk-report.md`).
+
+1. **Cache-first.** For each hop `{from,to}`, read the stable delta-KB before searching:
+   ```bash
+   node "$PLUGIN_DIR/scripts/upgrade-knowledge-cache.cjs" get --stack=<token> --from=<v> --to=<v> --json
+   ```
+   Exit `0` = hit (reuse — the facts are immutable once the version shipped); `7` = miss → ground it.
+   For tool-capability facts use `--layer=volatile`; exit `6` = stale → re-ground.
+2. **Ground on miss/stale.** Use WebSearch to find the change from an **authoritative** source
+   (official migration guide / release notes / deprecation list). Never source a breaking-change
+   claim from model memory.
+3. **Verify + cache each fact.** Store it so the tag is set deterministically from the source host:
+   ```bash
+   node "$PLUGIN_DIR/scripts/upgrade-knowledge-cache.cjs" put --stack=<token> --from=<v> --to=<v> \
+     --fact="<claim>" --source="<url>" --source-date=<YYYY-MM-DD> --json
+   ```
+   `tier: VERIFIED` (authoritative host) or `INFERRED` (anything else — confidence auto-lowered).
+   A stable fact is immutable: an identical re-put is idempotent; a differing claim under the same id
+   returns `immutable-conflict` (exit 8) for you to resolve, never silently overwrite.
+
+## Step 4 — Decision-grade Gap + Risk report (implemented — AC-F3)
+
+Assemble the report per the schema in `references/gap-risk-report.md`. It is the **headline
+deliverable** — emit it whether or not the developer proceeds:
+
+- State which side of the **tool-coverage line** the project sits on (strong vs weak tool).
+- Classify every item on the feasibility spine (🟢/🟡/🔴/⛔) and show its **source tag** (VERIFIED +
+  dated url · or INFERRED).
+- Include the **dependency ledger** — a package with no target-compatible version is a hard ⛔ BLOCKER.
+- List what's possible / blocked / manual, then the **post-upgrade ladder** (→ Rewrite / Replatform).
+- Even a RED/BLOCKER verdict yields a decision-grade report (graceful degradation) — never a bare fail.
+
+The report is the point where value is delivered. Everything below runs **only if the developer
+chooses to proceed** — and every step that touches the working repo is authored here but executed by
+the developer (LLM authors + rehearses, human executes).
+
+## Step 5 — Baseline tag + working branch (implemented — AC-F3 execution)
+
+Before ANY edit, plan the execution runbook. The orchestrator is a **pure planner** — it emits the
+ordered git/tool commands; it never runs them:
+
+```bash
+node "$PLUGIN_DIR/scripts/upgrade-orchestrate.cjs" plan --stack=<token> --from=<v> --to=<v> \
+  --hops=<v1,v2,...> --tool="<preflight tool>" --ado=<ID> --json
+```
+
+`steps[0]` is always the **baseline tag** (the oracle anchor) and `steps[1]` the isolated branch —
+created before the first edit so verification always has a clean pre-upgrade reference. Record the
+tag in the checkpoint: `upgrade-checkpoint.cjs set-payload --baseline-tag=<tag> --hops=<...>`.
+
+## Step 6 — Run the stack tool per hop (implemented — AC-F3 execution)
+
+Walk the runbook one hop at a time. For each hop: run the deterministic tool for that hop, then make
+**exactly one commit** (`commit_plan[i].commit_msg`). One commit per hop keeps history bisectable so
+a later verify failure pins the exact hop. Never blend hops into one diff; never hand-author the bulk
+transform.
+
+## Step 7 — Residual remediation + verify vs baseline oracle (implemented — AC-F3 execution)
+
+The tool leaves a residual (~10–30%, stack-dependent). Remediate it with the LLM, but **each fix
+passes the Write Gate** (`APPROVE ADO-{ID}`), and the baseline-oracle regression net catches drift.
+Then evaluate verification per hop:
+
+```bash
+node "$PLUGIN_DIR/scripts/upgrade-orchestrate.cjs" verify --hops=<v1,v2> --hop-results=<pass|fail,...> --json
+```
+
+Exit `0` = verified (merge allowed); exit `9` = **blocked** — the first failing hop is pinned with
+resolution options and **no merge is allowed** until verify passes. If a residual auto-stop ceiling is
+hit, hand back to the developer with the residual list. Post-upgrade, offer the ladder
+(→ Rewrite / Replatform) per `references/gap-risk-report.md`.
+
+## Step 8 — Checkpoint + judge at every gate (implemented — AC-F9/F10, inline)
+
+Each gate (report · residual · verify) records a verdict from an **independent judge** (separate agent
++ separate model — see `$PLUGIN_DIR/skills/shared/judge.md`) and persists it to the resumable
+migration ledger (`$PLUGIN_DIR/skills/shared/migration-ledger-schema.md`):
+
+```bash
+node "$PLUGIN_DIR/scripts/upgrade-checkpoint.cjs" init --ado=<ID> --stack=<token> --from=<v> --to=<v>
+node "$PLUGIN_DIR/scripts/upgrade-checkpoint.cjs" set-gate --ado=<ID> --gate=<report|verify> --verdict=<PASS|REVISE|BLOCK>
+```
+
+The ledger is a single-writer, **merge-write** contract (never clobbers fields it does not own), so
+the run is resumable and safe to hand off. As of Story 2 the judge and checkpoint are the **shared
+substrate** (`skills/shared/judge.md`, `skills/shared/migration-ledger-schema.md`);
+`upgrade-checkpoint.cjs` is a thin adapter over `scripts/checkpoint-ledger.cjs` that owns the
+`payload.upgrade` namespace. (The local `references/judge-inline.md` / `checkpoint-inline.md` are now
+redirects to the shared docs.)
+
 ## Hard Rules
 
 - NEVER hand-author the bulk transform of working code — drive the deterministic tool.
@@ -131,4 +227,7 @@ and never bundles a tool. Tool absence is a graceful pause, not a failure.
 - ALWAYS one commit per version hop (bisectable); NEVER blend hops into one diff.
 - ALWAYS gate every residual fix behind the Write Gate; NEVER merge until verification passes.
 - ALWAYS invoke plugin scripts via the resolved `$PLUGIN_DIR` — never a bare relative path.
+- ALWAYS ground breaking-change facts in an authoritative source; NEVER source them from model memory.
+- ALWAYS tag each report claim VERIFIED (dated authoritative source) or INFERRED; NEVER fabricate a
+  source to reach VERIFIED, and NEVER present an INFERRED claim as settled fact.
 - ALWAYS state, in the report, which side of the tool-coverage line the project sits on (AC-F3).

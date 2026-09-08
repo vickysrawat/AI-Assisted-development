@@ -55,6 +55,22 @@ on Sonnet:
 
 Resolution order: `CRITIC_MODEL` → `REVIEW_MODEL` → `claude-sonnet-4-6`.
 
+#### `CRITIC_MODEL_MAX` — high-assurance judge (migration family)
+
+The migration family's shared LLM-as-judge (`skills/shared/judge.md`) scales judge capability with
+gate risk via a **three-tier ladder** (friction proportional to risk):
+
+| Gate risk | Creator | Judge |
+|---|---|---|
+| Low / routine | `ICEA_MODEL` | `CRITIC_MODEL` |
+| High-risk / B-series | `ICEA_MODEL` | **`CRITIC_MODEL_MAX`** — strongest available model @ **max reasoning effort** |
+| Top-risk / B-series | — | + different-family **panel** {`CRITIC_MODEL_MAX` + a different model}, agree-or-escalate |
+
+`CRITIC_MODEL_MAX` resolution order: `CRITIC_MODEL_MAX` → `claude-opus-4-8` (@ max effort). **Never
+hardcode a phantom model ID** — max effort on the current strongest model is the high-assurance lever
+today; it auto-upgrades when a stronger model ships and is validated. Effort buys *thoroughness*; a
+different model buys *diverse blind spots* — they compose.
+
 ### Infrastructure tier — `INFRA_MODEL`
 
 **Default:** `claude-sonnet-4-6`

@@ -162,3 +162,27 @@ the permanent storage options instead.
    forbidden once a spec is promoted here
 3. Reference from a skill using the plugin path `$PLUGIN_DIR/skills/shared/<filename>` where PLUGIN_DIR is resolved via `.claude/plugin-path.txt`. The old relative path `../shared/<filename>` only works from the plugin directory, not from a target project's CWD.
 4. When updating a shared spec, update **all** skills that reference it in the same commit
+
+---
+
+## Vendored-copy + drift-check governance (migration family)
+
+The migration family (Upgrade · Rewrite · Replatform) must be **deployable standalone** onto a repo
+that never ran `setup-init`. Because that vetoes runtime dependency resolution, the substrate is
+governed by **vendored-copy + drift-check**, in two modes:
+
+- **In-plugin (dev):** skills read this canonical `skills/shared/` directly — no copies, zero drift.
+- **Standalone (packaging):** a build step (`scripts/vendor-substrate.cjs`) copies canonical into the
+  bundle, stamps a manifest `{substrate_version, per-file sha256, content_hash}`, and banner-marks
+  each copy **`GENERATED — DO NOT EDIT`**.
+- **Drift-check** (`scripts/substrate-drift-check.cjs`) compares vendored vs canonical (banner
+  excluded) and the recorded canonical hashes vs current; **non-zero exit on any drift** (wired into
+  CI in Story 3, ADO-9000). Path resolution prefers the vendored copy when standalone, canonical when
+  in-plugin.
+
+**Change process (not just anti-drift):** to change a governed spec — bump the substrate semver →
+re-vendor → drift-check → write an ADR → re-validate consumers. The migration-ledger **core**
+(`migration-ledger-schema.md`) is **additive-only** — never remove or repurpose a core field.
+
+Governed members: `migration-ledger-schema.md` · `judge.md` · `model-routing-spec.md` (judge ladder) ·
+the gate-keyword grammar · detection · feasibility engine · goal-loop + rubric-score.

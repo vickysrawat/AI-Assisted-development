@@ -101,6 +101,10 @@ Recognised globally, no /command needed. ADO ID is case-insensitive (`ADO-1847`,
 | `STATUS ADO-{ID}` | Run icea-status skill for that ADO ID |
 | `BUG ADO-{ID} — {description}` | Log bug entry to tracker for that ADO ID |
 | `SET DOMAIN` | Run `business-context-generation.md` — infer/confirm business domain + jurisdiction, ground the B-series in cited regulatory frameworks, write `.claude/business-context.md` (own `APPROVED` gate; idempotent; architect-independent). Also sets the CLAUDE.md `Domain:` line + `dream-init-state.json` `domain`. Use for first-time setup outside architect, a domain pivot, or backfill. |
+| `UPGRADE ADO-{ID}` | Run the upgrade skill (`/upgrade`) for that ADO ID — in-place, same-stack version upgrade (orchestrates a deterministic tool; rejects false-upgrades → Rewrite) |
+| `UPGRADE RESUME ADO-{ID}` | Resume the upgrade from its on-disk checkpoint |
+| `REWRITE ADO-{ID}` | Run the rewrite skill (`/rewrite`) for that ADO ID — out-of-place generative migration to a new target folder (posture · options · target-space DAG · per-cluster BAL/ERL · two-gate) |
+| `REWRITE RESUME ADO-{ID}` | Resume the rewrite from the shared ledger checkpoint |
 | `MIGRATE ADO-{ID}` | Run migration skill for that ADO ID |
 | `MIGRATE RESUME ADO-{ID} [BACKEND\|FRONTEND]` | Resume migration from checkpoint (Stage 4 cluster resume) |
 | `MIGRATE STATUS ADO-{ID}` | Run the `migration-status` skill (`/migration-status`) — render the migration checkpoint (phase · stage-gates · clusters · next action) for that ADO ID. Read-only. |

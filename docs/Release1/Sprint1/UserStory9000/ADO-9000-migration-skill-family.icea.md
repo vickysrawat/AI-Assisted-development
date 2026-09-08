@@ -199,8 +199,8 @@ deferred *capability* (default OFF), not an open decision.
 
 | Story | Child ADO # | Logical scope | SP | Shippable alone? | Depends on | Status |
 |---|---|---|---|---|---|---|
-| 1 | ADO-9001 | **Upgrade** skill (MVP) — tool-orchestrated in-place upgrade + tool preflight/guidance + gap/risk report + minimal inline substrate | 21 | Yes | None | 🔨 In progress |
-| 2 | TBD | **Rewrite** skill + **extract shared substrate** (rule of three) + shared checkpoint ledger + migration-knowledge cache + vendored-copy/drift-check seam | 34 | Yes | Story 1 | ⏳ Pending |
+| 1 | ADO-9001 | **Upgrade** skill (MVP) — tool-orchestrated in-place upgrade + tool preflight/guidance + gap/risk report + minimal inline substrate | 21 | Yes | None | ✅ Code-complete |
+| 2 | ADO-9002 | **Rewrite** skill + **extract shared substrate** (rule of three) + shared checkpoint ledger + migration-knowledge cache + vendored-copy/drift-check seam | 34 | Yes | Story 1 | ✅ Code-complete (Inc A–D) |
 | 3 | TBD | **Replatform** skill + **standalone packaging** (vendored-copy + drift-check, CI-enforced) + **retire legacy** `migration` + future-autonomy flag (OFF) | 21 | Yes | Story 2 | ⏳ Pending |
 
 ---

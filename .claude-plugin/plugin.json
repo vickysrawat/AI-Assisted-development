@@ -53,12 +53,14 @@
       "pr-describe",
       "pr-spec-review",
       "product-docs",
+      "rewrite",
       "security-review",
       "session-start",
       "sprint-metrics",
       "sync-dirs",
       "token-analysis",
-      "update-arch"
+      "update-arch",
+      "upgrade"
     ],
     "skills": [
       "ado-tasks",
@@ -103,6 +105,7 @@
       "pr-describe",
       "pr-spec-review",
       "product-docs",
+      "rewrite",
       "security",
       "sprint-metrics",
       "token-analysis",
@@ -183,6 +186,8 @@
       "source-file-consent",
       "vcs-detect-spec",
       "checkpoint-schema",
+      "migration-ledger-schema",
+      "judge",
       "context-budget-check",
       "fingerprint-spec",
       "git-remote-provider-spec",
