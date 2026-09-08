@@ -105,7 +105,8 @@
       "product-docs",
       "security",
       "sprint-metrics",
-      "token-analysis"
+      "token-analysis",
+      "upgrade"
     ],
     "rules": [
       "project-rules",
