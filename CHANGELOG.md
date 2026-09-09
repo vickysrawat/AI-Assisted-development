@@ -2,6 +2,33 @@
 
 _Nothing yet._
 
+## [3.21.0] — 2026-09-09
+
+### Changed — migration skill family split (Upgrade · Rewrite · Replatform)
+- The single `migration` skill (and `migration-status`) is **retired** and split into three focused,
+  directly-invoked skills carved on **locality**: **`upgrade`** (in-place same-stack version upgrade;
+  orchestrates a deterministic tool, rejects false-upgrades → Rewrite), **`rewrite`** (out-of-place
+  generative translation to a new target folder; posture · options × TCO · target-space DAG · per-cluster
+  BAL/ERL · two-gate), and **`replatform`** (hosting/topology on-prem → cloud; NFR/Well-Architected
+  oracle; LLM authors IaC + human-executed runbooks). See [ADR 0061](docs/adr/0061-migration-skill-family-split.md).
+- **`MIGRATE*` retired to a static signpost** — no routing classifier (rigid + duplicative). Typing
+  `MIGRATE …` returns a human-choice signpost to Upgrade/Rewrite/Replatform; zero orphaned invocations.
+- **Per-skill status + resume**, uniform and ledger-backed (`UPGRADE|REWRITE|REPLATFORM STATUS|RESUME`);
+  STATUS is an `icea-status`-style re-entry point over the shared migration ledger.
+- Legacy stack/mapping/strategy references **preserved** as an offline-fallback knowledge tier
+  (`skills/shared/migration-knowledge/refs/`, INFERRED) with a freshness manifest; 8 superseded
+  stage-machine specs archived. `scripts/migration-source-detect.cjs` retained as a family-shared detector.
+
+### Added — shared substrate + CI
+- Shared substrate: `checkpoint-ledger.cjs` + `migration-ledger-schema.md`, `judge.md`, `executor-seam.md`
+  (future-autonomy flag, default OFF), vendored-copy/drift-check seam.
+- **Node-only CI gate** (`azure-pipelines.yml` + `docs/ci-substrate-drift-check.md`): `validate.js` +
+  the unit suite (incl. `substrate-drift.test.cjs` — fails on vendored ≠ canonical).
+
+### Migration
+- Run `/setup-sync`. The `MIGRATE*` keywords now emit a deprecation signpost — use `UPGRADE`/`REWRITE`/
+  `REPLATFORM ADO-{ID}` directly. See [docs/migrations/2026-09-migration-skill-family.md](docs/migrations/2026-09-migration-skill-family.md).
+
 ## [3.20.0] — 2026-09-04
 
 ### Added — operational documentation skills (`operations` + `go-live`)

@@ -171,18 +171,19 @@ if (exists('scripts/repo-detect.cjs')) {
     : bad('slnx-detect: repo-detect.cjs missing graceful .cs fallback for unknown packaging formats');
 }
 
-// Migration-owned, stack-neutral source detection (ADR 0060): the detector must exist and wrap
-// repo-detect (engine borrowed, interface owned); Stage 0 must call it instead of the old inline
-// probes; the checkpoint must document the multi-root source_roots. Regression: tests/migration-source-detect.test.cjs.
+// Family-shared, stack-neutral source detection (ADR 0060, superseded by the migration-family split):
+// the detector must exist and wrap repo-detect (engine borrowed, interface owned); the migration-family
+// skills (upgrade/rewrite/replatform) call it instead of inline probes; the checkpoint documents the
+// multi-root source_roots. Regression: tests/migration-source-detect.test.cjs.
 if (exists('scripts/migration-source-detect.cjs')) {
   ok('migration-source-detect: scripts/migration-source-detect.cjs exists');
   read('scripts/migration-source-detect.cjs').includes('repo-detect.cjs')
     ? ok('migration-source-detect: wraps repo-detect.cjs (engine borrowed, interface owned)')
     : bad('migration-source-detect: must wrap repo-detect.cjs, not re-implement detection');
 } else bad('migration-source-detect: scripts/migration-source-detect.cjs missing');
-exists('skills/migration/steps/stage-0.md') && read('skills/migration/steps/stage-0.md').includes('migration-source-detect.cjs')
-  ? ok('migration-source-detect: stage-0 calls the detector')
-  : bad('migration-source-detect: stage-0 does not call migration-source-detect.cjs (stale inline detection?)');
+['skills/upgrade/SKILL.md', 'skills/rewrite/SKILL.md', 'skills/replatform/SKILL.md'].every(f => exists(f) && read(f).includes('migration-source-detect.cjs'))
+  ? ok('migration-source-detect: called by upgrade/rewrite/replatform (family-shared detector)')
+  : bad('migration-source-detect: a migration-family skill (upgrade/rewrite/replatform) does not call the detector');
 exists('skills/shared/checkpoint-schema.md') && read('skills/shared/checkpoint-schema.md').includes('source_roots')
   ? ok('migration-source-detect: checkpoint documents source_roots (multi-root)')
   : bad('migration-source-detect: checkpoint-schema missing source_roots');
@@ -387,6 +388,13 @@ if (exists('CLAUDE.md')) {
   cm.includes('INFRA_MODEL')           ? ok('CLAUDE.md: INFRA_MODEL documented')            : bad('CLAUDE.md: INFRA_MODEL missing from model routing table');
   (cm.includes('Windows env var') && cm.includes('AZURE_DEVOPS_PAT')) || cm.includes('Windows User Environment Variables')
     ? ok('CLAUDE.md: PAT stored in Windows env var') : bad('CLAUDE.md: PAT Windows env var guidance missing');
+  // Migration family §0a (ADO-9000 Story 3) — status+resume for all 3 skills + MIGRATE retirement signpost
+  ['UPGRADE STATUS', 'REWRITE STATUS', 'REPLATFORM STATUS', 'UPGRADE RESUME', 'REWRITE RESUME', 'REPLATFORM RESUME'].every(k => cm.includes(k))
+    ? ok('CLAUDE.md: §0a STATUS+RESUME present for all 3 migration skills') : bad('CLAUDE.md: §0a missing a STATUS/RESUME row for upgrade/rewrite/replatform');
+  (cm.includes('**RETIRED**') && cm.includes('Do NOT auto-route'))
+    ? ok('CLAUDE.md: §0a MIGRATE retirement signpost present')             : bad('CLAUDE.md: §0a MIGRATE retirement signpost missing');
+  !cm.includes('Run migration skill for that ADO ID')
+    ? ok('CLAUDE.md: §0a legacy MIGRATE→migration handler removed')        : bad('CLAUDE.md: §0a still routes MIGRATE to the retired migration skill');
 }
 
 // ── 9b. _project-deploy/CLAUDE.md deployment template ────────────────────────
@@ -399,6 +407,13 @@ if (exists('_project-deploy/CLAUDE.md')) {
   dp.includes('{ADO_ORG}')                  ? ok('deploy CLAUDE.md: ADO_ORG placeholder present')    : bad('deploy CLAUDE.md: {ADO_ORG} placeholder missing — template must not have hardcoded values');
   dp.includes('Invoke icea-feature skill')  ? ok('deploy CLAUDE.md: §0a recovery handlers updated')  : bad('deploy CLAUDE.md: §0a still has old "Draft…cross-session recovery" handlers');
   dp.includes('INFRA_MODEL')                ? ok('deploy CLAUDE.md: MODEL ROUTING present')           : bad('deploy CLAUDE.md: MODEL ROUTING section missing');
+  // Migration family §0a (ADO-9000 Story 3) — status+resume for all 3 skills + MIGRATE retirement signpost
+  ['UPGRADE STATUS', 'REWRITE STATUS', 'REPLATFORM STATUS', 'UPGRADE RESUME', 'REWRITE RESUME', 'REPLATFORM RESUME'].every(k => dp.includes(k))
+    ? ok('deploy CLAUDE.md: §0a STATUS+RESUME present for all 3 migration skills') : bad('deploy CLAUDE.md: §0a missing a STATUS/RESUME row for upgrade/rewrite/replatform');
+  (dp.includes('**RETIRED**') && dp.includes('Do NOT auto-route'))
+    ? ok('deploy CLAUDE.md: §0a MIGRATE retirement signpost present')             : bad('deploy CLAUDE.md: §0a MIGRATE retirement signpost missing');
+  !dp.includes('Run migration skill for that ADO ID')
+    ? ok('deploy CLAUDE.md: §0a legacy MIGRATE→migration handler removed')        : bad('deploy CLAUDE.md: §0a still routes MIGRATE to the retired migration skill');
 } else {
   bad('_project-deploy/CLAUDE.md missing — create it as the deployment template source');
 }

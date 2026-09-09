@@ -251,12 +251,13 @@ every session. Max 3 per dream run.
 
 ---
 
-## Framework-fact promotion (migration self-learning)
+## Framework-fact promotion (migration-family self-learning)
 
-Stage 0.6 of the migration skill writes `Framework-fact` entries to `MEMORY.md` when it web-grounds a
-framework attribute's guaranteed behaviour (`attribute · framework@version · guaranteed outcome ·
-official-doc URL · date`). Handle these specially — they feed a self-learning cache in the migration
-`stacks/{stack}.md` LEARNED block, not an ordinary topic file.
+Any migration-family skill (Upgrade · Rewrite · Replatform) writes `Framework-fact` entries to
+`MEMORY.md` when it web-grounds a framework attribute's guaranteed behaviour (`attribute ·
+framework@version · guaranteed outcome · official-doc URL · date`). Handle these specially — they feed a
+self-learning cache in the offline-knowledge `stacks/{stack}.md` LEARNED block
+(`skills/shared/migration-knowledge/refs/stacks/`), not an ordinary topic file.
 
 **Recognise** by the `Framework-fact` tag (entry carries `attribute` + `framework@version` + URL).
 
@@ -268,7 +269,7 @@ official-doc URL · date`). Handle these specially — they feed a self-learning
 - **Dedup by `attribute@version`** against the existing LEARNED block — update in place, never duplicate.
 
 **Operation `STACK-PROMOTE` (Tier 2 — show diff, wait for approval):**
-1. Map the framework to `skills/migration/references/stacks/{stack}.md` (`dotnet` · `dotnet-framework`
+1. Map the framework to `skills/shared/migration-knowledge/refs/stacks/{stack}.md` (`dotnet` · `dotnet-framework`
    · `java-spring` · `nodejs-express` · `react` · `angular` · `python`). If the file or its
    `<!-- LEARNED:BEGIN/END -->` markers are missing, skip with a note.
 2. Append/update a row **inside** the LEARNED markers with `trust: learned`.

@@ -1,0 +1,15 @@
+# CI gate — node-only (no npm). ADO-9000 Story 3 (AC-F11). The enforcement is the `node …` commands;
+# this pipeline just runs them (host-adaptable). GitHub Actions equivalent: docs/ci-substrate-drift-check.md.
+trigger: { branches: { include: [ main, dev ] } }
+pr: { branches: { include: [ main, dev ] } }
+pool: { vmImage: ubuntu-latest }
+steps:
+  - task: NodeTool@0
+    inputs: { versionSpec: '20.x' }
+    displayName: Use Node 20
+  - script: node tests/validate.js
+    displayName: Structural validator (0 failures required)
+  - script: |
+      set -e
+      for t in tests/*.test.cjs; do echo "▶ $t"; node "$t"; done
+    displayName: Unit suite (incl. substrate-drift + migration-retirement — the AC-F11 drift enforcement)

@@ -154,7 +154,7 @@ Status:
 ### 1d — .claude/commands/ (stubs)
 
 ```bash
-for f in dream.md dream-audit.md dream-health.md setup-init.md dream-rollback.md setup-status.md setup-sync.md security-review.md code-review.md token-analysis.md product-docs.md sprint-metrics.md session-start.md bug.md checkin.md update-arch.md explain.md fix.md app-readiness.md plugin-readiness.md dynamic-scan.md ado-tasks.md icea-feature.md icea-approve.md icea-implement.md icea-revise.md icea-status.md icea-review.md pr-create.md pr-describe.md pr-spec-review.md critic.md gitignore-sync.md dismiss.md sync-dirs.md graph-sync.md graph-viz.md migration.md migration-status.md goal-loop.md setup-teardown.md; do
+for f in dream.md dream-audit.md dream-health.md setup-init.md dream-rollback.md setup-status.md setup-sync.md security-review.md code-review.md token-analysis.md product-docs.md sprint-metrics.md session-start.md bug.md checkin.md update-arch.md explain.md fix.md app-readiness.md plugin-readiness.md dynamic-scan.md ado-tasks.md icea-feature.md icea-approve.md icea-implement.md icea-revise.md icea-status.md icea-review.md pr-create.md pr-describe.md pr-spec-review.md critic.md gitignore-sync.md dismiss.md sync-dirs.md graph-sync.md graph-viz.md upgrade.md rewrite.md replatform.md goal-loop.md setup-teardown.md; do
   ls .claude/commands/$f 2>/dev/null && echo "EXISTS $f" || echo "MISSING $f"
 done
 ```

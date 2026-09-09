@@ -105,18 +105,15 @@ Recognised globally, no /command needed. ADO ID is case-insensitive (`ADO-1847`,
 | `BUG ADO-{ID} — {description}` | Log bug entry to tracker for that ADO ID |
 | `SET DOMAIN` | Run `business-context-generation.md` — infer/confirm business domain + jurisdiction, ground the B-series in cited regulatory frameworks, write `.claude/business-context.md` (own `APPROVED` gate; idempotent; architect-independent). Also sets the CLAUDE.md `Domain:` line + `dream-init-state.json` `domain`. Use for first-time setup outside architect, a domain pivot, or backfill. |
 | `UPGRADE ADO-{ID}` | Run the upgrade skill (`/upgrade`) for that ADO ID — in-place, same-stack version upgrade (orchestrates a deterministic tool; rejects false-upgrades → Rewrite) |
-| `UPGRADE RESUME ADO-{ID}` | Resume the upgrade from its on-disk checkpoint |
 | `REWRITE ADO-{ID}` | Run the rewrite skill (`/rewrite`) for that ADO ID — out-of-place generative migration to a new target folder (posture · options · target-space DAG · per-cluster BAL/ERL · two-gate) |
-| `REWRITE RESUME ADO-{ID}` | Resume the rewrite from the shared ledger checkpoint |
-| `MIGRATE ADO-{ID}` | Run migration skill for that ADO ID |
-| `MIGRATE RESUME ADO-{ID} [BACKEND\|FRONTEND]` | Resume migration from checkpoint (cross-session recovery) |
-| `MIGRATE STATUS ADO-{ID}` | Run the `migration-status` skill (`/migration-status`) — render the migration checkpoint (phase · stage-gates · clusters · next action) for that ADO ID. Read-only. |
-| `MIGRATE OPTIONS ADO-{ID}` | Invoke migration skill — cross-session recovery at Stage 0.5 Step 0.3 (regenerate the target-options analysis from the confirmed source on disk; skip context budget check; reads migration SKILL.md before proceeding) |
-| `MIGRATE INVENTORY ADO-{ID}` | Invoke migration skill — cross-session recovery at Stage 0.6 (regenerate the source behavioral inventory from the confirmed source on disk; skip context budget check; reads migration SKILL.md before proceeding) |
-| `MIGRATE ARCH ADO-{ID}` | Invoke migration skill — cross-session recovery at Stage 1 Step 1.2 (regenerate architecture docs from Stage 0 decisions on disk; skip context budget check; reads migration SKILL.md before proceeding) |
-| `MIGRATE FEAS ADO-{ID}` | Invoke migration skill — cross-session recovery at Stage 2 (regenerate feasibility from the approved architecture docs on disk; requires architecture_approved gate; skip context budget check; reads migration SKILL.md before proceeding) |
-| `MIGRATE CLUSTERS ADO-{ID}` | Invoke migration skill — cross-session recovery at Stage 3 Step 3.2 (regenerate cluster specs from the approved arch + feasibility docs on disk; requires feasibility_approved gate; skip context budget check; reads migration SKILL.md before proceeding) |
-| `APPROVE OPTIONS / INVENTORY / ARCHITECTURE / FEASIBILITY / MIGRATION ADO-{ID}` | Migration stage-gate approval (cross-session) — invoke the migration skill for that ADO ID, set the corresponding `stage_gates` flag from the on-disk checkpoint, and continue; the migration equivalents of `APPROVE ADO-{ID}` |
+| `REPLATFORM ADO-{ID}` | Run the replatform skill (`/replatform`) for that ADO ID — hosting/topology migration (on-prem → cloud); LLM authors IaC + human-executable runbooks, human executes; NFR/Well-Architected oracle |
+| `UPGRADE RESUME ADO-{ID}` | Resume the upgrade — read `payload.upgrade`, orient (Status), then continue at the first unfinished stage/gate. Per `skills/shared/migration-ledger-schema.md` § Status & Resume |
+| `REWRITE RESUME ADO-{ID}` | Resume the rewrite — read `payload.rewrite`, orient, then continue at the first unfinished stage/gate. Per `skills/shared/migration-ledger-schema.md` § Status & Resume |
+| `REPLATFORM RESUME ADO-{ID}` | Resume the replatform — read `payload.replatform`, orient, then continue at the first unfinished stage/gate. Per `skills/shared/migration-ledger-schema.md` § Status & Resume |
+| `UPGRADE STATUS ADO-{ID}` | Re-entry point (like `icea-status`): read the upgrade's ledger (`payload.upgrade`) fresh, render state, end with the single Next action. Read-only. Per `skills/shared/migration-ledger-schema.md` § Status & Resume |
+| `REWRITE STATUS ADO-{ID}` | Re-entry point (like `icea-status`): read the rewrite's ledger (`payload.rewrite`) fresh, render state, end with the single Next action. Read-only. Per `skills/shared/migration-ledger-schema.md` § Status & Resume |
+| `REPLATFORM STATUS ADO-{ID}` | Re-entry point (like `icea-status`): read the replatform's ledger (`payload.replatform`) fresh, render state, end with the single Next action. Read-only. Per `skills/shared/migration-ledger-schema.md` § Status & Resume |
+| `MIGRATE`, `MIGRATE RESUME`, `MIGRATE STATUS`, `MIGRATE OPTIONS`, `MIGRATE INVENTORY`, `MIGRATE ARCH`, `MIGRATE FEAS`, `MIGRATE CLUSTERS`, `APPROVE OPTIONS`, `APPROVE INVENTORY`, `APPROVE ARCHITECTURE`, `APPROVE FEASIBILITY`, `APPROVE MIGRATION` (each `ADO-{ID}`) | **RETIRED** — the legacy `migration`/`migration-status` skills are gone. Do NOT auto-route. Reply with the signpost so the human picks a named skill: same stack + higher version → `UPGRADE ADO-{ID}` · different stack (translate the code) → `REWRITE ADO-{ID}` · on-prem → cloud (move the host) → `REPLATFORM ADO-{ID}`. See `docs/migrations/2026-09-migration-skill-family.md`. |
 
 ---
 

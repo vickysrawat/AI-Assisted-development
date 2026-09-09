@@ -1,6 +1,6 @@
 # ICEA — Migration Skill Family (Upgrade · Rewrite · Replatform)
 ADO #9000 · Release 1 · Sprint 1
-Status: ✅ Approved · EPIC · 76 SP
+Status: ✅ COMPLETE · EPIC · 76 SP (all 3 stories code-complete — 2026-09-09)
 
 ---
 
@@ -120,20 +120,20 @@ changes. Highest ceremony; multi-story epic.
 ## Acceptance
 
 ### Acceptance Criteria
-- [ ] AC-F1: Upgrade classifies stack + version and **rejects false-upgrades**, routing them to Rewrite (fixture-tested across .NET/Angular/Java/Python/Node).
-- [ ] AC-F2: Upgrade **preflights tool availability** and, when missing, emits per-tool/OS install + verify steps, pauses, and re-checks; never bundles a tool.
-- [ ] AC-F3: Upgrade produces a decision-grade gap/risk report (web-grounded, source-verified, cached) and executes via baseline tag + branch + commit-per-hop, verifying against the baseline oracle.
-- [ ] AC-F4: Rewrite decomposes in target space, sets posture from stack distance, and presents options (assurance ceiling × effort × TCO) with a BYO-design escape hatch held to the same scrutiny.
-- [ ] AC-F5: Rewrite computes **per-cluster BAL** (weakest-link, mechanical denominators) and an **ERL** grade (reusing app-readiness); completion is gated (hard-block for B-series below floor).
-- [ ] AC-F6: Design-Quality (Simplicity/Readability/Maintainability/Testability) is gated at design + implementation, verified in generated code by the judge.
-- [ ] AC-F7: Replatform captures an NFR spec, decomposes by cloud capability (landing-zone Tier-0 first), and produces IaC + **human-executable** migration/reconciliation/cutover/rollback runbooks; the LLM never executes prod infra/data.
-- [ ] AC-F8: Replatform proves "done" via NFR assurance (measurability-ceilinged) + Well-Architected grade + behavioral regression (reused golden-master).
-- [ ] AC-F9: LLM-as-judge runs per-gate with a **separate model** (CRITIC_MODEL → CRITIC_MODEL_MAX for high-risk; panel for top-risk); routing configurable.
-- [ ] AC-F10: One shared **checkpoint ledger** (envelope+core / skill-owned payload) supports cross-skill hand-off; skew-safe (additive-only + tolerant-reader + merge-write).
-- [ ] AC-F11: Standalone build **vendors** the substrate with version+hash manifest; a CI drift-check fails on any vendored ≠ canonical.
-- [ ] AC-F12: Legacy `migration` skill retired; `MIGRATE` keyword routes to Upgrade/Rewrite/Replatform selection; deprecation notice shipped; no orphaned invocations.
-- [ ] AC-NF1: `tests/validate.js` stays green (0 failures) after each story merges — verification: CI run.
-- [ ] AC-NF2: All source/config writes pass the Write Gate (`APPROVE ADO-9000`) — verification: no un-gated writes in the diff.
+- [x] AC-F1: Upgrade classifies stack + version and **rejects false-upgrades**, routing them to Rewrite (fixture-tested across .NET/Angular/Java/Python/Node).
+- [x] AC-F2: Upgrade **preflights tool availability** and, when missing, emits per-tool/OS install + verify steps, pauses, and re-checks; never bundles a tool.
+- [x] AC-F3: Upgrade produces a decision-grade gap/risk report (web-grounded, source-verified, cached) and executes via baseline tag + branch + commit-per-hop, verifying against the baseline oracle.
+- [x] AC-F4: Rewrite decomposes in target space, sets posture from stack distance, and presents options (assurance ceiling × effort × TCO) with a BYO-design escape hatch held to the same scrutiny.
+- [x] AC-F5: Rewrite computes **per-cluster BAL** (weakest-link, mechanical denominators) and an **ERL** grade (reusing app-readiness); completion is gated (hard-block for B-series below floor).
+- [x] AC-F6: Design-Quality (Simplicity/Readability/Maintainability/Testability) is gated at design + implementation, verified in generated code by the judge.
+- [x] AC-F7: Replatform captures an NFR spec, decomposes by cloud capability (landing-zone Tier-0 first), and produces IaC + **human-executable** migration/reconciliation/cutover/rollback runbooks; the LLM never executes prod infra/data.
+- [x] AC-F8: Replatform proves "done" via NFR assurance (measurability-ceilinged) + Well-Architected grade + behavioral regression (reused golden-master).
+- [x] AC-F9: LLM-as-judge runs per-gate with a **separate model** (CRITIC_MODEL → CRITIC_MODEL_MAX for high-risk; panel for top-risk); routing configurable.
+- [x] AC-F10: One shared **checkpoint ledger** (envelope+core / skill-owned payload) supports cross-skill hand-off; skew-safe (additive-only + tolerant-reader + merge-write).
+- [x] AC-F11: Standalone build **vendors** the substrate with version+hash manifest; a CI drift-check fails on any vendored ≠ canonical.
+- [x] AC-F12: Legacy `migration` skill retired; `MIGRATE` keyword resolves to a static Upgrade/Rewrite/Replatform signpost (human-chosen; no auto-routing classifier); deprecation notice shipped; no orphaned invocations.
+- [x] AC-NF1: `tests/validate.js` stays green (0 failures) after each story merges — verification: CI run.
+- [x] AC-NF2: All source/config writes pass the Write Gate (`APPROVE ADO-9000`) — verification: no un-gated writes in the diff.
 
 ### Out of Scope
 - We will NOT enable autonomous execution of prod infrastructure/data by default — because safety requires human execution; a future-autonomy flag ships OFF.
@@ -201,7 +201,7 @@ deferred *capability* (default OFF), not an open decision.
 |---|---|---|---|---|---|---|
 | 1 | ADO-9001 | **Upgrade** skill (MVP) — tool-orchestrated in-place upgrade + tool preflight/guidance + gap/risk report + minimal inline substrate | 21 | Yes | None | ✅ Code-complete |
 | 2 | ADO-9002 | **Rewrite** skill + **extract shared substrate** (rule of three) + shared checkpoint ledger + migration-knowledge cache + vendored-copy/drift-check seam | 34 | Yes | Story 1 | ✅ Code-complete (Inc A–D) |
-| 3 | TBD | **Replatform** skill + **standalone packaging** (vendored-copy + drift-check, CI-enforced) + **retire legacy** `migration` + future-autonomy flag (OFF) | 21 | Yes | Story 2 | ⏳ Pending |
+| 3 | ADO-9003 | **Replatform** skill + **standalone packaging** (vendored-copy + drift-check, CI-enforced) + **retire legacy** `migration` + future-autonomy flag (OFF) | 21 | Yes | Story 2 | ✅ Code-complete |
 
 ---
 
