@@ -71,6 +71,11 @@ self-bootstrapping) vetoes runtime dependency resolution.
 - **Path resolution** prefers the vendored copy when standalone, canonical when in-plugin.
 
 ### Shared checkpoint schema — one ledger, envelope+core / payload split
+> **Doc:** the migration-family ledger is specified in `skills/shared/migration-ledger-schema.md`
+> (backed by `scripts/checkpoint-ledger.cjs`). This is **distinct** from `skills/shared/checkpoint-schema.md`,
+> which is the brownfield **scan-resume** checkpoint for code-review/security (a different, ephemeral
+> lifecycle) — the two only share the word "checkpoint".
+
 One checkpoint **per project/ADO** = a *migration ledger* (records the whole `upgrade → hand-off → rewrite`
 journey; single active writer).
 - **Shared CORE** (substrate-governed, versioned, drift-checked, **additive-only**): `schema_version` ·

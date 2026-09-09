@@ -1,6 +1,6 @@
 {
   "name": "ai-assisted-development",
-  "version": "3.20.0",
+  "version": "3.21.0",
   "description": "ICEA-driven development workflow for distributed teams using Azure DevOps. Language-agnostic across .NET 8, Java/Spring Boot, Python (FastAPI/Django/Flask), Node.js, and Angular/React. Includes Dream memory system, architect skill, codebase knowledge graph (graph.json structure of record with typed edges + confidence, index+detail projection, module-wide fingerprints, git-hook staleness detection), cache-aware code review and security review, DAST dynamic scanning with OWASP ZAP, PR compliance gates, finding ledgers with dismiss workflow, sprint metrics, and product documentation.",
   "author": {
     "name": "Your Company"
@@ -45,20 +45,21 @@
       "icea-review",
       "icea-revise",
       "icea-status",
-      "migration",
-      "migration-status",
       "operations",
       "plugin-readiness",
       "pr-create",
       "pr-describe",
       "pr-spec-review",
       "product-docs",
+      "replatform",
+      "rewrite",
       "security-review",
       "session-start",
       "sprint-metrics",
       "sync-dirs",
       "token-analysis",
-      "update-arch"
+      "update-arch",
+      "upgrade"
     ],
     "skills": [
       "ado-tasks",
@@ -96,16 +97,17 @@
       "icea-review",
       "icea-revise",
       "icea-status",
-      "migration",
-      "migration-status",
       "plugin-readiness",
       "pr-create",
       "pr-describe",
       "pr-spec-review",
       "product-docs",
+      "replatform",
+      "rewrite",
       "security",
       "sprint-metrics",
-      "token-analysis"
+      "token-analysis",
+      "upgrade"
     ],
     "rules": [
       "project-rules",
@@ -182,6 +184,9 @@
       "source-file-consent",
       "vcs-detect-spec",
       "checkpoint-schema",
+      "migration-ledger-schema",
+      "judge",
+      "executor-seam",
       "context-budget-check",
       "fingerprint-spec",
       "git-remote-provider-spec",

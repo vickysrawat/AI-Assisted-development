@@ -1,0 +1,10 @@
+<!-- Fixture: on-prem .NET Framework 4.8 web app (IIS-hosted; uses MSMQ + SQL Server). -->
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System.Messaging" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
+  </ItemGroup>
+</Project>

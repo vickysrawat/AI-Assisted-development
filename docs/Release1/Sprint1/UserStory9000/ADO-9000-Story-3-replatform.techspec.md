@@ -39,9 +39,9 @@ one-version deprecation notice, and guaranteeing **zero orphaned invocations**.
 | AC-F7 | NFR spec; cloud-capability decomposition (landing-zone Tier-0); IaC + human-executable migration/reconciliation/cutover/rollback runbooks; LLM never executes prod | `skills/replatform/SKILL.md`, `skills/replatform/references/nfr-spec.md`, `skills/replatform/references/cloud-capability-decomposition.md`, `skills/replatform/references/runbooks.md`, `scripts/replatform-plan.cjs` | ✅ Covered |
 | AC-F8 | NFR assurance (measurability-ceilinged) + Well-Architected grade + behavioral regression (reused golden-master) | `skills/replatform/references/nfr-assurance.md`, `skills/replatform/references/well-architected.md`, `scripts/replatform-nfr-assess.cjs` | ✅ Covered |
 | AC-F11 | Standalone build vendors substrate w/ version+hash manifest; CI drift-check fails on vendored ≠ canonical | `scripts/vendor-substrate.cjs` (CI wiring), `scripts/substrate-drift-check.cjs`, `tests/substrate-drift.test.cjs`, CI config | ✅ Covered (CI-enforced) |
-| AC-F12 | Retire legacy `migration`; `MIGRATE` → router; deprecation notice; zero orphaned invocations | `skills/migrate-router/SKILL.md`, `CLAUDE.md` §0a, `.claude-plugin/plugin.json`, `skills/migration/` (removed), `docs/migrations/*` | ✅ Covered |
+| AC-F12 | Retire legacy `migration` + `migration-status`; `MIGRATE*` → **static deprecation signpost** (human picks; no auto-routing classifier); refs preserved as offline tier; deprecation notice; zero orphaned invocations | `CLAUDE.md` §0a + `_project-deploy/CLAUDE.md` §0a (signpost + per-skill STATUS/RESUME), `.claude-plugin/plugin.json` (deregister both), `skills/migration/` + `skills/migration-status/` (removed), `skills/shared/migration-knowledge/refs/**` + `freshness-manifest.json` (relocated), `docs/migrations/2026-09-migration-skill-family.md`, `docs/adr/0061-migration-skill-family-split.md` | ✅ Covered (as-built — see Revision Log 2026-09-09: router→signpost) |
 | Future-autonomy flag (deferred capability) | Executor seam + flag default OFF; prod/regulated always barred | `skills/shared/executor-seam.md`, `scripts/replatform-plan.cjs` | ✅ Seam present, OFF |
-| AC-NF1 | `tests/validate.js` green after merge | `tests/replatform.test.cjs`, `tests/migrate-router.test.cjs`, `tests/fixtures/replatform/*` | ✅ Covered |
+| AC-NF1 | `tests/validate.js` green after merge | `tests/replatform-plan.test.cjs`, `tests/replatform-nfr-assess.test.cjs`, `tests/migration-retirement.test.cjs`, `tests/fixtures/replatform/*` | ✅ Covered |
 | AC-NF2 | Write Gate on all source/config writes | (process — existing hook) | ✅ Covered |
 
 ### File → AC mapping
@@ -89,8 +89,11 @@ one-version deprecation notice, and guaranteeing **zero orphaned invocations**.
 | `scripts/replatform-plan.cjs` | new | Emits cloud-capability plan + IaC scaffold + runbook set; routes execution through the executor seam (flag OFF → author-only) |
 | `scripts/replatform-nfr-assess.cjs` | new | Computes NFR assurance with measurability ceiling |
 | `skills/shared/executor-seam.md` | new | Executor seam contract + future-autonomy flag (default OFF; prod/regulated always barred; cost caps, kill-switch, audit if ever enabled) |
-| `skills/migrate-router/SKILL.md` | new | `MIGRATE` router: detect + classify shape → select Upgrade/Rewrite/Replatform; deprecation redirect from legacy |
-| `skills/migration/` | remove | Retire legacy skill (after router covers mapped cases) |
+| `CLAUDE.md` §0a + `_project-deploy/CLAUDE.md` §0a | modify | Static `MIGRATE*` deprecation signpost (human picks Upgrade/Rewrite/Replatform — **no classifier**) + per-skill STATUS/RESUME rows |
+| `skills/shared/migration-knowledge/refs/**` + `freshness-manifest.json` + `README.md` | new | Relocated 26 legacy refs (mappings/stacks/strategies/shared + 3 curated specs) as an INFERRED offline-fallback tier; 8 superseded specs archived |
+| `skills/migration/` + `skills/migration-status/` | remove | Retire both legacy skills; refs preserved (relocated above) before removal |
+| `tests/migration-retirement.test.cjs` | new | Verifies retirement + relocation + zero-orphan signpost + source-detect preserved |
+| `docs/adr/0061-migration-skill-family-split.md` | new | Records the split + router→signpost + preserve-refs decisions (supersedes ADR 0060 framing) |
 | `scripts/vendor-substrate.cjs` | modify | Wire into CI build (standalone packaging) |
 | `scripts/substrate-drift-check.cjs` | modify | Wire into CI; fail build on drift/manifest mismatch |
 | `CLAUDE.md` §0a | modify | `MIGRATE ADO-{ID}` → router; add `REPLATFORM ADO-{ID}`; deprecation note for legacy behavior |
@@ -210,12 +213,11 @@ REPLATFORM ADO-{ID}   (or MIGRATE ADO-{ID} → router selects Replatform)
 ```
 
 ```
-MIGRATE ADO-{ID}  (router — replaces legacy migration skill)
-  → detect source + intent → classify shape
-       → in-place same-stack higher-version → UPGRADE
-       → out-of-place source≠target        → REWRITE
-       → hosting axis on-prem→cloud         → REPLATFORM
-  → legacy invocation shapes redirected (deprecation notice); zero orphans
+MIGRATE ADO-{ID}  (RETIRED — static deprecation signpost; the human picks a named skill, nothing auto-routes)
+  → prints: same stack + higher version → UPGRADE ADO-{ID}
+            different stack (translate code) → REWRITE ADO-{ID}
+            on-prem → cloud (move host)       → REPLATFORM ADO-{ID}
+  → all legacy MIGRATE*/APPROVE-stage shapes resolve to this signpost (deprecation notice); zero orphans
 ```
 
 ---
@@ -292,3 +294,13 @@ would ever gate execution — keep prod + regulated permanently barred there.
 
 ### Revision Log
 2026-09-07 — Story 3 (Replatform + packaging + retire) tech spec drafted from ADO-9000 ICEA + replatform.md.
+2026-09-09 — AC-F12 reconciled to as-built (Inc D). **`MIGRATE` router → static deprecation signpost**: the
+routing classifier was dropped (rigid, duplicates each skill's own intake detection, breakable extra step);
+`MIGRATE*`/`APPROVE …-stage` keywords now resolve to a human-choice signpost (zero-orphan, no auto-route).
+`skills/migrate-router/SKILL.md` + `migrate-router.cjs` + `migrate-router.test.cjs` were **not created**.
+Legacy refs **preserved** (relocated to `skills/shared/migration-knowledge/refs/` as an INFERRED offline
+tier + freshness manifest; 8 superseded stage specs archived) rather than deleted. `migration-status`
+retired alongside `migration`; per-skill `UPGRADE|REWRITE|REPLATFORM STATUS/RESUME` (uniform, ledger-backed,
+`icea-status`-style) added instead. Verification: `tests/migration-retirement.test.cjs` + `validate.js` §0a
+signpost checks (replacing the planned router tests). ADR 0061 records the decision. `migration-source-detect.cjs`
+retained as a family-shared detector.

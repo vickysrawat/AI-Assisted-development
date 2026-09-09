@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "generated": "2026-09-08",
+  "default_ttl_days": 180,
+  "authority": "INFERRED",
+  "note": "Offline-fallback knowledge tier for the migration family (Upgrade·Rewrite·Replatform). INFERRED (lowest) — never overrides web-VERIFIED facts; consulted only when web-grounding is unavailable. A future knowledge-freshness skill validates last_verified vs TTL and version anchors vs latest, refreshing stale entries. Evergreen methodology (specs/*, shared/clean-architecture, shared/fullstack-integration, strategies/README) is not version-tracked.",
+  "refs": [
+    { "path": "refs/mappings/java-dotnet.md", "source": "java / spring-boot 3.x (Java 17)", "target": ".NET 8", "last_verified": "2026-09-08" },
+    { "path": "refs/mappings/nodejs-dotnet.md", "source": "node 20 / express 4", "target": ".NET 8", "last_verified": "2026-09-08" },
+    { "path": "refs/mappings/nodejs-python.md", "source": "node 20", "target": "python 3.12 (fastapi)", "last_verified": "2026-09-08" },
+    { "path": "refs/mappings/react-angular.md", "source": "react 18", "target": "angular 17", "last_verified": "2026-09-08" },
+    { "path": "refs/mappings/angular-react.md", "source": "angular 17", "target": "react 18", "last_verified": "2026-09-08" },
+    { "path": "refs/mappings/dotnet-framework-to-dotnet.md", "source": ".NET Framework 4.8", "target": ".NET 8", "last_verified": "2026-09-08" },
+    { "path": "refs/mappings/dotnet-upgrade.md", "source": ".NET 6/7", "target": ".NET 8", "last_verified": "2026-09-08" },
+    { "path": "refs/stacks/dotnet.md", "versions": ".NET 8", "last_verified": "2026-09-08" },
+    { "path": "refs/stacks/dotnet-framework.md", "versions": ".NET Framework 4.8", "last_verified": "2026-09-08" },
+    { "path": "refs/stacks/java-spring.md", "versions": "Java 17 / Spring Boot 3.x", "last_verified": "2026-09-08" },
+    { "path": "refs/stacks/nodejs-express.md", "versions": "Node 20 / Express 4-5", "last_verified": "2026-09-08" },
+    { "path": "refs/stacks/python.md", "versions": "Python 3.12", "last_verified": "2026-09-08" },
+    { "path": "refs/stacks/angular.md", "versions": "Angular 17", "last_verified": "2026-09-08" },
+    { "path": "refs/stacks/react.md", "versions": "React 18-19", "last_verified": "2026-09-08" },
+    { "path": "refs/strategies/dotnet.md", "versions": ".NET 8", "last_verified": "2026-09-08" },
+    { "path": "refs/strategies/java-spring.md", "versions": "Spring Boot 3.x", "last_verified": "2026-09-08" },
+    { "path": "refs/strategies/python.md", "versions": "Python 3.12", "last_verified": "2026-09-08" },
+    { "path": "refs/strategies/angular.md", "versions": "Angular 17", "last_verified": "2026-09-08" },
+    { "path": "refs/strategies/react.md", "versions": "React 18", "last_verified": "2026-09-08" },
+    { "path": "refs/shared/ef6-to-efcore.md", "source": "EF6", "target": "EF Core 8", "last_verified": "2026-09-08" }
+  ]
+}

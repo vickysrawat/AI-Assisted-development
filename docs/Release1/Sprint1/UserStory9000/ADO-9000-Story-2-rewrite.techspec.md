@@ -45,7 +45,7 @@ seam** (fully CI-enforced in Story 3).
 | AC-F5 | Per-cluster BAL (weakest-link, mechanical denominators) + ERL; gated completion (B-series hard-block) | `skills/rewrite/references/bal.md`, `skills/rewrite/references/erl.md`, `scripts/rewrite-bal.cjs`, `skills/rewrite/SKILL.md` | ✅ Covered |
 | AC-F6 | Design-Quality gated at design + implementation; verified in generated code by judge | `skills/rewrite/references/design-quality.md`, `skills/shared/judge.md` | ✅ Covered |
 | AC-F9 | LLM-as-judge extracted to shared: separate model, risk-scaled routing | `skills/shared/judge.md`, `skills/shared/model-routing-spec.md` | ✅ Covered (extracted) |
-| AC-F10 | Shared checkpoint ledger (envelope+core / payload); skew-safe | `skills/shared/checkpoint-schema.md`, `scripts/checkpoint-ledger.cjs` | ✅ Covered (extracted) |
+| AC-F10 | Shared checkpoint ledger (envelope+core / payload); skew-safe | `skills/shared/migration-ledger-schema.md`, `scripts/checkpoint-ledger.cjs` | ✅ Covered (extracted) |
 | AC-F11 (◐ seam) | Vendored-copy + drift-check seam (CI-enforced in Story 3) | `skills/shared/README.md`, `scripts/vendor-substrate.cjs`, `scripts/substrate-drift-check.cjs` | ✅ Seam covered |
 | AC-NF1 | `tests/validate.js` green after merge (incl. no-behavior-change for existing consumers) | `tests/rewrite.test.cjs`, `tests/substrate-drift.test.cjs`, `tests/fixtures/rewrite/*` | ✅ Covered |
 | AC-NF2 | Write Gate on all source/config writes | (process — existing hook) | ✅ Covered |
@@ -64,7 +64,7 @@ seam** (fully CI-enforced in Story 3).
 | `skills/rewrite/references/design-quality.md` | AC-F6 |
 | `skills/shared/judge.md` | AC-F6, AC-F9 |
 | `skills/shared/model-routing-spec.md` | AC-F9 |
-| `skills/shared/checkpoint-schema.md`, `scripts/checkpoint-ledger.cjs` | AC-F10 |
+| `skills/shared/migration-ledger-schema.md`, `scripts/checkpoint-ledger.cjs` | AC-F10 |
 | `skills/shared/README.md`, `scripts/vendor-substrate.cjs`, `scripts/substrate-drift-check.cjs` | AC-F11 (seam) |
 | `tests/rewrite.test.cjs`, `tests/substrate-drift.test.cjs`, `tests/fixtures/rewrite/*` | AC-NF1 |
 
@@ -80,7 +80,7 @@ seam** (fully CI-enforced in Story 3).
 
 | Artifact | Change | Detail |
 |---|---|---|
-| Checkpoint **core** (`skills/shared/checkpoint-schema.md`) | EXTRACT + versionise | `schema_version` · `skill` discriminator · `ado_id`/timestamps · source descriptor · `stage_gates` · `decision_log` · `judge_verdicts` · `phase_history`. **Additive-only**; tolerant-reader + merge-write |
+| Checkpoint **core** (`skills/shared/migration-ledger-schema.md`) | NEW (extract from Story-1 inline) | `schema_version` · `skill` discriminator · `ado_id`/timestamps · source descriptor · `stage_gates` · `decision_log` · `judge_verdicts` · `phase_history`. **Additive-only**; tolerant-reader + merge-write |
 | Checkpoint **payload** | ADD | `rewrite{clusters, BAL, ERL, DAG, posture}` (opaque to other skills) |
 | Migration-knowledge cache | ADD 3rd class | decision-precedent ADRs (alongside immutable breaking-change facts + volatile pricing) |
 
@@ -100,7 +100,7 @@ seam** (fully CI-enforced in Story 3).
 | `scripts/rewrite-decompose.cjs` | new | Target-space decomposition + dependency DAG emission + worktree scheduling plan |
 | `scripts/rewrite-bal.cjs` | new | Computes per-cluster BAL (weakest-link) with mechanical coverage denominators |
 | **Substrate extraction** | | |
-| `skills/shared/checkpoint-schema.md` | modify (extract) | Promote Story-1 inline envelope to the shared core + payload split; document skew-safety |
+| `skills/shared/migration-ledger-schema.md` | new (extract) | Promote Story-1 inline envelope to the shared core + payload split; document skew-safety. NEW dedicated doc — deliberately NOT `checkpoint-schema.md` (that is the brownfield scan-resume spec; see Revision Log 2026-09-08) |
 | `skills/shared/judge.md` | new | LLM-as-judge layer: separate agent (artifact+rubric+ground-truth only) + separate model; adversarial-by-default; per-gate PASS/REVISE/BLOCK + session meta-judge |
 | `skills/shared/model-routing-spec.md` | modify | Add three-tier judge ladder: `CRITIC_MODEL` → `CRITIC_MODEL_MAX` (Opus 4.8 @ max effort) → different-family panel for top-risk |
 | `skills/shared/README.md` | modify | Document vendored-copy + drift-check governance + path resolution (canonical in-plugin / vendored standalone) |
@@ -295,3 +295,11 @@ just anti-drift). The checkpoint core is additive-only — never remove or repur
 
 ### Revision Log
 2026-09-07 — Story 2 (Rewrite + substrate extraction) tech spec drafted from ADO-9000 ICEA + rewrite.md.
+2026-09-08 — Inc A deviation: the shared checkpoint-ledger contract is documented in a NEW
+`skills/shared/migration-ledger-schema.md`, NOT by extending `skills/shared/checkpoint-schema.md` as
+originally drafted. Reason: `checkpoint-schema.md` already exists as the brownfield **scan-resume**
+spec (code-review/security three-pass + legacy migration `mode` block; ephemeral, delete-on-completion)
+— a different lifecycle from the persistent migration-family **journey ledger** (envelope+core /
+skill-payload, hand-off contract). Conflating them would overload one doc + risk the `source_roots`
+invariant `validate.js` asserts on `checkpoint-schema.md`. `checkpoint-ledger.cjs` is unchanged
+(skill-agnostic `payload.<skill>`); only the DOC name/status differs (new, not modify).

@@ -187,6 +187,15 @@ gap. `migration` is the reference implementation of this shape (it is exactly SR
 *stage-gated sub-phases that re-enter at different steps*). Reach for this pattern only when a
 single SKILL.md genuinely cannot hold the work — most skills should stay flat.
 
+> ⚠ **Retired as a shipping skill (ADO-9000).** `skills/migration/` no longer exists — the single
+> `migration` skill was split into the directly-invoked **Upgrade · Rewrite · Replatform** family. The
+> anatomy below is **preserved as the canonical illustration of the multi-stage orchestrator pattern**;
+> the living implementations are `skills/rewrite/` and `skills/replatform/` (staged pipelines with
+> per-stage gates + shared-ledger resume). Persistent journey state is now the shared **migration ledger**
+> (`skills/shared/migration-ledger-schema.md`) — *not* the scan-resume `checkpoint-schema.md` cited below.
+> A detailed diagrammed walkthrough of the retired skill is planned at
+> `docs/architecture/legacy-migration-skill.md`.
+
 ### Anatomy (`skills/migration/`)
 
 | Part | Responsibility |
@@ -244,7 +253,7 @@ backward-safe merge; document the gate in `checkpoint-schema.md`. Then re-run `n
 
 ### When to promote something to shared/
 
-A spec belongs in `shared/` when **two or more skills** read or write the same artefact or follow the same protocol. The **authoritative, complete list is `plugin.json` → `components.shared`** (41 specs as of v3.20.0); the most-referenced are:
+A spec belongs in `shared/` when **two or more skills** read or write the same artefact or follow the same protocol. The **authoritative, complete list is `plugin.json` → `components.shared`** (42 specs as of v3.21.0); the most-referenced are:
 
 | File | Governs |
 |---|---|
