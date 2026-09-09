@@ -75,4 +75,7 @@ temp/
 .claude/plugin-path.txt
 .claude/session-context.json
 .claude/graph/.module-skeleton.json
+# Build artifacts auto-generated in test fixtures by IDE C# tooling (never commit)
+tests/fixtures/**/obj/
+tests/fixtures/**/bin/
 # === end ai-assisted-development ===
