@@ -104,7 +104,7 @@ _Nothing yet._
   `skills/migration/references/specs/integration-verification-spec.md` defines a ground-truth-verified
   **Integration Inventory** (source-inventory §8); every row is a Review-Focus item and an `UNVERIFIED`
   row blocks `APPROVE INVENTORY`. New checkpoint gate `stage_gates.integrations_verified`. Encodes the
-  ADO-9999 lesson (RiskMgmt in-process-DB misread as WCF; WallBuilder NTLM/2-endpoint misread as
+  ADO-9999 lesson (Product in-process-DB misread as WCF; service NTLM/2-endpoint misread as
   Kerberos): **citation ≠ interpretation**.
 - **As-built reconciliation (output side).** New **gated** Stage 6 Step 6.5 runs `architect` +
   `/graph-sync` on the generated code (`.claude/architecture/*` becomes the as-built source of truth),
@@ -718,7 +718,7 @@ The plugin injected ~180 governance lines into every project (own template was 2
 `--uninstall` / `-Uninstall` previously removed only the current marketplace source dir and
 one `extraKnownMarketplaces` key, relying on `claude plugin uninstall` for the cache. It left
 behind: the plugin **cache** dir (all versions), caches **orphaned by a marketplace rename or
-past version bumps** (e.g. an old `ke-marketplace/ai-assisted-development` tree with 5
+past version bumps** (e.g. an old `local-marketplace/ai-assisted-development` tree with 5
 stranded versions), and **stale `extraKnownMarketplaces` entries** for renamed marketplaces.
 
 - New shared engine `scripts/uninstall-cleanup.js` (cross-platform Node) computes and applies
@@ -768,7 +768,7 @@ with generic placeholders (`your-org`, `your-project`, `Your Company`).
   runs `scripts/sync-config.sh` to propagate into `plugin.json` (author, repository) and
   `marketplace.json` (name, description). Updates preserve the entered values.
 - **`scripts/sync-config.sh`** (new) is the propagation tool for manual edits/CI.
-- **Marketplace namespace de-branded**: `ke-marketplace` → a name **derived from the
+- **Marketplace namespace de-branded**: `local-marketplace` → a name **derived from the
   organization** — `{organization}-marketplace` for a real org, else `local-marketplace`.
   Skills now locate the plugin dir by glob (`~/.claude/plugins/*/plugins/ai-assisted-development`),
   so the marketplace name is free and existing installs keep working; `--update`/`--uninstall`
@@ -927,7 +927,7 @@ root — a path that never exists. Every dream-init run wrote
 `dream_init_plugin_version: undefined` to `dream-init-state.json`, making
 dream-sync's version comparison always show `PROVISIONED_VERSION = unknown`.
 Fixed to read from the correct plugin install path:
-`$HOME/.claude/plugins/ke-marketplace/plugins/ai-assisted-development/.claude-plugin/plugin.json`
+`$HOME/.claude/plugins/local-marketplace/plugins/ai-assisted-development/.claude-plugin/plugin.json`
 
 ### Fixed — dream-init Phase 2: stale section content never updated on upgrade
 Phase 2 only checked section presence — if `## 0. WRITE GATE` existed (even

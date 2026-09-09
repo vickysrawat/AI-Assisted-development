@@ -122,7 +122,7 @@ is `UNVERIFIED` is RED/UNKNOWN here (never rated on an assumed Kind):
 
 | Integration | Kind (verified) | Evidence (PROV: config/assembly/WSDL) | Target approach | Verification status | Risk |
 |---|---|---|---|---|---|
-| {e.g. WallBuilder} | WCF basicHttpBinding/Transport/NTLM | PROV:Web.config#L120 | CoreWCF client / regenerate from WSDL | VERIFIED / UNVERIFIED / DEFERRED(task) | {MEDIUM/HIGH/BLOCKER} |
+| {e.g. service} | WCF basicHttpBinding/Transport/NTLM | PROV:Web.config#L120 | CoreWCF client / regenerate from WSDL | VERIFIED / UNVERIFIED / DEFERRED(task) | {MEDIUM/HIGH/BLOCKER} |
 
 **## 7. Architecture Alignment**
 

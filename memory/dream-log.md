@@ -480,3 +480,5 @@ These were deleted. Watch for more stale v1 references in future sessions.
 ### [capture] [2026-09-07] Plan approved — ADO-9000 ICEA APPROVED (Feature Gate open); next = IMPLEMENT Story-1 (Upgrade)
 
 ### [capture] [2026-09-09] Task completed + gotchas — ADO-9000 committed (06d22b9) + merged to main (ec78db0)
+
+### [capture] [2026-09-09] Plan approved — push DEFERRED; resume the 3 migration-family follow-ups tomorrow

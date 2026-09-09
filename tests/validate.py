@@ -508,7 +508,7 @@ for cmd in pj.get("components", {}).get("commands", []):
 # ── 24. No hardcoded ADO project values in commands/ ─────────────────────────
 for cmd_file in sorted(glob.glob("commands/*.md")):
     content = open(cmd_file).read()
-    # Look for hardcoded project name patterns: TeamProject = 'KE' or similar
+    # Look for hardcoded project name patterns: TeamProject = 'local' or similar
     if _re.search(r"TeamProject\]\s*=\s*'[A-Z]{1,6}'", content):
         err(f"{cmd_file}: contains a hardcoded ADO TeamProject value — "
             f"read ADO_PROJECT dynamically from CLAUDE.md instead")

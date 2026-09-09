@@ -13,11 +13,11 @@
 
 | # | File | Project | Change |
 |---|---|---|---|
-| 1 | {Controllers/XController.cs} | {KE.Project} | {Add/Modify action} |
-| 2 | {Services/IXService.cs} | {KE.Project.Services} | {Add/Modify method} |
-| 3 | {Services/XService.cs} | {KE.Project.Services} | {Implement method (stub/real)} |
-| 4 | {Models/XModel.cs} | {KE.Project.Models} | {New DTO / Modify existing} |
-| 5 | {Views/Area/Index.cshtml} | {KE.Project} | {Add UI component} |
+| 1 | {Controllers/XController.cs} | {local.Project} | {Add/Modify action} |
+| 2 | {Services/IXService.cs} | {local.Project.Services} | {Add/Modify method} |
+| 3 | {Services/XService.cs} | {local.Project.Services} | {Implement method (stub/real)} |
+| 4 | {Models/XModel.cs} | {local.Project.Models} | {New DTO / Modify existing} |
+| 5 | {Views/Area/Index.cshtml} | {local.Project} | {Add UI component} |
 
 > Locate files via the existing solution structure — do not invent paths.
 > For DTOs, check if an existing model should be extended before creating new.
@@ -120,7 +120,7 @@ public async Task<{ReturnType}> {MethodAsync}({parameters})
 ## DTO / Model — {XModel.cs} (if new)
 
 ```csharp
-namespace {KE.Project.Models};
+namespace {local.Project.Models};
 
 /// <summary>
 /// {Description of this model's purpose}.

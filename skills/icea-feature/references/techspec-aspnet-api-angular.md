@@ -20,10 +20,10 @@
 | 3 | `apps/{app}/src/app/{feature}/{feature}.component.scss` | {AngularApp} | Add/modify styles |
 | 4 | `libs/{lib}/src/{feature}/{feature}.service.ts` | {AngularLib} | Add/modify Angular service |
 | 5 | `libs/{lib}/src/{feature}/{feature}.model.ts` | {AngularLib} | Add TypeScript interface |
-| 6 | `Controllers/{Feature}Controller.cs` | {KE.Project.Api} | Add/modify API controller |
-| 7 | `Services/I{Feature}Service.cs` | {KE.Project.Services} | Add service interface |
-| 8 | `Services/{Feature}Service.cs` | {KE.Project.Services} | Implement service (stub/real) |
-| 9 | `Models/{Feature}Model.cs` | {KE.Project.Models} | Add/modify DTO |
+| 6 | `Controllers/{Feature}Controller.cs` | {local.Project.Api} | Add/modify API controller |
+| 7 | `Services/I{Feature}Service.cs` | {local.Project.Services} | Add service interface |
+| 8 | `Services/{Feature}Service.cs` | {local.Project.Services} | Implement service (stub/real) |
+| 9 | `Models/{Feature}Model.cs` | {local.Project.Models} | Add/modify DTO |
 
 > Standard Angular (non-NX): replace rows 1–5 with `src/app/{feature}/` paths.
 > Locate existing files via the solution structure — do not invent paths.
@@ -250,7 +250,7 @@ public class {Feature}Service : I{Feature}Service
 
 **Modern (.NET Core/5+/10):**
 ```csharp
-namespace {KE.Project}.Models;
+namespace {local.Project}.Models;
 
 /// <summary>{Feature} item returned to the Angular client.</summary>
 public record {Feature}Item(

@@ -10,8 +10,8 @@ design-doc supersession banner._
 
 On ADO-9999 the architecture docs were frozen at Stage 1 — written *before any code existed* — and
 never reconciled against the code that was actually generated. 13 divergences were found only by hand:
-endpoint count **57 (design) vs 49 (as-built)**, a phantom `kirklanddata_generalmatterdetails` role
-enforced nowhere, RiskMgmt documented as a service but built as a direct DB, WallBuilder documented as
+endpoint count **57 (design) vs 49 (as-built)**, a phantom `org_role` role
+enforced nowhere, Product documented as a service but built as a direct DB, service documented as
 HttpClient but built as WCF, and Serilog / Moq / IMemoryCache / `/health/*` documented but absent.
 Golden-master (the only behavioral net) was SKIPPED, so nothing caught them.
 
@@ -47,8 +47,8 @@ mechanical path — the label is the honest signal.
 |---|---|---|---|---|
 | 1 | **Endpoints** — enumerate generated controller routes (verb + template); diff count + set | generated controllers | Stage 0.6 §1/§3 coverage + design docs | 57≠49 |
 | 2 | **Authorization** — extract every role attribute (class ∧ action, AND-semantics); diff role set | `[Authorize(Roles=…)]` etc. | `SECURITY-ARCHITECTURE.md` / inventory §9 roles | phantom `generalmatterdetails` |
-| 3 | **External dependencies** — list generated external clients / DI registrations; diff *kind* | WCF client / HttpClient / DbContext + `Program.cs`/`Startup.cs` DI | design docs + §8 Integration Inventory | RiskMgmt-as-service, WallBuilder-as-HttpClient |
-| 4 | **Config + libraries** — diff `appsettings.json` keys + logging/cache/test packages | `appsettings*.json` + `*.csproj`/`package.json` | doc claims | `RiskMgmtBaseUrl`, Serilog, Moq, IMemoryCache |
+| 3 | **External dependencies** — list generated external clients / DI registrations; diff *kind* | WCF client / HttpClient / DbContext + `Program.cs`/`Startup.cs` DI | design docs + §8 Integration Inventory | Product-as-service, service-as-HttpClient |
+| 4 | **Config + libraries** — diff `appsettings.json` keys + logging/cache/test packages | `appsettings*.json` + `*.csproj`/`package.json` | doc claims | `ProductBaseUrl`, Serilog, Moq, IMemoryCache |
 
 Check 3 **cross-links the Stage 0.6 §8 Integration Inventory** (`integration-verification-spec.md`) —
 an integration verified as in-process DB must appear as a `DbContext`/connection, not a service client;
