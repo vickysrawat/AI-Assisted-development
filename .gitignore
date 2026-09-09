@@ -57,12 +57,8 @@ tests/results/
 
 
 # === ai-assisted-development (managed) ===
-.claude/settings.local.json
-.claude/security-checkpoint.json
-.claude/code-review-checkpoint.json
-.claude/file-cache.json
-.claude/dream-init-state.json
-memory/health.html
+.claude
+memory
 CodeReviews/*
 !CodeReviews/code-review-ledger.md
 security/*

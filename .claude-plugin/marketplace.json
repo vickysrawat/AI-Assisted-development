@@ -1,7 +1,7 @@
 {
   "name": "local-marketplace",
   "owner": {
-    "name": "Product Engineering"
+    "name": "Vivek Rawat"
   },
   "description": "Your Company internal Claude Code plugins",
   "plugins": [
