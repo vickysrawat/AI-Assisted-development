@@ -478,3 +478,5 @@ These were deleted. Watch for more stale v1 references in future sessions.
 ### [capture] [2026-09-07] Task completed — ADO-9000 Tech Spec SAVED (epic + 3 story specs, 76 SP); RESUME at APPROVE ADO-9000
 
 ### [capture] [2026-09-07] Plan approved — ADO-9000 ICEA APPROVED (Feature Gate open); next = IMPLEMENT Story-1 (Upgrade)
+
+### [capture] [2026-09-09] Task completed + gotchas — ADO-9000 committed (06d22b9) + merged to main (ec78db0)
