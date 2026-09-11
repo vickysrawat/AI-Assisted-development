@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "default_ttl_days": 180,
+  "authority": "INFERRED",
+  "refs": [
+    { "path": "refs/stacks/dotnet.md", "versions": ".NET 8", "last_verified": "2025-01-01" }
+  ]
+}

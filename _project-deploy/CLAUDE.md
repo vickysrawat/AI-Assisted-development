@@ -17,7 +17,7 @@
 #        skill Q1 matrix. Python is a target from Node.js (nodejs→python) and React a target from
 #        Angular (angular→react); Python-as-source and java/dotnet→python have no mapping refs yet.
 # Last updated: keep this file updated when conventions change
-# Plugin version: 3.20.0
+# Plugin version: 3.22.0
 
 ---
 

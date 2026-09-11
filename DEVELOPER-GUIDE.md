@@ -253,7 +253,7 @@ backward-safe merge; document the gate in `checkpoint-schema.md`. Then re-run `n
 
 ### When to promote something to shared/
 
-A spec belongs in `shared/` when **two or more skills** read or write the same artefact or follow the same protocol. The **authoritative, complete list is `plugin.json` → `components.shared`** (42 specs as of v3.21.0); the most-referenced are:
+A spec belongs in `shared/` when **two or more skills** read or write the same artefact or follow the same protocol. The **authoritative, complete list is `plugin.json` → `components.shared`** (42 specs as of v3.22.0); the most-referenced are:
 
 | File | Governs |
 |---|---|

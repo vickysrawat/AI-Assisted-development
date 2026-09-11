@@ -90,6 +90,10 @@ const RULES = [
 
 const FORCE_FLAG_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
+// An epic-level tech spec legitimately omits the per-story sections — those live in each
+// ADO-{ID}-Story-{N} spec, not the epic umbrella. These three are skipped for an EPIC spec.
+const EPIC_EXEMPT_SECTIONS = new Set(['## AC Coverage Matrix', '## Files Changed', '## Test Cases']);
+
 function countPlaceholders(content) {
   let count = 0, inCodeBlock = false;
   for (const line of content.split('\n')) {
@@ -109,6 +113,16 @@ function countNonEmptyLines(content) {
 function checkRequiredSections(content, requiredSections) {
   const lines = new Set(content.split('\n').map(l => l.trim()));
   return requiredSections.filter(s => !lines.has(s));
+}
+
+// DECISION: how to detect an epic-level spec so its Gate-3 required-sections check can relax
+// Options considered:
+//   A) match any "EPIC" token anywhere in the body — rejected: a story spec's Sizing table lists
+//      "Type: STORY / EPIC" and would falsely exempt itself
+//   B) match the anchored Status: line only — chosen: the epic-level template is the only artefact
+//      whose status line carries EPIC; deterministic and forge-resistant
+function isEpicLevelSpec(content) {
+  return /^Status:[^\n]*\bEPIC\b/mi.test(content);
 }
 
 function checkForceFlag(flagPath, flagMode) {
@@ -223,7 +237,11 @@ process.stdin.on('end', () => {
 
   // Gate 3: missing required template sections
   if (matched.requiredSections) {
-    const missing = checkRequiredSections(content, matched.requiredSections);
+    // Epic-level specs omit the per-story sections by design — relax those three for an EPIC status line.
+    const required = isEpicLevelSpec(content)
+      ? matched.requiredSections.filter(s => !EPIC_EXEMPT_SECTIONS.has(s))
+      : matched.requiredSections;
+    const missing = checkRequiredSections(content, required);
     if (missing.length > 0) {
       process.stderr.write(
         `⛔ CONTEXT GATE — ${noun} write blocked (missing ${missing.length} required section(s))\n` +

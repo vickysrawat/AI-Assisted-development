@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "default_ttl_days": 180,
+  "authority": "INFERRED",
+  "refs": [
+    { "path": "refs/stacks/dotnet.md", "versions": ".NET 8", "last_verified": "2026-09-01" },
+    { "path": "refs/mappings/dotnet-upgrade.md", "source": ".NET 6/7", "target": ".NET 8", "last_verified": "2026-09-01" }
+  ]
+}
