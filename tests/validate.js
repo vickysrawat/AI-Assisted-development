@@ -40,7 +40,8 @@ if (!exists('.claude-plugin/plugin.json')) {
   const EXPECTED_COMMANDS = [
     'dream','dream-health','setup-init','setup-status','setup-sync','setup-teardown','dream-rollback',
     'session-start','bug','checkin','update-arch','explain','fix',
-    'code-review','security-review','token-analysis','sprint-metrics','product-docs'
+    'code-review','security-review','token-analysis','sprint-metrics','product-docs',
+    'knowledge-freshness'
   ];
   EXPECTED_COMMANDS.forEach(c => {
     cmds.includes(c) ? ok(`command registered: ${c}`) : bad(`command registered: ${c}`, `Add "${c}" to components.commands in plugin.json`);
@@ -195,6 +196,7 @@ const SKILLS = [
   'pr-create','pr-describe','pr-spec-review','ado-tasks','sprint-metrics',
   'setup-status','setup-sync','setup-teardown','dream-rollback','token-analysis','product-docs',
   'app-readiness','plugin-readiness',
+  'knowledge-freshness',
 ];
 SKILLS.forEach(s => {
   const rel = `skills/${s}/SKILL.md`;
@@ -343,6 +345,39 @@ if (exists('scripts/repo-detect.cjs')) {
 }
 
 // ── 7. setup-init completeness ────────────────────────────────────────────────
+// ── knowledge-freshness (ADO-9004 Story 1) — detector + shared classifier extract ──
+console.log('\n▶ knowledge-freshness (ADO-9004)');
+{
+  const kf = 'scripts/knowledge-freshness.cjs';
+  if (exists(kf)) {
+    const c = read(kf);
+    c.includes('SCRIPT REVIEW')           ? ok('kf: detector has SCRIPT REVIEW header')  : bad('kf: detector missing SCRIPT REVIEW header');
+    c.includes('require.main === module') ? ok('kf: detector has require.main CLI guard') : bad('kf: detector missing require.main guard');
+    (!c.includes("require('http") && !c.includes("require('https") && !c.includes('fetch('))
+      ? ok('kf: detector performs no network I/O') : bad('kf: detector must not perform network I/O');
+    (c.includes("=== 'restamp'") && c.includes('function applyRestamp'))
+      ? ok('kf: restamp op + pure applyRestamp present') : bad('kf: restamp op/applyRestamp missing');
+  } else bad('kf: scripts/knowledge-freshness.cjs missing');
+
+  const lib = 'scripts/lib/source-classifier.cjs';
+  if (exists(lib)) {
+    const l = read(lib);
+    l.includes('SCRIPT REVIEW') ? ok('kf: source-classifier has SCRIPT REVIEW header') : bad('kf: source-classifier missing SCRIPT REVIEW header');
+    (l.includes('module.exports') && l.includes('classifySource'))
+      ? ok('kf: source-classifier exports classifySource') : bad('kf: source-classifier must export classifySource');
+  } else bad('kf: scripts/lib/source-classifier.cjs missing');
+
+  if (exists('scripts/upgrade-knowledge-cache.cjs')) {
+    const u = read('scripts/upgrade-knowledge-cache.cjs');
+    u.includes("require('./lib/source-classifier.cjs')")
+      ? ok('kf: upgrade-cache imports the shared classifier') : bad('kf: upgrade-cache must import the shared classifier');
+    !u.includes('function classifySource')
+      ? ok('kf: upgrade-cache no longer defines its own classifySource') : bad('kf: upgrade-cache still defines classifySource (extract incomplete)');
+  }
+
+  exists('commands/knowledge-freshness.md') ? ok('kf: command stub exists') : bad('kf: commands/knowledge-freshness.md missing');
+}
+
 // setup-init is a thin command → skills/setup-init/SKILL.md holds the procedure.
 console.log('\n▶ setup-init completeness (skills/setup-init/SKILL.md)');
 if (exists('skills/setup-init/SKILL.md')) {

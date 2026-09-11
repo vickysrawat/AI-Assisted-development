@@ -2,6 +2,30 @@
 
 _Nothing yet._
 
+## [3.22.0] — 2026-09-10
+
+### Added — `knowledge-freshness` skill (validate + refresh the offline knowledge tier)
+- New **`/knowledge-freshness`** skill + command (EPIC ADO-9004) that keeps the migration family's
+  offline INFERRED knowledge tier (`skills/shared/migration-knowledge/refs/`) trustworthy.
+  - **`check`** — a deterministic, **no-network** validator (`scripts/knowledge-freshness.cjs`) that
+    classifies every `freshness-manifest.json` ref **FRESH / STALE-BY-AGE / STALE-BY-VERSION /
+    UNKNOWN**. Age is pure `last_verified`+TTL math; version compares each ref's anchor against an
+    LLM-supplied `--latest` JSON (absent ⇒ UNKNOWN, never guessed). Exit: 0 none-stale · 9 some-stale · 1 error.
+  - **`refresh`** — for a stale ref: web-ground → unified diff → higher-tier inline judge → **Write
+    Gate** → update the ref, bump `last_verified` (deterministic `restamp` op), re-tag source
+    authority. Never auto-runs; never writes without `APPROVE`.
+- **Shared classifier extract** — `classifySource`/`confidenceFor` moved to
+  `scripts/lib/source-classifier.cjs` (single source of truth; `upgrade-knowledge-cache.cjs` imports
+  it, behaviour unchanged).
+
+### Fixed
+- **`context-budget-tech-write.cjs`** no longer misfires on **epic-level** Tech Specs — the required
+  per-story sections (AC Coverage Matrix / Files Changed / Test Cases) are skipped when the spec's
+  `Status:` line is `EPIC` (they live in the per-story specs). Added `tests/context-budget-tech-write.test.cjs`.
+
+### Migration
+- Run `/setup-sync`. No breaking changes; `/knowledge-freshness` is a plugin-maintainer tool.
+
 ## [3.21.0] — 2026-09-09
 
 ### Changed — migration skill family split (Upgrade · Rewrite · Replatform)
