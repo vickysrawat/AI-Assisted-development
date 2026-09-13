@@ -78,8 +78,9 @@ NTLM+2-endpoint reality was misread as Kerberos):
 - **Formatting / ID helpers (`FormatHelper.*`, employee-ID / client-matter formats)** often live in a
   referenced common assembly (e.g. `local.Common.Helpers`) — resolve it before asserting formats; do not
   infer the format from a call site.
-- If the backing source / WSDL is unreachable, record an **unavailable-ground-truth gap** (inventory
-  §11) and mark the Integration Inventory row `UNVERIFIED` — it blocks `APPROVE INVENTORY`.
+- If the backing source / WSDL is unreachable, record an **unavailable-ground-truth gap** and mark the
+  Integration Inventory row `UNVERIFIED` (per `specs/integration-verification-spec.md`) — a
+  PARTIAL/UNVERIFIED row blocks `APPROVE OPTIONS` and `APPROVE DESIGN`.
 
 ---
 
@@ -131,11 +132,12 @@ The .NET Upgrade Assistant was deprecated in late 2025. Microsoft now directs te
 
 ---
 
-## Framework-attribute tier reference (Stage 0.6)
+## Framework-attribute tier reference
 
-Framework-provided attributes whose *declarative* outcome is framework-GUARANTEED → Stage 0.6 may
-tier that outcome **STATIC** (see `specs/source-inventory-spec.md` → Tier cut-line). Hard rule: an
-attribute **defined in the SOURCE tree is custom → INFERRED**. NOTE the big divergence from .NET
+Framework-provided attributes whose *declarative* outcome is framework-GUARANTEED → a golden-master
+recording of that outcome is tiered **STATIC** (`specs/golden-master-spec.md` → `tier` field; also
+feeds the authorization check in `specs/asbuilt-reconciliation-spec.md`). Hard rule: an attribute
+**defined in the SOURCE tree is custom → INFERRED**. NOTE the big divergence from .NET
 Core: Web API 2 does NOT auto-400 on invalid ModelState, and MVC5 `[Authorize]` does NOT split
 401/403 — do not carry Core assumptions across.
 

@@ -2,6 +2,31 @@
 
 _Nothing yet._
 
+## [3.23.0] — 2026-09-13
+
+### Fixed — `icea-floor` block message + PowerShell port
+- **Block message now names the bug path.** All three `icea-floor` ports (`.sh`/`.cjs`/`.ps1`)
+  pointed only at `/icea-feature`, though the floor already honours a `Tier: T1` bug spec. The
+  message now says: for a feature run `/icea-feature`; for a bug fix run `/bug` (writes an approved
+  T1 spec first). "T1 auto-ICEA" wording corrected to "T1 bug spec".
+- **`icea-floor.ps1` exemption parity.** The PowerShell port lacked the `CodeReviews/`, `security/`,
+  `dynamic-scan/`, and `token-analysis/` exemptions that `.sh`/`.cjs` have — so on a PowerShell-fallback
+  machine a review skill writing its HTML report (`.html` is guarded) was wrongly blocked. Added.
+- **`icea-floor.ps1` made ASCII-only.** Windows PowerShell 5.1 reads the BOM-less `.ps1` with the ANSI
+  codepage; non-ASCII glyphs corrupted string parsing. Port strings are now plain ASCII.
+
+### Added — `SKIP_ICEA_FLOOR` escape hatch
+- Loud, justification-required, audited override for the mechanical ICEA floor, mirroring
+  `SKIP_FINDINGS_GATE`: `SKIP_ICEA_FLOOR=1` with `ICEA_FLOOR_JUSTIFICATION="reason"`. Without a
+  justification the write stays blocked; the `.cjs` port appends a `gate.bypass` audit event.
+  **Caveat:** the floor is a PreToolUse hook, so the override cannot be scoped to one write — it stays
+  in effect session-wide until unset, and a loud warning fires on every bypassed write. Documented in
+  `hooks/README.md`.
+
+### Migration
+- Run `/setup-sync` to re-copy the `icea-floor.*` hooks. No breaking changes; default posture (floor
+  enforced) is unchanged when `SKIP_ICEA_FLOOR` is unset.
+
 ## [3.22.0] — 2026-09-10
 
 ### Added — `knowledge-freshness` skill (validate + refresh the offline knowledge tier)

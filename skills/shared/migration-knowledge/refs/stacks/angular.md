@@ -166,7 +166,10 @@ With `ChangeDetectionStrategy.OnPush`, Angular re-checks the component ONLY when
 
 ---
 
-## Framework-attribute tier reference (Stage 0.6)
+## Framework-attribute tier reference
+
+_Framework-guaranteed outcomes tier **STATIC** in a golden-master recording
+(`specs/golden-master-spec.md` → `tier` field); source-defined logic is **INFERRED**._
 
 Angular is a *looser* fit than attribute-driven backends: outcomes are UI / navigation / validation
 states, **not HTTP codes**, and guards/validators are wired by reference — so the entries below are

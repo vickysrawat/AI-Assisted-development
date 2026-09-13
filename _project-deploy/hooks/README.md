@@ -16,7 +16,7 @@ them. Each hard rule lives at the lowest tier that can hold it:
 
 | File | Tier | Rule enforced |
 |---|---|---|
-| `icea-floor.sh` | (b) PreToolUse | Source-file writes blocked when no approved ICEA (or T1 auto-ICEA) exists. Coarse floor — the prompt gate provides the per-feature judgment; this guarantees code is never written with no approval at all. |
+| `icea-floor.sh` | (b) PreToolUse | Source-file writes blocked when no approved ICEA (or T1 bug spec) exists. Coarse floor — the prompt gate provides the per-feature judgment; this guarantees code is never written with no approval at all. Override is loud and session-wide: `SKIP_ICEA_FLOOR=1` with `ICEA_FLOOR_JUSTIFICATION`, logged to the audit trail. |
 | `findings-gate-precommit.sh` | (c) git pre-commit | Open Critical/High findings block commits even when the developer bypasses /checkin and runs `git commit` directly. Override is loud: `SKIP_FINDINGS_GATE=1` with justification. |
 | `validate-ledgers.py` | (c) CI | Ledger invariants: no empty dismissal justifications, valid reason categories, no FP collisions, summary counts match sections. Fails the pipeline on violation. |
 | `validate-pr-compliance.py` | (c) CI **required check** | Server-side ICEA floor per PR (approved ICEA matching the branch ADO ID must exist) + T1 bound re-verification as pure diff math. Runs as required Build Validation — unbypassable. A failure when local gates "passed" is bypass telemetry (ADR 0009). |

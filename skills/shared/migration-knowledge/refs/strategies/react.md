@@ -8,14 +8,14 @@ standard React/Vite tooling but not yet run against a real migration.
 
 _A `frontend` run's target folder IS the React app, so all paths are **root-relative** (same
 convention as `angular.md`/`dotnet.md`). The run consumes an API contract and calls the API only
-through the generated client. SKILL.md Step 4.6 resolves its `{TOKEN}`s from here._
+through the generated client. The invoking migration skill resolves its `{TOKEN}`s from here._
 
 ---
 
 ## STACK
 React 18+ · TypeScript · Vite · TanStack Query · React Router v6
 
-## SKELETON (workspace scaffolded in Step 3.3)
+## SKELETON (workspace scaffolded at scaffold phase)
 ```
 package.json
 vite.config.ts
@@ -24,7 +24,7 @@ index.html
 src/main.tsx          ← app entry: providers (QueryClient, Router, auth)
 src/app/router.tsx    ← route table (lazy routes + loaders/guards)
 src/shared/           ← shared components/hooks (UI kernel)
-src/api/              ← GENERATED API client (Step 4.6.0 — do not hand-edit)
+src/api/              ← GENERATED API client (API-client generation step — do not hand-edit)
 src/features/         ← feature clusters
 .env                  ← VITE_API_BASE_URL (placeholder only)
 ```
@@ -43,7 +43,7 @@ FORMS:   react-hook-form (controlled); explicit value + onChange
 ```bash
 npm run build 2>&1 | tail -5      # tsc -b && vite build
 ```
-Skeleton verify (Step 3.3): `npm run build 2>&1 | tail -5`.
+Skeleton verify (scaffold): `npm run build 2>&1 | tail -5`.
 
 ## TEST_CLUSTER
 ```bash
@@ -72,12 +72,12 @@ npx vitest run --coverage 2>&1 | tail -20
 | Cluster (feature) | `src/features/{feature}/` |
 | Cluster / char tests | co-located `*.test.tsx` beside components |
 
-## COMPOSITION (integration layer — Step 4.6.3 writes these)
+## COMPOSITION (integration layer — the integration step writes these)
 - `src/main.tsx` — providers: `QueryClientProvider`, `RouterProvider`, auth/token provider + the fetch/axios interceptor
 - `src/app/router.tsx` — route table with lazy routes + loaders/guards
 - `.env` — `VITE_API_BASE_URL` = the **consumed contract's backend URL** (placeholder only, no secrets)
 
-## CONFIG (dev configuration + Step 6.2 pre-flight)
+## CONFIG (dev configuration + pre-flight before E2E)
 Dev config: `.env`. Pre-flight — fail if `VITE_API_BASE_URL` is empty/`{placeholder}` before E2E:
 ```bash
 [ -f .env ] || { echo "ℹ️  no .env — skipping"; exit 0; }
@@ -89,7 +89,7 @@ echo "✅ VITE_API_BASE_URL set"
 ## BUILD_UNIT (per-cluster FORBIDDEN set)
 `package.json` · `vite.config.ts` · `tsconfig.json` · `src/main.tsx` · `src/app/router.tsx` · `src/api/` (generated)
 
-## RULES (deployed to .claude/rules/ at Step 3.3a)
+## RULES (deployed to .claude/rules/ at scaffold time)
 `project-rules.md` (always) · `react-ecosystem-rules.md`
 
 ## PKG_ADD
@@ -98,13 +98,13 @@ npm install {package}@{ver}
 ```
 Requested via the orchestrator; clusters never edit `package.json` directly.
 
-## SERVE (Stage 6.2 startup + health probe)
+## SERVE (startup + health probe)
 ```bash
 npm run dev -- --port 5173 > /tmp/frontend.log 2>&1 &     # vite dev
 timeout 60 bash -c 'until curl -sf http://localhost:5173>/dev/null 2>&1;do sleep 2;done' \
   || { echo "❌ Frontend failed to start"; tail -20 /tmp/frontend.log; exit 1; }
 ```
-Dev-run (Step 6.4): `npm run dev`. Talks to the **consumed backend URL**; local dev may use Vite's
+Dev-run: `npm run dev`. Talks to the **consumed backend URL**; local dev may use Vite's
 `server.proxy` to that backend rather than widening CORS.
 
 ## E2E

@@ -65,3 +65,4 @@ Summary: {one line — what a sync brings current}
 | 3.12.1 | All plugin file references corrected to the canonical `$PLUGIN_DIR/skills/...` prefix (ADR 0054) — plugin-cache-side prose fix, no project-side sync |
 | 3.13.0 | `external_detected_stacks`: setup-init/setup-sync collect external repo paths and detect their stacks into `dream-init-state.json`; two new Tech Spec overlays; `icea-feature` reads both stack fields |
 | 3.14.0 | Migration skill advisor upgrade — Stage 0.5 Target Options Analysis + Stage 5.0 Golden-Master verification; enforcement fixes; model default opus-4-6→4-8. No required project-side migration; optional CLAUDE.md §0a refresh for the `MIGRATE OPTIONS` keyword |
+| 3.23.0 | `icea-floor` hook refresh — bug-aware block message, PS1 exemption parity + ASCII strings, and a loud/audited `SKIP_ICEA_FLOOR` escape hatch. Run `/setup-sync` to re-copy the hooks |

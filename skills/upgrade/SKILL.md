@@ -60,21 +60,25 @@ Read .claude/plugin-path.txt → PLUGIN_DIR
 
 ```
 Detect stack + current version        (shared detection substrate — raven)
-  → Classify                          (reject false-upgrades → route to Rewrite)     ← implemented
-  → Plan version path                 (multi-hop; LTS ladder / one major at a time)  ← implemented
-  → Tool-availability preflight       (probe tool; missing → print install steps, pause) ← implemented
-  → Web-grounded Gap + Risk analysis  (cached, source-verified)                       ← implemented
-  → Decision-grade REPORT             (feasibility spine; value even if it stops here) ← implemented
-  → [if proceed] baseline TAG + branch                                                ← implemented
-  → Run stack tool per hop            (one COMMIT per hop → bisectable)               ← implemented
-  → LLM residual remediation          (each fix behind the Write Gate)               ← implemented
-  → Verify vs baseline oracle                                                         ← implemented
-  → Post-upgrade recommendations      (ladder → Rewrite / Replatform)                ← implemented
+  → Classify                          (reject false-upgrades → route to Rewrite)
+  → Plan version path                 (multi-hop; where version-path/hosting OPTIONS exist → options-insight-spec.md)
+  → Tool-availability preflight       (probe tool; missing → print install steps, pause)
+  → Web-grounded Gap + Risk analysis  (cached, source-verified; INCLUDES integration verification)
+  → Decision-grade REPORT             (feasibility spine; the gap/risk report IS Document 7)
+  → Delta design documents            (NON-EMPTY deltas only, from gap/risk analysis) → APPROVE DESIGN
+     feedback loop (document-feedback.md); infeasibility discovered here → route to Rewrite
+  → [if proceed] baseline TAG + branch (oracle anchor; oracle = self-run baseline)
+  → Run stack tool per hop            (one COMMIT per hop → bisectable)
+  → LLM residual remediation          (each fix behind the Write Gate)
+  → Verify vs baseline oracle
+  → Post-upgrade recommendations      (ladder → Rewrite / Replatform)
+  → migration log: follow migration-log-spec.md at each phase
 ```
 
-Tool-availability preflight (AC-F2) is implemented in Step 2; grounded gap/risk analysis + the
-decision-grade report (AC-F3) in Steps 3–4; gated execution (baseline tag + branch, commit-per-hop,
-residual remediation, verify) + the inline judge/checkpoint substrate (AC-F9/F10) in Steps 5–8.
+Tool-availability preflight (AC-F2) in Step 2; grounded gap/risk analysis + integration verification +
+the decision-grade report (AC-F3) in Steps 3–4; delta design documents + APPROVE DESIGN before the
+baseline tag; gated execution (commit-per-hop, residual remediation, verify) + the inline
+judge/checkpoint substrate (AC-F9/F10) in Steps 5–8.
 
 ## Step 1 — Intake & classification (implemented — the highest-risk component)
 
@@ -136,6 +140,14 @@ stores** — the engine makes no network call (see `references/gap-risk-report.m
    ```
    Exit `0` = hit (reuse — the facts are immutable once the version shipped); `7` = miss → ground it.
    For tool-capability facts use `--layer=volatile`; exit `6` = stale → re-ground.
+
+**Integration verification (the integration dimension of the analysis)** — run
+`integration-verification-spec.md` as part of this step. Most integrations pass through an in-place
+upgrade unchanged; the ones that BREAK (a library with no target-version equivalent, a changed auth
+scheme) are exactly what the gap/risk report must surface. Tier 2 via `additionalDirectories` where
+the service source is available. The Integration Inventory feeds the report's integration rows and
+`[INTEGRATION]` migration log entries. This is lighter than Rewrite/Replatform — it runs inside the
+gap/risk analysis, not as a separate pre-options step.
 2. **Ground on miss/stale.** Use WebSearch to find the change from an **authoritative** source
    (official migration guide / release notes / deprecation list). Never source a breaking-change
    claim from model memory.
@@ -160,11 +172,36 @@ deliverable** — emit it whether or not the developer proceeds:
 - List what's possible / blocked / manual, then the **post-upgrade ladder** (→ Rewrite / Replatform).
 - Even a RED/BLOCKER verdict yields a decision-grade report (graceful degradation) — never a bare fail.
 
+**The gap/risk report IS Document 7 (feasibility).** Per `feasibility-spec.md`, this spec governs the
+report's format directly — no separate `migration-feasibility.md` is produced for upgrade.
+
 The report is the point where value is delivered. Everything below runs **only if the developer
 chooses to proceed** — and every step that touches the working repo is authored here but executed by
 the developer (LLM authors + rehearses, human executes).
 
+## Step 4.5 — Delta design documents + APPROVE DESIGN (new)
+
+Author the **non-empty delta documents only** — the gap/risk analysis identifies which dimensions the
+upgrade actually changes; author delta documents solely for those (per `target-design-spec.md` delta
+depth). A clean upgrade may produce only the gap/risk report + a component delta (middleware pipeline,
+package replacements). Infrastructure/deployment deltas only if the upgrade includes a hosting change.
+
+- **Derive the graph** from whatever documents are present: `graph-derive-documents.cjs`.
+- **Feedback loop** via `design-revision-spec.md` on the gap/risk report + deltas (reduced document set).
+- **Route-to-Rewrite escape hatch:** if the gap/risk review or the feedback loop reveals the upgrade is
+  **infeasible in place** (accumulated RED/BLOCKER evidence), route to **Rewrite** — this is the
+  discovered-late equivalent of the Step 1 false-upgrade catch. Per `option-change-spec.md` (upgrade
+  posture-boundary note). Do NOT proceed to the baseline tag on an infeasible upgrade.
+- **APPROVE DESIGN** — records `payload.upgrade.gate_verdicts.design_approved = true`. Required before
+  the baseline tag. Write `[DECISION]` + `[REVISION]` migration log entries.
+
 ## Step 5 — Baseline tag + working branch (implemented — AC-F3 execution)
+
+The oracle is the **pre-upgrade baseline** — `self-run` almost by definition (the app builds and runs;
+it is what you are upgrading). Golden master, if used as a secondary smoke, captures baseline behaviour
+here (pre-move) and replays it after the upgrade (post-move) per `golden-master-spec.md` (Upgrade
+binding row). If the app cannot be built/run locally, the oracle degrades — noted in the report.
+
 
 Before ANY edit, plan the execution runbook. The orchestrator is a **pure planner** — it emits the
 ordered git/tool commands; it never runs them:
@@ -223,7 +260,12 @@ redirects to the shared docs.)
 - NEVER hand-author the bulk transform of working code — drive the deterministic tool.
 - NEVER proceed past a `false-upgrade` classification — route to Rewrite; make no edits.
 - NEVER offer a fallback for an `unsupported` stack — STOP and list supported stacks. No fabrication.
-- NEVER edit source before a baseline tag exists (the oracle anchor) — increment 4 enforces this.
+- NEVER edit source before `APPROVE DESIGN` and a baseline tag exist (design gate + oracle anchor).
+- If the gap/risk review or feedback loop reveals the upgrade is **infeasible in place**, route to
+  **Rewrite** — the discovered-late equivalent of the false-upgrade catch. NEVER force an infeasible
+  upgrade forward to the baseline tag.
+- Author only NON-EMPTY delta documents — never produce "No change" filler that dilutes the report.
+- Integration verification runs INSIDE the gap/risk analysis (Step 3) — not a separate pre-options step.
 - ALWAYS one commit per version hop (bisectable); NEVER blend hops into one diff.
 - ALWAYS gate every residual fix behind the Write Gate; NEVER merge until verification passes.
 - ALWAYS invoke plugin scripts via the resolved `$PLUGIN_DIR` — never a bare relative path.
@@ -231,3 +273,5 @@ redirects to the shared docs.)
 - ALWAYS tag each report claim VERIFIED (dated authoritative source) or INFERRED; NEVER fabricate a
   source to reach VERIFIED, and NEVER present an INFERRED claim as settled fact.
 - ALWAYS state, in the report, which side of the tool-coverage line the project sits on (AC-F3).
+- The gap/risk report IS the feasibility document (Document 7) — no separate `migration-feasibility.md`.
+- Write migration log entries per `migration-log-spec.md` at each phase.

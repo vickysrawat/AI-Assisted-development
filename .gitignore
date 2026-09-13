@@ -45,6 +45,7 @@ testem.log
 # Non-managed local ignores
 tests/results/
 .claude/graph/graph.html
+tests/migration-validation/runs/
 
 # .claude/settings.json is committed & team-shared — it holds only secret-free config
 # (hooks, customInstructions, non-secret env such as model routing). Secrets and machine-
@@ -57,20 +58,13 @@ tests/results/
 
 
 # === ai-assisted-development (managed) ===
-.claude
-memory
+
 CodeReviews/*
-!CodeReviews/code-review-ledger.md
 security/*
-!security/security-ledger.md
 dynamic-scan/*
-!dynamic-scan/dynamic-scan-ledger.md
-token-analysis/
-prod-readiness/
-temp/
-.claude/plugin-path.txt
-.claude/session-context.json
-.claude/graph/.module-skeleton.json
+token-analysis/*
+prod-readiness/*
+temp/*
 # Build artifacts auto-generated in test fixtures by IDE C# tooling (never commit)
 tests/fixtures/**/obj/
 tests/fixtures/**/bin/

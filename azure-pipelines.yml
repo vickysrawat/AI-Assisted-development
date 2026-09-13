@@ -13,3 +13,5 @@ steps:
       set -e
       for t in tests/*.test.cjs; do echo "▶ $t"; node "$t"; done
     displayName: Unit suite (incl. substrate-drift + migration-retirement — the AC-F11 drift enforcement)
+  - script: node tests/migration-validation/run-selftest.cjs
+    displayName: Migration validators self-test (golden-master + inventory-trace + frontend-parity)

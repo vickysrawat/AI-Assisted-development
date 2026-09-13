@@ -1,8 +1,22 @@
 # Spec: MIGRATION-FEASIBILITY.md
 
-_Loaded by migration SKILL.md at Stage 2 start._
-_Defines the required format for the feasibility assessment document._
-_This document is generated AFTER the target architecture is approved (Stage 1 gate)._
+_Defines the required format for `migration-feasibility.md` — Document 7 of the target design set
+([`target-design-spec.md`](target-design-spec.md)). Governs what a complete feasibility assessment
+contains and how it is structured. Applies to any migration-family skill
+(**Upgrade · Rewrite · Replatform**) before code/IaC generation begins._
+
+## Per-skill binding
+
+| Skill | Artifact | When produced | Primary input |
+|---|---|---|---|
+| **Rewrite** | `migration-feasibility.md` (standalone) | After `APPROVE OPTIONS`, before code generation | Integration Inventory · source knowledge graph · selected option · mapping refs |
+| **Replatform** | `migration-feasibility.md` (standalone) | After 6R posture + option selected (R1), before IaC authoring (R3) | Integration Inventory · NFR spec · cloud-capability decomposition |
+| **Upgrade** | **The gap/risk report itself** — this spec governs its format; no separate `migration-feasibility.md` is produced | After gap/risk analysis (Step 3–4), as part of the decision-grade report package | Gap/risk analysis · Integration Inventory · dependency ledger |
+
+**Upgrade note:** For Upgrade, the gap/risk report IS the feasibility document. The skill applies this
+spec's format directly to the gap/risk report rather than producing a second artifact. Any revision
+during APPROVE DESIGN goes through the feedback loop (`design-revision-spec.md`), which cascades
+changes across the gap/risk report and the delta design documents as a single coherent package.
 
 ---
 
@@ -12,14 +26,14 @@ _This document is generated AFTER the target architecture is approved (Stage 1 g
 **Purpose:** Assesses what it takes to migrate from the source to the approved target architecture.
 Identifies risks, effort, and blockers before any code is written.
 
-**Generated from:** Source analysis + loaded stack/mapping reference files + approved architecture docs.
+**Generated from:** Integration Inventory (`integration-verification-spec.md`) + source analysis + loaded stack/mapping reference files + selected target option.
 
 **Posture-aware (per cluster/project).** Breaking-change analysis MUST branch on each project's
 generation (from the source `versions[].generation` spread + `mode.source_version`/`target_version`):
 `dotnet-modern`→ **Upgrade** (cumulative net-core removals over `(source, target]` from
-`dotnet-upgrade.md`); `dotnet-framework`→ **Re-platform** (parity mapping `dotnet-framework-to-dotnet.md`
+`dotnet-upgrade.md`); `dotnet-framework`→ **Rewrite** (parity mapping `dotnet-framework-to-dotnet.md`
 — the removal-delta model does NOT apply). A mixed source runs both postures per-cluster. Flag a
-≥3-major version delta (Upgrade posture) as a stage-the-upgrade YELLOW/RED. See stage-2 Step 2.0b.
+≥3-major version delta (Upgrade posture) as a stage-the-upgrade YELLOW/RED.
 
 ### Honesty Rules (enforced)
 
@@ -28,10 +42,10 @@ generation (from the source `versions[].generation` spread + `mode.source_versio
 - "Compiles" ≠ "behaves identically" — call out behavioral risk on every YELLOW and RED item.
 - Dependency verification: run the appropriate outdated-package command. If unavailable, mark UNKNOWN.
 - **Integration classification:** an external dependency whose Kind/Transport/Auth is not
-  ground-truth-verified (§8 Integration Inventory row still `UNVERIFIED`, per
-  `specs/integration-verification-spec.md`) is `UNKNOWN`/RED with a resolution option — never assessed
-  on an assumed Kind. Misclassifying an in-process DB as a service (or NTLM as Kerberos) invalidates
-  the whole effort estimate for that dependency.
+  ground-truth-verified (row still `PARTIAL` or `UNVERIFIED` in the Integration Inventory — see
+  [`integration-verification-spec.md`](integration-verification-spec.md)) is `UNKNOWN`/RED with a
+  resolution option — never assessed on an assumed Kind. Misclassifying an in-process DB as a service
+  (or NTLM as Kerberos) invalidates the whole effort estimate for that dependency.
 
 ### Behavioral Risk Scale
 
@@ -116,9 +130,11 @@ If command fails or unavailable: classify all unverified packages as UNKNOWN.
 |---|---|---|---|
 | {package} | {ver} | Supported / Replacement: X / Deprecated / UNKNOWN | Upgrade / Replace / Verify |
 
-**External integrations (beyond package versions).** Mirror the Stage 0.6 §8 Integration Inventory —
-one row per external dependency, carrying its ground-truth evidence. A row whose `Verification status`
-is `UNVERIFIED` is RED/UNKNOWN here (never rated on an assumed Kind):
+**External integrations (beyond package versions).** Transcribe directly from the Integration
+Inventory (`integration-inventory.md`) produced by
+[`integration-verification-spec.md`](integration-verification-spec.md) — one row per external
+dependency, carrying its ground-truth evidence. Do NOT re-derive independently. A row whose
+`Verification` is `PARTIAL` or `UNVERIFIED` is RED/UNKNOWN here (never rated on an assumed Kind):
 
 | Integration | Kind (verified) | Evidence (PROV: config/assembly/WSDL) | Target approach | Verification status | Risk |
 |---|---|---|---|---|---|

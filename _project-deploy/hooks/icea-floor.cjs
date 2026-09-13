@@ -67,12 +67,26 @@ process.stdin.on('end', () => {
     }
   }
 
+  // Floor is about to block. Loud, audited escape hatch (mirrors SKIP_FINDINGS_GATE) —
+  // session-wide because a PreToolUse hook reads the process env; cannot be scoped to one write.
+  if (process.env.SKIP_ICEA_FLOOR === '1') {
+    const justification = (process.env.ICEA_FLOOR_JUSTIFICATION || '').trim();
+    if (!justification) {
+      process.stderr.write('❌ SKIP_ICEA_FLOOR=1 requires a justification. Set ICEA_FLOOR_JUSTIFICATION="reason" (e.g. hotfix ADO-1234).\n');
+      process.exit(2);
+    }
+    try { require('./audit-append.cjs').appendEvent({ event: 'gate.bypass', action: 'SKIP_ICEA_FLOOR', path: filePath, result: 'granted', source: 'PreToolUse', detail: justification }); } catch (e) { /* best-effort — auditing never blocks the gate */ }
+    process.stderr.write('⚠ ICEA FLOOR bypassed via SKIP_ICEA_FLOOR=1 — ' + filePath + ' (justification logged; this stays in effect session-wide until you unset it).\n');
+    process.exit(0);
+  }
+
   try { require('./audit-append.cjs').appendEvent({ event: 'gate.block', action: 'icea-floor', path: filePath, result: 'blocked', source: 'PreToolUse' }); } catch (e) { /* best-effort — auditing never blocks the gate */ }
 
   process.stderr.write(
     'ICEA FLOOR: blocked write to ' + filePath +
-    ' — no approved ICEA (or T1 auto-ICEA) found modified in the last 8h under docs/.' +
-    ' Create and approve an ICEA first (/icea-feature), or if one exists, touch it to confirm it is current.' +
+    ' — no approved ICEA (or T1 bug spec) found modified in the last 8h under docs/.' +
+    ' For a feature, create/approve an ICEA (/icea-feature); for a bug fix, run /bug (it writes an approved T1 spec first).' +
+    ' If an approved spec already exists, touch it to confirm it is current.' +
     ' This is the mechanical floor beneath the ICEA gate.\n'
   );
   process.exit(2);

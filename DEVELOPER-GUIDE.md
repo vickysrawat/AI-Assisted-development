@@ -193,8 +193,8 @@ single SKILL.md genuinely cannot hold the work — most skills should stay flat.
 > the living implementations are `skills/rewrite/` and `skills/replatform/` (staged pipelines with
 > per-stage gates + shared-ledger resume). Persistent journey state is now the shared **migration ledger**
 > (`skills/shared/migration-ledger-schema.md`) — *not* the scan-resume `checkpoint-schema.md` cited below.
-> A detailed diagrammed walkthrough of the retired skill is planned at
-> `docs/architecture/legacy-migration-skill.md`.
+> A detailed diagrammed walkthrough of the retired skill lives at
+> [docs/architecture/legacy-migration-skill.md](docs/architecture/legacy-migration-skill.md).
 
 ### Anatomy (`skills/migration/`)
 

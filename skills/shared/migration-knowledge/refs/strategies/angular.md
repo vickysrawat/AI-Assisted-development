@@ -6,24 +6,24 @@ ROLE: frontend (a standalone `frontend` run — see SKILL.md two-track re-model)
 _The concrete tokens for an Angular frontend target. A `frontend` run's target folder IS the Angular
 app, so all paths are **root-relative** (no `web/` prefix) — same convention as `dotnet.md`. The run
 consumes an API contract (from a backend run, or an existing backend) and calls the API only through
-the generated client. SKILL.md Stages 3–6 reference the `{TOKEN}`s below._
+the generated client. The invoking migration skill's generate/verify phases reference the `{TOKEN}`s below._
 
 ---
 
 ## STACK
 Angular 17+ (standalone components, signals) · TypeScript · Vite/esbuild
 
-## SKELETON (workspace scaffolded in Step 3.3)
+## SKELETON (workspace scaffolded at scaffold phase)
 ```
 angular.json
 package.json
 src/app/app.config.ts     ← providers (router, HttpClient + interceptors)
 src/app/app.routes.ts     ← route table (lazy loadComponent/loadChildren + guards)
 src/app/shared/           ← shared components/services (UI kernel)
-src/app/api/              ← GENERATED API client (Step 4.6.0 — do not hand-edit)
+src/app/api/              ← GENERATED API client (API-client generation step — do not hand-edit)
 src/environments/         ← per-env API base URL (placeholders only)
 ```
-Scaffold with `ng new . --routing --style=scss` (or the confirmed setup) so `angular.json`/`package.json` exist before Step 4.6.0.
+Scaffold with `ng new . --routing --style=scss` (or the confirmed setup) so `angular.json`/`package.json` exist before API-client generation.
 
 ## STANDARDS_EXAMPLE (idioms for the Architecture Standards block)
 ```
@@ -38,7 +38,7 @@ TEMPLATE: @if/@for/@switch control flow (not *ngIf/*ngFor)
 ```bash
 ng build 2>&1 | tail -5
 ```
-Skeleton verify (Step 3.3): `ng build 2>&1 | tail -5`.
+Skeleton verify (scaffold): `ng build 2>&1 | tail -5`.
 
 ## TEST_CLUSTER
 ```bash
@@ -67,19 +67,19 @@ ng test --code-coverage --watch=false 2>&1 | tail -20
 | Cluster (feature) | `src/app/{feature}/` |
 | Cluster / char tests | co-located `*.spec.ts` beside components |
 
-## COMPOSITION (integration layer — Step 4.6.3 writes these)
+## COMPOSITION (integration layer — the integration step writes these)
 - `src/app/app.config.ts` — providers (`provideHttpClient(withInterceptors([authInterceptor]))`, router)
 - `src/app/app.routes.ts` — route table with lazy loading + guards
 - `src/environments/` — API base URL per environment = the **consumed contract's backend URL** (placeholders only, no secrets)
 
-## CONFIG (dev configuration + Step 6.2 pre-flight)
+## CONFIG (dev configuration + pre-flight before E2E)
 Dev config: `src/environments/environment.development.ts`. Pre-flight — fail if `apiBaseUrl` is empty
 or a `{placeholder}` before E2E (a frontend needs a backend URL to talk to).
 
 ## BUILD_UNIT (per-cluster FORBIDDEN set)
 `angular.json` · `package.json` · `src/app/app.config.ts` · `src/app/app.routes.ts` · `src/app/api/` (generated)
 
-## RULES (deployed to .claude/rules/ at Step 3.3a)
+## RULES (deployed to .claude/rules/ at scaffold time)
 `project-rules.md` (always) · `angular-rules.md`
 
 ## PKG_ADD
@@ -88,13 +88,13 @@ npm install {package}@{ver}
 ```
 Requested via the orchestrator; clusters never edit `package.json` directly.
 
-## SERVE (Stage 6.2 startup + health probe)
+## SERVE (startup + health probe)
 ```bash
 ng serve --port 4200 --no-open > /tmp/frontend.log 2>&1 &
 timeout 60 bash -c 'until curl -sf http://localhost:4200>/dev/null 2>&1;do sleep 2;done' \
   || { echo "❌ Frontend failed to start"; tail -20 /tmp/frontend.log; exit 1; }
 ```
-Dev-run (Step 6.4): `ng serve`. The app talks to the **consumed backend URL**; local dev may use a
+Dev-run: `ng serve`. The app talks to the **consumed backend URL**; local dev may use a
 `proxy.conf.json` to that backend rather than widening CORS (see `fullstack-integration.md`).
 
 ## E2E

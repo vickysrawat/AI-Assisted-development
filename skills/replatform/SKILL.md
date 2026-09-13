@@ -61,15 +61,21 @@ Read .claude/plugin-path.txt → PLUGIN_DIR
 ## Stage flow
 ```
 Detect source runtime topology
-  → R1 Intake: 6R posture + code-change surface + TCO options + NFR spec + feasibility (GREEN/YELLOW/RED)  ← implemented
-  → R2 Decompose by cloud capability (landing zone = Tier-0 first)                                          ← implemented
-  → R3 Author IaC + config + pipeline + runbooks (design-quality + judge + security scan; author-only)      ← implemented
-  → R4 HUMAN executes runbooks: migration → reconciliation gate → cutover → rollback (LLM monitors)          ← implemented
-  → R5 NFR assurance (measurability-ceilinged) + Well-Architected + behavioral regression                   ← Inc C
-  → every gate: shared judge verdict; checkpoint to the SHARED ledger (payload.replatform)                   ← Inc C/E
+  → R1 Intake: 6R posture + integration verification + oracle mode + TCO options + NFR spec + feasibility
+     options presented per options-insight-spec.md (basis · comparative insight · web-grounded · triggered judge)
+     APPROVE OPTIONS
+  → R1.5 Target design documents (design-revision-spec.md → document-orchestrator.md)
+     feedback loop (document-feedback.md · option-change-spec.md) → APPROVE DESIGN
+  → R2 Decompose by cloud capability (landing zone = Tier-0 first; reads target-infrastructure-architecture)
+  → R3 Author IaC + config + pipeline + runbooks (design-quality + judge + security scan; author-only)
+     pre-Write-Gate review may cascade: revise in R3 · back to R1.5 (design update) · option change
+  → R4 HUMAN executes runbooks: migration → reconciliation gate → cutover → rollback (LLM monitors)
+  → R5 NFR assurance (measurability-ceilinged) + Well-Architected + behavioral regression (golden-master-spec.md)  ← Inc C
+  → every gate: shared judge verdict; checkpoint to the SHARED ledger (payload.replatform)
+  → migration log: follow migration-log-spec.md at each phase
 ```
 
-## Step R1 — Intake, posture, NFR spec (implemented — AC-F7)
+## Step R1 — Intake, posture, integration verification, NFR spec, options (implemented — AC-F7; extended)
 1. Detect the source runtime topology (do NOT re-implement detection):
    ```bash
    node "$PLUGIN_DIR/scripts/migration-source-detect.cjs" --roots=<source> --json
@@ -77,22 +83,56 @@ Detect source runtime topology
 2. Classify the **6R posture** (table above). `refactor-for-cloud` → **OVERLAY**: Rewrite generates the
    code, Replatform provisions the host; hand off via the shared ledger (`payload.rewrite` ↔
    `payload.replatform`). Pure rehost → standalone.
-3. Ask the **intake questions** (NEVER assume — these differ per engagement):
+3. **Integration verification** — per `integration-verification-spec.md`. The source app's on-prem
+   integrations change materially in a cloud move (NTLM → managed identity, on-prem SQL → Azure SQL
+   private endpoint, WCF → REST/CoreWCF). Produce the **Integration Inventory** before options — it
+   feeds the infrastructure/security design documents and the TCO estimate (integration rework is a
+   significant cost driver). Tier 2 via `additionalDirectories` where the service source is available.
+   Write `[INTEGRATION]` migration log entries.
+4. **Oracle mode detection** — per `golden-master-spec.md` Step 1. The source is a running on-prem app,
+   so `provided-url` is the natural default. Record in `decision_log.golden_master` — feeds R5 behavioral
+   regression (even while R5 is Inc C, the intent record exists in the ledger).
+5. Ask the **intake questions** (NEVER assume — these differ per engagement):
    - target cloud (Azure / AWS / GCP)
    - target **CI/CD platform** for the AUTHORED deployment pipeline (Azure DevOps / GitHub Actions / GitLab)
    - **IaC flavor** (Bicep / Terraform / ARM / Pulumi)
    - environment progression (dev → staging → prod)
    - **regulated?** data-residency / PII / financial constraints (hard-block NFRs)
    Record them → they flow into `replatform-plan.cjs plan --cicd-platform=<> --iac-flavor=<>` and the ledger.
-4. Capture the **NFR spec** as the PRIMARY intent — see `references/nfr-spec.md`.
-5. Present cloud-target **OPTIONS** (IaaS VM / App Service / AKS / Container Apps / Functions) with
-   pros/cons + web-grounded, dated **TCO** + NFR fit + effort (cost is often the primary driver) — same
-   options+BYO engine as Rewrite. Feasibility gated GREEN/YELLOW/RED (see
-   `skills/shared/migration-knowledge/refs/specs/feasibility-spec.md`); hard blocker → STOP or hybrid.
+6. Capture the **NFR spec** as the PRIMARY intent — see `references/nfr-spec.md`.
+7. Present cloud-target **OPTIONS** (IaaS VM / App Service / AKS / Container Apps / Functions) per
+   **`options-insight-spec.md`**:
+   - Each option carries a **capability summary** (count + list + estimated IaC/runbook effort) — compute
+     choice materially changes provisioning complexity (App Service ~5 vs AKS ~9 capabilities).
+   - Every attribute carries a **basis** (`computed` | `web-grounded:{date}` | `published-spec` |
+     `estimate:{source}` | `requires:{who}`) — never a confidence tier.
+   - **Comparative insight** per decision-critical attribute (capability delta, TCO, NFR fit) — the
+     "why A and not B" reasoning. Volatile cloud facts web-grounded through the cache (VERIFIED/INFERRED,
+     dated); suggest the web search before running it; offline → `refs/` INFERRED tier.
+   - **Triggered judge pass** on the option synthesis when options are a close call or the developer asks.
+   - `requires:` on compliance / NFR-floor / security → named human before `APPROVE OPTIONS`.
+   - PARTIAL integration rows: advisory here, **hard block at APPROVE DESIGN** (R1.5).
+   Feasibility gated GREEN/YELLOW/RED (`feasibility-spec.md`); hard blocker → STOP or hybrid.
+   `APPROVE OPTIONS` → write `[OPTION]` + `[DECISION]` log entries.
+
+## Step R1.5 — Target design documents (new)
+Runs after `APPROVE OPTIONS`, before R2 capability decomposition (R2 reads the infrastructure
+architecture document). The Replatform document mix: infrastructure + deployment are the **primary**
+deliverables; component-arch is **delta only** (same code, minimal structural change).
+
+1. **Derive the dependency graph:** `graph-derive-documents.cjs` (exit 1 cycle / exit 2 parse → fix first).
+2. **Author the design documents** via `document-orchestrator.md` (wave-scheduled parallel subagents;
+   Integration Inventory + NFR spec as shared state).
+3. **Feedback loop** via `design-revision-spec.md`: corrections → `document-feedback.md`; option changes
+   → `option-change-spec.md` (note the `refactor-for-cloud` posture-boundary case — crosses into Rewrite).
+4. **APPROVE DESIGN** — all required documents `APPROVED`, no PARTIAL/UNVERIFIED integration rows remain.
+   Records `payload.replatform.gate_verdicts.design_approved = true`. Write `[DECISION]` + `[REVISION]` logs.
 
 ## Step R2 — Cloud-capability decomposition (implemented — AC-F7)
 Decompose by cloud capability with the **landing zone as Tier-0** — see
-`references/cloud-capability-decomposition.md`. The mapping is **grounded** (static table = offline-fallback
+`references/cloud-capability-decomposition.md`. **Reads the approved `target-infrastructure-architecture.md`**
+(from R1.5) as the source of truth for which capabilities exist — R2 organises them into a provisioning
+order; it does not re-derive them. The mapping is **grounded** (static table = offline-fallback
 INFERRED; concrete service pick web-grounded → VERIFIED).
 ```bash
 node "$PLUGIN_DIR/scripts/replatform-plan.cjs" plan --target=<cloud> \
@@ -108,7 +148,17 @@ IaC is BOTH generated code AND a destructive action → two safety layers (R5 of
 2. **Author the four runbooks** — see `references/runbooks.md` — migration · reconciliation · cutover ·
    rollback. NEW target-specific artifacts (not the source's), rehearsed in non-prod, each step carrying
    the 5-point transparency + a PASS/FAIL gate.
-The executor seam keeps this author-only:
+
+**The executor seam is a sequence, not a wall.** The developer REVIEWS the authored IaC/runbooks
+BEFORE the Write Gate. That review may cascade upstream — the seam applies only to *execution*
+(post-APPROVE), never to the review phase:
+- IaC detail doesn't fit → revise within R3
+- IaC authoring reveals a design gap (e.g. needs a private endpoint not in the design) → return to
+  **R1.5**, update `target-infrastructure-architecture.md` via the feedback loop, re-author the IaC
+- IaC complexity reveals the option was wrong (e.g. App Service can't support required VNet integration)
+  → **option change** (`option-change-spec.md`)
+
+Only after `APPROVE` (Write Gate) does the executor seam apply — real actions denied while the flag is OFF:
 ```bash
 node "$PLUGIN_DIR/scripts/replatform-plan.cjs" execute --action=apply --json   # denied (flag OFF) — executor-seam.md
 ```
@@ -125,10 +175,29 @@ decides. The real prod cutover is the Nth rehearsal, human-executed, LLM monitor
 
 ## Step R5 — NFR assurance + Well-Architected + behavioral regression (Inc C)
 Deferred to Inc C (AC-F8): NFR assurance (measurability ceiling, symmetric to BAL) + Well-Architected
-grade (reuse app-readiness/ERL) + behavioral regression (reuse golden-master) → two-gate; regulated NFRs
-hard-block.
+grade (reuse app-readiness/ERL) + **behavioral regression per `golden-master-spec.md`** (see its
+Replatform binding row — oracle mode was detected at R1, source is the running on-prem app) → two-gate;
+regulated NFRs hard-block.
+
+**Execution-profile verify subset.** To build/smoke the (unchanged) application on the new host, resolve
+the app's execution profile for the **verify subset only** — Replatform moves the host, not the code, so
+it needs `BUILD` / `TEST_ALL` / `SERVE` / `E2E`, never the scaffold/cluster tokens (those belong to
+Rewrite; a `refactor-for-cloud` overlay lets Rewrite own generation). For a pure rehost/replatform the
+target app token is the source stack's own token (the code is the same):
+```bash
+node "$PLUGIN_DIR/scripts/strategy-resolve.cjs" --target=<app-stack-token> \
+  --tokens=BUILD,TEST_ALL,SERVE,E2E --json
+```
+Exit 0 → use those commands for the post-cutover build + smoke + golden-master replay; exit 2/3/4 →
+STOP (never fall back to another stack); `unverified:true` → warn the developer. This is a subset check
+by design — do NOT require the full contract here.
 
 ## Hard Rules
+- NEVER present options before the Integration Inventory is complete — integration rework is a major
+  cloud-cost driver; options built on unverified integrations mislead the TCO decision.
+- NEVER author IaC (R3) before `APPROVE DESIGN` (R1.5) — the design documents are the intent baseline.
+- The executor seam applies to EXECUTION only — the pre-Write-Gate review may cascade to a design
+  update (R1.5) or an option change; that is not an executor-seam violation.
 - The LLM **AUTHORS**; the HUMAN **EXECUTES** — anything touching real infra/data, in ANY environment
   (even dev). The planner is decision-only (`applied:false`); the executor seam denies real actions with the flag OFF.
 - **prod + regulated are PERMANENTLY human-executed**, even if the future-autonomy flag is ever ON.
@@ -138,5 +207,8 @@ hard-block.
   before the real cutover ("an untested rollback is not a rollback").
 - Reconciliation is a mandatory pre-cutover gate; regulated/PII/financial require a full pass (hard-block).
 - **Ground** the capability mapping (offline table = INFERRED fallback; concrete pick web-grounded → VERIFIED).
+- To build/smoke the app on the new host (R5), resolve the execution profile for the **verify subset
+  only** (`--tokens=BUILD,TEST_ALL,SERVE,E2E`) — NEVER require the scaffold/cluster tokens (those are
+  Rewrite's). STOP on exit 2/3/4; never fall back to another stack; warn when `unverified:true`.
 - `refactor-for-cloud` **OVERLAYS** Rewrite via the shared ledger — Replatform never redesigns application code.
 - ALWAYS invoke plugin scripts via the resolved `$PLUGIN_DIR`; record posture/options/NFR/decomposition in the ledger.

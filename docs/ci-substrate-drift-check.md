@@ -8,6 +8,7 @@ app), so a target being .NET/no-npm is irrelevant.
 ## The gate (any CI)
     node tests/validate.js                          # 0 failures required
     for t in tests/*.test.cjs; do node "$t"; done   # unit suite
+    node tests/migration-validation/run-selftest.cjs  # golden-master + inventory-trace + frontend-parity validators
 
 The unit suite includes `substrate-drift.test.cjs`, which vendors the shared substrate, mutates a
 vendored copy, and asserts the drift-check exits non-zero — the AC-F11 "CI fails on vendored ≠ canonical"
@@ -30,3 +31,4 @@ enforcement, proven deterministically.
           - run: |
               set -e
               for t in tests/*.test.cjs; do echo "▶ $t"; node "$t"; done
+          - run: node tests/migration-validation/run-selftest.cjs

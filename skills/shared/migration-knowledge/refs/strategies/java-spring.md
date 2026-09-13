@@ -5,16 +5,16 @@ ROLE: backend (single-track)
 MATURITY: ⚠ Unverified against a real target — commands are standard Maven/Spring tooling but have
 not been run end-to-end by the plugin. Validate on a real .NET→Java migration before relying on it.
 
-_Concrete tokens for a Java Spring Boot target (Maven shown; Gradle equivalents noted). SKILL.md
-Stages 3–6 reference the `{TOKEN}`s; this file is the only place the Java specifics live. Parity for
-`.NET → Java` lives in `references/mappings/java-dotnet.md` (bidirectional)._
+_Concrete tokens for a Java Spring Boot target (Maven shown; Gradle equivalents noted). The invoking
+migration skill's generate/verify phases reference the `{TOKEN}`s; this file is the only place the Java
+specifics live. Parity for `.NET → Java` lives in `references/mappings/java-dotnet.md` (bidirectional)._
 
 ---
 
 ## STACK
 Java 21 · Spring Boot 3.x · Maven (or Gradle)
 
-## SKELETON (project structure scaffolded in Step 3.3)
+## SKELETON (project structure scaffolded at scaffold phase)
 ```
 pom.xml                                            (or build.gradle)
 src/main/java/{basePackage}/
@@ -27,7 +27,7 @@ src/main/resources/application.yml
 src/test/java/{basePackage}/                       ← mirrors main
 ```
 
-## STANDARDS_EXAMPLE (idioms for the ~20-line Architecture Standards block, Step 3.2 §1)
+## STANDARDS_EXAMPLE (idioms for the ~20-line Architecture Standards block — scaffold phase)
 ```
 AUTH:    Spring Security 6 — SecurityFilterChain bean; JWT via oauth2ResourceServer().jwt()
 DB:      Spring Data JPA (JpaRepository) or JdbcTemplate; @Transactional on EVERY write method
@@ -40,8 +40,8 @@ TX:      @Transactional on writes — omission = silent no-commit; keep entities
 ```bash
 mvn -q -DskipTests package 2>&1 | tail -5            # Gradle: ./gradlew build -x test
 ```
-- Skeleton verify (Step 3.3): `mvn -q -DskipTests compile 2>&1 | tail -5`
-- Cluster work: `mvn -q -DskipTests compile` · Stage 6.1 verify: `mvn -q package`
+- Skeleton verify (scaffold): `mvn -q -DskipTests compile 2>&1 | tail -5`
+- Cluster work: `mvn -q -DskipTests compile` · release verify: `mvn -q package`
 
 ## TEST_CLUSTER
 ```bash
@@ -60,7 +60,7 @@ JUnit 5 + Mockito + AssertJ (+ Testcontainers for real-DB integration; `@SpringB
 ```bash
 mvn -q verify 2>&1 | tail -5     # JaCoCo bound to the verify phase
 # Parse target/site/jacoco/jacoco.csv — sum INSTRUCTION/LINE covered vs missed per package;
-# compare package→layer coverage to the Step 5.2 table.
+# compare package→layer coverage to the coverage target.
 ```
 
 ## LAYOUT
@@ -72,12 +72,12 @@ mvn -q verify 2>&1 | tail -5     # JaCoCo bound to the verify phase
 | Cluster tests | `src/test/java/{basePackage}/{cluster}/` |
 | Characterization / unit tests | `src/test/java/{basePackage}/` |
 
-## COMPOSITION (integration layer — Step 4.5 writes these)
+## COMPOSITION (integration layer — the integration step writes these)
 - `{App}Application.java` — `@SpringBootApplication`; component scan wires the beans
 - `application.yml` — configuration skeleton (placeholders only, no secrets); security/datasource config
 - `README.md` — structure, build/run, link to architecture docs
 
-## CONFIG (dev configuration + Step 6.2 pre-flight)
+## CONFIG (dev configuration + pre-flight before E2E)
 Dev config: `src/main/resources/application-dev.yml`. DB-aware pre-flight — skip if no datasource,
 fail only if a declared datasource URL is empty/placeholder:
 ```bash
@@ -92,21 +92,21 @@ echo "✅ datasource url populated"
 ## BUILD_UNIT (per-cluster FORBIDDEN set)
 `pom.xml` / `build.gradle` · `{App}Application.java` · `application.yml`
 
-## RULES (deployed to .claude/rules/ at Step 3.3a)
+## RULES (deployed to .claude/rules/ at scaffold time)
 `project-rules.md` (always) · `java-rules.md`
 
 ## PKG_ADD (skeleton-amendment path)
 Add the dependency to `pom.xml` `<dependencies>` (or `build.gradle`) via the orchestrator, then
 `mvn -q -DskipTests compile` to resolve. Clusters never edit `pom.xml`/`build.gradle` directly.
 
-## SERVE (Stage 6.2 startup + health probe)
+## SERVE (startup + health probe)
 ```bash
 mvn -q spring-boot:run > /tmp/backend.log 2>&1 &          # Gradle: ./gradlew bootRun
 BACKEND_PID=$!
 timeout 60 bash -c 'until curl -sf http://localhost:{port}/actuator/health>/dev/null 2>&1;do sleep 1;done' \
   || { echo "❌ Backend failed to start"; tail -20 /tmp/backend.log; kill $BACKEND_PID; exit 1; }
 ```
-Health endpoint: `/actuator/health` (Spring Boot Actuator). Dev-run (Step 6.4): `mvn spring-boot:run`.
+Health endpoint: `/actuator/health` (Spring Boot Actuator). Dev-run: `mvn spring-boot:run`.
 
 ## E2E
 Playwright for a UI/API target, or REST-assured / `httpx` contract tests for API-only. Token

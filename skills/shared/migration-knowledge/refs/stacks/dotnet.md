@@ -91,11 +91,13 @@ migration-specific context below.
 
 ---
 
-## Framework-attribute tier reference (Stage 0.6)
+## Framework-attribute tier reference
 
-Framework-provided attributes whose *declarative* outcome is framework-GUARANTEED — Stage 0.6 may
-tier that outcome **STATIC** (see `specs/source-inventory-spec.md` → Tier cut-line). Hard rule: an
-attribute **defined in the SOURCE tree is custom → INFERRED**, never STATIC, regardless of this list.
+Framework-provided attributes whose *declarative* outcome is framework-GUARANTEED — a golden-master
+recording of that outcome is tiered **STATIC** (`specs/golden-master-spec.md` → `tier` field: the
+outcome is framework-guaranteed regardless of source data, so it is safe to author directly). Also
+feeds the authorization check in `specs/asbuilt-reconciliation-spec.md`. Hard rule: an attribute
+**defined in the SOURCE tree is custom → INFERRED**, never STATIC, regardless of this list.
 
 ### Curated (human-reviewed, web-grounded)
 | attribute | framework@version | guaranteed outcome | source | grounded |

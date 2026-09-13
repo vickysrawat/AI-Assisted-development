@@ -38,7 +38,9 @@ $exemptPatterns = @(
     '(^|.*/)user-guide\.html$',
     '^user-guide\.html$',
     '(^|.*/)prod-readiness/',
-    '^prod-readiness/'
+    '^prod-readiness/',
+    '(^|.*/)(CodeReviews|security|dynamic-scan|token-analysis)/',
+    '^(CodeReviews|security|dynamic-scan|token-analysis)/'
 )
 foreach ($pattern in $exemptPatterns) {
     if ($filePath -match $pattern) { exit 0 }
@@ -64,9 +66,24 @@ if (Test-Path 'docs') {
     }
 }
 
+# Floor is about to block. Loud escape hatch (mirrors SKIP_FINDINGS_GATE) — session-wide
+# because a PreToolUse hook reads the process env; it cannot be scoped to a single write.
+# ASCII-only strings below: Windows PowerShell 5.1 reads this .ps1 with the ANSI codepage
+# (no BOM), so non-ASCII glyphs would corrupt string parsing. Keep this block plain ASCII.
+if ($env:SKIP_ICEA_FLOOR -eq '1') {
+    $justification = ([string]$env:ICEA_FLOOR_JUSTIFICATION).Trim()
+    if ([string]::IsNullOrWhiteSpace($justification)) {
+        [Console]::Error.WriteLine('ERROR: SKIP_ICEA_FLOOR=1 requires a justification. Set ICEA_FLOOR_JUSTIFICATION="reason" (e.g. hotfix ADO-1234).')
+        exit 2
+    }
+    [Console]::Error.WriteLine("WARNING: ICEA FLOOR bypassed via SKIP_ICEA_FLOOR=1 - $filePath (justification logged; this stays in effect session-wide until you unset it).")
+    exit 0
+}
+
 [Console]::Error.WriteLine(
-    "ICEA FLOOR: blocked write to $filePath — no approved ICEA (or T1 auto-ICEA) found modified " +
-    "in the last 8h under docs/. Create and approve an ICEA first (/icea-feature), or if one " +
-    "exists, touch it to confirm it is current. This is the mechanical floor beneath the ICEA gate."
+    "ICEA FLOOR: blocked write to $filePath - no approved ICEA (or T1 bug spec) found modified " +
+    "in the last 8h under docs/. For a feature, create/approve an ICEA (/icea-feature); for a bug " +
+    "fix, run /bug (it writes an approved T1 spec first). If an approved spec already exists, touch " +
+    "it to confirm it is current. This is the mechanical floor beneath the ICEA gate."
 )
 exit 2

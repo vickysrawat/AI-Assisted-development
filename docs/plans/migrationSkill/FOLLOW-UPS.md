@@ -26,7 +26,7 @@ Push was explicitly deferred on 2026-09-09.
 **Verify before any `git add -A`:** the `.gitignore` managed block was regenerated this session — confirm
 `tests/fixtures/**/{obj,bin}/` is still ignored so the fixture's IDE build output doesn't re-track.
 
-## 1. `knowledge-freshness` skill — validate + refresh the offline knowledge tier
+## 1. `knowledge-freshness` skill — validate + refresh the offline knowledge tier  ✅ DONE (ADO-9004 · v3.22.0 · merged to main)
 **Why:** `skills/shared/migration-knowledge/refs/` is an INFERRED offline-fallback tier that goes
 stale (framework versions, cloud service names). Story 3 shipped `freshness-manifest.json` (version
 anchors + `last_verified` + `default_ttl_days`) as validator-ready metadata but NOT the validator.
@@ -36,7 +36,7 @@ refs, web-grounds current facts → shows a diff → Write Gate → updates the 
 re-tags; judge-verified. Reuses the VERIFIED/INFERRED tagging from `upgrade-knowledge-cache.cjs`.
 **Entry:** `/icea-feature` (own ADO). **Est:** ~5–8 SP.
 
-## 2. `docs/architecture/legacy-migration-skill.md` — diagrammed explainer of the RETIRED skill
+## 2. `docs/architecture/legacy-migration-skill.md` — diagrammed explainer of the RETIRED skill  ✅ DONE (2026-09-10)
 **Why:** The retired `migration` skill embodied a rich 9-stage orchestrator pattern worth capturing
 before it lives only in git history. The DEVELOPER-GUIDE orchestrator-pattern section already points here.
 **Scope:** hand-authored explainer with Mermaid diagrams (stage flow · gate/checkpoint model · hybrid
@@ -47,7 +47,13 @@ golden-master verification).
 0b794db^:skills/migration/steps/stage-0.md`, etc.), the DEVELOPER-GUIDE section, `docs/plans/migrationSkill/`.
 **Entry:** documentation task (no ICEA). **Est:** ~3 SP.
 
-## 3. Review `tests/migration-validation/` for reusable tooling
+## 3. Review `tests/migration-validation/` for reusable tooling  ✅ DONE (2026-09-10)
+
+_Outcome: golden-master-replay.cjs + frontend-parity-replay.cjs KEPT as the shared golden-master/parity
+engines (repointed into rewrite §9 + replatform §10 docs); run-selftest.cjs WIRED into CI (azure-pipelines.yml
++ ci-substrate-drift-check.md) — was previously unguarded; verify-inventory-trace.cjs + score-inventory-rubric.md
+KEPT + flagged as candidate reuse for Rewrite's rewrite-from-spec (not deleted); runs/ scratch untracked + gitignored._
+
 **Why:** Left intact during retirement (D2b) — not coupled to the retired skill dir. Its
 `golden-master-replay.cjs` may be reusable by Rewrite/Replatform (both reuse golden-master for
 behavioral regression); the inventory-trace pieces may be legacy-only.
