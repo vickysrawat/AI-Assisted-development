@@ -23,10 +23,33 @@ const fs   = require('fs');
 const path = require('path');
 
 // ── Args ──────────────────────────────────────────────────────────────────────
-const FORCE = process.argv.includes('--force');
-const DRY   = process.argv.includes('--dry-run');
-const ROOT  = process.argv.find(a => a.startsWith('--root='))?.slice(7)
-           || process.cwd();
+const FORCE   = process.argv.includes('--force');
+const DRY     = process.argv.includes('--dry-run');
+const NO_DEPS = process.argv.includes('--no-deps'); // repo root only (skip additionalDirectories)
+const ROOT    = process.argv.find(a => a.startsWith('--root='))?.slice(7)
+             || process.cwd();
+
+// ── Scan roots: repo root + curated dependency repos (additionalDirectories) ──
+// Graph derivation is read-only orientation, so it includes dependency repos by default
+// (see skills/shared/multi-root-scan.md, Node flavour). --no-deps forces repo-only.
+function deriveScanRoots() {
+  const norm = p => (p ? path.resolve(p).replace(/\\/g, '/').replace(/\/+$/, '') : '');
+  const repo = norm(ROOT);
+  const roots = [repo];
+  if (NO_DEPS) return roots;
+  let dirs = [];
+  try {
+    const s = JSON.parse(fs.readFileSync(path.join(process.cwd(), '.claude', 'settings.local.json'), 'utf8'));
+    dirs = Array.isArray(s.additionalDirectories) ? s.additionalDirectories : [];
+  } catch (_) {}
+  for (const d of dirs) {
+    const nd = norm(d);
+    if (!nd || !fs.existsSync(nd)) continue;                                 // skip-missing
+    if (roots.some(r => nd === r || nd.startsWith(r + '/') || nd.startsWith(r + path.sep))) continue; // dup / nested
+    roots.push(nd);
+  }
+  return roots;
+}
 
 // ── Exclusions — SAME set as graph-sync Step 4 + architect Step 7-1 (S6) ─────
 // Do NOT add/remove items here without updating both SKILL.md skills to match.
@@ -85,18 +108,20 @@ function toId(name) {
     .replace(/[^a-z0-9-]/g, '');
 }
 
-// ── Scan for module candidates ────────────────────────────────────────────────
-function scan() {
+// ── Scan for module candidates under a single root ─────────────────────────────
+// Paths and entry points are emitted relative to `root`; the caller tags dependency
+// modules with `sourceRoot` so consumers resolve those globs against the right base.
+function scan(root) {
   const modules = [];
 
   let depth1;
   try {
-    depth1 = fs.readdirSync(ROOT, { withFileTypes: true })
+    depth1 = fs.readdirSync(root, { withFileTypes: true })
       .filter(e => e.isDirectory() && !EXCLUDE_DIRS.has(e.name) && !e.name.startsWith('.'));
   } catch (_) { return modules; }
 
   for (const d1 of depth1) {
-    const abs1 = path.join(ROOT, d1.name);
+    const abs1 = path.join(root, d1.name);
     const rel1 = d1.name;
 
     if (CONTAINER_DIRS.has(d1.name)) {
@@ -173,7 +198,28 @@ if (fs.existsSync(skelPath) && !FORCE) {
   process.exit(1); // exit 1 = already present; setup-init.md treats this as "skip, continue"
 }
 
-const modules   = scan();
+// Derive modules across the repo root and each curated dependency repo. The repo root is
+// always first; its modules carry no sourceRoot (absent ⇒ repo root). Dependency modules
+// are tagged with an absolute sourceRoot and, on id collision, disambiguated by dep name.
+const roots    = deriveScanRoots();
+const repoRoot = roots[0];
+const modules  = [];
+const seenIds  = new Set();
+for (const root of roots) {
+  const isDep = root !== repoRoot;
+  for (const m of scan(root)) {
+    if (isDep) m.sourceRoot = root;
+    if (seenIds.has(m.id)) {
+      if (!isDep) continue;                       // repo self-collision — keep first (existing behaviour)
+      const slug = toId(path.basename(root)) || 'dep';
+      let cand = m.id + '-' + slug, i = 2;
+      while (seenIds.has(cand)) cand = m.id + '-' + slug + '-' + (i++);
+      m.id = cand;
+    }
+    seenIds.add(m.id);
+    modules.push(m);
+  }
+}
 const structure = modules.length > 30 ? 'domain' : 'flat';
 const today     = new Date().toISOString().slice(0, 10);
 

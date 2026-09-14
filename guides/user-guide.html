@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- documents-plugin-version: 3.20.0 -->
+<!-- documents-plugin-version: 3.24.0 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>User Guide — ai-assisted-development v3.20.0</title>
+<title>User Guide — ai-assisted-development v3.24.0</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
 
@@ -425,7 +425,7 @@
   <div class="logo">ai-assisted-<em>development</em></div>
   <div class="vsep"></div>
   <div class="hdr-sub">User Guide</div>
-  <div class="hdr-badge">v3.20.0</div>
+  <div class="hdr-badge">v3.24.0</div>
 </header>
 
 <nav id="sidebar">
@@ -468,7 +468,7 @@
     <h1>ai-assisted-development</h1>
     <p>ICEA-driven development workflow for distributed teams using Azure DevOps — language-agnostic across <strong>.NET · Java/Spring Boot · Python · Node.js</strong> backends and Angular / React frontends. Every feature starts with a spec. Every PR is compliance-checked before it opens.</p>
     <div class="hero-chips">
-      <span class="chip">v3.20.0</span>
+      <span class="chip">v3.24.0</span>
       <span class="chip">.NET 8</span>
       <span class="chip">Angular 17+</span>
       <span class="chip">Node.js</span>
@@ -482,6 +482,10 @@
   <section style="margin:20px 0 0;padding:16px 20px;background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #f59e0b;border-radius:8px;font-size:14px;line-height:1.6;">
     <strong>What's new since 3.0.0</strong>
     <ul style="margin:8px 0 0;padding-left:20px;">
+      <li><strong>3.24.0</strong> — <strong>Flag commands now ask instead of guessing.</strong> Run a flag-taking command with no flag (e.g. <code>/code-review</code>, <code>/security-review</code>, <code>/dynamic-scan</code>, <code>/app-readiness</code>) and it now shows a short menu with the sensible default pre-selected as <em>recommended</em>, instead of silently picking a default. Pass a flag (or run in CI) and there's no prompt — automation is unchanged.</li>
+      <li><strong>3.23.0</strong> — <strong>Clearer ICEA-floor guidance.</strong> When a write is blocked for lacking an approved spec, the message now points to <code>/bug</code> for a bug fix (not just <code>/icea-feature</code>), and there's a loud, audited <code>SKIP_ICEA_FLOOR</code> escape hatch for the rare deliberate override.</li>
+      <li><strong>3.22.0</strong> — <strong>Trustworthy migration knowledge.</strong> New <code>/knowledge-freshness</code> validates (and, with approval, refreshes) the migration family's offline reference knowledge so upgrade/rewrite advice stays current.</li>
+      <li><strong>3.21.0</strong> — <strong>Migration split into three clear skills.</strong> The old <code>migration</code> skill is now <code>/upgrade</code> (same-stack version bump), <code>/rewrite</code> (translate to a new stack), and <code>/replatform</code> (move hosting, e.g. on-prem → cloud). Each has its own status/resume; the old <code>MIGRATE</code> keyword now signposts which one to use.</li>
       <li><strong>3.20.0</strong> — <strong>Operational docs for support handover.</strong> New <code>/operations</code> generates a master <strong>Operational Runbook</strong> (Markdown + offline HTML, with architecture/triage/escalation diagrams) — the doc a support engineer opens during an incident. New <code>/go-live</code> generates a <strong>Support-Transition Acceptance Checklist</strong> (go/no-go gate) by pulling together your prod-readiness report, security findings, and code-review findings. Both are documentation generators (like product docs) and never invent values — anything unknown shows as a <code>⚠ TODO</code> to fill in.</li>
       <li><strong>3.19.0</strong> — <strong>Version-aware .NET detection.</strong> A mixed solution (.NET Framework 4.x alongside .NET 8/9/10) is now detected per project, so each project gets the right rules and generation. The migration skill gains a target-version selector (net8/9/10), and an opt-in per-project rule-scoping mode is available for brownfield repos.</li>
       <li><strong>3.18.0</strong> — <strong>Migration hardening + a new goal-loop.</strong> Migrations now verify external integrations against ground-truth config, reconcile the generated app against the design (as-built), and can capture a golden-master from a running source URL. New <code>/goal-loop</code> drives a feature from ICEA → approve → implement, self-scoring the code against its acceptance criteria until met (stopping at every human gate).</li>
@@ -730,14 +734,14 @@ bash install.sh --update  <span class="cm"># Git Bash</span></code></pre>
     <p>Static code analysis with persistent cross-run tracking. Skips unchanged files by default — token cost drops 80–95% on subsequent runs.</p>
 
     <div class="flags">
-      <div class="flag-row"><span class="flag-name">(no flag)</span><span class="flag-desc">Cache-aware full-project scan — skips files unchanged since last review</span></div>
+      <div class="flag-row"><span class="flag-name">(no flag)</span><span class="flag-desc">Opens an interactive scope menu — pick a scope (Smart scan recommended). In CI / non-interactive runs it skips the menu and does a cache-aware full scan.</span></div>
       <div class="flag-row"><span class="flag-name">--changed</span><span class="flag-desc">Only git-staged and unstaged modified files</span></div>
       <div class="flag-row"><span class="flag-name">--pr</span><span class="flag-desc">Only files changed in this branch vs the base branch</span></div>
       <div class="flag-row"><span class="flag-name">--full</span><span class="flag-desc">Force a complete scan — ignore cache entirely</span></div>
       <div class="flag-row"><span class="flag-name">--ci</span><span class="flag-desc">CI mode: same as <code>--full</code>, plus warns if a cache file is found on disk</span></div>
     </div>
 
-    <pre><code>/ai-assisted-development:code-review              <span class="cm"># default scan</span>
+    <pre><code>/ai-assisted-development:code-review              <span class="cm"># interactive scope menu</span>
 /ai-assisted-development:code-review --changed    <span class="cm"># staged/modified only</span>
 /ai-assisted-development:code-review --pr         <span class="cm"># this branch vs dev</span>
 /ai-assisted-development:code-review --full       <span class="cm"># force full rescan</span></code></pre>

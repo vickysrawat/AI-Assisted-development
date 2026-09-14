@@ -60,8 +60,15 @@ argument string the user provided:
 | `--security` | `docfile` | Re-run the File 6 prompt → rewrite `architecture-security.md`, then STOP. |
 | `--decisions` | `decisions` | **Append** a new `AD-NNN` entry to `architecture-decisions.md` — never overwrite existing entries. Then STOP. |
 | a file/folder path (e.g. `src/services/matters/`) | `subtree` | Refresh that subtree — skip to Step 1 with the path. |
-| (nothing) | `auto` | Auto-detect changed areas — skip to Step 1. |
+| (nothing) — interactive | `prompt` | Prompt for the mode (per `$PLUGIN_DIR/skills/shared/flag-prompt-spec.md`): **Auto-detect changed areas** (recommended) · deployment · data · integrations · security · decisions · a subtree path. Wait for a choice; do not default silently. |
+| (nothing) — CI / non-interactive | `auto` | Auto-detect changed areas silently — skip to Step 1 (no prompt). |
 | anything starting with `--` that is not the flags above | `error` | Unknown flag — see below. |
+
+**No-flag interactive prompt.** When `$ARGUMENTS` is empty in an interactive session, use
+`AskUserQuestion` to pick the mode above with **Auto-detect** as the recommended option, then map
+the choice to the corresponding MODE. In CI / headless / gate-invoked runs, skip the prompt and use
+`MODE=auto`. The `case` below runs once the mode is resolved (an interactive choice of "Auto-detect"
+is equivalent to the empty-string branch).
 
 ```bash
 # ARGS holds the raw invocation arguments
@@ -217,6 +224,12 @@ And stop.
 > The module orientation graph is **not** refreshed here — if `.claude/graph/.stale`
 > is present, tell the developer to run `/graph-sync` (it refreshes only stale
 > modules). `/update-arch` refreshes the prose `architecture.md` only.
+
+> **Dependency-repo changes.** A changed path may fall under a locally-cloned dependency
+> repo (`additionalDirectories`, an absolute path outside the repo root — see
+> `$PLUGIN_DIR/skills/shared/multi-root-scan.md`) rather than a repo-relative subtree. When
+> it does, update the integration/dependency prose (`architecture-integrations.md`) for that
+> dependency rather than a repo module section, and note the module lives outside the repo.
 
 If nothing relevant changed:
 ```

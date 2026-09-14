@@ -151,7 +151,7 @@ write_marketplace_json() {
   cat > "$MARKETPLACE_DIR/.claude-plugin/marketplace.json" << MARKETPLACE_EOF
 {
   "name": "$MARKETPLACE_NAME",
-  "owner": { "name": "Product Engineering" },
+  "owner": { "name": "$COMPANY" },
   "description": "$COMPANY internal Claude Code plugins",
   "plugins": [
     {

@@ -1,11 +1,21 @@
 # Interactive Scope Menu Specification
-_Spec version: 1.0 · Last changed: 2026-07-06 · Applies to: code-review, security_
+_Spec version: 1.1 · Last changed: 2026-09-14 · Applies to: code-review, security_
 
-Shared by: `code-review`, `security`
+Shared by: `code-review`, `security` (file-scope scan menu). `dynamic-scan` follows the general
+`flag-prompt-spec.md` convention with its own scan-mode prompt (passive / full-active / deps-only),
+not this file-scope menu.
 
-When a scan skill is invoked without a scope flag, it MUST present an
-interactive menu and wait for the developer to choose before proceeding.
-Do not default silently. Do not proceed without a selection.
+This is the scan-scope instantiation of the universal `flag-prompt-spec.md` convention —
+see that spec for the general "no flag → prompt, CI → default" rule that applies to every
+flag-taking command.
+
+When a scan skill is invoked without a scope flag **in an interactive session**, it MUST present
+an interactive menu and wait for the developer to choose before proceeding. Do not default
+silently. Do not proceed without a selection.
+
+**CI / non-interactive exception:** when `--ci` is present, the run is headless/piped, or the
+skill was invoked by another skill/gate, **skip the menu** and use the cache-aware full scan.
+Never block a pipeline on a prompt.
 
 ---
 
@@ -105,8 +115,11 @@ actual filter uses the extensions present in the codebase.
 
 ## Hard rules
 
-- **NEVER proceed without a selection** when no flag was provided.
-- **NEVER default silently.** The developer must explicitly choose.
+- **NEVER proceed without a selection** when no flag was provided **in an interactive session**.
+- **NEVER default silently** in an interactive session. The developer must explicitly choose.
+- **CI / non-interactive is the one exception.** When `--ci` is present, the run is headless/piped,
+  or the skill was invoked by another skill/gate, skip the menu and use the cache-aware full scan.
+  This keeps pipelines and internal callers (e.g. `checkin` → `code-review --changed`) unblocked.
 - **Both skills use the same menu.** Only the icon and skill name differ.
 - **The menu is the ONLY place where options are listed.** Do not repeat the
   options list in the scope report that follows.

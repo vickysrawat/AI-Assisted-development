@@ -2,6 +2,29 @@
 
 _Nothing yet._
 
+## [3.24.0] — 2026-09-14
+
+### Fixed — flag commands no longer default silently when invoked bare
+- **Root cause: a spec contradiction.** `scope-flags-spec.md` said "no flag → silent cache-aware
+  full scan", while `interactive-menu-spec.md` and each scan skill's Step 0a said "no flag → show
+  the menu". `Step 0c`'s pointer to `scope-flags-spec.md` let `/code-review` and `/security-review`
+  rationalise skipping the menu. `scope-flags-spec.md`'s `(none)` row and precedence now route to
+  the menu (interactive) with a CI/non-interactive carve-out.
+
+### Added — `flag-prompt-spec.md` universal convention
+- New shared spec: **any** flag-taking command invoked bare prompts (`AskUserQuestion`) with the
+  documented default as the *recommended* option. Applied to `code-review`, `security`,
+  `dynamic-scan` (via `interactive-menu-spec.md` / its own scan-mode prompt) and to `app-readiness`,
+  `update-arch`, `graph-sync`, `graph-viz`, `gitignore-sync`, `dream-audit`, `token-analysis`.
+- **CI / non-interactive never prompts** — `--ci`, headless/piped runs, and internal gate calls skip
+  the prompt and use the documented default. `checkin` / `pr-create` pass explicit flags, so they
+  are unaffected. `interactive-menu-spec.md` gained a matching CI-fallback hard rule.
+
+### Migration
+- Run `/setup-sync` to re-deploy the updated command stubs. No breaking changes for automation;
+  interactive users now see a prompt (accept the recommended option for the prior behaviour). See
+  `docs/migrations/032-3.24.0.md`.
+
 ## [3.23.0] — 2026-09-13
 
 ### Fixed — `icea-floor` block message + PowerShell port

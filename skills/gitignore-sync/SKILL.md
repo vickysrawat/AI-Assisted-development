@@ -126,8 +126,15 @@ deletion, and ideally move the PAT to a Windows User Environment Variable (Optio
 
 ## Step 2 — Optional: detected build artifacts (`--with-artifacts` only)
 
-If the user passed `--with-artifacts`, also detect and offer common build/env
-artifacts. Otherwise skip to Step 3.
+**No-flag prompt** (per `$PLUGIN_DIR/skills/shared/flag-prompt-spec.md`): the plugin entries in
+Step 1 always run. If neither `--with-artifacts` nor its absence was explicitly chosen — i.e. the
+skill was invoked with no flag **in an interactive session** — ask via `AskUserQuestion` whether to
+also scan for build/env artifacts: **plugin entries only** (recommended) or **also detect
+artifacts**. In CI / headless / gate-invoked runs (e.g. `setup-*`), skip the prompt and do
+**plugin entries only** (skip to Step 3).
+
+If the user passed `--with-artifacts` (or chose it at the prompt), also detect and offer common
+build/env artifacts. Otherwise skip to Step 3.
 
 ```bash
 find . -not -path "./.git/*" -not -path "./node_modules/*" -type d \

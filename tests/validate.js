@@ -104,6 +104,8 @@ console.log('\n▶ Shared specs (skills/shared/)');
 const SHARED = [
   'file-cache-schema.md',
   'scope-flags-spec.md',
+  'flag-prompt-spec.md',
+  'interactive-menu-spec.md',
   // domain-map-spec.md was retired in v3.0.0 (ADR 0038) — validate.py check 9 errors if it exists
   'single-writer-assumption.md',
   'model-routing-spec.md',
@@ -129,6 +131,25 @@ if (exists('skills/shared/scope-flags-spec.md')) {
     ? ok('scope-flags-spec: no stale FILE_BUDGET / 40-file cap (removed 3.6.0)')
     : bad('scope-flags-spec: still references removed FILE_BUDGET or 40-file cap — update scope-flags-spec.md');
   s.includes('find .')        ? ok('scope-flags-spec: canonical find command present') : bad('scope-flags-spec: canonical find command missing');
+  // v3.24.0: the (none) case must route to the interactive menu (not a bare silent default),
+  // and must carry the CI / non-interactive carve-out — this is the contradiction the release fixed.
+  /interactive( scope)? menu/i.test(s)
+    ? ok('scope-flags-spec: no-flag routes to the interactive menu')
+    : bad('scope-flags-spec: (none) still describes a silent default — must route to the interactive menu (v3.24.0)');
+  /CI|non-interactive/i.test(s)
+    ? ok('scope-flags-spec: CI / non-interactive carve-out present')
+    : bad('scope-flags-spec: missing CI / non-interactive carve-out for the no-flag case (v3.24.0)');
+}
+
+// v3.24.0: universal no-flag prompt convention + scan-menu CI carve-out
+if (exists('skills/shared/flag-prompt-spec.md')) {
+  const fp = read('skills/shared/flag-prompt-spec.md');
+  /AskUserQuestion/.test(fp) ? ok('flag-prompt-spec: names AskUserQuestion') : bad('flag-prompt-spec: should reference AskUserQuestion');
+  /CI|non-interactive/i.test(fp) ? ok('flag-prompt-spec: CI / non-interactive skip rule present') : bad('flag-prompt-spec: missing CI / non-interactive skip rule');
+}
+if (exists('skills/shared/interactive-menu-spec.md')) {
+  const im = read('skills/shared/interactive-menu-spec.md');
+  /CI|non-interactive/i.test(im) ? ok('interactive-menu-spec: CI / non-interactive fallback present') : bad('interactive-menu-spec: missing CI / non-interactive fallback (v3.24.0)');
 }
 
 // Business context spec is domain-neutral (v2.0): a variable-length B-series, not a fixed
@@ -604,6 +625,54 @@ console.log('\n▶ Deploy-stub delegation integrity (_project-deploy/commands/)'
     });
     if (broken === 0) ok(`all ${checked} delegating deploy stubs resolve to a registered skill or existing command`);
   }
+}
+
+// ── Decoupling guards (stack-neutral + company-agnostic shipping content) ───────
+console.log('\n▶ Decoupling guards');
+{
+  // (a) No company/personal identity may ship. docs/ (case studies) + this file are exempt.
+  const DENY = ['Vivek Rawat', 'Product Engineering', 'Kirkland', 'K&E', 'kirkland.com'];
+  const SCAN_DIRS  = ['skills', 'commands', '_project-deploy'];
+  const SCAN_FILES = ['.claude-plugin/marketplace.json', '.claude-plugin/plugin.json',
+                      '.claude-plugin/config.json', 'install.sh', 'install.ps1', 'install.cjs',
+                      'scripts/sync-config.sh', 'scripts/sync-config.cjs'];
+  const walk = d => fs.readdirSync(path.join(ROOT, d), { withFileTypes: true }).flatMap(e =>
+    e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]);
+  const files = [...SCAN_DIRS.filter(exists).flatMap(walk), ...SCAN_FILES.filter(exists)];
+  const hits = [];
+  files.forEach(f => { const c = read(f); DENY.forEach(t => { if (c.includes(t)) hits.push(`${f} → "${t}"`); }); });
+  hits.length === 0
+    ? ok('no company/personal identity in shipping content')
+    : bad('company/personal identity leaked into shipping content', hits.join(' | '));
+
+  // (b) Data Access Convention must be stack-conditional, not an unconditional Dapper mandate.
+  ['CLAUDE.md', '_project-deploy/CLAUDE.md'].forEach(f => {
+    const c = read(f);
+    (!/Always use \*\*Dapper/.test(c) && c.includes('- .NET:') && c.includes('- Python:'))
+      ? ok(`${f}: Data Access Convention is stack-conditional`)
+      : bad(`${f}: Data Access Convention must be stack-conditional (per-stack bullets, no unconditional Dapper mandate)`);
+  });
+
+  // (c) Stack-context fallbacks must not assume a stack.
+  ['skills/icea-feature/SKILL.md', 'skills/critic/SKILL.md', 'skills/pr-describe/SKILL.md'].forEach(f => {
+    /No (repo )?stack is assumed/.test(read(f))
+      ? ok(`${f}: stack context is detection-driven (no assumed default)`)
+      : bad(`${f}: stack context must say "No stack is assumed" and resolve via detection`);
+  });
+
+  // (d) Emitted templates must derive layers, not hardcode .NET/Angular/Node.js.
+  const T = {
+    'skills/ado-tasks/references/task-formats.md':                 ['EF Core Entity:', 'Angular Route/Component:'],
+    'skills/icea-feature/references/ado-description-template.md':  ['.NET API:', 'EF Core Entity:'],
+    'skills/pr-describe/references/pr-description-template.md':     ['.NET: FluentValidation', 'Angular: OnPush'],
+  };
+  Object.entries(T).forEach(([f, banned]) => {
+    const c = read(f);
+    const found = banned.filter(b => c.includes(b));
+    (found.length === 0 && /active layer/.test(c))
+      ? ok(`${f}: emitted layers are stack-neutral`)
+      : bad(`${f}: emitted template still hardcodes a stack`, found.length ? `remove: ${found.join(', ')}` : 'add layer-driven "active layer" template');
+  });
 }
 
 // ── Summary ───────────────────────────────────────────────────────────────────

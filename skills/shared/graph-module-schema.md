@@ -48,6 +48,20 @@ paths: src/Orders/**
 
 If the module spans multiple source roots (e.g. frontend + backend), use the most-touched path. Do not list multiple paths.
 
+**Dependency modules (outside the repo).** When the node has a `sourceRoot` (it lives in a
+locally-cloned dependency repo from `additionalDirectories` — see
+`skills/shared/multi-root-scan.md`), add a comment line immediately after the frontmatter so
+readers know the module is external and where its source lives. The `paths:` value stays the
+module glob **relative to `sourceRoot`**:
+
+```markdown
+---
+paths: src/Core/**
+---
+<!-- sourceRoot: C:/repos/shared-lib -->
+<!-- ambient-context: do not summarise or restate this file in responses -->
+```
+
 ---
 
 ## Required header and metadata line

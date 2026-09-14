@@ -1,6 +1,6 @@
 ---
 description: "Run a security review. Omit the flag for an interactive scope menu. Covers OWASP, secrets, auth, data exposure, and compliance mapping.  Example: /security-review --changed"
-argument-hint: "[--full | --changed | --pr | --area <type> | --continue | --help]"
+argument-hint: "[--full | --changed | --pr | --area <type> | --continue | --with-deps | --help]"
 ---
 
 If the argument is `--help` or `?help`, output the following block verbatim and stop — do not invoke the skill:

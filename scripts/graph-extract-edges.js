@@ -29,7 +29,11 @@ const nodes = graph.nodes || [];
 if (!nodes.length) { console.error('graph-extract-edges: no nodes in graph — run architect/setup-init first'); process.exit(2); }
 
 // ── path helpers ──────────────────────────────────────────────────────────────
-const norm = p => p.split(path.sep).join('/').replace(/^\.\//, '');
+// All file identity is ABSOLUTE + forward-slashed so nodes from multiple source roots
+// (repo + additionalDirectories dependency repos) never collide and cross-root imports /
+// ProjectReferences resolve. See skills/shared/multi-root-scan.md.
+const norm = p => (p || '').replace(/\\/g, '/').replace(/^\.\//, '');
+const REPO = norm(path.resolve(ROOT));
 function globToRegex(g) {
   let re = '';
   for (let i = 0; i < g.length; i++) {
@@ -43,25 +47,29 @@ function globToRegex(g) {
 }
 function globBase(g) { const i = g.search(/[*?]/); const b = i < 0 ? g : g.slice(0, i); return b.replace(/\/+$/, ''); }
 
-// node path matchers, most-specific (longest base) first
+// node path matchers, most-specific (longest base) first. Each glob resolves against the
+// node's sourceRoot (dependency repo) or the repo root, so matchers key ABSOLUTE paths.
 const matchers = [];
-for (const n of nodes) for (const g of (n.paths || [])) {
-  const gg = norm(g); matchers.push({ id: n.id, re: globToRegex(gg), base: globBase(gg) });
+for (const n of nodes) {
+  const nodeBase = n.sourceRoot ? norm(n.sourceRoot) : REPO;
+  for (const g of (n.paths || [])) {
+    const gg = norm(nodeBase + '/' + g);
+    matchers.push({ id: n.id, re: globToRegex(gg), base: globBase(gg) });
+  }
 }
 matchers.sort((a, b) => b.base.length - a.base.length);
-function ownerOf(relPath) { const p = norm(relPath); for (const m of matchers) if (m.re.test(p)) return m.id; return null; }
+function ownerOf(absPath) { const p = norm(absPath); for (const m of matchers) if (m.re.test(p)) return m.id; return null; }
 
-// ── walk source files under the union of node bases ──────────────────────────
-const bases = [...new Set(matchers.map(m => m.base).filter(Boolean))];
-const roots = bases.length ? bases : ['']; // fall back to whole repo
+// ── walk source files under the union of node bases (absolute) ───────────────
+const roots = [...new Set(matchers.map(m => m.base).filter(Boolean))]; // absolute base dirs
 const files = []; const seen = new Set();
-function walk(dir) {
-  let ents; try { ents = fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true }); } catch (e) { return; }
+function walk(absDir) {
+  let ents; try { ents = fs.readdirSync(absDir, { withFileTypes: true }); } catch (e) { return; }
   for (const e of ents) {
     if (e.name.startsWith('.git') || IGNORE_DIRS.has(e.name)) continue;
-    const rel = dir ? dir + '/' + e.name : e.name;
-    if (e.isDirectory()) walk(rel);
-    else if (CODE_EXT.has(path.extname(e.name).toLowerCase())) { if (!seen.has(rel)) { seen.add(rel); files.push(rel); } }
+    const abs = norm(absDir + '/' + e.name);
+    if (e.isDirectory()) walk(abs);
+    else if (CODE_EXT.has(path.extname(e.name).toLowerCase())) { if (!seen.has(abs)) { seen.add(abs); files.push(abs); } }
   }
 }
 for (const r of roots) walk(r);
@@ -72,7 +80,7 @@ for (const f of files) { const o = ownerOf(f); if (o) fileToNode[f] = o; }
 // ── namespace/package → node maps (C#, Java) ─────────────────────────────────
 const nsToNode = {}; // C# namespace  → node id
 const pkgToNode = {}; // Java package → node id
-function readSafe(f) { try { return fs.readFileSync(path.join(ROOT, f), 'utf8'); } catch (e) { return ''; } }
+function readSafe(f) { try { return fs.readFileSync(f, 'utf8'); } catch (e) { return ''; } }
 for (const f of files) {
   const node = fileToNode[f]; if (!node) continue;
   const ext = path.extname(f).toLowerCase();
@@ -195,7 +203,7 @@ const merged = result.filter(e => { const k = e.from + '\t' + e.to + '\t' + (e.t
   .sort((a, b) => (a.from + '\t' + a.to + '\t' + (a.type || '')).localeCompare(b.from + '\t' + b.to + '\t' + (b.type || '')));
 
 // ── deterministic serialization (schema key order) ────────────────────────────
-const NODE_KEYS = ['id', 'module', 'domain', 'type', 'detailFile', 'entryPoint', 'paths', 'fingerprint', 'hub'];
+const NODE_KEYS = ['id', 'module', 'domain', 'type', 'detailFile', 'entryPoint', 'paths', 'sourceRoot', 'fingerprint', 'hub'];
 const EDGE_KEYS = ['from', 'to', 'type', 'confidence', 'reason'];
 function ordered(obj, keys) { const o = {}; for (const k of keys) if (obj[k] !== undefined) o[k] = obj[k]; for (const k of Object.keys(obj)) if (!keys.includes(k)) o[k] = obj[k]; return o; }
 const out = {

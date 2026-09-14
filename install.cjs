@@ -170,7 +170,7 @@ function writeMarketplaceJson(version) {
     path.join(MARKETPLACE_DIR, '.claude-plugin', 'marketplace.json'),
     JSON.stringify({
       name: MARKETPLACE_NAME,
-      owner: { name: 'Product Engineering' },
+      owner: { name: COMPANY },
       description: `${COMPANY} internal Claude Code plugins`,
       plugins: [{
         name: PLUGIN_NAME,

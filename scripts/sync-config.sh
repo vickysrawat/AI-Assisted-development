@@ -3,7 +3,7 @@
 # for organization / project / company / repo identity) into the machine-readable
 # manifests that must carry literal values:
 #   • .claude-plugin/plugin.json      → author.name, repository (derived clone URL)
-#   • .claude-plugin/marketplace.json → description ("{company} internal Claude Code plugins")
+#   • .claude-plugin/marketplace.json → name, owner.name (= company), description
 #
 # Run after editing config.json (e.g. to rebrand or point at another Azure DevOps org).
 # Idempotent. Requires node. See DEVELOPER-GUIDE.md > Rebranding / forking.
@@ -46,9 +46,10 @@ const mkPath = ".claude-plugin/marketplace.json";
 if (fs.existsSync(mkPath)) {
   const mk = JSON.parse(fs.readFileSync(mkPath, "utf8"));
   if (cfg.marketplaceName) mk.name = cfg.marketplaceName;
+  mk.owner = { name: cfg.company };
   mk.description = mktDesc;
   fs.writeFileSync(mkPath, JSON.stringify(mk, null, 2) + "\n");
-  console.log(`✓ marketplace.json name="${mk.name}"  description="${mktDesc}"`);
+  console.log(`✓ marketplace.json name="${mk.name}"  owner="${cfg.company}"  description="${mktDesc}"`);
 }
 
 console.log("Config synced. (Runtime skills read org/project from CLAUDE.md §2, seeded by setup-init.)");

@@ -52,6 +52,26 @@ work on ADO-{ID}. The model still **streams the diff + path for each file before
   `✍ Writing under APPROVE ALL — {path}` marker.
 - **Does NOT widen scope:** covers only files within the approved plan's Change Manifest /
   stated file set; a write outside that set falls back to a per-file WRITE PENDING prompt.
+- **Does NOT blanket a repo-boundary crossing:** see below.
+
+## Boundary-crossing writes — dependency repos (`additionalDirectories`)
+
+Read access to a locally-cloned dependency repo (a path in `.claude/settings.local.json →
+additionalDirectories`; see `multi-root-scan.md`) does **not** imply write consent. When a write
+target resolves to an absolute path **outside the repo root**:
+
+- It **always** requires its own explicit per-file confirmation, and **`APPROVE ALL ADO-{ID}`
+  does NOT blanket it** — a standing batch approval covers in-repo writes only.
+- Show the diff + full path, then stop with an extra line before the standard prompt:
+  ```
+  ⚠ WRITE CROSSES REPO BOUNDARY — {path} is outside this repo (dependency: {dep root}).
+  📁 WRITE PENDING — reply APPROVE ADO-{ID} to write, or SKIP to discard.
+     Path: {full/file/path}
+  ```
+- Rationale: writing into a sibling repo you merely depend on is a distinct, higher-blast-radius
+  action than writing your own source; it must never happen silently. `icea-implement` is the
+  primary caller — a Tech Spec may legitimately name a dependency path (multi-root graph), but the
+  write still stops here.
 
 ## Gate orthogonality — the gates guard different risks
 

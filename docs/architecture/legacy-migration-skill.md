@@ -14,7 +14,18 @@
 
 ---
 
-## 1. Purpose
+## A note before you read
+
+*Think of the old `migration` skill as the founder who ran a single workshop that could do every
+kind of move — and who has since retired, handing the trade down to three specialist children.* This
+page is the tribute on the wall. It's worth keeping not out of nostalgia but because the founder
+invented the working habits the whole family still lives by: a thin orchestrator that only sequences
+and gates, a checkpoint that everyone hands work through, and a clever trick for doing an enormous
+job inside a small memory. Read it as "how the family firm learned its craft."
+
+---
+
+## 1. Purpose — the one workshop that did everything
 
 `migration` migrated an application from one tech stack to another **out of place**: you ran it
 **from inside the new (empty) TARGET project folder** and supplied the SOURCE application path when
@@ -24,40 +35,46 @@ and each cluster agent generated target code on its own **branch of the TARGET r
 Supported source→target moves at retirement: .NET Framework → .NET 10, Java ↔ .NET,
 React+Express → Angular+.NET, Node.js → .NET.
 
-Its defining characteristic — and the reason it is worth remembering — is the **thin-orchestrator +
+The reason it's worth remembering — the founder's signature technique — is the **thin-orchestrator +
 per-stage step-file + checkpoint** pattern, combined with a **hybrid inline/subagent execution
-model** that kept a very long, multi-stage workflow inside a bounded context budget.
+model** that kept a very long, multi-stage workflow inside a bounded context budget. Every child
+skill inherited some version of this.
 
 ---
 
-## 2. Responsibility (SRP)
+## 2. Responsibility (SRP) — the foreman who only foreman'd
 
-`SKILL.md` was a **thin orchestrator**. Its single responsibility was *sequence + stage-gates +
+`SKILL.md` was a **thin orchestrator** — a foreman who never touched a tool, only ran the floor. Its
+single responsibility (the Single Responsibility Principle in action) was *sequence + stage-gates +
 checkpoint*:
 
 - It owned **Step 0** (entry / resume), the **stage order**, the **gate keywords**, and the
-  `.claude/migration-checkpoint.json` **checkpoint** (the single source of truth).
+  `.claude/migration-checkpoint.json` **checkpoint** (the single source of truth — the job book on
+  the foreman's desk).
 - Each stage's actual procedure — persona, model tier, reference loads, and steps — lived in its own
-  **step file** under `skills/migration/steps/`.
+  **step file** under `skills/migration/steps/`. The specialists' manuals, not the foreman's memory.
 - The orchestrator read the checkpoint's `phase` / `stage_gates` and **dispatched** the right step
-  file. It never inlined stage procedures.
+  file. It never inlined stage procedures — a foreman who did the welding would be a bottleneck.
 
 This is the pattern the DEVELOPER-GUIDE's "multi-stage orchestrator skills" section points to.
 
 ---
 
-## 3. Hybrid execution model (the context-budget trick)
+## 3. Hybrid execution model — how one workshop did a job too big to hold
 
-The workflow was far too long to run in one context. The skill split work by **interactivity**:
+The workflow was far too long to run in one context — no single mind could hold the whole job at
+once. So the founder split the work by **interactivity**, keeping in-hand only what needed a
+conversation and sending the heavy lifting out to be done and forgotten:
 
 - **Interactive** steps (Stage 0 questions; every stage-gate approval) ran **inline** in the
-  orchestrator's context — a subagent cannot do multi-turn user Q&A.
+  orchestrator's context — you can't hold a back-and-forth with the customer through a subcontractor.
 - **Heavy, non-interactive** steps (Stage 2 feasibility; Stage 4 cluster code-gen) were **dispatched
   as subagents**, so their large context was **discarded on return** — only a compact structured
-  result flowed back into the checkpoint.
-- The **checkpoint (JSON)** was the hand-off medium. The orchestrator was the **single writer**
-  (`skills/shared/single-writer-assumption.md`); dispatched agents **returned** results, and the
-  orchestrator merged them.
+  result came back to the desk. The subcontractor does the messy work off-site and returns a tidy
+  invoice.
+- The **checkpoint (JSON)** was the hand-off medium — the shared job book. The orchestrator was the
+  **single writer** (`skills/shared/single-writer-assumption.md`); dispatched agents **returned**
+  results, and the orchestrator merged them. One pen, one book, no arguments.
 
 ```mermaid
 flowchart TB
@@ -83,7 +100,10 @@ flowchart TB
 
 ---
 
-## 4. The nine-stage flow
+## 4. The nine-stage flow — the founder's full production line
+
+The whole job moved down a nine-station line, each station with its own manual, its own way of
+running (inline or dispatched), and — where a human sign-off was needed — its own gate keyword:
 
 | Stage | Keyword (start / resume) | Step file | Gate keyword | Exec |
 |---|---|---|---|---|
@@ -97,7 +117,8 @@ flowchart TB
 | 5 — **tests** (characterization) | — | `stage-5-tests.md` | `APPROVE MIGRATION ADO-{ID}` | inline |
 | 6 — **verification** | — | `stage-6-verification.md` | completion gate (6.4 parity · 6.5 as-built reconciliation) | inline |
 
-Cross-cutting: `MIGRATE STATUS ADO-{ID}` → the read-only `/migration-status` projection.
+Cross-cutting: `MIGRATE STATUS ADO-{ID}` → the read-only `/migration-status` projection — the
+customer-facing status board.
 
 ```mermaid
 flowchart LR
@@ -112,33 +133,42 @@ flowchart LR
     I -->|"parity + as-built reconciliation"| DONE(["MIGRATION COMPLETE"])
 ```
 
-**Per-stage walkthrough (one line each):**
-- **0** — collect ADO/Release/Sprint + SOURCE_PATH, verify TARGET git repo, register SOURCE as an
-  additionalDirectory, detect + offer resume from any existing checkpoint.
+**What happened at each station (one line each):**
+- **0** — collect ADO/Release/Sprint + SOURCE_PATH, verify the TARGET git repo, register SOURCE as an
+  additionalDirectory, detect + offer resume from any existing checkpoint. (Take the order, check the
+  premises.)
 - **0.5** — enumerate viable target options with trade-offs/TCO (skipped only for a pure `dotnet`
-  version upgrade).
+  version upgrade). (Quote the job.)
 - **0.6** — build a grounded source **inventory**; INFERRED items touching integration/auth/security
-  must be ground-truth-verified; gaps logged with `file:line`, never guessed.
+  must be ground-truth-verified; gaps logged with `file:line`, never guessed. (Survey what's there —
+  and don't guess about the wiring.)
 - **1** — design the **target architecture** (the governance substitute for an ICEA); Mermaid required.
+  (Draw the plans.)
 - **2** — **feasibility** assessment (heavy → subagent); risk/finding severity uses the B-series.
-- **3** — derive parallel **clusters** from the source graph; deploy target guardrail rules (Step 3.3a).
-- **4** — generate target code **per cluster on worktree branches**; bounded goal-loop scores each.
-- **5** — characterization / **tests**.
-- **6** — **verification**: golden-master parity (6.4) + as-built reconciliation (6.5) before COMPLETE.
+  (Can this actually be done?)
+- **3** — derive parallel **clusters** from the source graph; deploy target guardrail rules
+  (Step 3.3a). (Split the job among crews.)
+- **4** — generate target code **per cluster on worktree branches**; a bounded goal-loop scores each.
+  (Build.)
+- **5** — characterization / **tests**. (Prove it behaves.)
+- **6** — **verification**: golden-master parity (6.4) + as-built reconciliation (6.5) before
+  COMPLETE. (Final walkthrough before handover.)
 
 ---
 
-## 5. Gate & checkpoint model
+## 5. Gate & checkpoint model — the job book everyone wrote through
 
 `.claude/migration-checkpoint.json` (**schema 1.10**) was seeded at Step 0.4 and **merged** at each
 gate. It was the resume anchor for every `MIGRATE *` keyword, the Stage 1–3 context-budget checks,
-and the parallel Stage-4 subagents. It was **gitignored runtime state** (never committed;
-`skills/shared/checkpoint-schema.md`). Human-readable status was a **computed projection** rendered
-by `/migration-status` — there was no separate markdown tracker file.
+and the parallel Stage-4 subagents — the one book that survived even when a worker's memory was
+thrown away. It was **gitignored runtime state** (never committed;
+`skills/shared/checkpoint-schema.md`). The human-readable status was a **computed projection**
+rendered by `/migration-status` — there was no separate markdown tracker file to drift out of sync.
 
 On each `APPROVE …`, the owning step file merged the checkpoint
-(`stage_gates.*_approved = true`, `phase = next`) **without clobbering** `decision_log` / `clusters`.
-Per-cluster status was authoritative in `clusters{}`:
+(`stage_gates.*_approved = true`, `phase = next`) **without clobbering** `decision_log` / `clusters` —
+you wrote your own line without scribbling over anyone else's. Per-cluster status was authoritative in
+`clusters{}`:
 
 ```json
 "clusters": {
@@ -172,7 +202,7 @@ stateDiagram-v2
 
 ---
 
-## 6. Personas & model routing
+## 6. Personas & model routing — who staffed each station
 
 | Stage | Persona | Model tier |
 |---|---|---|
@@ -181,18 +211,19 @@ stateDiagram-v2
 | 4 / 5 / 6 (code-gen, tests, verification) | **[SE] Elena Fischer — Senior Software Engineer** | `ICEA_MODEL` for Stage 4 code-gen |
 
 Each step file re-stated its own persona; see `skills/shared/personas-spec.md` /
-`model-routing-spec.md`.
+`model-routing-spec.md`. (Every specialist knew their own trade without being told twice.)
 
 ---
 
-## 7. Stage-4 cluster parallelism
+## 7. Stage-4 cluster parallelism — many crews, one site, no collisions
 
 Stage 4 dispatched **one subagent per cluster**, each on its **own git worktree branch** of the
 TARGET repo, executing from `TARGET-ARCHITECTURE.md` only (cluster agents loaded **no** reference
-files). The orchestrator ran the bounded **goal-loop** (`goal-loop-spec.md`) to score each cluster
-against its completion rubric and compute an overall Stage-4 percentage shown beside the
-`APPROVE MIGRATION ADO-{ID}` summary. The loop bounded auto-retries (maxIterations 2, then
-`RETRY CLUSTER {name}`) and **never crossed the gate** — it stopped at it for the human.
+files — each crew got exactly one drawing and nothing to distract them). The orchestrator ran the
+bounded **goal-loop** (`goal-loop-spec.md`) to score each cluster against its completion rubric and
+compute an overall Stage-4 percentage shown beside the `APPROVE MIGRATION ADO-{ID}` summary. The loop
+bounded auto-retries (maxIterations 2, then `RETRY CLUSTER {name}`) and **never crossed the gate** —
+it worked right up to the line and stopped there for the human.
 
 ```mermaid
 flowchart TB
@@ -210,7 +241,8 @@ flowchart TB
 
 ## 8. Full-stack = two coordinated single-track runs
 
-A full-stack migration was **two** coordinated runs, never one:
+A full-stack migration was **two** coordinated runs, never one — the founder never tried to build the
+back and front of the shop at the same time on one crew:
 
 1. A **`backend`** run that generates the API and **publishes the integration contract**.
 2. A separate **`frontend`** run that **consumes** it — calling the API only through the *generated
@@ -219,27 +251,27 @@ A full-stack migration was **two** coordinated runs, never one:
 
 ---
 
-## 9. Governance & key hard rules
+## 9. Governance & the founder's house rules
 
 - **ICEA substitute:** the skill generated code **without a prior ICEA**; the **Stage-1 architecture
   documents** were the governance substitute. The **Write Gate still held** — no target code was
-  written without `APPROVE MIGRATION ADO-{ID}`.
+  written without `APPROVE MIGRATION ADO-{ID}`. (No permit, no build — even for the founder.)
 - **Design-time ≠ as-built:** Stage-1 docs were pre-implementation intent; `MIGRATION COMPLETE`
   required the Stage-6 **as-built reconciliation** (`architect` + `/graph-sync` on the generated
   target; `asbuilt-reconciliation-spec.md`). When golden-master was skipped, the mechanical as-built
-  audit was the compensating control.
+  audit was the compensating control. (What you drew is not what you handed over until you check.)
 - **Ground-truth integration verification:** never classify an integration's transport/binding/auth
   from a consumer interface name — verify against host config / assembly / WSDL
   (`integration-verification-spec.md`). `PROV:` proves the citation exists, not that its
-  interpretation is correct.
-- **No fallbacks:** unsupported source stack → STOP; `MATURITY: ⚠ Unverified` target profile →
+  interpretation is correct. (Don't guess the wiring from the light switch.)
+- **No fallbacks:** an unsupported source stack → STOP; a `MATURITY: ⚠ Unverified` target profile →
   explicit go-ahead required; never auto-proceed past a gate.
 - **Never migrate + refactor + change behaviour in one step; never assume when ambiguous; never write
   secrets (placeholders only); never skip Mermaid diagrams.**
 
 ---
 
-## 10. What replaced it
+## 10. What replaced it — the trade, handed down to three specialists
 
 | Legacy `migration` posture | Replacement skill |
 |---|---|
@@ -255,6 +287,8 @@ See [ADR 0061](../adr/0061-migration-skill-family-split.md).
 ---
 
 ## Appendix — retired reference inventory (`06d22b9^:skills/migration/`)
+
+Everything the workshop owned, catalogued for anyone who needs to reach back into git history:
 
 - **`steps/`** — `stage-0`, `0.5-options`, `0.6-inventory`, `1-architecture`, `2-feasibility`,
   `3-clusters`, `4-migration`, `5-tests`, `6-verification`.

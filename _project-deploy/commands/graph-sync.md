@@ -1,6 +1,6 @@
 ---
 description: "Knowledge graph refresh — recomputes fingerprints, regenerates stale modules, reconciles renamed/orphaned modules, and updates graph.json. Deletes the .stale flag on success.  Example: /graph-sync"
-argument-hint: "[--effort low|medium | --help]"
+argument-hint: "[--effort low|medium | --help]  — omit to be prompted (low recommended; CI uses low)"
 ---
 
 If the argument is `--help` or `?help`, output the following block verbatim and stop — do not invoke the skill:
@@ -13,7 +13,8 @@ removed/renamed/orphaned modules, derives typed dependency edges, and updates
 graph.json. Restructures flat→domain layout past 30 modules.
 
 Arguments:
-  --effort low      Fast refresh — default. Use for routine updates.
+  (no flag)         Prompt to choose effort: low (recommended) or medium. (CI / non-interactive: low, no prompt.)
+  --effort low      Fast refresh. Use for routine updates.
   --effort medium   Deeper refresh. Use if module structure is unusual or recently restructured.
   --help, ?help     Show this help.
 

@@ -20,6 +20,11 @@ _Skill version: 2.0 · Last changed: 2026-07-03 · Plugin compatibility: ≥3.3.
 Effort tier: **low** (infrastructure, deterministic structure). Use `--effort medium`
 only when module layout has significantly changed and boundaries are ambiguous.
 
+**No-flag prompt** (per `$PLUGIN_DIR/skills/shared/flag-prompt-spec.md`): if invoked with no
+`--effort` flag **in an interactive session**, ask via `AskUserQuestion` — **low** (recommended)
+or **medium** — before syncing; do not default silently. In CI / headless / gate-invoked runs
+(e.g. `session-start`, `setup-*`), skip the prompt and use `--effort low`.
+
 **Consent (Category B):** graph-sync reads entry-point and source files to derive
 module content and dependency edges. It is plugin infrastructure with no B-series
 business sensitivity of its own (see `skills/shared/business-context-severity.md` for
@@ -139,7 +144,9 @@ For each node, recompute its module-wide fingerprint over `node.paths` and compa
 `node.fingerprint`:
 
 ```bash
-# roots = node.paths with trailing /** stripped
+# roots = node.paths with trailing /** stripped.
+# For a dependency module (node.sourceRoot set), prefix each root with sourceRoot so the
+# fingerprint resolves against the dependency repo, e.g.  roots="$sourceRoot/src/Core".
 current="$(graph_module_fingerprint $roots)"
 [ "$current" = "$node_fingerprint" ] && echo "UNCHANGED $id" || echo "STALE $id $current"
 ```
@@ -154,24 +161,31 @@ Build:
 ## Step 4 — Detect new modules
 
 Scan for top-level source directories not represented by any node's `paths`. Derive
-ignore globs from the detected stack instead of a fixed list:
+ignore globs from the detected stack instead of a fixed list. Scan the **repo root and
+each dependency root** (`additionalDirectories`) — graph orientation is read-only, so it
+includes dependency repos by default (see `$PLUGIN_DIR/skills/shared/multi-root-scan.md`):
 
 ```bash
+# Repo root:
 find . -mindepth 2 -maxdepth 3 -type d \
   -not -path "./.git/*" -not -path "./.claude/*" \
   -not -path "./node_modules/*" -not -path "./dist/*" \
   -not -path "./bin/*" -not -path "./obj/*" -not -path "./.angular/*" \
   | sort
+# Each dependency root DEP from additionalDirectories (same exclusions), then tag any
+# discovered module with sourceRoot=DEP so its paths stay relative to DEP:
+#   find "$DEP" -mindepth 2 -maxdepth 3 -type d ... | sort
 ```
 
 > **S6 / ADR 0056:** `scripts/module-derive.cjs` uses the same bounded-context heuristic
 > and the same exclusion list as this `find` command to derive the initial module skeleton
-> during setup-init. Keeping both in sync ensures the FIRST `/graph-sync` after setup does
-> not detect spurious renames. If you update the exclusion list here, update
-> `module-derive.cjs`'s `EXCLUDE_DIRS` set and vice versa.
+> during setup-init (multi-root: repo + `additionalDirectories`). Keeping both in sync ensures
+> the FIRST `/graph-sync` after setup does not detect spurious renames. If you update the
+> exclusion list here, update `module-derive.cjs`'s `EXCLUDE_DIRS` set and vice versa.
 
 Cross-reference with `.claude/architecture/architecture.md` when a new module's
-purpose is unclear. Directories matched by no node become `NEW_MODULES` (Step 7b).
+purpose is unclear. Directories matched by no node become `NEW_MODULES` (Step 7b); a
+dependency-root directory becomes a `NEW_MODULES` entry carrying `sourceRoot`.
 
 ---
 
@@ -234,6 +248,9 @@ For each `STALE` and `NEW_MODULES` entry, update the in-memory node + its edges:
   `ui`, `datastore`, `external-api`, `shared-lib`, or `domain`.
 - `fingerprint` — the recomputed value from Step 3.
 - `entryPoint`, `paths`, `module`, `domain`, `detailFile` — per the schema.
+- `sourceRoot` — for a dependency module, carry it forward (renames) or set it (new dep
+  module) so `paths`/`entryPoint` resolve against the dependency repo. Repo-local modules
+  omit it. Detail file gets a `<!-- sourceRoot: {node.sourceRoot} -->` comment (8b).
 
 ### 7b — Typed edges with confidence (deterministic EXTRACTED)
 `EXTRACTED` edges (dependencies visible in source) are produced **deterministically by a
@@ -254,6 +271,10 @@ Run these `find` commands from the project root and populate `directoryCatalog`
 on the **in-memory graph object** before Step 8a writes `graph.json`. This way
 the single 8a write includes the catalog, and `graph-extract-edges.js` (which
 runs after 8a and touches only `edges[]`) leaves `directoryCatalog` untouched.
+
+> Scope: the catalog describes **this** app's deployment topology, so it stays repo-only
+> (the `find .` calls are intentional). Dependency modules are graph nodes, but a
+> dependency's own static/config/test dirs are its concern — not this app's catalog.
 
 ```bash
 # Requires GNU grep for -oP (Linux / Git Bash on Windows).
@@ -375,6 +396,7 @@ format above. Confirm: `✓ Written: .claude/graph/graph.json (~N tokens)`.
 ### 8b — Project the detail files (only stale/new/renamed)
 For each changed node, write `.claude/graph/<detailFile>` per
 `graph-module-schema.md`: `paths:` frontmatter (first root), ambient-context comment,
+a `<!-- sourceRoot: {node.sourceRoot} -->` comment when the node is a dependency module,
 `_Fingerprint: {node.fingerprint} | Updated: {TODAY}_`, the four sections, and — when
 it fits under 400 tokens — a `**Depended on by:**` line listing the node's dependents
 (edges where `to == id`; derived, not stored). Write silently.

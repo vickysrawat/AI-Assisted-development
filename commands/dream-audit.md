@@ -1,6 +1,6 @@
 ---
 description: Quarterly memory quality audit — flags uncited facts, surfaces contradicted promotions, and feeds rollback history into confidence scoring. Closes Dream's feedback loop.
-argument-hint: "[--days <N>] (citation window, default 90)"
+argument-hint: "[--days <N>]  —  citation window; omit to be prompted (90 recommended; CI uses 90)"
 ---
 
 ## Model routing

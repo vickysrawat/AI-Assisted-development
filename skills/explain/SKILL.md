@@ -94,6 +94,12 @@ Key files      : {list from the module detail file, if relevant}
 
 ## Step 4 — Decide whether source is needed
 
+The knowledge graph is multi-root: modules from locally-cloned dependency repos
+(`additionalDirectories`) appear as nodes carrying a `sourceRoot` (see
+`$PLUGIN_DIR/skills/shared/multi-root-scan.md`). When the answer lives in a dependency, the
+graph will point there — name that dependency module and its file rather than guessing a
+repo-local path. The one file you may offer to read (below) can be that dependency file.
+
 After answering from architecture docs, assess confidence:
 
 **HIGH confidence** (answer is complete from docs):
@@ -145,6 +151,8 @@ The gate in Step 4 is the implementation of that spec.
 
 - NEVER scan `src/` or any directory without an explicit developer confirmation in Step 4
 - NEVER read more than ONE source file per /explain invocation
+- The ONE consented file MAY live under an `additionalDirectories` dependency path when the
+  graph indicates the answer is in a dependency module (still exactly one file, still Step-4 gated)
 - NEVER say "I don't have access to the source code" — the architecture docs were built
   from the source and contain the structural answer for most questions
 - If the knowledge graph is stale (`.claude/graph/.stale` present), note it:

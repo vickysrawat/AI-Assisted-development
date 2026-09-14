@@ -23,12 +23,20 @@ Stack context is read from `.claude/architecture/architecture.md` during the
 Codebase Orientation step above. If that file is missing, fall back to the
 project defaults below.
 
-**Default stack (K&E project — update architecture.md to override):**
-- Backend: .NET 8 / C# — Clean Architecture
-- Frontend: Angular 17+ — Standalone components, OnPush
-- Middleware: Node.js / Express / TypeScript
-- Auth: Azure AD Bearer tokens
-- Tracking: Azure DevOps (ADO) work items
+**No stack is assumed.** If `architecture.md` is absent, resolve the stack in this
+order before proceeding — never guess a backend, frontend, or ORM:
+
+1. Read `.claude/dream-init-state.json` → `repo_type` / `detected_stacks[]` (written
+   by `/setup-init`'s repo detection). Use it if present.
+2. If that is also absent, STOP and ask the developer to supply the stack context,
+   offering these options:
+   - **Recommended:** run `/setup-init` (or `/update-arch`) to detect the stack and
+     populate `architecture.md` — makes it durable for every later run; or
+   - state the stack inline for this one run (backend / frontend / middleware / auth /
+     tracking) so ICEA drafting can proceed.
+
+All stack-specific acceptance criteria derive from the resolved stack — do not draft
+.NET/Angular-specific ACs unless the resolved stack is .NET/Angular.
 
 ## Business context severity
 
@@ -137,6 +145,16 @@ reading raw source files:
    This skill is Category C under `$PLUGIN_DIR/skills/shared/source-file-consent.md` —
    it operates on architecture docs and the knowledge graph only. The graph
    was built from source; use it instead of re-reading source files.
+
+   **Multi-root orientation.** The graph is multi-root: modules from locally-cloned
+   dependency repos (`additionalDirectories`) appear as nodes carrying a `sourceRoot`
+   (see `$PLUGIN_DIR/skills/shared/multi-root-scan.md`). When the feature legitimately
+   touches a dependency module, Context and the Tech Spec **file-change table may reference
+   that module's real paths** (from the graph node) rather than inventing a repo-local path.
+   Flag any such path — implementing it crosses a repo boundary and will require the
+   boundary-crossing write confirmation in `icea-implement` (CLAUDE.md §0). This complements
+   the existing stack-union (`detected_stacks ∪ external_detected_stacks`) already used for
+   template selection.
 
 6. **Staleness check** — if `.claude/graph/.stale` exists (set by the post-merge
    git hook when tracked entry-point files change), the graph may be behind the

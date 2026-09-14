@@ -1,6 +1,6 @@
 ---
 description: Analyses token consumption across recent Claude Code sessions. Uses a persistent graph cache so subsequent runs only process new sessions and changed files. Identifies expensive operations and prompts. Writes token-analysis-<date>.html to token-analysis/ in the project root.
-argument-hint: [sessions=N — number of sessions to analyse, default 10]
+argument-hint: "[sessions=N]  —  number of sessions to analyse; omit to be prompted (10 recommended; CI uses 10)"
 ---
 
 # /token-analysis
@@ -19,8 +19,10 @@ Produce a token consumption analysis report and write it to
 
 ### Step 1 — Parse arguments
 
-Extract `sessions=N` from the invocation arguments if present.
-Default to `sessions=10` if not provided.
+Extract `sessions=N` from the invocation arguments if present. If not present **in an interactive
+session**, prompt via `AskUserQuestion` for the session count — **10** (recommended) or a custom
+value — before proceeding (per `$PLUGIN_DIR/skills/shared/flag-prompt-spec.md`); do not default
+silently. In CI / headless / gate-invoked runs, skip the prompt and use `sessions=10`.
 
 ---
 

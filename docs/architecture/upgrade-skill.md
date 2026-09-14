@@ -9,36 +9,62 @@
 
 ---
 
-## 1. Purpose
+## The story in one line
 
-`upgrade` performs an **in-place, same-stack version upgrade** — current → a higher supported version
-of the *same* runtime (e.g. .NET 6→8, Angular 15→17, Java 8→21). It edits the source repo itself.
-
-Its defining stance: **the LLM is an *orchestrator* of a deterministic stack-native tool, never a
-generative author of the bulk change.** Triggered by `UPGRADE ADO-{ID}` / `/upgrade`, run from inside
-the repo being upgraded.
-
----
-
-## 2. Guiding principle
-
-> **The LLM coordinates; the deterministic tool transforms.** The model never hand-authors the bulk
-> change to working code — it selects and drives the stack-native tool (e.g. `dotnet` SDK upgrade
-> assistant, `ng update`, OpenRewrite), grounds its gap/risk analysis in authoritative sources, and
-> remediates only the **residual** the tool cannot handle — each fix gated and verified against the
-> pre-upgrade baseline commit. The primary product is the **decision-grade report**; the code change
-> is secondary and always reversible.
-
-## 3. Skill shape
-
-- **Locality:** in-place — edits the source repo directly.
-- **Oracle:** the project's own **pre-upgrade baseline commit/tag** (the regression reference).
-- **Headline deliverable:** the **Gap + Risk report** — worth producing even if the developer never
-  proceeds to touch code.
+*Think of Upgrade as a medical visit for your application.* The app is healthy and running — it
+just needs to move to a supported, current runtime. Upgrade begins with a **diagnosis** you can
+act on (or not), and if you choose treatment it brings in a **licensed specialist** to do the
+work while it keeps careful watch. It never picks up the scalpel itself, and it always keeps a
+record of your "before" state so nothing is done that can't be undone.
 
 ---
 
-## 4. Stage flow
+## 1. Purpose — the check-up
+
+Your application works. It compiles, it ships, users are happy — but it's sitting on a runtime
+that shipped a few years ago and the support clock is running out. You don't want to *change*
+what the app does; you just want it current. That's a check-up, not surgery.
+
+That is exactly what `upgrade` is for: an **in-place, same-stack version upgrade** — current → a
+higher supported version of the *same* runtime (e.g. .NET 6→8, Angular 15→17, Java 8→21). It
+edits the source repo itself, because you are treating the patient in front of you, not building
+a new one.
+
+The single most important thing to understand about how Upgrade behaves: **the LLM is an
+*orchestrator* of a deterministic stack-native tool, never a generative author of the bulk
+change.** A good doctor doesn't hand-operate when a proven, calibrated instrument exists. Upgrade
+is triggered by `UPGRADE ADO-{ID}` / `/upgrade`, and is run from inside the repo being upgraded.
+
+---
+
+## 2. Guiding principle — diagnosis first, then a specialist
+
+> **The LLM coordinates; the deterministic tool transforms.** The model never hand-authors the
+> bulk change to working code — it selects and drives the stack-native tool (e.g. `dotnet` SDK
+> upgrade assistant, `ng update`, OpenRewrite), grounds its gap/risk analysis in authoritative
+> sources, and remediates only the **residual** the tool cannot handle — each fix gated and
+> verified against the pre-upgrade baseline commit. The primary product is the **decision-grade
+> report**; the code change is secondary and always reversible.
+
+In medical terms: the report is the diagnosis, and the diagnosis is the deliverable. The
+treatment — if you choose it — is performed by a specialist instrument, one careful step at a
+time, always measured against your baseline vitals.
+
+## 3. Skill shape — what kind of visit this is
+
+- **Locality:** in-place — it edits the source repo directly. You're treating the existing
+  patient, not cloning them.
+- **Oracle (the baseline vitals):** the project's own **pre-upgrade baseline commit/tag** — the
+  reference every post-treatment check is compared against.
+- **Headline deliverable (the diagnosis):** the **Gap + Risk report** — worth producing even if
+  the developer never proceeds to touch code. A clean bill of health, or a list of what would
+  break, is valuable on its own.
+
+---
+
+## 4. The journey, stage by stage
+
+Here is the whole visit at a glance — from walking in the door to walking out upgraded:
 
 ```
 Detect stack + version  →  Classify  →  Plan version path  →  Tool preflight
@@ -50,8 +76,10 @@ Detect stack + version  →  Classify  →  Plan version path  →  Tool preflig
   →  LLM residual remediation (gated)  →  verify vs baseline oracle  →  post-upgrade ladder
 ```
 
-The first gate is **classification** — the safety valve that keeps a *false* upgrade from corrupting a
-working app:
+The very first thing that happens is triage — and it is the most important safety check in the
+whole skill. **Classification** is what keeps a patient who actually needs a *different*
+specialist from being operated on by this one. Misdiagnose a rewrite as an upgrade and you'd
+corrupt a working app, so the moment the boundary is crossed, Upgrade stops and refers you out:
 
 ```mermaid
 flowchart TD
@@ -62,8 +90,9 @@ flowchart TD
     CLS -->|"exit 5: invalid"| S2["STOP - target must be higher than current"]
 ```
 
-Everything past the report runs **only if the developer proceeds**, and the orchestrator is a **pure
-planner** — it authors + rehearses the git/tool commands; the developer (or tool) executes:
+Everything past the diagnosis happens **only if the patient consents to treatment.** Up to that
+point the orchestrator is a **pure planner** — it writes and rehearses the git/tool commands; the
+developer (or the tool) actually runs them:
 
 ```mermaid
 flowchart TB
@@ -86,11 +115,12 @@ flowchart TB
 
 ---
 
-## 5. Classification & routing (Step 1)
+## 5. Triage — classification & routing (Step 1)
 
-Detection uses the family-shared `scripts/migration-source-detect.cjs` (never re-implemented). The
-deterministic `scripts/upgrade-classify.cjs` then decides — exit code is the contract (full taxonomy
-in `references/classification.md`):
+Before anything else, Upgrade works out what it's looking at. Detection uses the family-shared
+`scripts/migration-source-detect.cjs` (never re-implemented — the whole family reads the patient's
+chart the same way). The deterministic `scripts/upgrade-classify.cjs` then makes the call, and the
+exit code *is* the verdict (full taxonomy in `references/classification.md`):
 
 | Exit | Classification | Action |
 |---|---|---|
@@ -99,13 +129,17 @@ in `references/classification.md`):
 | 4 | `unsupported` | **STOP** — no in-place path/tool; list supported stacks |
 | 5 | `invalid` | **STOP** — target ≤ current (downgrade/equal) |
 
-A `false-upgrade` is the highest-value catch: misrouting a rewrite as an upgrade would corrupt a
-working app, so it hard-stops with a `REWRITE ADO-{ID}` signpost and makes no changes.
+The `false-upgrade` catch is the highest-value moment in the skill — the equivalent of a GP
+recognising that this isn't a case for them at all. Treating a rewrite as an upgrade would corrupt
+a working app, so Upgrade hard-stops, makes **no changes**, and hands you a `REWRITE ADO-{ID}`
+signpost to the right specialist.
 
-## 6. Tool-availability preflight (Step 2)
+## 6. Is the instrument on the tray? — tool-availability preflight (Step 2)
 
-Only reached on `upgrade`. `scripts/upgrade-tool-preflight.cjs` probes the stack's deterministic tool
-(read-only; matrix + per-OS install steps in `references/tool-matrix.md`):
+Only reached once the case is confirmed as an `upgrade`. A surgeon checks the instrument is
+present and calibrated before scrubbing in; `scripts/upgrade-tool-preflight.cjs` does the same,
+probing the stack's deterministic tool read-only (the full matrix + per-OS install steps live in
+`references/tool-matrix.md`):
 
 | Exit | Status | Action |
 |---|---|---|
@@ -114,90 +148,109 @@ Only reached on `upgrade`. `scripts/upgrade-tool-preflight.cjs` probes the stack
 | 3 | `needs-install` | not found — print install+verify steps, **pause**, re-run |
 | 4 | `unknown-stack` | no tool — **STOP** |
 
-The skill only **prints** steps — it never installs or bundles a tool. Tool absence is a graceful
-pause, not a failure.
+The skill only **prints** the steps — it never installs or bundles a tool. A missing instrument
+is a graceful pause ("we'll wait while you fetch it"), not a failure.
 
-## 7. Grounded gap/risk + the report (Steps 3–4)
+## 7. The diagnosis — grounded gap/risk + the report (Steps 3–4)
 
-- **Cache-first:** `scripts/upgrade-knowledge-cache.cjs get` reads the stable delta-KB before any
-  search (hit exit 0 / miss exit 7 / volatile-stale exit 6). Stable facts are immutable once a version
-  ships.
-- **Ground on miss:** WebSearch an **authoritative** source (official migration guide / release notes
-  / deprecation list) — never model memory.
-- **Tag + store:** `put` sets `tier: VERIFIED` (authoritative host) or `INFERRED` (confidence
-  auto-lowered), via the shared `scripts/lib/source-classifier.cjs`. A differing claim under the same
-  id returns `immutable-conflict` (exit 8) rather than silently overwriting.
+This is where the visit earns its keep. Upgrade builds the diagnosis from evidence, not from
+memory:
 
-**Integration verification is the integration dimension of this analysis**, not a separate pre-options
-step (unlike Rewrite/Replatform, where it precedes options). Per `integration-verification-spec.md`:
-most integrations pass through an in-place upgrade unchanged; the ones that **break** (a library with no
-target-version equivalent, a changed auth scheme) are exactly what the report must surface. Tier 2 via
-`additionalDirectories` where the service source is available; the Integration Inventory feeds the
-report's integration rows and `[INTEGRATION]` log entries.
+- **Cache-first:** `scripts/upgrade-knowledge-cache.cjs get` consults the patient's known history —
+  the stable delta-KB (knowledge base) — before any new research (hit exit 0 / miss exit 7 /
+  volatile-stale exit 6). Facts about a shipped version are immutable once it ships, so they're
+  worth remembering.
+- **Ground on miss:** on a cache miss it consults the literature — WebSearch an **authoritative**
+  source (official migration guide / release notes / deprecation list), never model memory.
+- **Tag + store:** `put` records each fact as `tier: VERIFIED` (from an authoritative host) or
+  `INFERRED` (confidence auto-lowered), via the shared `scripts/lib/source-classifier.cjs`. If a
+  differing claim ever arrives under the same id, it returns `immutable-conflict` (exit 8) rather
+  than quietly overwriting a settled fact.
 
-The **Gap + Risk report** (`references/gap-risk-report.md`) is the headline deliverable: it states
-which side of the **tool-coverage line** the project sits on, classifies each item on the feasibility
-spine (🟢/🟡/🔴/⛔) with its source tag, includes a **dependency ledger** (a package with no
-target-compatible version is a hard ⛔ BLOCKER), and ends with the **post-upgrade ladder**
-(→ Rewrite / Replatform). Even a RED/BLOCKER verdict yields a decision-grade report — never a bare fail.
-Per `feasibility-spec.md`, **the gap/risk report IS Document 7 (feasibility)** — no separate
-`migration-feasibility.md` is produced for Upgrade; this spec governs the report's format directly.
+Crucially, **integration verification is part of this same examination**, not a separate
+appointment (that differs from Rewrite/Replatform, where it precedes options). Per
+`integration-verification-spec.md`: most integrations survive an in-place upgrade unchanged; the
+ones that **break** — a library with no target-version equivalent, a changed auth scheme — are
+exactly the symptoms the report must surface. Tier 2 verification runs via `additionalDirectories`
+where the service source is available; the Integration Inventory feeds the report's integration
+rows and its `[INTEGRATION]` log entries.
 
-## 8. Delta design documents + APPROVE DESIGN (Step 4.5)
+The **Gap + Risk report** (`references/gap-risk-report.md`) is the diagnosis written up: it states
+which side of the **tool-coverage line** the project sits on, classifies each item on the
+feasibility spine (🟢/🟡/🔴/⛔) with its source tag, includes a **dependency ledger** (a package with
+no target-compatible version is a hard ⛔ BLOCKER), and closes with the **post-upgrade ladder**
+(→ Rewrite / Replatform) — the "here's what to consider next" note at the bottom of the chart.
+Even a RED/BLOCKER verdict yields a decision-grade report — you always leave with an answer, never
+a bare "failed." Per `feasibility-spec.md`, **the gap/risk report IS Document 7 (feasibility)** —
+Upgrade produces no separate `migration-feasibility.md`; this spec governs the report's format
+directly.
 
-If the developer proceeds, the skill authors the **non-empty delta documents only** — the gap/risk
-analysis identifies which dimensions the upgrade actually changes, and delta documents are authored
-solely for those (`target-design-spec.md` delta depth). A clean upgrade may produce only the gap/risk
-report + a component delta (middleware pipeline, package replacements); infrastructure/deployment deltas
-appear only when the upgrade includes a hosting change. **No "No change" filler** — it would dilute the
-report.
+## 8. Consenting to treatment — delta design documents + APPROVE DESIGN (Step 4.5)
 
-- The document graph is derived from **whatever documents are present** by `graph-derive-documents.cjs`.
-- The **feedback loop** (`design-revision-spec.md` → `document-feedback.md`) runs on the reduced set
-  (gap/risk report + deltas).
-- **Route-to-Rewrite escape hatch:** if the gap/risk review or the feedback loop reveals the upgrade is
-  **infeasible in place** (accumulated RED/BLOCKER evidence), the skill routes to **Rewrite** — the
-  discovered-late equivalent of the Step 1 false-upgrade catch (`option-change-spec.md`, upgrade
-  posture-boundary note). It never forces an infeasible upgrade forward to the baseline tag.
-- **APPROVE DESIGN** is a formal gate for Upgrade too (even delta documents) — required *before* the
-  baseline tag; records `payload.upgrade.gate_verdicts.design_approved`.
+If the developer proceeds, Upgrade writes up only the parts of the treatment plan that actually
+change — the **non-empty delta documents only**. The diagnosis already identified which dimensions
+the upgrade touches, and delta documents are authored solely for those (`target-design-spec.md`
+delta depth). A clean upgrade might produce nothing more than the gap/risk report plus a component
+delta (middleware pipeline, package replacements); infrastructure/deployment deltas appear only if
+the upgrade also changes hosting. **No "No change" filler** — a chart full of "nothing to report"
+lines only buries the findings that matter.
 
-## 9. Gated execution (Steps 5–7)
+- The document graph is derived from **whatever documents are present** by
+  `graph-derive-documents.cjs`.
+- The **feedback loop** (`design-revision-spec.md` → `document-feedback.md`) runs on the reduced
+  set (gap/risk report + deltas).
+- **Referral escape hatch — route to Rewrite:** if the diagnosis or the feedback loop reveals the
+  upgrade is **infeasible in place** (accumulated RED/BLOCKER evidence), Upgrade refers you to
+  **Rewrite** — the discovered-late equivalent of the Step 1 `false-upgrade` catch
+  (`option-change-spec.md`, upgrade posture-boundary note). It never forces an infeasible upgrade
+  forward to the baseline tag; a good doctor stops rather than operate on a case they can't win.
+- **APPROVE DESIGN** is a formal consent gate for Upgrade too (even for delta documents) —
+  required *before* the baseline tag; it records
+  `payload.upgrade.gate_verdicts.design_approved`.
 
-- **Oracle is `self-run`** almost by definition — the app builds and runs; it is what you are upgrading.
-  Golden master, if used as a secondary smoke, captures baseline behaviour here (pre-move) and replays
-  it after the upgrade (post-move) per `golden-master-spec.md` (Upgrade binding row). If the app cannot
-  be built/run locally, the oracle degrades — noted in the report.
-- **APPROVE DESIGN and the baseline tag both precede any edit** — the design gate (§8) and the oracle
-  anchor are prerequisites; no source is touched before both exist.
-- **Baseline first:** `scripts/upgrade-orchestrate.cjs plan` emits the ordered runbook; `steps[0]` is
-  always the **baseline tag** (oracle anchor) and `steps[1]` the isolated branch — created before the
-  first edit so verification always has a clean pre-upgrade reference.
-- **One commit per hop:** run the tool for each hop, then exactly one commit → bisectable history so a
-  later failure pins the exact hop. Hops are never blended.
-- **Residual remediation is gated:** the tool leaves ~10–30% residual; the LLM fixes it, but **each
-  fix passes the Write Gate** (`APPROVE ADO-{ID}`).
-- **Verify vs the oracle:** `upgrade-orchestrate.cjs verify` → exit 0 verified (merge allowed) / exit
-  9 blocked (first failing hop pinned; no merge until it passes).
+## 9. The procedure — gated execution (Steps 5–7)
 
-## 10. Judge + resumable ledger (Step 8)
+- **The oracle is `self-run` almost by definition** — the app builds and runs; it *is* the patient
+  you're upgrading. If used as a secondary smoke test, golden master captures baseline behaviour
+  here (pre-move) and replays it afterwards (post-move) per `golden-master-spec.md` (Upgrade
+  binding row). If the app can't be built or run locally, the oracle degrades — and that's noted
+  honestly in the report.
+- **Baseline vitals before the first incision:** both **APPROVE DESIGN and the baseline tag must
+  exist before any edit** — the consent gate (§8) and the oracle anchor are prerequisites, no
+  exceptions. `scripts/upgrade-orchestrate.cjs plan` emits the ordered runbook; `steps[0]` is
+  always the **baseline tag** (the oracle anchor) and `steps[1]` the isolated branch — both created
+  before the first edit so verification always has a clean pre-upgrade reference to measure against.
+- **One commit per hop:** run the tool for each version hop, then make exactly one commit → a
+  bisectable history, so if something fails later you can pin the exact hop that caused it. Hops
+  are never blended together.
+- **Residual remediation is gated:** the specialist instrument leaves ~10–30% residual it can't
+  reach; the LLM stitches that up by hand — but **each fix passes the Write Gate**
+  (`APPROVE ADO-{ID}`). Nothing is closed up without your sign-off.
+- **Verify against the baseline:** `upgrade-orchestrate.cjs verify` → exit 0 verified (merge
+  allowed) / exit 9 blocked (first failing hop pinned; no merge until it passes).
 
-Each gate (report · residual · verify) records a verdict from an **independent judge** — a separate
-agent on a separate model (`skills/shared/judge.md`) — persisted to the shared **migration ledger**
-(`skills/shared/migration-ledger-schema.md`). `scripts/upgrade-checkpoint.cjs` is a thin adapter over
-`scripts/checkpoint-ledger.cjs` owning the `payload.upgrade` namespace. The ledger is a single-writer,
-**merge-write** contract (never clobbers fields it does not own), so a run is resumable
-(`UPGRADE RESUME ADO-{ID}`) and safe to hand off; `UPGRADE STATUS ADO-{ID}` renders it read-only.
+## 10. The second opinion — judge + resumable ledger (Step 8)
 
-## 11. Personas & model routing
+No single doctor signs off alone. Each gate (report · residual · verify) records a verdict from an
+**independent judge** — a separate agent on a separate model (`skills/shared/judge.md`) — persisted
+to the shared **migration ledger** (`skills/shared/migration-ledger-schema.md`). This is the
+second opinion on the chart. `scripts/upgrade-checkpoint.cjs` is a thin adapter over
+`scripts/checkpoint-ledger.cjs` that owns the `payload.upgrade` namespace. The ledger is a
+single-writer, **merge-write** contract (it never clobbers fields it doesn't own), so a visit can
+be paused and picked up later (`UPGRADE RESUME ADO-{ID}`) or handed to a colleague, and
+`UPGRADE STATUS ADO-{ID}` renders the current chart read-only.
 
-- **Persona:** **[SE] Elena Fischer — Senior Software Engineer**, weighing **[SA] Rafael Mendes**
-  (feasibility/classification) at Intake.
+## 11. Who's in the room — personas & model routing
+
+- **Persona:** **[SE] Elena Fischer — Senior Software Engineer** is the attending, weighing
+  **[SA] Rafael Mendes** (feasibility/classification) at intake.
 - **Model routing:** classification / gap-risk / residual remediation → `ICEA_MODEL` (opus); the
-  gate judge + source verification → `CRITIC_MODEL` (sonnet), escalating to `CRITIC_MODEL_MAX` (max
-  effort) for high-risk / B-series findings.
+  gate judge + source verification → `CRITIC_MODEL` (sonnet), escalating to `CRITIC_MODEL_MAX`
+  (max effort) for high-risk / B-series findings.
 
-## 12. Deterministic scripts
+## 12. The instruments — deterministic scripts
+
+The calibrated tools on the tray, each with one job:
 
 | Script | Role |
 |---|---|
@@ -209,28 +262,44 @@ agent on a separate model (`skills/shared/judge.md`) — persisted to the shared
 | `upgrade-orchestrate.cjs` | `plan` (baseline+branch+commit-per-hop runbook) · `verify` (vs baseline oracle) |
 | `upgrade-checkpoint.cjs` | thin adapter over `checkpoint-ledger.cjs` for `payload.upgrade` |
 
-Knowledge-tier specs the skill reads (not scripts): `integration-verification-spec.md`,
-`feasibility-spec.md`, `target-design-spec.md`, `design-revision-spec.md`, `document-feedback.md`,
-`option-change-spec.md`, `golden-master-spec.md`, `options-insight-spec.md` (only where version-path /
-hosting options exist), `migration-log-spec.md`.
+Knowledge-tier specs the skill reads (the reference texts, not instruments):
+`integration-verification-spec.md`, `feasibility-spec.md`, `target-design-spec.md`,
+`design-revision-spec.md`, `document-feedback.md`, `option-change-spec.md`,
+`golden-master-spec.md`, `options-insight-spec.md` (only where version-path / hosting options
+exist), `migration-log-spec.md`.
 
-## 13. Key hard rules
+## 13. The promises this skill keeps (the lines it won't cross)
 
-- NEVER hand-author the bulk transform — drive the deterministic tool.
-- NEVER proceed past a `false-upgrade` — route to Rewrite; make no edits.
-- If the gap/risk review or feedback loop reveals the upgrade is **infeasible in place**, route to
-  **Rewrite** (discovered-late false-upgrade) — NEVER force it forward to the baseline tag.
-- NEVER edit source before **APPROVE DESIGN** and the **baseline tag** both exist (design gate + oracle anchor).
-- Integration verification runs INSIDE the gap/risk analysis (Step 3) — not a separate pre-options step.
-- Author only NON-EMPTY delta documents — never "No change" filler that dilutes the report.
-- The gap/risk report IS the feasibility document (Document 7) — no separate `migration-feasibility.md`.
-- ALWAYS one commit per version hop (bisectable); gate every residual fix; never merge until verify passes.
-- ALWAYS ground breaking-change facts in an authoritative source; tag VERIFIED or INFERRED; never fabricate a source.
-- Write migration log entries per `migration-log-spec.md` at each phase.
+Every one of these is a rule Upgrade never breaks — and each has a reason rooted in "first, do no
+harm":
+
+- **It never hand-authors the bulk transform** — it drives the deterministic tool, because a
+  calibrated instrument beats a freehand incision on working code.
+- **It never proceeds past a `false-upgrade`** — it routes to Rewrite and makes no edits, because
+  operating on the wrong kind of case corrupts a healthy app.
+- **If the diagnosis or feedback loop shows the upgrade is infeasible in place, it refers to
+  Rewrite** (discovered-late false-upgrade) — it never forces an infeasible case forward to the
+  baseline tag.
+- **It never edits source before both APPROVE DESIGN and the baseline tag exist** — consent gate
+  plus baseline vitals, always before the first incision.
+- **Integration verification runs inside the diagnosis** (Step 3), not as a separate pre-options
+  appointment.
+- **It authors only non-empty delta documents** — never "No change" filler that buries the real
+  findings.
+- **The gap/risk report *is* the feasibility document** (Document 7) — no separate
+  `migration-feasibility.md`.
+- **Always one commit per version hop** (bisectable); **every residual fix is gated**; **no merge
+  until verify passes.**
+- **Every breaking-change fact is grounded in an authoritative source**, tagged VERIFIED or
+  INFERRED — a source is never fabricated.
+- **It writes a migration log entry at each phase** per `migration-log-spec.md` — the chart is
+  never left blank.
 
 ---
 
 ## Where it fits in the family
+
+Three siblings, each for a different kind of move:
 
 | You have… | Skill |
 |---|---|
@@ -238,5 +307,6 @@ hosting options exist), `migration-log-spec.md`.
 | Different stack, translate the code to a new target | [Rewrite](rewrite-skill.md) |
 | Same code, new host/topology (on-prem → cloud) | [Replatform](replatform-skill.md) |
 
-A `false-upgrade` classification is Upgrade explicitly handing off to **Rewrite**. Post-upgrade
-recommendations may point further up the ladder (Rewrite / Replatform).
+A `false-upgrade` classification is Upgrade explicitly referring you to **Rewrite**. And the
+post-upgrade ladder at the foot of the report may point you further up — to Rewrite or Replatform —
+once the immediate check-up is done.

@@ -1,6 +1,6 @@
 ---
-description: "Run a dynamic (DAST) scan against a running app/API with OWASP ZAP via Docker. Default: passive baseline + dependency audit.  Example: /dynamic-scan --url https://localhost:5001"
-argument-hint: "[--url <target> | --deps-only] [--stack ...] [--auth ...] [--full | --scope <path>] [--ci | --help]"
+description: "Run a dynamic (DAST) scan against a running app/API with OWASP ZAP via Docker. Omit flags for an interactive scan-mode prompt (CI / non-interactive: passive baseline + dependency audit).  Example: /dynamic-scan --url https://localhost:5001"
+argument-hint: "[--url <target> | --deps-only] [--stack ...] [--auth ...] [--full | --scope <path>] [--ci | --help]  — omit for the scan-mode prompt"
 ---
 
 If the argument is `--help` or `?help`, output the following block verbatim and stop — do not invoke the skill:
@@ -9,6 +9,7 @@ If the argument is `--help` or `?help`, output the following block verbatim and 
 /dynamic-scan — OWASP ZAP DAST scan against a running app/API (requires Docker).
 
 Arguments:
+  (no flag)            Interactive scan-mode prompt: passive baseline (recommended) / full active / deps-only. (CI / non-interactive: passive baseline, no prompt.)
   --url <target>       Base URL of the running app to scan (e.g. https://localhost:5001).
   --stack <type>       Force stack detection (e.g. dotnet, angular, node).
   --auth <token>       Auth header value for authenticated scans.

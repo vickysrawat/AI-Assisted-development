@@ -180,12 +180,8 @@ EFFORT ESTIMATE SUMMARY — ADO #[ID]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Layer          Tasks    Est. Hours
 ─────────────────────────────────────
-Angular          [N]      [N]h
-.NET             [N]      [N]h
-Node.js          [N]      [N]h
-Database         [N]      [N]h
-QA               [N]      [N]h
-Infra            [N]      [N]h
+[one row per active layer from architecture.md — e.g. Frontend / Backend / Service / Database / QA / Infra]
+[Layer]          [N]      [N]h
 ─────────────────────────────────────
 TOTAL            [N]      [N]h  (~[N] days)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

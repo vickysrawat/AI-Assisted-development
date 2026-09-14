@@ -231,7 +231,7 @@ if ($Update) {
   Set-Content -Path "$MARKETPLACE_DIR\.claude-plugin\marketplace.json" -Encoding UTF8 -Value @"
 {
   "name": "$MARKETPLACE_NAME",
-  "owner": { "name": "Product Engineering" },
+  "owner": { "name": "$COMPANY" },
   "description": "$COMPANY internal Claude Code plugins",
   "plugins": [
     {
@@ -323,7 +323,7 @@ $winPath = $MARKETPLACE_DIR -replace '\\', '\\\\'
 Set-Content -Path "$MARKETPLACE_DIR\.claude-plugin\marketplace.json" -Encoding UTF8 -Value @"
 {
   "name": "$MARKETPLACE_NAME",
-  "owner": { "name": "Product Engineering" },
+  "owner": { "name": "$COMPANY" },
   "description": "$COMPANY internal Claude Code plugins",
   "plugins": [
     {

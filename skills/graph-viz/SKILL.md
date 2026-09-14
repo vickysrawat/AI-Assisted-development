@@ -81,7 +81,11 @@ Stop.
 
 ## Step 3 — Mode
 
-- Default: **2D** (Step 4).
+- **No-flag prompt** (per `$PLUGIN_DIR/skills/shared/flag-prompt-spec.md`): if no `--3d` flag was
+  given **in an interactive session**, ask via `AskUserQuestion` — **2D** (recommended) or **3D** —
+  before rendering; do not default silently. In CI / headless / gate-invoked runs, skip the prompt
+  and render **2D**.
+- Default (CI / non-interactive, or the recommended interactive choice): **2D** (Step 4).
 - `--3d`: use 3D **only if** a vendored WebGL library exists at
   `.claude/graph/vendor/3d-force-graph.min.js` (MIT, committed locally by the developer —
   never fetched). If it is absent:

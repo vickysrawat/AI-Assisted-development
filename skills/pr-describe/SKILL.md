@@ -23,8 +23,15 @@ Stack context is read from `.claude/architecture/architecture.md` during the
 Codebase Orientation step. If that file is missing, fall back to the project
 defaults below.
 
-**Default stack (K&E project — update architecture.md to override):**
-- Repo: .NET 8 / Angular 17+ / Node.js
+**No repo stack is assumed.** If `architecture.md` is absent, resolve the stack in
+this order before proceeding — never guess:
+
+1. Read `.claude/dream-init-state.json` → `repo_type` / `detected_stacks[]` (written
+   by `/setup-init`'s repo detection). Use it if present.
+2. If that is also absent, ask the developer to run `/setup-init` (or `/update-arch`)
+   to populate `architecture.md`, or to state the repo stack inline for this run.
+
+Host and tracking conventions (not stack-coupled — always apply):
 - Hosting: Azure DevOps **or** GitHub (auto-detected; only the base branch differs)
 - Tracking: Azure DevOps (ADO) work items — the ADO-{ID} identifies the work regardless of host
 - Branch convention: feature/ADO-[ID]-short-description
@@ -107,10 +114,10 @@ End with:
 ```
 Run this before requesting human review:
 [ ] I have tested all 5 ICEA scenarios locally
-[ ] All new tests pass (dotnet test && ng test --watch=false && npx jest)
-[ ] No console.log / Debug.WriteLine left in production code
+[ ] All new tests pass (run each changed layer's test command)
+[ ] No stray debug/console logging left in production code
 [ ] No TODO comments introduced without a linked ADO item
-[ ] Bundle size delta checked (ng build --stats-json)
+[ ] Bundle/artifact size delta checked for frontend changes
 [ ] No secrets or connection strings in diff
 ```
 

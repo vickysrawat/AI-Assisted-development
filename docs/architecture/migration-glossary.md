@@ -4,7 +4,15 @@ Full forms + in-context meaning for the terms used across the migration-family a
 ([upgrade](upgrade-skill.md) · [rewrite](rewrite-skill.md) · [replatform](replatform-skill.md) ·
 [legacy](legacy-migration-skill.md)).
 
+Think of this as the **traveller's phrasebook** for the migration country. The three sibling skills —
+Upgrade, Rewrite, and Replatform — all speak the same language, and these are the words they share.
+Keep it open beside the other docs: every abbreviation you meet there is defined here precisely, so
+the story never has to stop to explain itself.
+
 ## Assurance & planning (family core)
+
+The core vocabulary of "how do we know this move is any good?" — the grades, the plans, and the cost
+figures the whole family reasons with.
 
 | Abbr. | Full form | In context |
 |---|---|---|
@@ -19,12 +27,18 @@ Full forms + in-context meaning for the terms used across the migration-family a
 
 ## Source-authority tags
 
+Two little words that appear everywhere, marking how much you can trust a given fact — straight from
+the horse's mouth, or an educated guess.
+
 | Term | Meaning |
 |---|---|
 | **VERIFIED** | A fact traced to an authoritative official source (host on the allowlist in `scripts/lib/source-classifier.cjs`). |
 | **INFERRED** | A fact with no/weak source; confidence auto-lowered; the offline knowledge tier is INFERRED by default. |
 
 ## Cloud & infrastructure
+
+The words for the new premises — the building, its services, and the machinery that provisions it —
+mostly Replatform's dialect.
 
 | Abbr. | Full form | In context |
 |---|---|---|
@@ -37,7 +51,27 @@ Full forms + in-context meaning for the terms used across the migration-family a
 | **CI/CD** | Continuous Integration / Continuous Delivery | The deployment pipeline platform asked at intake (Azure DevOps / GitHub Actions / GitLab). |
 | **PII** | Personally Identifiable Information | A regulated-data trigger; regulated/PII/financial constraints are hard-block NFRs. |
 
+## The 6R postures (cloud migration)
+
+The **6R** row above is worth its own page in the phrasebook, because "which R?" is the first
+question Replatform asks. The six Rs are the industry's menu of *how far you change an app when you
+move it to the cloud* — from touching nothing to rebuilding it. This family implements the three
+that involve an actual move (the other three are portfolio decisions made before Replatform is even
+called):
+
+| R | Also called | What it means | In this family |
+|---|---|---|---|
+| **Rehost** | "lift and shift" | Move the app as-is onto cloud IaaS (e.g. a VM); minimal or no code change. | **Used** — Replatform's minimal-change posture (the IaaS VM / `rehost` target). |
+| **Replatform** | "lift, tinker and shift" | Move with targeted optimizations — swap in managed services, adjust identity/config — without redesigning the app. | **Used** — Replatform owns the adaptation delta. |
+| **Repurchase** | "drop and shop" | Replace the app with a different product, usually a SaaS offering. | Not used — a buy-vs-move decision outside the migration family. |
+| **Refactor / Re-architect** | — | Reshape the app for cloud-native (containerize / serverless / split). | **Used as `refactor-for-cloud`** — Rewrite does the code; Replatform overlays the host via the shared ledger. |
+| **Retire** | — | Decommission components no longer needed. | Not used — a portfolio decision, not a migration move. |
+| **Retain** | "revisit" | Keep as-is for now; defer the move. | Not used — the "do nothing yet" option. |
+
 ## Plugin process & governance
+
+The house rules of the wider plugin — the gates, records, and trackers the migration skills plug
+into.
 
 | Abbr. | Full form | In context |
 |---|---|---|
@@ -50,6 +84,9 @@ Full forms + in-context meaning for the terms used across the migration-family a
 | **KB** | Knowledge Base | The cached, source-tagged breaking-change facts (`upgrade-knowledge-cache.cjs` delta-KB). |
 
 ## Personas (expert lenses — never named in output)
+
+The three recurring characters in the family's stories — the architect, the builder, and the
+inspector. They're lenses the skills reason through, never names shown to the end user.
 
 | Abbr. | Full form | Used at |
 |---|---|---|

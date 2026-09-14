@@ -31,7 +31,8 @@ Parse the invocation and set:
 | `--diff` | Report only findings new since last run. |
 | `--ci` | Headless, no prompts, JSON+HTML, bare image. |
 | `--fail-on <sev>` | Non-zero exit if any finding ≥ severity. |
-| (nothing) | Default: passive baseline scan + dependency audit (no attack payloads). |
+| (nothing) — interactive | Present the skill's no-flag scan-mode prompt (Step 0d): **Passive baseline + deps audit** (recommended) / Full active / Deps-only. Do not default silently. |
+| (nothing) — CI / non-interactive | `--ci`, headless, or gate-invoked → passive baseline scan + dependency audit (no attack payloads), no prompt. |
 
 Announce the resolved configuration before doing anything:
 ```

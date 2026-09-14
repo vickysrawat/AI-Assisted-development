@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- documents-plugin-version: 3.20.0 -->
+<!-- documents-plugin-version: 3.24.0 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -370,7 +370,7 @@
   <div class="hero-grid"></div>
   <div class="hero-glow"></div>
   <div class="hero-content">
-    <div class="hero-tag" style="margin-bottom:12px;">Claude Code Plugin · v3.20.0</div>
+    <div class="hero-tag" style="margin-bottom:12px;">Claude Code Plugin · v3.24.0</div>
     <h1>ai-assisted-<em>development</em></h1>
     <p class="sub">
       ICEA-driven development workflow for distributed .NET · Angular · Node.js teams.
@@ -378,7 +378,7 @@
       and guards code quality with scoped rules — all inside Claude Code.
     </p>
     <div class="hero-badges">
-        <span class="badge badge-gold">v3.20.0</span>
+        <span class="badge badge-gold">v3.24.0</span>
       <span class="badge badge-blue">.NET 8 / 10</span>
       <span class="badge badge-cyan">Angular 17+</span>
       <span class="badge badge-cyan">Java / Spring Boot</span>
@@ -393,6 +393,11 @@
 <section style="max-width:1100px;margin:24px auto 0;padding:16px 20px;background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #f59e0b;border-radius:8px;font-size:14px;line-height:1.6;">
   <strong style="color:#0f172a;">What's new since 3.0.0</strong>
   <ul style="margin:8px 0 0;padding-left:20px;color:#334155;">
+    <li><strong>3.24.0</strong> — <strong>Flag commands prompt when invoked bare.</strong> A new universal convention (<code>skills/shared/flag-prompt-spec.md</code>) resolves a contradiction between <code>scope-flags-spec.md</code> and <code>interactive-menu-spec.md</code> that let <code>/code-review</code> and <code>/security-review</code> skip their scope menu. Every flag-taking command now prompts on a bare invocation with the previous default pre-selected as <em>recommended</em>; <strong>CI / non-interactive runs never prompt</strong> and fall back to the documented default, so gates and pipelines are unchanged.</li>
+    <li><strong>3.23.0</strong> — <code>icea-floor</code> hook refresh: the block message now names the <code>/bug</code> path (not just <code>/icea-feature</code>), PowerShell-port exemption parity + ASCII-only strings, and a loud, justification-required, audited <code>SKIP_ICEA_FLOOR</code> escape hatch (mirrors <code>SKIP_FINDINGS_GATE</code>).</li>
+    <li><strong>3.22.0</strong> — New <code>/knowledge-freshness</code> skill (EPIC ADO-9004): a deterministic, no-network validator (<code>check</code>) + gated web-grounded <code>refresh</code> keeps the migration family's offline INFERRED knowledge tier trustworthy.</li>
+    <li><strong>3.21.0</strong> — The <code>migration</code> skill is <strong>split into three</strong> locality-carved skills — <code>/upgrade</code> (in-place same-stack), <code>/rewrite</code> (out-of-place stack translation), <code>/replatform</code> (hosting/topology) — each with ledger-backed status/resume (<a href="docs/adr/0061-migration-skill-family-split.md">ADR 0061</a>). The <code>MIGRATE</code> keyword retired to a signpost.</li>
+    <li><strong>3.20.0</strong> — Operational documentation skills: <code>/operations</code> generates a master Operational Runbook (Markdown + offline HTML), and <code>/go-live</code> generates a Support-Transition Acceptance Checklist (go/no-go gate). Both are doc generators — no ICEA, no Write Gate — and never fabricate values.</li>
     <li><strong>3.9.0</strong> — The critic now runs at <strong>two planning-time gates</strong> inside <code>icea-feature</code> — the ICEA draft (Step 5) and the Tech Spec draft (Step 8), each before the <code>temp/</code> write with up to 2 auto-revise retries — in addition to the existing code gate in <code>icea-implement</code> (<a href="docs/adr/0052-critic-planning-gates.md">ADR 0052</a>). A new <code>tech</code> critic mode checks ICEA↔design traceability, D-option fidelity, and coverage-matrix completeness at the earliest point a design diverges from the spec, before any code exists. Previously the critic was documented as firing in <code>icea-feature</code> but was never actually invoked there.</li>
     <li><strong>3.8.0</strong> — Architecture doc set expands from 4 to 8 per stack (<a href="docs/adr/0050-architecture-doc-set-expansion.md">ADR 0050</a>): adds <code>architecture-data.md</code>, <code>architecture-integrations.md</code>, <code>architecture-security.md</code>, and an append-only <code>architecture-decisions.md</code> log, plus Mermaid diagrams in <code>architecture.md</code> and an NFR section in <code>architecture-deployment.md</code>. Templates deduplicated into a shared base + per-stack overrides (<a href="docs/adr/0051-architect-template-dedup.md">ADR 0051</a>). The lifecycle commands were renamed <code>dream-init/-sync/-status/-teardown</code> → <code>setup-init/-sync/-status/-teardown</code> (see <code>docs/migrations/018-3.8.0.md</code>); the internal <code>.claude/dream-init-state.json</code> state file and its <code>dream_init_*</code> keys are intentionally kept for backward compatibility.</li>
     <li><strong>3.6.0</strong> — Frontmatter-based rule deployment with a 43-file layered rule set (<a href="docs/adr/0042-frontmatter-based-rule-deployment.md">ADR 0042</a>, <a href="docs/adr/0043-ecosystem-and-layered-rule-organisation.md">ADR 0043</a>); Expert Personas across all skills; a deterministic <code>dream-init-bootstrap.cjs</code>; <code>directoryCatalog</code> in graph.json (<a href="docs/adr/0044-directory-catalog-in-graph-json.md">ADR 0044</a>) and a security free-form risk pass (<a href="docs/adr/0045-security-skill-free-form-risk-analysis.md">ADR 0045</a>).</li>
@@ -1212,7 +1217,9 @@ Recommended actions:
 │   ├── <span class="var">shared/</span>                            <span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;">Global</span> cross-skill primitives  <span class="tag tag-mandatory" style="font-size:10px;padding:1px 5px;">New v1.5</span>
 │   │   ├── README.md                  <span class="cmt">ownership rules for this folder</span>
 │   │   ├── file-cache-schema.md       <span class="cmt">schema + merge rules for .claude/file-cache.json</span>
-│   │   ├── scope-flags-spec.md        <span class="cmt">canonical --changed/--pr/--full/--ci spec (v1.1)</span>
+│   │   ├── scope-flags-spec.md        <span class="cmt">canonical --changed/--pr/--full/--ci spec (v1.6); no-flag → interactive menu, CI → default</span>
+│   │   ├── flag-prompt-spec.md         <span class="cmt">universal no-flag → prompt convention; CI/non-interactive → documented default  <span class="tag tag-optional" style="font-size:10px;padding:1px 5px;">New v3.24.0</span></span>
+│   │   ├── interactive-menu-spec.md    <span class="cmt">scan-scope menu shared by code-review + security-review</span>
 │   │   ├── single-writer-assumption.md <span class="cmt">concurrency constraints + --ci guidance</span>
 │   │   ├── model-routing-spec.md       <span class="cmt">model routing tiers, env vars, defaults — single source of truth</span>
 │   │   ├── business-context-severity.md <span class="cmt">B1-B7 domain severity overrides for all review skills</span>
@@ -1411,8 +1418,8 @@ Recommended actions:
             <td>Generates Product Detail Document and/or User Guide as self-contained HTML files. Asks which documents to create before generating — skips any you say no to.</td>
           </tr>
           <tr>
-            <td>/ai-assisted-development:code-review [--changed | --pr | --full]</td>
-            <td><span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;margin-right:6px;">Updated v1.5</span>Cache-aware by default — skips files unchanged since last run. Scope flags: <code>--changed</code> (staged/modified files only), <code>--pr</code> (branch diff vs dev), <code>--full</code> (ignore cache), <code>--ci</code> (full scan + warns if a cache file is found on disk — use in all pipeline invocations). Fingerprint tracking across runs with git-attributed Fixed status.</td>
+            <td>/ai-assisted-development:code-review [--changed | --pr | --full | --ci]</td>
+            <td><span class="tag tag-mandatory" style="font-size:10px;padding:1px 6px;margin-right:6px;">Updated v3.24</span>No flag opens an <strong>interactive scope menu</strong> (Smart scan recommended); CI / non-interactive runs skip the menu and do a cache-aware full scan. Scope flags: <code>--changed</code> (staged/modified files only), <code>--pr</code> (branch diff vs dev), <code>--full</code> (ignore cache), <code>--ci</code> (full scan + warns if a cache file is found on disk — use in all pipeline invocations). Fingerprint tracking across runs with git-attributed Fixed status.</td>
           </tr>
           <tr>
             <td>/ai-assisted-development:security-review [--changed | --pr | --full]</td>
@@ -2523,7 +2530,9 @@ skills/&lt;skill&gt;/SKILL.md and execute it from Step 0 to the end.</pre></div>
         <thead><tr><th>Shared file</th><th>Governs</th></tr></thead>
         <tbody>
           <tr><td><code>file-cache-schema.md</code></td><td>Schema and merge rules for <code>.claude/file-cache.json</code></td></tr>
-          <tr><td><code>scope-flags-spec.md</code></td><td>Canonical <code>--changed</code> / <code>--pr</code> / <code>--full</code> / <code>--ci</code> definitions</td></tr>
+          <tr><td><code>scope-flags-spec.md</code></td><td>Canonical <code>--changed</code> / <code>--pr</code> / <code>--full</code> / <code>--ci</code> definitions; no-flag routes to the interactive menu (CI → cache-aware full scan)</td></tr>
+          <tr><td><code>flag-prompt-spec.md</code></td><td>Universal convention: any flag command invoked bare prompts (default = recommended); CI / non-interactive never prompts</td></tr>
+          <tr><td><code>interactive-menu-spec.md</code></td><td>Scan-scope selection menu shared by <code>code-review</code> and <code>security-review</code></td></tr>
           <tr><td><code>graph-index-schema.md</code></td><td><code>.claude/graph/graph-index.md</code> schema — breadth index (module → entry point)</td></tr>
           <tr><td><code>graph-module-schema.md</code></td><td><code>.claude/graph/&lt;module&gt;.md</code> schema — per-module depth + fingerprint</td></tr>
           <tr><td><code>single-writer-assumption.md</code></td><td>Cache concurrency constraints and CI guidance</td></tr>
@@ -2616,7 +2625,7 @@ skills/&lt;skill&gt;/SKILL.md and execute it from Step 0 to the end.</pre></div>
 </div>
 
 <footer>
-  <span>ai-assisted-development · Claude Code Plugin · v3.20.0</span>
+  <span>ai-assisted-development · Claude Code Plugin · v3.24.0</span>
   <span>Product Engineering</span>
 </footer>
 

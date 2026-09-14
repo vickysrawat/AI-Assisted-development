@@ -89,26 +89,48 @@ Pass 3 — FREE-FLOW ADVERSARIAL PASS
 
 ### Step 0a — Interactive scope menu
 
-If no scope flag was provided, present the interactive menu and WAIT for the
-developer to choose. Do not proceed without a selection.
+If no scope flag was provided **in an interactive session**, present the interactive menu and
+WAIT for the developer to choose. Do not proceed without a selection, and do not default silently.
 
-See `$PLUGIN_DIR/skills/shared/interactive-menu-spec.md` for the full menu specification.
+**CI / non-interactive exception:** if `--ci` is present, the run is headless/piped, or this skill
+was invoked by another skill/gate, skip the menu and use the cache-aware full scan. Never block a
+pipeline on a prompt.
+
+See `$PLUGIN_DIR/skills/shared/interactive-menu-spec.md` for the full menu specification and
+`$PLUGIN_DIR/skills/shared/flag-prompt-spec.md` for the general no-flag convention.
 
 The skill icon is a shield. The skill name is "Security Review".
 
-### Step 0b — Stack detection
+### Step 0a — Scan scope (repo by default, dependencies via `--with-deps`)
 
-Detect the project's language stack BEFORE loading any reference files.
+This is a ledger-writing scanner (FP-fingerprinted findings that gate `checkin` Check D), so it
+defaults to **repo-only**. When invoked with `--with-deps`, it also scans the locally-cloned
+dependency repos in `additionalDirectories`. Resolve roots via the **bash flavour** of
+`$PLUGIN_DIR/skills/shared/multi-root-scan.md`:
 
 ```bash
-# Check for language signals
-find . -name "*.cs" -maxdepth 4 | head -1 && echo "DOTNET"
-find . -name "*.ts" -maxdepth 4 | head -1 && echo "TYPESCRIPT"
-find . -name "*.py" -maxdepth 4 | head -1 && echo "PYTHON"
-find . -name "*.java" -maxdepth 4 | head -1 && echo "JAVA"
-find . -name "*.go" -maxdepth 4 | head -1 && echo "GO"
+INCLUDE_DEPS=0   # set to 1 only when the developer passed --with-deps
+# multi_root_scan_roots emits the repo root first, then each dependency root (INCLUDE_DEPS=1).
+```
+
+**Every source enumeration/grep in this skill** (Step 0b detection and PASS 1) runs once per
+`SCAN_ROOT` from `multi_root_scan_roots "$INCLUDE_DEPS"`: announce each non-repo root
+(`📁 also scanning dependency: <path>`) and **tag findings with their root** so the ledger stays
+unambiguous across repos. Without `--with-deps`, roots = repo only (existing behaviour).
+
+### Step 0b — Stack detection
+
+Detect the project's language stack BEFORE loading any reference files (run under each `SCAN_ROOT`).
+
+```bash
+# Check for language signals — under each SCAN_ROOT (repo-only unless --with-deps)
+find "${SCAN_ROOT:-.}" -name "*.cs" -maxdepth 4 | head -1 && echo "DOTNET"
+find "${SCAN_ROOT:-.}" -name "*.ts" -maxdepth 4 | head -1 && echo "TYPESCRIPT"
+find "${SCAN_ROOT:-.}" -name "*.py" -maxdepth 4 | head -1 && echo "PYTHON"
+find "${SCAN_ROOT:-.}" -name "*.java" -maxdepth 4 | head -1 && echo "JAVA"
+find "${SCAN_ROOT:-.}" -name "*.go" -maxdepth 4 | head -1 && echo "GO"
 # VSTO: Office add-in or document-level customization
-find . \( -name "ThisAddIn.cs" -o -name "ThisWorkbook.cs" -o -name "ThisDocument.cs" \) \
+find "${SCAN_ROOT:-.}" \( -name "ThisAddIn.cs" -o -name "ThisWorkbook.cs" -o -name "ThisDocument.cs" \) \
   -maxdepth 5 2>/dev/null | head -1 && echo "VSTO"
 ```
 
@@ -143,7 +165,8 @@ Apply scope flags per `$PLUGIN_DIR/skills/shared/scope-flags-spec.md`. Supported
 | `--area config` | Config/IaC (*.json, *.yml, *.env, Dockerfile, *.tf) |
 | `--area <ModuleName>` | Knowledge-graph module files |
 | `--continue` | Resume from checkpoint |
-| (none) | Interactive menu (Step 0a) |
+| (none) — interactive | Interactive menu (Step 0a) |
+| (none) — CI / gate-invoked | Cache-aware full scan, no prompt (Step 0a exception) |
 
 ### Step 0d — Build candidate file list
 

@@ -210,7 +210,21 @@ Adopt the canonical flags from `$PLUGIN_DIR/skills/shared/scope-flags-spec.md`. 
 | `--rate-limit <n>` | Cap scanner threads per host (maps to `scanner.threadPerHost`). |
 | `--fail-on <sev>` | CI: non-zero exit if any finding ≥ severity (uses ZAP `exitStatus` job). |
 | `--ci` | Headless, no prompts, JSON + HTML output, `zap-bare` image. |
-| (none) | Default: **passive baseline scan + dependency audit** — no attack payloads. |
+| (none) — interactive | Present the scan-mode prompt below (per `$PLUGIN_DIR/skills/shared/flag-prompt-spec.md`). Do not default silently. |
+| (none) — CI / non-interactive | `--ci` present, headless/piped, or gate-invoked → **passive baseline scan + dependency audit** (no attack payloads), no prompt. |
+
+**No-flag interactive prompt.** When invoked with no flag in an interactive session, use
+`AskUserQuestion` to choose the scan mode:
+
+| Option | Maps to | Notes |
+|---|---|---|
+| **Passive baseline + dependency audit** *(recommended)* | current default | No attack payloads. Always safe. |
+| Full active scan | `--full` | Attack payloads — still requires the Step 0a confirmation. |
+| Dependency audit only | `--deps-only` | Skips the live scan entirely. |
+
+If a live mode (baseline or full) is chosen and no `--url` was given, prompt for the target URL
+before continuing. In CI / non-interactive contexts, skip this prompt and use the passive
+baseline default.
 
 ### Step 0e — Windows Authentication check (potential blocker)
 

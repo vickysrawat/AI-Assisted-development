@@ -7,6 +7,9 @@
 
 Output this first — one row per task:
 
+> The rows below are **an example for one stack (Angular + .NET + Node.js)**. Substitute
+> the actual layers/frameworks from `architecture.md` — do not emit these literally.
+
 ```
 ADO #[ID] — [Feature Name] — Task Breakdown
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -113,13 +116,12 @@ Impact:   [from ICEA]
 Outcome:  [from ICEA]
 
 --- CONTEXT ---
-Angular Route/Component: [from ICEA]
-.NET API:                [from ICEA]
-Node.js Service:         [from ICEA]
-Auth Policy:             [from ICEA]
-EF Core Entity:          [from ICEA]
-Performance:             [from ICEA constraints]
-Dependencies:            [from ICEA]
+[One line per active layer, named in the project's actual stack from architecture.md —
+ e.g. Frontend (component/route), Backend (API endpoint), Service tier, Data model (ORM entity):]
+[Layer]:      [from ICEA]
+Auth Policy:  [from ICEA]
+Performance:  [from ICEA constraints]
+Dependencies: [from ICEA]
 
 --- EXAMPLES ---
 Scenario 1 — Happy Path

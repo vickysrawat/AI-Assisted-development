@@ -18,16 +18,18 @@ who has not read the ICEA — enough context to understand without being a novel
 ---
 
 ### Changes by Layer
+> One section per active layer from architecture.md. The headers below are an example
+> for an Angular/.NET/Node.js stack — rename them to your project's actual layers.
 
-#### Angular ([list component/service files changed])
-- [File]: [What it implements — reference AC]
-- [File]: [What it implements — reference AC]
-
-#### .NET ([list controller/service/repo files changed])
+#### [Frontend layer] ([list component/view files changed])
 - [File]: [What it implements — reference AC]
 - [File]: [What it implements — reference AC]
 
-#### Node.js ([list service files changed, or N/A])
+#### [Backend layer] ([list controller/service/repo files changed])
+- [File]: [What it implements — reference AC]
+- [File]: [What it implements — reference AC]
+
+#### [Service tier] ([list service files changed, or N/A])
 - [File]: [What it implements — reference AC]
 
 #### Database ([migrations, schema changes, or N/A])
@@ -69,7 +71,7 @@ who has not read the ICEA — enough context to understand without being a novel
 ---
 
 ### Test Evidence
-- Unit test results: [paste dotnet test summary / ng test summary]
+- Unit test results: [paste the test summary for each changed layer's test runner]
 - Integration tests: [Pass / Fail / N/A]
 - Manual test: [brief note on what was verified locally]
 - Screenshot / recording: [attach for any UI changes]
@@ -86,13 +88,8 @@ or decisions made during implementation that deviate from the ICEA and why.]
 - [ ] All ICEA Acceptance Criteria implemented
 - [ ] All 5 ICEA scenarios covered by tests
 - [ ] No behaviour outside ICEA scope introduced
-- [ ] .NET: FluentValidation on all new inputs
-- [ ] .NET: ProblemDetails on all error responses
-- [ ] .NET: ILogger structured (no string interpolation)
-- [ ] Angular: OnPush on all new components
-- [ ] Angular: async pipe used (no manual subscribe)
-- [ ] Angular: loading / error / empty states handled
-- [ ] Node.js: Zod validation at route level
-- [ ] Node.js: no PII in log output
+- [ ] Per-layer quality bar met (input validation, structured error responses,
+      structured logging with no PII, framework performance idioms) — see rules/ for
+      the project's stack-specific rule files
 - [ ] No secrets or connection strings committed
 - [ ] ICEA saved to docs/Release{R}/Sprint{S}/UserStory{ID}/ADO-[ID]-[feature].icea.md

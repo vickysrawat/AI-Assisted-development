@@ -46,12 +46,17 @@ anything touches disk — not patched afterward.
 Stack context is read from `.claude/architecture/architecture.md` when present.
 If that file is missing, fall back to the project defaults below.
 
-**Default stack (K&E project — update architecture.md to override):**
-- Backend: .NET 8 / C# — Clean Architecture
-- Frontend: Angular 17+ — Standalone components, OnPush
-- Middleware: Node.js / Express / TypeScript
-- Auth: Azure AD Bearer tokens
-- Tracking: Azure DevOps (ADO) work items
+**No stack is assumed.** If `architecture.md` is absent, resolve the stack in this
+order before critiquing — never guess a backend, frontend, or ORM:
+
+1. Read `.claude/dream-init-state.json` → `repo_type` / `detected_stacks[]` (written
+   by `/setup-init`'s repo detection). Use it if present.
+2. If that is also absent, STOP and ask the developer to run `/setup-init` (or
+   `/update-arch`) to populate `architecture.md`, or to state the stack inline for
+   this run.
+
+Critique against the resolved stack only — do not flag artefacts for deviating from
+.NET/Angular conventions unless the resolved stack is .NET/Angular.
 
 ## Business context sensitivity
 

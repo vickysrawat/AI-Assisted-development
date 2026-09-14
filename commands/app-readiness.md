@@ -1,6 +1,6 @@
 ---
 description: "Enterprise / Solution Architect production readiness assessment for the application. Evaluates 8 domains: deployment pipeline (ADO), resilience, observability, security posture, scalability, data integrity, operational runbook, and test coverage. Requires architecture-deployment.md — run the architect skill first. Flags: --quick (no source reads, ~12K tokens) | --full (targeted source reads for Red domains, ~25K tokens)"
-argument-hint: "[--quick | --full]"
+argument-hint: "[--quick | --full | --with-deps]  — omit to be prompted (--quick recommended); CI uses --quick (--with-deps also assesses additionalDirectories dependency services)"
 ---
 
 # /app-readiness
@@ -15,7 +15,8 @@ Read `$PLUGIN_DIR/skills/app-readiness/SKILL.md` and execute it completely.
 |---|---|
 | `--full` | Full assessment including targeted source reads for Red domains |
 | `--quick` | No source reads — bash evidence + ADO API + architecture docs only |
-| (nothing) | Default: `--quick` |
+| (nothing) — interactive | Prompt (`AskUserQuestion`): `--quick` (recommended) or `--full`; do not default silently |
+| (nothing) — CI / non-interactive | Use `--quick` silently (no prompt) |
 
 Announce:
 ```

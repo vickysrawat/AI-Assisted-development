@@ -48,6 +48,11 @@ override them.
 - Note: this skill deliberately does **not** use `--full` — that flag means "scan all files,
   ignore cache" for file-scanner skills (`scope-flags-spec.md`); here full scope is simply the
   default. `--icea-only` and `--compact` are registered as skill-local extensions in that spec.
+- **No-flag prompt convention (`flag-prompt-spec.md`) does not apply here:** this skill is never
+  invoked bare interactively — its callers always pass an explicit mode. `icea-review` is a thin
+  alias that sets `--icea-only`; `pr-create`'s pre-submit gate and `checkin`'s Check B pass
+  `--compact`. With a flag always present, the prompt's skip condition is satisfied and the dials
+  fall back to the documented defaults silently.
 
 ---
 

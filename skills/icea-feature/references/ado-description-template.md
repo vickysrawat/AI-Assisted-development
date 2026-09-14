@@ -20,11 +20,10 @@ Impact: [from ICEA Intent — Business Impact if Not Built]
 Outcome: [from ICEA Intent — Measurable Success Metric]
 
 --- CONTEXT ---
-Angular Route/Component: [from ICEA]
-.NET API: [from ICEA]
-Node.js Service: [from ICEA]
+[One line per active layer, named in the project's actual stack from architecture.md —
+ e.g. Frontend (component/route), Backend (API endpoint), Service tier, Data model (ORM entity):]
+[Layer]: [from ICEA]
 Auth Policy: [from ICEA]
-EF Core Entity: [from ICEA]
 Performance: [from ICEA Constraints]
 Dependencies: [from ICEA]
 
@@ -68,7 +67,8 @@ Scenario 5 — Permission Boundary
 
 ## Task Breakdown (generate after ADO description)
 
-For each AC, generate tasks using this naming convention:
+For each AC, generate tasks using this naming convention (one section per active layer —
+the rows below are an example for an Angular/.NET/Node.js stack):
 
 | Layer | Task Title | Tags |
 |---|---|---|

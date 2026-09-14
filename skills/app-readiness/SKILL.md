@@ -65,7 +65,12 @@ Check for `--quick` or `--full` flag:
 |---|---|
 | `--quick` | Phase 0 + Phase 1 + Phase 2 (no source reads) — ~12K tokens |
 | `--full` | All phases including targeted source reads for Red domains — ~25K tokens |
-| (none) | Default: `--quick` |
+| (none) — interactive | Prompt (per `$PLUGIN_DIR/skills/shared/flag-prompt-spec.md`): **`--quick`** (recommended) or `--full`. Wait for a choice; do not default silently. |
+| (none) — CI / non-interactive | Use `--quick` silently (no prompt). |
+
+When no flag is provided in an interactive session, use `AskUserQuestion` with `--quick` as the
+recommended option before running. In CI / headless / gate-invoked runs, skip the prompt and use
+`--quick`.
 
 Announce:
 ```
@@ -156,10 +161,19 @@ Load the hosting-model-specific checklist:
 
 Run these before any ADO API calls. Record PRESENT / MISSING / PARTIAL for each.
 
+**Scan scope (repo by default, dependencies via `--with-deps`).** Readiness is assessed for the
+deployable app, so evidence collection defaults to **repo-only**. When invoked with `--with-deps`,
+also assess the locally-cloned dependency services in `additionalDirectories`: resolve roots via the
+bash flavour of `$PLUGIN_DIR/skills/shared/multi-root-scan.md` and run each `grep`/`find` below once
+per `SCAN_ROOT` (replace the trailing `.` / bare paths with `"$SCAN_ROOT"`), announcing each non-repo
+root and attributing evidence to it. Pipeline/IIS/runbook signals stay repo-only (they describe *this*
+app's deployment). Without `--with-deps`, roots = repo only (existing behaviour).
+
 ```bash
+INCLUDE_DEPS=0   # set to 1 only when the developer passed --with-deps ; SCAN_ROOT defaults to .
 echo "=== Health checks ==="
 grep -r "UseHealthChecks\|MapHealthChecks\|AddHealthChecks\|/healthz\|/health" \
-  --include="*.cs" --include="*.ts" -l . 2>/dev/null | head -5
+  --include="*.cs" --include="*.ts" -l "${SCAN_ROOT:-.}" 2>/dev/null | head -5
 
 echo "=== Observability ==="
 grep -r "AddOpenTelemetry\|ApplicationInsights\|Serilog\|ILogger\|CorrelationId\|TraceId" \

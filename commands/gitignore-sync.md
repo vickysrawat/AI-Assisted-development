@@ -1,6 +1,6 @@
 ---
 description: "Write/refresh the repo's ignore file with the plugin-required entries (managed block) and optionally detected build artifacts. Detects the VCS first — .gitignore on Git, .tfignore on TFVC — so protection actually takes effect (a .gitignore is inert on TFVC). Creates the file if missing, never touches your own lines; on TFVC also flags an already-tracked credential file. Use when the ignore file is missing or out of date. Args: none, or --with-artifacts to also scan for build/env files."
-argument-hint: "[--with-artifacts]  —  omit for plugin entries only; --with-artifacts also offers detected bin/obj/dist/.env etc."
+argument-hint: "[--with-artifacts]  —  omit to be prompted (plugin entries only recommended; CI does plugin entries only); --with-artifacts also offers detected bin/obj/dist/.env etc."
 ---
 
 ## Model routing

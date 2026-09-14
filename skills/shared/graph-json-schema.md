@@ -86,7 +86,8 @@ byte-identical file so diffs stay minimal.
 | `type` | **Node type (required)** ∈ `service` · `repository` · `ui` · `datastore` · `external-api` · `shared-lib` · `domain`. Drives filterable traversal, precise impact analysis, and visualisation grouping. When ambiguous, pick the closest and let `/graph-sync` refine it. |
 | `detailFile` | Relative path from `.claude/` — matches the index `Detail File` column |
 | `entryPoint` | Most-representative file (human orientation pointer; matches the index `Entry Point`) |
-| `paths` | **Array** of source-root globs the module owns. Usually one; a multi-root module (e.g. frontend + backend) lists each. Fingerprint and traversal-load span all of them. |
+| `paths` | **Array** of source-root globs the module owns, **relative to `sourceRoot`** (or the repo root when `sourceRoot` is absent). Usually one; a multi-root module (e.g. frontend + backend) lists each. Fingerprint and traversal-load span all of them. |
+| `sourceRoot` | **Optional, absent-tolerant.** Absolute (forward-slashed) path of the source root a module was derived from when it lives in a locally-cloned dependency repo listed in `additionalDirectories` (see `skills/shared/multi-root-scan.md`). **Absent ⇒ the repo root** (the common case — repo-local modules never carry it). Consumers resolve `paths`/`entryPoint`/fingerprint roots against `sourceRoot` when present. Additive field — `meta.schemaVersion` stays `"1.0"`; a graph without it is valid. |
 | `fingerprint` | **Module-wide** fingerprint — see below. Mirrored into the detail file's `_Fingerprint:` header. |
 | `hub` | Derived flag: `true` when the node's total degree (in + out edges) exceeds the hub threshold. Traversal-load excludes hubs from neighborhood expansion so a `Core`/`Common` module never blows the token budget. |
 

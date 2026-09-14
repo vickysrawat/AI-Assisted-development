@@ -43,6 +43,17 @@ Store as PLUGIN_DIR. All `$PLUGIN_DIR` references in this skill use this value.
 
 ---
 
+## Step 0 — Parse arguments
+
+`sessions=<N>` sets how many recent sessions to analyse. Default 10.
+
+**No-flag prompt** (per `$PLUGIN_DIR/skills/shared/flag-prompt-spec.md`): if `sessions=` was not
+provided **in an interactive session**, ask via `AskUserQuestion` for the session count —
+**10** (recommended) or a custom value — before proceeding; do not default silently. In CI /
+headless / gate-invoked runs, skip the prompt and use 10.
+
+---
+
 ## Step 1 — Load or initialise the graph
 
 ```bash

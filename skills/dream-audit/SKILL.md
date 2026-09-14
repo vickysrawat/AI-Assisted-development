@@ -30,6 +30,11 @@ infrastructure — all derived from files Dream already writes:
 
 `--days <N>` sets the citation window. Default 90.
 
+**No-flag prompt** (per `$PLUGIN_DIR/skills/shared/flag-prompt-spec.md`): if `--days` was not
+provided **in an interactive session**, ask via `AskUserQuestion` for the citation window —
+**90 days** (recommended) or a custom value — before proceeding; do not default silently. In CI /
+headless / gate-invoked runs, skip the prompt and use 90.
+
 ## Step 2 — Citation analysis
 
 For each `memory/topic-*.md` file, read the `Last-cited:` stamp from its header.

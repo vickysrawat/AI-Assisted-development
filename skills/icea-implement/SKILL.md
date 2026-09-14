@@ -270,6 +270,14 @@ Present all files to be written:
 
 Write only after receiving `APPROVE ADO-{ADO_ID}`.
 
+**Boundary-crossing writes.** If any target file resolves to an absolute path **outside the repo
+root** — e.g. a dependency repo in `additionalDirectories` that the Tech Spec's file-change table
+named (multi-root graph; see `$PLUGIN_DIR/skills/shared/multi-root-scan.md`) — that file requires
+its **own** confirmation and is **NOT** covered by `APPROVE ALL ADO-{ID}`. Precede such a file's
+entry with `⚠ WRITE CROSSES REPO BOUNDARY — {path} is outside this repo (dependency: {dep root}).`
+and stop for an explicit `APPROVE ADO-{ADO_ID}` on it, per CLAUDE.md §0 and
+`$PLUGIN_DIR/skills/shared/write-gate-spec.md` § Boundary-crossing writes.
+
 ---
 
 ## Step 6 — Update tracker

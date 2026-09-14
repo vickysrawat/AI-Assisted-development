@@ -1,5 +1,5 @@
 # Scope Flags Specification
-_Spec version: 1.5 · Last changed: 2026-08-28 · Compatible skill versions: code-review ≥1.2.0, security ≥1.2.0_
+_Spec version: 1.6 · Last changed: 2026-09-14 · Compatible skill versions: code-review ≥1.2.0, security ≥1.2.0_
 
 
 Shared by: `code-review`, `security`
@@ -22,7 +22,8 @@ Both skills must implement these flags identically.
 | `--area config` | Only `*.json`, `*.yml`, `*.yaml`, `*.env`, `Dockerfile`, `*.tf` | (no git filter; file-type filter only) |
 | `--area <Name>` | Entry-point + key files for knowledge-graph module `<Name>` | (read `.claude/graph/graph-index.md`, then `.claude/graph/<module>.md`) |
 | `--continue` | Resume pending files from checkpoint | (read `.claude/{skill}-checkpoint.json`) |
-| (none) | Default: cache-aware full-project scan (no file cap) | (all matching files, skipping cache-hits) |
+| (none) — interactive | Present the interactive scope menu (`interactive-menu-spec.md`); the **Smart scan** choice resolves to the cache-aware full-project scan below. Do **not** default silently. | (menu first; on Smart scan → all matching files, skipping cache-hits) |
+| (none) — CI / non-interactive | `--ci` present, headless/piped, or invoked by an internal gate → **skip the menu**, use the cache-aware full-project scan | (all matching files, skipping cache-hits) |
 
 ### `--ci` flag behaviour
 
@@ -46,8 +47,9 @@ Use `--ci` in all CI/CD pipeline invocations instead of `--full`.
 1. If the user passes `--ci` → full scan + warn on cache presence
 2. If the user passes `--full` → ignore file-cache, scan everything (no warning)
 3. If the user passes `--changed` or `--pr` → apply git filter first, then skip cache-hits within that set
-4. If no flag → cache-aware full scan (default)
-5. `--changed` and `--pr` are mutually exclusive — if both appear, `--pr` wins
+4. If no flag **and interactive** → present the interactive scope menu (`interactive-menu-spec.md`) and wait for a selection; **never** default silently. The Smart-scan choice then follows the cache-aware full-scan behaviour.
+5. If no flag **and CI / non-interactive** (`--ci` present, headless/piped, or gate-invoked) → skip the menu and run the cache-aware full scan.
+6. `--changed` and `--pr` are mutually exclusive — if both appear, `--pr` wins
 
 ---
 

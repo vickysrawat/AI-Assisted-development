@@ -80,7 +80,11 @@ If `SKELETON_MISSING`:
 Stop here.
 
 Load the skeleton into memory. Note the `structure` field (`flat` or `domain`) and the
-`modules[]` array — each entry has `id`, `module`, `domain`, `paths`, `entryPoint`.
+`modules[]` array — each entry has `id`, `module`, `domain`, `paths`, `entryPoint`, and
+**optionally `sourceRoot`** (absolute path when the module lives in a locally-cloned dependency
+repo from `additionalDirectories`; absent ⇒ repo root). Carry `sourceRoot` through verbatim onto
+the graph.json node — it drives fingerprint and detail-file resolution below. See
+`$PLUGIN_DIR/skills/shared/multi-root-scan.md`.
 
 ```bash
 mkdir -p .claude/graph
@@ -108,7 +112,9 @@ this step adds LLM-judgment fields:
 
 - `fingerprint` — module-wide hash over ALL files under `paths`:
   ```bash
-  # roots = paths[] with trailing /** stripped
+  # roots = paths[] with trailing /** stripped.
+  # For a dependency module (node.sourceRoot set), prefix each root with sourceRoot so the
+  # find resolves against the dependency repo, e.g.:  "$sourceRoot/src/Core"
   graph_module_fingerprint $roots
   ```
 
@@ -125,6 +131,11 @@ edge-density community. Update each node's `domain` field accordingly.
 ---
 
 ## Step 3 — Build directoryCatalog in memory (before writing graph.json)
+
+> Scope: the `directoryCatalog` describes **this** app's deployment topology, so it stays
+> repo-only (the `find .` below is intentional). Dependency repos are graphed as nodes but a
+> dependency's own static/config/test dirs are the dependency's concern, not this app's catalog.
+
 
 ```bash
 # Static-serving — name-based
@@ -205,7 +216,9 @@ For each node, write `.claude/graph/<detailFile>` per
 `$PLUGIN_DIR/skills/shared/graph-module-schema.md`: `paths:` frontmatter (first root),
 ambient-context comment, `_Fingerprint: {node.fingerprint} | Updated: {TODAY}_`, four
 sections (Bounded context, Key files ≤5, Dependencies with types, Patterns), and —
-when ≤ 400 tokens — a `**Depended on by:**` line. Write silently; confirm each with
+when ≤ 400 tokens — a `**Depended on by:**` line. For a dependency module (`node.sourceRoot`
+set), add a `<!-- sourceRoot: {node.sourceRoot} -->` comment after the frontmatter so readers
+know the module lives outside the repo. Write silently; confirm each with
 `✓ Written: .claude/graph/<module>.md (~N tokens)`.
 
 ---

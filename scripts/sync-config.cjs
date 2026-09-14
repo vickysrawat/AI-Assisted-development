@@ -45,9 +45,10 @@ if (fs.existsSync(mktPath)) {
   const mkt  = JSON.parse(fs.readFileSync(mktPath, 'utf8'));
   const slug = cfg.organization.toLowerCase().replace(/[^a-z0-9]/g, '-');
   mkt.name        = `${slug}-marketplace`;
+  mkt.owner       = { name: cfg.company };
   mkt.description = `${cfg.company} internal Claude plugin marketplace`;
   fs.writeFileSync(mktPath, JSON.stringify(mkt, null, 2) + '\n');
-  console.log('✓ marketplace.json updated (name, description)');
+  console.log('✓ marketplace.json updated (name, owner.name, description)');
 }
 
 // Propagate marketplaceName into config.json if not set
