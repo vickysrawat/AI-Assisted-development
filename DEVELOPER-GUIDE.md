@@ -253,7 +253,7 @@ backward-safe merge; document the gate in `checkpoint-schema.md`. Then re-run `n
 
 ### When to promote something to shared/
 
-A spec belongs in `shared/` when **two or more skills** read or write the same artefact or follow the same protocol. The **authoritative, complete list is `plugin.json` → `components.shared`** (42 specs as of v3.22.0); the most-referenced are:
+A spec belongs in `shared/` when **two or more skills** read or write the same artefact or follow the same protocol. The **authoritative, complete list is `plugin.json` → `components.shared`** (rendered by `node scripts/gen-shared-index.cjs` into `skills/shared/README.md`; do not hardcode the count here — ADR 0063); the most-referenced are:
 
 | File | Governs |
 |---|---|
@@ -268,12 +268,12 @@ A spec belongs in `shared/` when **two or more skills** read or write the same a
 | `findings-gate.md` | Canonical bash functions for Critical/High open findings detection across all three ledgers |
 | `dismissed-findings-reconciliation.md` | Canonical Rule 5 — dismissed finding reconciliation on re-scan (keep dismissed if unchanged; re-open with verify flag if code changed) |
 | `runtime-generation-spec.md` | Per-project .NET runtime detection (v1.1) — `versions[]` spread, generation resolution, PackageReference/CPM package versions, build-file collection |
-| `checkpoint-schema.md` | Migration checkpoint JSON (schema 1.11) — the single source of truth for stage-gate resume |
+| `checkpoint-schema.md` | Scan-resume checkpoint for code-review/security (three-pass, delete-on-completion) — NOT migration (the family uses `migration-ledger-schema.md`, ADR 0062) |
 | `goal-loop-spec.md` | Bounded, gated goal-loop engine (generate → self-score → revise) with hard iteration ceiling + diminishing-returns guard; exits at a human gate, writes nothing |
 | `rubric-score-schema.md` | I/O contract for the self-scoring agent — per-criterion PASS/FAIL/PARTIAL + evidence + deterministic `percentDone` + `blocking` list |
 | `write-gate-spec.md` | Write-Gate artefact-timing table, batch (`APPROVE ALL`) semantics, gate orthogonality |
 | `business-context-presets.md` / `-grounding.md` / `-generation.md` | Domain-aware B-series — presets (incl. verbatim-locked `legal`), regulatory grounding, and per-project generation into `.claude/business-context.md` |
-| `personas-spec.md` | Expert-persona role axis (SA/SE) used by the migration and readiness skills |
+| `personas-spec.md` | Expert-persona role axis (SA/SE), orthogonal to model routing — used across generation/review skills |
 | `claude-md-budget-spec.md` | CLAUDE.md ~200-line context-budget targets and floor rationale |
 | `dream-reference.md` | Dream entry format, consolidation cadence, promotion cap, topic-file demotion |
 

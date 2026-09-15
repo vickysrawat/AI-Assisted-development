@@ -39,7 +39,7 @@ Skills in this tier:
 - `pr-create` (icea-review gate) — auto-compliance check before PR submission
 - `dynamic-scan` — DAST runtime security scanning with OWASP ZAP
 - `critic` — second-pass critique of ICEA drafts and generated code (uses `CRITIC_MODEL`, which falls back to `REVIEW_MODEL`)
-- goal-loop **self-score** (the `rubric-score-schema` scorer run by `goal-loop-spec`, called from icea-implement Step 4b and migration Stage 4) — measuring artefact completion against a rubric is analytical, not generation, so the scorer runs in the review tier. The loop's *regeneration* step uses the **parent skill's generation tier** (icea-implement / migration code-gen), not this tier.
+- goal-loop **self-score** (the `rubric-score-schema` scorer run by `goal-loop-spec`, called from icea-implement Step 4b) — measuring artefact completion against a rubric is analytical, not generation, so the scorer runs in the review tier. The loop's *regeneration* step uses the **parent skill's generation tier** (icea-implement code-gen), not this tier.
 
 #### `CRITIC_MODEL` — critic override (review sub-tier)
 

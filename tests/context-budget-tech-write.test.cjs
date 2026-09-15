@@ -15,8 +15,20 @@
 'use strict';
 const { spawnSync } = require('child_process');
 const path = require('path');
+const fs = require('fs');
+const os = require('os');
 
-const HOOK = path.join('.claude', 'hooks', 'context-budget-tech-write.cjs');
+// Resolve the hook: prefer the deployed copy (real target-project layout under .claude/hooks/);
+// fall back to the source of truth under _project-deploy/hooks/ so this test runs in a bare
+// checkout / CI where the plugin has not been deployed onto itself (no .claude/ present).
+// Resolve to an ABSOLUTE path — the hook is spawned with cwd set to a throwaway temp dir (below).
+const DEPLOYED = path.resolve('.claude', 'hooks', 'context-budget-tech-write.cjs');
+const SOURCE   = path.join(__dirname, '..', '_project-deploy', 'hooks', 'context-budget-tech-write.cjs');
+const HOOK = fs.existsSync(DEPLOYED) ? DEPLOYED : SOURCE;
+
+// Isolate the hook's best-effort audit writes (.claude/audit/*.jsonl) and force-flag lookups to a
+// throwaway cwd so running this test never pollutes the repo working tree.
+const CWD = fs.mkdtempSync(path.join(os.tmpdir(), 'cbtw-'));
 
 // Build a body with >= minLines non-empty lines and no {placeholder} tokens.
 function pad(lines) {
@@ -31,9 +43,9 @@ function pad(lines) {
 
 function run(filePath, content) {
   const payload = JSON.stringify({ tool_input: { file_path: filePath, content } });
-  let r = spawnSync('node', [HOOK], { input: payload, encoding: 'utf8' });
+  let r = spawnSync('node', [HOOK], { input: payload, encoding: 'utf8', cwd: CWD });
   if (r.status !== null && r.status > 3221225000) {         // transient Windows loader crash — retry once
-    r = spawnSync('node', [HOOK], { input: payload, encoding: 'utf8' });
+    r = spawnSync('node', [HOOK], { input: payload, encoding: 'utf8', cwd: CWD });
   }
   return r.status;
 }
@@ -78,5 +90,7 @@ for (const [name, fn] of cases) {
   if (ok) { passed++; console.log(`  ✓ ${name}`); }
   else    { failed++; console.log(`  ✗ ${name}`); }
 }
+try { fs.rmSync(CWD, { recursive: true, force: true }); } catch (_) { /* best-effort */ }
+
 console.log(`\n${passed} passed · ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

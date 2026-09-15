@@ -1,18 +1,20 @@
 #!/usr/bin/env node
 // SCRIPT REVIEW
-// What it does:        Substrate vendoring build step (the standalone-packaging SEAM; wired into CI
+// What it does:        Substrate bundling build step (the standalone-packaging SEAM; wired into CI
 //                      in Story 3). Copies the canonical shared substrate (skills/shared/*.md) into a
-//                      vendor bundle, prepends a "GENERATED — DO NOT EDIT" banner to each copy, and
-//                      writes a manifest stamping {substrate_version, per-file sha256, overall
+//                      self-contained bundle, prepends a "GENERATED — DO NOT EDIT" banner to each copy,
+//                      and writes a manifest stamping {substrate_version, per-file sha256, overall
 //                      content_hash}. The manifest records the CANONICAL content hash (banner
 //                      excluded) so drift-check can compare later.
 // What it touches:     Reads skills/shared/*.md (--src). Writes copies + .substrate-manifest.json
-//                      under the vendor dir (--dest, default .vendor/skills-shared). Nothing else.
+//                      under the bundle dir (--dest, default .vendor/skills-shared). Nothing else.
 // What it does NOT do: No network, no git, no LLM, no edits to the canonical source. Only writes into
-//                      the vendor dir.
+//                      the bundle dir.
 // APIs / commands:     Node stdlib: fs, path, crypto (sha256). Exit 0 on success, 1 on error.
 // How to verify:       node scripts/vendor-substrate.cjs --src=skills/shared --dest=.vendor/skills-shared --version=1.0
 //                      node tests/substrate-drift.test.cjs  -> "N passed · 0 failed".
+// Terminology:         This is BUNDLING of first-party substrate, not third-party "vendoring". The
+//                      filename + .vendor/ dir + substrate_version key are retained identifiers (ADR 0063).
 
 'use strict';
 const fs   = require('fs');
@@ -27,7 +29,7 @@ const JSON_OUT = process.argv.includes('--json');
 
 const MANIFEST = '.substrate-manifest.json';
 const sha256 = (s) => crypto.createHash('sha256').update(s, 'utf8').digest('hex');
-const banner = (version, name) => `<!-- GENERATED — DO NOT EDIT · vendored substrate ${version} · source: ${SRC}/${name} -->\n`;
+const banner = (version, name) => `<!-- GENERATED — DO NOT EDIT · bundled substrate ${version} · source: ${SRC}/${name} -->\n`;
 
 function version() {
   if (arg('version')) return arg('version');
@@ -51,9 +53,9 @@ function main() {
   });
   // Overall content hash is a pure function of the per-file (name, hash) pairs — order-stable.
   const content_hash = sha256(JSON.stringify(files));
-  const manifest = { substrate_version: v, vendored_at: NOW, source: SRC, content_hash, files };
+  const manifest = { substrate_version: v, bundled_at: NOW, source: SRC, content_hash, files };
   fs.writeFileSync(path.join(DEST, MANIFEST), JSON.stringify(manifest, null, 2) + '\n');
-  return { op: 'vendor', status: 'ok', dest: DEST, version: v, file_count: files.length, content_hash };
+  return { op: 'bundle', status: 'ok', dest: DEST, version: v, file_count: files.length, content_hash };
 }
 
 module.exports = { sha256, MANIFEST };
@@ -62,7 +64,7 @@ if (require.main === module) {
   try {
     const r = main();
     if (JSON_OUT) process.stdout.write(JSON.stringify(r, null, 2) + '\n');
-    else process.stdout.write(`vendored ${r.file_count} files → ${r.dest} (v${r.version}, content ${r.content_hash.slice(0, 12)}…)\n`);
+    else process.stdout.write(`bundled ${r.file_count} files → ${r.dest} (v${r.version}, content ${r.content_hash.slice(0, 12)}…)\n`);
     process.exit(0);
   } catch (e) { process.stderr.write(`error: ${e.message}\n`); process.exit(1); }
 }

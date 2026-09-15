@@ -187,6 +187,7 @@
       "vcs-detect-spec",
       "checkpoint-schema",
       "migration-ledger-schema",
+      "multi-root-scan",
       "judge",
       "executor-seam",
       "context-budget-check",

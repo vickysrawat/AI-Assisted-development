@@ -2,6 +2,39 @@
 
 _Nothing yet._
 
+## [3.25.0] — 2026-09-14
+
+### Added — multi-root scanners & knowledge graph (`additionalDirectories`)
+- **Root cause: scanners hard-rooted at `.`.** Skills enumerated source only under the project root
+  and ignored `.claude/settings.local.json → additionalDirectories` (the curated, locally-cloned
+  dependency repos the app depends on), so dependency code was silently invisible — unscanned,
+  ungraphed, and unreferenceable by `explain` / `icea-feature`.
+- New shared spec **`skills/shared/multi-root-scan.md`** — single source of truth for scan roots
+  (`repo root + additionalDirectories`) with dedup / skip-missing / skip-nested and an
+  announce-before-scan convention (bash + `.cjs` flavours). No trust/classification layer — curated
+  entries are in-scope by construction.
+- **Knowledge graph is multi-root (read-default):** `module-derive.cjs` and `graph-extract-edges.js`
+  derive dependency modules (tagged with an optional, absent-tolerant `sourceRoot`) and resolve
+  cross-root imports / ProjectReferences. `graph-create` / `graph-sync` fingerprint and project them.
+  `explain`, `icea-feature`, and `update-arch` inherit dependency awareness via the graph.
+- **Heavy scanners are opt-in:** `security`, `code-review`, `app-readiness` stay repo-only by default
+  and include dependencies only with `--with-deps` (they persist FP-fingerprinted findings and gate
+  `checkin` Check D). `checkin`'s `code-review --changed` stays repo-only.
+
+### Changed — Write Gate: boundary-crossing writes always confirm
+- A write target resolving **outside the repo root** (e.g. a dependency repo file) requires its own
+  per-file confirmation and is **not** blanketed by `APPROVE ALL ADO-{ID}`. Documented in CLAUDE.md §0
+  (+ `_project-deploy` mirror), `write-gate-spec.md`, and enforced at `icea-implement`'s write step.
+
+### Schema
+- `graph.json` node gains optional, absent-tolerant `sourceRoot`; `meta.schemaVersion` stays `"1.0"`.
+  Single-root graph output is byte-identical to pre-3.25.0.
+
+### Migration
+- Run `/setup-sync` to re-deploy the updated command stubs (`--with-deps` hints). Populate
+  `additionalDirectories` with `/sync-dirs`, then `/graph-sync` to graph dependency modules. See
+  `docs/migrations/033-3.25.0.md`.
+
 ## [3.24.0] — 2026-09-14
 
 ### Fixed — flag commands no longer default silently when invoked bare

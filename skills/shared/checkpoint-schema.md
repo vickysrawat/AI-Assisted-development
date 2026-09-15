@@ -1,5 +1,5 @@
 # Checkpoint File Schema
-_Spec version: 1.0 · Last changed: 2026-07-06 · Applies to: code-review, security_
+_Spec version: 1.0 · Last changed: 2026-09-14 · Applies to: code-review, security_
 
 Shared by: `code-review`, `security`
 
@@ -52,62 +52,6 @@ These files must be added to `.gitignore` — they are runtime state, not source
   }
 }
 ```
-
-### Optional `goalLoop` block (goal-loop engine)
-
-A skill that runs the bounded goal-loop (`goal-loop-spec.md`) across turns — e.g.
-`migration` Stage 4 — persists loop progress here so a resumed session continues
-the count instead of restarting. Keyed by loop unit (e.g. cluster name):
-
-```json
-{
-  "goalLoop": {
-    "shared-kernel": { "iteration": 1, "tokenSpend": 0, "lastScore": { "percentDone": 80, "blocking": ["SR-3"] } }
-  }
-}
-```
-
-| Field | Type | Description |
-|---|---|---|
-| `goalLoop.{unit}.iteration` | number | Iterations spent on this unit so far (against the engine's `maxIterations` ceiling) |
-| `goalLoop.{unit}.tokenSpend` | number | Optional token spend, when a `tokenBudget` ceiling is in use |
-| `goalLoop.{unit}.lastScore` | object | The most recent `{ percentDone, blocking }` — lets a resume detect the diminishing-returns guard |
-
-Only the checkpoint **owner** (the orchestrator) writes this block; dispatched
-agents return scores and never write it (`single-writer-assumption.md`).
-`icea-implement` runs its Step 4b loop within a single turn and does **not** persist
-a `goalLoop` block — a dropped implementation loop simply re-runs from Step 4.
-
-### Migration `mode` block (`schema_version` 1.11)
-
-The `migration` checkpoint (`.claude/migration-checkpoint.json`) carries a `mode` object seeded at
-Stage 0.4. It is **merge-written** (overwrite only with provided non-empty values), so a resume that
-re-runs Step 0.4 never drops a previously-recorded field.
-
-```json
-{
-  "schema_version": "1.11",
-  "mode": {
-    "graph": true,
-    "track": "backend | frontend | upgrade",
-    "source_token": "dotnet | dotnet_framework | java | nodejs | angular | react | python",
-    "target_token": "dotnet | angular | react | java-spring | python",
-    "source_version": "net8.0 | 4.8 | 3.12 | 20.x | null",
-    "target_version": "net10.0 | null",
-    "source_roots": ["<repo or additionalDirectories path>", "..."]
-  }
-}
-```
-
-| Field | Type | Description |
-|---|---|---|
-| `mode.source_token` | string | Detected SOURCE stack, **any stack** (`SRC.primary.token` from `migration-source-detect.cjs`, per ADR 0060) — not .NET-only |
-| `mode.source_version` | string \| null | Detected SOURCE primary version, **any stack** (`SRC.primary.version` — a TFM for .NET, else the stack's runtime/language version); kept comparable for Q1b (`target ≥ source`) and Stage-2 posture; `null` if unresolved |
-| `mode.target_version` | string \| null | Chosen TARGET .NET version (Q1b, allow-list `net8.0`/`net9.0`/`net10.0`); `null` until chosen / non-.NET target |
-| `mode.source_roots` | string[] (optional) | The SOURCE root(s) scanned by the detector — the repo and/or `additionalDirectories` paths (multi-root). Optional and absent-tolerant (added additively; no `schema_version` bump — a resumed checkpoint without it is valid) |
-
-New in 1.11 (from 1.10): `mode.source_version`, `mode.target_version`, and merge-write semantics for
-`mode`. A resumed pre-1.11 checkpoint simply gains these fields (defaulted absent → treated as null).
 
 ---
 

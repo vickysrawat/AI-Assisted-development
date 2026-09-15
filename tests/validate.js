@@ -101,24 +101,33 @@ COMMANDS.forEach(c => {
 
 // ── 4. Shared specs ───────────────────────────────────────────────────────────
 console.log('\n▶ Shared specs (skills/shared/)');
-const SHARED = [
-  'file-cache-schema.md',
-  'scope-flags-spec.md',
-  'flag-prompt-spec.md',
-  'interactive-menu-spec.md',
-  // domain-map-spec.md was retired in v3.0.0 (ADR 0038) — validate.py check 9 errors if it exists
-  'single-writer-assumption.md',
-  'model-routing-spec.md',
-  'runtime-generation-spec.md',
-  'business-context-severity.md',
-  'business-context-presets.md',
-  'business-context-grounding.md',
-  'business-context-generation.md',
-  'source-file-consent.md',
-];
-SHARED.forEach(f => {
-  exists(`skills/shared/${f}`) ? ok(`shared/${f}`) : bad(`shared/${f} missing`);
-});
+// NOTE: the old hardcoded existence list was removed in ADR 0063 — the manifest==disk guard below
+// supersedes it (it verifies EVERY registered spec exists AND every disk spec is registered).
+
+// ADR 0063: components.shared is the manifest of record — it MUST equal skills/shared/*.md on disk
+// (minus README). Catches specs added to disk but unregistered (e.g. multi-root-scan.md) and stale
+// manifest entries. This is why README/DEVELOPER-GUIDE spec counts are no longer hand-authored.
+{
+  const manifest = new Set((readJson('.claude-plugin/plugin.json').components?.shared || []).map(s => `${s}.md`));
+  const disk = new Set(fs.readdirSync(path.join(ROOT, 'skills/shared')).filter(f => f.endsWith('.md') && f !== 'README.md'));
+  const missingFromManifest = [...disk].filter(f => !manifest.has(f));
+  const missingFromDisk = [...manifest].filter(f => !disk.has(f));
+  missingFromManifest.length === 0
+    ? ok('shared: every skills/shared/*.md is registered in components.shared')
+    : bad(`shared: on disk but NOT in components.shared: ${missingFromManifest.join(', ')}`, 'Add them to components.shared in plugin.json');
+  missingFromDisk.length === 0
+    ? ok('shared: every components.shared entry exists on disk')
+    : bad(`shared: in components.shared but MISSING on disk: ${missingFromDisk.join(', ')}`, 'Remove them from components.shared or restore the file');
+}
+
+// ADR 0063: the README "Shared specs" table is GENERATED from plugin.json — assert it isn't stale
+// (README is a projection, not a source of truth). The generator is the single owner of that block.
+{
+  const r = require('child_process').spawnSync('node', [path.join(ROOT, 'scripts/gen-shared-index.cjs'), '--check'], { encoding: 'utf8' });
+  r.status === 0
+    ? ok('shared: README spec table matches generator (gen-shared-index.cjs --check)')
+    : bad('shared: README spec table is STALE', 'Run: node scripts/gen-shared-index.cjs --write');
+}
 
 // Scope flags spec must include --ci and canonical find command
 if (exists('skills/shared/scope-flags-spec.md')) {
@@ -206,9 +215,9 @@ if (exists('scripts/migration-source-detect.cjs')) {
 ['skills/upgrade/SKILL.md', 'skills/rewrite/SKILL.md', 'skills/replatform/SKILL.md'].every(f => exists(f) && read(f).includes('migration-source-detect.cjs'))
   ? ok('migration-source-detect: called by upgrade/rewrite/replatform (family-shared detector)')
   : bad('migration-source-detect: a migration-family skill (upgrade/rewrite/replatform) does not call the detector');
-exists('skills/shared/checkpoint-schema.md') && read('skills/shared/checkpoint-schema.md').includes('source_roots')
-  ? ok('migration-source-detect: checkpoint documents source_roots (multi-root)')
-  : bad('migration-source-detect: checkpoint-schema missing source_roots');
+exists('skills/shared/migration-ledger-schema.md') && read('skills/shared/migration-ledger-schema.md').includes('source.roots')
+  ? ok('migration-source-detect: ledger documents source.roots (multi-root)')
+  : bad('migration-source-detect: migration-ledger-schema missing source.roots');
 
 // ── 5. Skills ─────────────────────────────────────────────────────────────────
 console.log('\n▶ Skills (skills/*/SKILL.md)');

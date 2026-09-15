@@ -1,6 +1,6 @@
 # Migration-Family Ledger Schema (Upgrade · Rewrite · Replatform)
 
-_Spec version: 1.0 · Last changed: 2026-09-08 · Applies to: upgrade, rewrite, replatform_
+_Spec version: 1.0 · Last changed: 2026-09-14 · Applies to: upgrade, rewrite, replatform_
 
 > **Not the same as `checkpoint-schema.md`.** That file is the brownfield **scan-resume** checkpoint
 > for `code-review` / `security` (ephemeral, three-pass, delete-on-completion). This file is the
@@ -28,7 +28,7 @@ repurpose a core field; only add.
   "ado_id": "9000",
   "created_at": "2026-09-08",
   "updated_at": "2026-09-08",
-  "source": { "stack": "dotnet", "from": "6", "to": "8" },
+  "source": { "stack": "dotnet", "from": "6", "to": "8", "roots": ["<repo or additionalDirectories path>"] },
   "stage_gates": { "report": "PASS", "verify": "PASS" },   // names differ per skill, shape common
   "phase_history": [ { "phase": "report", "verdict": "PASS", "at": "2026-09-08" } ],
   "decision_log": [],             // ADR / precedent refs
@@ -36,6 +36,11 @@ repurpose a core field; only add.
   "payload": { }                  // per-skill namespaces, opaque to other skills
 }
 ```
+
+`source.stack`/`from`/`to` carry the detector's `SRC.primary.token`/`version` (from
+`scripts/migration-source-detect.cjs`) and the chosen target version. `source.roots` (string[],
+optional, absent-tolerant) records the source root(s) the detector scanned — the repo and/or
+`additionalDirectories` paths (multi-root). Additive; a ledger without it is valid.
 
 **Skill-owned PAYLOAD** — each skill owns `payload.<skill>`, versioned by that skill, NOT part of the
 shared contract and opaque to the others:
@@ -132,9 +137,9 @@ Resume = orient, then continue — uniform for all three skills:
 Read-only orientation first; only the continuation writes. Missing ledger → tell the user to start
 (`UPGRADE|REWRITE|REPLATFORM ADO-{ID}`). A skill continues from ONLY its own `payload.<skill>`.
 
-## Governance (vendored standalone)
+## Governance (bundled standalone)
 
-When a skill is vendored for standalone use, this doc + `checkpoint-ledger.cjs` are copied into the
+When a skill is bundled for standalone use, this doc + `checkpoint-ledger.cjs` are copied into the
 bundle and drift-checked against canonical (`scripts/vendor-substrate.cjs` /
-`scripts/substrate-drift-check.cjs`). Changing the core = bump the substrate semver → re-vendor →
+`scripts/substrate-drift-check.cjs`). Changing the core = bump the substrate semver → re-bundle →
 drift-check → ADR → re-validate consumers. See `skills/shared/README.md`.

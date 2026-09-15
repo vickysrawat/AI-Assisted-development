@@ -1,8 +1,8 @@
 # Goal-Loop Engine Spec
 _Spec version: 1.0 · Created: 2026-08-31_
-_Applies to: goal-loop (orchestrator), icea-implement (Step 4b), migration (Stage 4)_
+_Applies to: goal-loop (orchestrator), icea-implement (Step 4b)_
 
-Shared by: `goal-loop`, `icea-implement`, `migration`
+Shared by: `goal-loop`, `icea-implement`
 
 Defines the **bounded, gated goal-loop** — the single reusable contract for
 "iterate until the goal is met, then stop." Any skill that wants to close an
@@ -22,12 +22,12 @@ done?*. They compose — see "Composing with the critic".
   cannot be raised at runtime, plus a diminishing-returns guard. It is not an
   open-ended autopilot.
 - It is **gated**: it operates only on in-context, unwritten artefacts, and it
-  **exits at a human gate** — the Write Gate for code, the `APPROVE …` stage gate
-  for migration. It never writes to disk and never types `APPROVE` on the
+  **exits at a human gate** — the Write Gate for code (or the parent skill's own
+  approval gate). It never writes to disk and never types `APPROVE` on the
   developer's behalf. The loop advances the artefact *up to* a gate; the human
   still crosses it.
-- It runs **only on rubric-consuming artefacts** — implementation code, migration
-  cluster output. It is **never** run on the ICEA or the Tech Spec: those *define*
+- It runs **only on rubric-consuming artefacts** — e.g. implementation code
+  (icea-implement Step 4b). It is **never** run on the ICEA or the Tech Spec: those *define*
   the rubric, so scoring them against a rubric they author is circular. ICEA and
   Tech Spec drafting keep the critic's bounded revise instead (see the boundary
   note at the end).
@@ -40,11 +40,11 @@ The parent skill enters the engine with:
 
 | Input | Type | Description |
 |---|---|---|
-| `goal` | string | One-line "done" statement (ICEA Goal one-liner, or migration stage objective). |
+| `goal` | string | One-line "done" statement (e.g. the ICEA Goal one-liner). |
 | `rubric` | array | The criteria to score against, verbatim — see `rubric-score-schema.md` Inputs. |
-| `artifact` | in-context | The current output (generated code, or a cluster's written files + build/test result). |
-| `regenerate` | callback | "Produce a better artefact addressing `remaining`" — the parent supplies this (e.g. icea-implement re-runs Step 4 code generation; migration re-dispatches the cluster agent). Uses the parent's **generation** tier. |
-| `ceilings.maxIterations` | number | Hard cap on iterations. Default **3** (icea-implement); migration sets **2** per cluster. |
+| `artifact` | in-context | The current output (e.g. generated code + its build/test result). |
+| `regenerate` | callback | "Produce a better artefact addressing `remaining`" — the parent supplies this (e.g. icea-implement re-runs Step 4 code generation). Uses the parent's **generation** tier. |
+| `ceilings.maxIterations` | number | Hard cap on iterations. Default **3** (icea-implement). |
 | `ceilings.tokenBudget` | number? | Optional. If set and exceeded, stop and escalate. |
 
 ---
@@ -101,9 +101,9 @@ ENTER(goal, rubric, artifact, regenerate, ceilings)
 - The engine reads and reasons over **in-context** artefacts only. It **never**
   writes to disk and **never** issues `APPROVE`.
 - On **GOAL MET** or **ESCALATE**, the engine returns control (and the latest score)
-  to the parent skill. The parent then presents its existing human gate — the Write
-  Gate (`APPROVE ADO-{ID}`) for icea-implement, the `APPROVE …` stage gate for
-  migration. Crossing that gate is the human's action, always.
+  to the parent skill. The parent then presents its existing human gate — e.g. the
+  Write Gate (`APPROVE ADO-{ID}`) for icea-implement. Crossing that gate is the
+  human's action, always.
 - Restated as a rule the callers must honour: **the goal-loop advances an artefact
   up to a gate; it never advances through one.**
 
@@ -170,12 +170,12 @@ into the other.
 
 ## Surviving a context drop
 
-Long loops can outlive a context window. A parent that owns a checkpoint (migration)
-persists loop state so a resumed session continues instead of restarting:
+Long loops can outlive a context window. A parent that owns a persistent checkpoint
+or ledger persists loop state so a resumed session continues instead of restarting:
 
-- Persist `{ iteration, tokenSpend, lastScore }` under the parent's checkpoint —
-  see the `goalLoop` block in `checkpoint-schema.md`.
-- Only the checkpoint **owner** writes it (migration's orchestrator). Subagents
+- Persist `{ iteration, tokenSpend, lastScore }` under the parent's own checkpoint or
+  ledger (e.g. a migration-family skill under `payload.<skill>` in `migration-ledger-schema.md`).
+- Only the **owner** (the parent orchestrator) writes it. Subagents
   return scores; they do not write the checkpoint (`single-writer-assumption.md`).
 - `icea-implement` runs in a single turn and does not persist loop state; a dropped
   implementation loop simply re-runs from Step 4.
@@ -208,7 +208,7 @@ persists loop state so a resumed session continues instead of restarting:
 |---|---|---|
 | R1 | Self-scoring drifts optimistic (an agent grading itself) | Evidence mandatory per verdict; `percentDone` is a fixed formula not a free-hand number; diminishing-returns guard; and the human gate is always downstream, so a wrong 100% still faces `APPROVE`. |
 | R2 | Loop weakens the Write Gate | Hard rule: no write / no `APPROVE` from inside; engine exits at the gate threshold only. |
-| R3 | Concurrency on the migration checkpoint | Only the orchestrator persists `goalLoop`; cluster agents return scores (`single-writer-assumption.md`). |
+| R3 | Concurrency on a parent-owned checkpoint/ledger | Only the orchestrator persists loop state; dispatched agents return scores (`single-writer-assumption.md`). |
 | R4 | Rubric paraphrase optimises the wrong target | Rubric passed verbatim from ICEA/tracker/stage rubric. |
 | T1 | Merging score + critic into one verdict | Rejected — kept orthogonal (completion vs quality). |
 | T2 | Nested critic + score loops blow up | One shared iteration budget: 1 iter = regenerate → critic → score. |

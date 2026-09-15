@@ -1,8 +1,8 @@
 # Rubric Score Schema
 _Spec version: 1.0 · Created: 2026-08-31_
-_Applies to: goal-loop-spec (the engine), icea-implement (Step 4b), migration (Stage 4)_
+_Applies to: goal-loop-spec (the engine), icea-implement (Step 4b)_
 
-Shared by: `goal-loop-spec`, `icea-implement`, `migration`
+Shared by: `goal-loop-spec`, `icea-implement`
 
 Defines the I/O contract for the **self-scoring agent** — the one new capability
 the goal-loop introduces. The scorer measures how much of a goal an in-context
@@ -28,16 +28,16 @@ like the critic. Governed by `source-file-consent.md`.
 
 ## Inputs
 
-The caller (the engine, on behalf of `icea-implement` or `migration`) passes:
+The caller (the engine, on behalf of `icea-implement`) passes:
 
 | Input | Type | Description |
 |---|---|---|
-| `goal` | string | One-line statement of what "done" means. ICEA: the **Goal** one-liner. Migration: the stage objective. |
+| `goal` | string | One-line statement of what "done" means. ICEA: the **Goal** one-liner. |
 | `rubric` | array | Ordered list of criteria to score against. See below. **Must be the criteria text verbatim** — never a paraphrase (a paraphrased rubric optimises the wrong target). |
-| `rubric[].id` | string | Stable criterion id. ICEA: the AC id (`AC-F1`, `AC-NF2`). Migration: a stage-rubric id (`SR-1`). |
+| `rubric[].id` | string | Stable criterion id. ICEA: the AC id (`AC-F1`, `AC-NF2`). |
 | `rubric[].text` | string | The criterion, verbatim from its source (ICEA Acceptance section / tracker, or the stage-completion rubric). |
 | `rubric[].type` | string | `functional` \| `non-functional` \| `structural`. |
-| `artifact` | in-context | The current output being scored — generated code (icea-implement) or a cluster's written files + build/test result (migration). Passed in context; not a disk path. |
+| `artifact` | in-context | The current output being scored — e.g. generated code (icea-implement). Passed in context; not a disk path. |
 
 ---
 

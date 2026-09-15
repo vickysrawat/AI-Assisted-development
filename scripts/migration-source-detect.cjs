@@ -35,7 +35,7 @@ const MAX_DEPTH = 6;
 const MAX_CONTENT_READS = 5000;   // cap content scans so a huge source tree stays tractable
 const MAX_FILE_BYTES = 512 * 1024;
 
-// Token vocabulary matches checkpoint mode.source_token. `primary` picks the most SPECIFIC stack:
+// Token vocabulary matches ledger source.stack. `primary` picks the most SPECIFIC stack:
 // backend languages first, then frontend frameworks, then generic nodejs last (a repo detected as
 // angular/react also carries 'nodejs' — the framework, not the runtime, is the representative stack).
 const TOKEN_PRIORITY = ['dotnet_framework', 'dotnet', 'java', 'python', 'angular', 'react', 'nodejs'];

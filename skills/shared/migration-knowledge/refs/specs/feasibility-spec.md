@@ -29,7 +29,7 @@ Identifies risks, effort, and blockers before any code is written.
 **Generated from:** Integration Inventory (`integration-verification-spec.md`) + source analysis + loaded stack/mapping reference files + selected target option.
 
 **Posture-aware (per cluster/project).** Breaking-change analysis MUST branch on each project's
-generation (from the source `versions[].generation` spread + `mode.source_version`/`target_version`):
+generation (from the source `versions[].generation` spread + `source.from`/`source.to`):
 `dotnet-modern`→ **Upgrade** (cumulative net-core removals over `(source, target]` from
 `dotnet-upgrade.md`); `dotnet-framework`→ **Rewrite** (parity mapping `dotnet-framework-to-dotnet.md`
 — the removal-delta model does NOT apply). A mixed source runs both postures per-cluster. Flag a
