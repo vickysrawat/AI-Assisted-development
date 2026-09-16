@@ -22,7 +22,7 @@ $line1a   = "What's "       # white
 $line1b   = 'left'          # amber
 $line2    = 'for us?'       # white
 $subtitle = 'Building software when the AI writes the code'
-$byline   = 'Vivek Rawat'
+$byline   = 'Your Company'
 
 $white  = [System.Drawing.Color]::FromArgb(255, 255, 255, 255)
 $amber  = [System.Drawing.Color]::FromArgb(255, 200, 169, 81)   # #c8a951

@@ -148,6 +148,18 @@ scheme) are exactly what the gap/risk report must surface. Tier 2 via `additiona
 the service source is available. The Integration Inventory feeds the report's integration rows and
 `[INTEGRATION]` migration log entries. This is lighter than Rewrite/Replatform — it runs inside the
 gap/risk analysis, not as a separate pre-options step.
+
+**Source-context intake gate** — per `$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/source-context-intake-spec.md`.
+Author the **Source Context Manifest** (`docs/migrations/{ADO}/source-context-manifest.md`) from the
+source's own docs + code, then verify. The upgrade profile is lighter (cross-cutting scan = delta only;
+Tier-2 only for integrations that break) BUT **source coverage is full accounting** — every `graph.json`
+module gets a `mapped`/`out-of-scope` disposition, so "unchanged" is asserted, never assumed by omission:
+```bash
+node "$PLUGIN_DIR/scripts/intake-verify.cjs" verify --manifest=docs/migrations/{ADO}/source-context-manifest.md \
+  --skill=upgrade --json
+```
+Exit 0 → record `stage_gates.intake_context=PASS` + `core.source_context`. Exit 2–8 → **STOP** and
+resolve. The gap/risk report (Step 4) cannot be gated PASS until this is done — see Step 8.
 2. **Ground on miss/stale.** Use WebSearch to find the change from an **authoritative** source
    (official migration guide / release notes / deprecation list). Never source a breaking-change
    claim from model memory.
@@ -248,6 +260,12 @@ node "$PLUGIN_DIR/scripts/upgrade-checkpoint.cjs" init --ado=<ID> --stack=<token
 node "$PLUGIN_DIR/scripts/upgrade-checkpoint.cjs" set-gate --ado=<ID> --gate=<report|verify> --verdict=<PASS|REVISE|BLOCK>
 ```
 
+**Intake gate precondition on the report gate (fail-closed — upgrade's chain point).** Because the
+Gap+Risk report is LLM-authored (no downstream script like rewrite's `decompose` to hard-refuse),
+the `report` gate is where intake is enforced: BEFORE recording `--gate=report --verdict=PASS`, run
+`intake-verify.cjs check-gate --ado=<ID>` — if it exits non-zero, the report gate **cannot** be
+recorded PASS. This makes the headline deliverable impossible to produce on unread source.
+
 The ledger is a single-writer, **merge-write** contract (never clobbers fields it does not own), so
 the run is resumable and safe to hand off. As of Story 2 the judge and checkpoint are the **shared
 substrate** (`skills/shared/judge.md`, `skills/shared/migration-ledger-schema.md`);
@@ -257,6 +275,11 @@ redirects to the shared docs.)
 
 ## Hard Rules
 
+- NEVER record the `report` gate PASS before the **source-context intake gate** is PASS — the report
+  gate calls `intake-verify.cjs check-gate` (upgrade's fail-closed chain point, since the report is
+  LLM-authored). The Source Context Manifest must fully account for every `graph.json` module.
+- NEVER accept `PARTIAL`/`unknown` when the resolving source is reachable in a configured root —
+  resolve it at intake (exit 5), never defer.
 - NEVER hand-author the bulk transform of working code — drive the deterministic tool.
 - NEVER proceed past a `false-upgrade` classification — route to Rewrite; make no edits.
 - NEVER offer a fallback for an `unsupported` stack — STOP and list supported stacks. No fabrication.

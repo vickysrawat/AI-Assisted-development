@@ -17,11 +17,30 @@
 ```
 ### Option {n}: {target stack + posture}
 - Assurance ceiling: {BAL A|B|C|D} — {why (oracle availability, test surface)}
+- DAG shape:         {cluster count · N waves} — basis: INFERRED (target-space projection)
 - Effort:            {S/M/L} — {cluster count, re-arch depth, key residual risks}
 - TCO:               onboarding {…} · run-cost {$/mo, cited + dated} (source: {url}, {date})
 - Pros:  {…}
 - Cons:  {…}
 ```
+
+## Per-option DAG (target-space projection)
+
+There is **no target application yet** at the options phase, so the DAG shown per option is an
+**inferred projection** of the source module graph through *that option's* decisions — never the raw
+source DAG shown identically for every option (that would erase the very differences the options exist
+to expose). Project, then feed the projection to `rewrite-decompose.cjs decompose … --space=target`:
+
+| Posture (from `posture`) | How the source graph projects into target space |
+|---|---|
+| `port` (same lang + same fw) | Structure-preserving — target ≈ source seams; reusing the source graph is legitimate **here and only here**. |
+| `re-architecture` (any lang/fw change) | Reshape per the keep-vs-redesign answers — merge/split modules, add/remove layers, change bounded contexts. Cluster count + waves genuinely differ. |
+| `rewrite-from-spec` (no runnable oracle) | Project from the inventory/spec, not the source graph; DAG is coarse and INFERRED. |
+
+The projection is a **design judgment** (the LLM's), fed as `--modules/--edges` (coarse) or a small
+per-option graph file to the pure topo-sorter. Its **basis is INFERRED** at this phase per
+`options-insight-spec.md`; it is re-derived and promoted to `computed` after `APPROVE DESIGN`, once
+`target-component-architecture.md` is authored (SKILL Step 2.5, step 5).
 
 ## Grounding rules (run-cost)
 
@@ -34,6 +53,8 @@
 
 - ALWAYS show the **assurance ceiling before commit** — the developer must know the best achievable BAL
   for each option, especially when no runnable oracle exists (C/D cap).
+- ALWAYS project a **target-space DAG per option** (basis INFERRED); NEVER decompose the source graph
+  identically across options — only a `port` posture may reuse the source structure.
 - NEVER present a run-cost figure as firm without a dated, authoritative citation.
 - Record the chosen option + its ceiling in the shared ledger `payload.rewrite`.
 - A BYO design is an alternative to these options — held to the **same** scrutiny (`byo-design.md`).

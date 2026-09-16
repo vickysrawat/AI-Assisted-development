@@ -2,13 +2,13 @@
 # Status - Implemented
 > Run this in the **plugin repository** (ai-assisted-development, v3.15.0).
 > All paths below are relative to the plugin repo root.
-> Origin: retrospective on the KE.KirklandData migration (ADO-9999).
+> Origin: retrospective on the KE.CustomerData migration (ADO-9999).
 
 ---
 
 ## Context
 
-During the KE.KirklandData migration (ADO-9999), several integration facts were wrong in the generated
+During the KE.CustomerData migration (ADO-9999), several integration facts were wrong in the generated
 docs and only discovered during *implementation*, after many iterations:
 
 - **RiskManagementDataMart** was documented as a **WCF proxy**; it is actually an **in-process EF6
@@ -154,7 +154,7 @@ deferred[] }`, and (recommended) a `stage_gates.integrations_verified` flag surf
    dispatch, stage-0.6, and feasibility all cite it; `setup-status` reports the new version without drift.
 2. **Regression against known ground truth (strongest test):** re-run the migration discovery/inventory
    stages against the real source we now fully understand —
-   `C:\Users\rawatv\source\Workspaces\KE2\_Platform\Dev\KE.KirklandData` (with `KE.WallBuilder`,
+   `C:\Users\rawatv\source\Workspaces\KE2\_Platform\Dev\KE.CustomerData` (with `KE.WallBuilder`,
    `KE.RiskManagementDataMart`, `KE.Common.Helpers` available). The hardened process MUST now:
    - classify **RiskManagementDataMart** as **in-process EF6 direct-DB** (no `<client>` endpoint + `DbContext`),
    - classify **WallBuilder** as **WCF basicHttpBinding/Transport/NTLM, two endpoints**, and flag that its

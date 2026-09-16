@@ -55,6 +55,10 @@ verified? which modality/oracle never ran?). Its findings become the next round 
 ## Per-skill gate rubrics
 
 Each skill supplies its own gate list + rubric essentials; this layer supplies the mechanism:
+- **Shared (all three)** — source-context **intake gate**: unwired-candidate confirmation +
+  cross-cutting **completeness** (a concern class present in source but absent from the manifest scan →
+  REVISE; a **security** concern — authN/authZ, secrets — present but unaddressed → BLOCK). Rubric:
+  `migration-knowledge/refs/specs/source-context-intake-spec.md` § Judge rubric — intake gate.
 - **Upgrade** — report gate (VERIFIED/INFERRED integrity), residual gate (scoped diff), verify gate (all hops pass before merge).
 - **Rewrite** — design-quality gate (design + impl), BAL merge gate (provisional ≠ D), completion gate (final BAL; B-series hard-block).
 - **Replatform** — NFR/Well-Architected gate; human-executed runbook PASS/FAIL gates.

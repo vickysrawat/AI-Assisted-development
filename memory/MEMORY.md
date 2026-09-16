@@ -1,5 +1,164 @@
 # MEMORY.md — Project memory (dream-managed)
 
+## 2026-09-16 — Retired legacy `skills/command-stubs/`; deployable stubs live only in `_project-deploy/commands/`
+
+**Convention confirmed.** There are three parallel stub sets and they are NOT interchangeable:
+top-level `commands/` = the plugin's OWN dev-session slash commands (rich: model routing,
+`$PLUGIN_DIR` resolution, full task steps); `_project-deploy/commands/` = the CANONICAL
+deployable stubs shipped into target projects (quoted `description` + `Example:`, `argument-hint`,
+`--help` verbatim block, fully-qualified `<skill>ai-assisted-development:X</skill>`);
+`skills/command-stubs/` = LEGACY, thin old-format (`<command>X</command>` / bare `<skill>X</skill>`),
+superseded per DEVELOPER-GUIDE.md:44 and docs/migrations/017-3.7.0.md:12.
+
+**Action.** Deleted `skills/command-stubs/` entirely (34 tracked files). Verified safe first:
+description-diff showed every legacy stub was a strict *subset* of its deploy counterpart (nothing
+to back-port), and no `scripts/`/hooks/config reference the folder (only changelog/tracker mentions).
+The ONE legacy-exclusive file, `articulate-as-human.md` (added today to the wrong folder), was ported
+to `_project-deploy/commands/articulate-as-human.md` in deploy format BEFORE deleting.
+
+**Reusable heuristic.** When a new command stub is added, it goes in `_project-deploy/commands/`
+(deploy format) — never `skills/command-stubs/`. Before deleting a "legacy" folder, diff its files
+against the successor to prove it's a subset, and grep scripts/hooks/config for live references.
+
+## 2026-09-16 — Replatform R5 wired to the NFR oracle (docs-vs-code drift closed) — IMPLEMENTED
+
+**Lesson — a shipped engine can be silently disowned by its own skill's prose.** The same
+LLM-as-judge fact-check pass found that `skills/replatform/SKILL.md` Step R5 still read
+**"Deferred to Inc C (AC-F8)"** even though the AC-F8 machinery had *already shipped and was tested*:
+`scripts/replatform-nfr-assess.cjs` (assess weakest-link + gate regulated-hard-block exit 16, **9/0**),
+`references/nfr-assurance.md`, `references/well-architected.md`, and the `payload.replatform.NFR` ledger
+field. The engine was cross-referenced by both reference docs, the architecture doc, the tracker, AND the
+tech spec (AC-F8 "✅ Covered") — **everywhere except the skill's own stage flow.** The tracker even said
+"Story 3 COMPLETE / AC-F8 delivered" while the skill's headline "prove-done" oracle was never invoked.
+
+**Reusable heuristic:** "AC ✅ Covered" at the artifact level ≠ wired. When auditing, check that the
+skill's **stage flow actually invokes** the script an AC claims — a passing unit test on a script proves
+the engine, not that any skill calls it. This is the mirror of the earlier intake-gate lesson (a rule
+gets skipped when nothing downstream depends on it) — here, an engine gets stranded when the stage flow
+that should call it still says "deferred."
+
+**Fix (D2 — wire it; skill + governance docs, NO new code):** R5 now invokes the existing tested engines:
+per-NFR `replatform-nfr-assess assess`→`gate` (regulated-below-floor HARD BLOCK exit 16; `ceiling_flagged`
+must be stated, never reported as fully measured) + Well-Architected assembly (reuse `app-readiness` ERL +
+NFR pillars, no re-grade, no double-count) + golden-master pre→post smoke (execution-profile verify
+subset) + two-gate "done" recorded to `payload.replatform.NFR` with per-gate judge verdicts. Removed the
+`← Inc C` stage-flow marker + the "even while R5 is Inc C" caveat; added a Hard Rule. **No new script —
+pure orchestration over already-tested engines, symmetric to Rewrite Step 4/5 calling `rewrite-bal`.**
+R5 necessarily runs *after* the human-executed R4 cutover (the target must be deployed) — that's a runtime
+dependency, not a missing capability.
+
+**Decisions rejected:** flipping the tech spec's reviewer checkbox (that's a human PR-time action — used a
+dated Revision Log entry instead); rebuilding any grader (the engine + WAF-assembly spec already existed);
+docs-truth-up only (D1 — rejected: it would document the oracle as unwired rather than turn it on, when
+turning it on cost only orchestration prose).
+
+**Status:** IMPLEMENTED (scope: skill/scripts + governance docs, per developer). Shipped: `SKILL.md` R5
+rewrite (invokes assess/gate/WAF/golden-master/two-gate/ledger) + stage-flow/caveat cleanup + new Hard
+Rule; tech-spec Revision Log 2026-09-16; tracker fix-forward note; contest `06-migration-family.md` §6
+updated (oracle now runs, honest "no real-move numbers yet"). Engine/refs/tests UNCHANGED. validate.js
+green; replatform-nfr-assess 9/0.
+
+---
+
+## 2026-09-16 — Rewrite decomposition: per-option target-space DAG (drift fixed) — IMPLEMENTED
+
+**Architecture decision — differentiation lives in the INPUT graph, not a flag; the script stays a
+pure topo-sorter.** An LLM-as-judge fact-check of the migration-family contest entry, followed by a
+code trace, found two spec-vs-code drifts in `scripts/rewrite-decompose.cjs`:
+1. **"Target-space decomposition" was actually source-space** — `decompose` only ever topo-sorted the
+   source `graph.json`. No target-space graph is produced anywhere (`graph-derive-documents.cjs` builds
+   only a *document-authoring* DAG, not a target component graph).
+2. **`--option=<A|B|C>` was a silent no-op** — `SKILL.md` Step 2 told you to run decompose "per option"
+   with `--option`, but `opDecompose()` never read it. Every option got an identical DAG; the only real
+   axis of variation was `--group-by-domain`.
+
+**Root cause (single, reusable lesson):** `decompose` is a *generic topo-sorter* fed one input (the
+source graph) identically for every option. "Target-space" and "per-option" are properties of the
+**input graph**, not of the sorter or a flag. The user's key insight: at the options phase there is
+**no target application yet**, so reusing the source graph for every option is wrong — it's neither
+target-space nor differentiated.
+
+**Locked design (skill/scripts scope only — tech spec + tracker left as historical, per developer):**
+- The per-option DAG is an **LLM design act fed to a pure sorter**: for each candidate option, project
+  the source graph through *that option's* posture (a `port` ≈ source seams; `re-architecture`
+  merges/splits/re-layers) and feed it via `--modules/--edges` or a small per-option graph file.
+  Different option ⇒ different projection ⇒ genuinely different DAG.
+- **`port` is the ONE honest source≈target case** (same lang+fw) where reusing the source graph is
+  legitimate; `re-architecture`/`rewrite-from-spec` require a reshaped projection.
+- **Provenance labeled:** DAG basis is `INFERRED` at options time (no target app exists), re-derived and
+  promoted to `computed` after `APPROVE DESIGN` from the authored `target-component-architecture.md`
+  (new SKILL Step 2.5 step 5).
+- Script gained only a `--space=source|target` **provenance** flag (echoed into output, default
+  `source` for back-compat); `readGraph()`/`topoWaves()` reused unchanged — their generality was the
+  whole point. **No `--option` flag added** (it was the wrong mechanism).
+
+**Decisions rejected:** wiring `--option` as a real flag (differentiation belongs in the input, not a
+flag); making the script itself do target-space transformation (that's LLM design judgment, must stay
+behind the gates); downscoping the docs to "source-space" (the user correctly wanted the capability made
+*real*, not the claim shrunk); emitting a concrete `git worktree add` runbook from decompose (rejected —
+worktree lifecycle is a gated, verdict-dependent generation loop, not a static runbook, and decompose
+has no target-folder knowledge).
+
+**Status:** IMPLEMENTED (plan-mode approved, skill/scripts scope). Shipped: `--space` flag + header
+rewrite in `rewrite-decompose.cjs`; `SKILL.md` Step 2 (per-option projection, `--option` removed),
+Step 2.5 step 5 (re-derive committed DAG), description/stage-flow/Step 3 + 2 new Hard Rules;
+`references/options-and-tco.md` (DAG-shape row + posture→projection table + rule); 5 new tests in
+`tests/rewrite-decompose.test.cjs` (16/16 pass, incl. different-input→different-DAG and `--option`-is-a-no-op).
+validate.js 300/0. Contest entry `06-migration-family.md` refreshed (claim now backed, not hedged).
+**Gotcha:** in bash, `--edges=a>b` triggers shell redirection — quote it (`"--edges=a>b"`); tests are
+unaffected because they use `spawnSync` (no shell).
+
+---
+
+## 2026-09-15 — Source-Context Intake Gate (migration family) — DESIGN LOCKED
+
+**Architecture decision — make intake reads unskippable via a fail-closed shared gate.**
+A migration run produced gappy design docs because intake made decisions BEFORE reading the
+source's own CLAUDE.md, architecture docs, and `additionalDirectories` (Tier 2 deps). Root cause
+(the reusable lesson): **a rule gets skipped when nothing downstream depends on it having been
+done** — `integration-verification-spec.md` already said "Tier 2 REQUIRED" and it was still
+skipped. Prose hard rules are necessary but insufficient.
+
+**Locked design** (design of record: `docs/plans/migrationSkill/source-context-intake-gate.md`):
+- Shared substrate across all 3 skills (upgrade · rewrite · replatform), not rewrite-only.
+- Turn "reading" into a verifiable **Source Context Manifest** with resolvable `PROV: path#line`
+  citations (no citation / dangling citation = not read).
+- New `scripts/intake-verify.cjs` (pure/read-only like `strategy-resolve.cjs`): `verify` (exits
+  0/2/3/4/5/6) + `check-gate`. Reuses `scanRoots()` from `multi-root-scan.md` — never re-improvise
+  root logic.
+- **Keystone = ledger chaining:** downstream step refuses without `stage_gates.intake_context=PASS`.
+  rewrite → `rewrite-decompose decompose`; replatform → `replatform-plan plan`; upgrade (asymmetric,
+  no downstream script — report is LLM-authored) → `upgrade-checkpoint set-gate --gate=report` refuses.
+- Ledger fields are **core** (shared, additive): `stage_gates.intake_context` + `core.source_context`.
+- Unwired-dependency detection = **script heuristic + judge** (deps named in source docs but not in
+  `additionalDirectories` → exit 6). Per-skill manifest depth (upgrade lighter, rewrite deepest).
+- **Source-coverage dimension (D7, full accounting — all three skills):** the deepest root cause is
+  that migration skills are architected to AVOID reading full source (token economy — they lean on
+  `graph.json` + targeted reads), so they translate a *description* of the code, not the code.
+  Fix: manifest gains a Source Coverage section; `intake-verify.cjs` reads `graph.json` as the
+  denominator (degrade to file enumeration if absent) — every module must be `mapped` or
+  `out-of-scope` (exit 7 on a silent drop), and behavior-bearing units must cite an actual **source**
+  `file#line`, not a doc (exit 8). `check-gate` re-validates `mapped+out_of_scope==total`. Rejected:
+  risk-weighted / per-skill coverage (both reopen the silent-drop gap). Ledger `core.source_context`
+  now carries `modules_total/mapped/out_of_scope`.
+
+**Decisions rejected:** prose-only enforcement; rewrite-only scope; gating upgrade at the baseline
+tag (too late); judge-only unwired detection; per-skill payload ledger placement.
+
+**Status:** IMPLEMENTED (skip-ICEA path, behind Write Gate, ADO-9000). Shipped: new spec
+`source-context-intake-spec.md`; new `scripts/intake-verify.cjs` (verify/check-gate) + `tests/intake-verify.test.cjs`
+(9/9 pass); ledger schema core fields; wiring in all 3 SKILL.md (rewrite Step1.5+Step2, upgrade
+Step3+report-gate, replatform R1+R2) + integration-verification-spec cross-link. validate.js 300/0.
+CI auto-runs the test via `azure-pipelines.yml` glob `tests/*.test.cjs` (no manifest to update).
+**Gotcha (script bug caught in test design):** the first citation extractor matched ANY filename-like
+token in prose → false-positive dangling-citation on real manifests. Fix: only treat `path#anchor`
+tokens (with an explicit #line/#section) as PROV citations. Lesson: an over-broad citation regex
+punishes legitimate prose — require the anchor.
+**Gotcha confirmed again:** post-code-gen oracle runbook + comparison script belong to
+`golden-master-spec.md`, NOT this intake gate — kept out of scope deliberately.
+
+---
+
 ## 2026-09-14 — Decoupling audit + fixes (stack-neutral / company-agnostic)
 
 **Architecture decision — coupling lives in *emitted templates*, not skill logic.**
@@ -19,10 +178,12 @@ reference/template bodies a skill outputs — not just the SKILL.md prose.
   `pr-describe/references/pr-description-template.md` + its SKILL checklist) now derive layers
   from the active stack ("one line/section per active layer"), with .NET/Angular shown only as
   labelled examples.
-- Marketplace `owner.name` was the dev's personal name ("Vivek Rawat") in source and
-  "Product Engineering" hardcoded in install.sh/.ps1/.cjs. Now: source uses "Your Company"
+- Marketplace `owner.name` was the dev's personal name in source and a team name hardcoded
+  in install.sh/.ps1/.cjs. Now: source uses "Your Company"
   placeholder; installers write `$COMPANY`; `sync-config.sh`/`.cjs` propagate `owner.name = cfg.company`.
-- No "Kirkland/K&E" literals remain in shipping content (docs/ case-studies are exempt/expected).
+- No company/personal identity literals remain in shipping content (docs/ case-studies are exempt/expected).
+  The `validate.js` identity guard derives its denylist at runtime (git identity + `IDENTITY_DENYLIST`)
+  rather than hardcoding any name, so the guard itself carries no literal.
 
 **Gotcha:** `Grep` tool times out (~20s) on the OneDrive-synced repo path, especially with
 parallel calls. Use per-file scoped greps, `Read`, or delegate to Explore agents that manage
@@ -174,3 +335,63 @@ always re-grep case-insensitively before declaring an orphan sweep complete.
 
 **Flagged (out of scope):** rewrite's design/impl judge REVISE loops are "(bounded)" but the ceiling is
 unquantified (unlike design-revision-spec's 5 / goal-loop's 3) — candidate future hardening.
+
+## 2026-09-16 — ADO-9000: hardened intake-verify.cjs cross-cutting scan enforcement (exit 9)
+
+**Audit finding (fix #4 of the rewrite-intake gap set):** the cross-cutting concern scan was
+NOT mechanically enforced. `intake-verify.cjs` had zero "cross-cutting" logic — an EMPTY scan
+section passed `verify` silently (exit 8 only flags *existing* behaviour rows cited to docs; it
+can't detect an absent/blank scan). The judge was assigned the check by
+`source-context-intake-spec.md:54` but `judge.md`'s rewrite rubric list omits the intake gate and
+NO rubric artifact backs it → the check was a naked, unrubriced LLM instruction. This is exactly
+how errorHandler/eventTracer/conversationTracer infra behaviors slipped through the failed rewrite.
+
+**Applied:** added exit code 9 to `verify` — cross-cutting section must be PRESENT; deep-scan skills
+(rewrite/replatform) require ≥1 table row AND ≥1 resolvable **source** (non-doc) citation; upgrade is
+lenient (delta-only: blank section must carry an explicit none/no-delta/N/A marker or it's a stub).
+Reasons: `cross-cutting-missing|empty|uncited|stub`. Mirrored a re-validation into `check-gate`
+(keystone — a hand-set `intake_context=PASS` still can't bypass it), reading `sc.skill` from the ledger.
+
+**Convention confirmed:** intake-verify keys on markdown TABLE rows (`tableRows()` parses only
+`|`-delimited lines) — free-form prose in a manifest section is invisible to the script. Any new
+manifest section that must be enforced has to be authored as a keyword-tagged table with `file#line`
+PROV citations. Happy-path test fixture (`goodManifest`) must include every enforced section or the
+new check breaks the existing exit-0 test.
+
+**Verification:** `node tests/intake-verify.test.cjs` → 14 passed · 0 failed (5 new: missing/empty/
+doc-only → 9, upgrade none-note → 0, check-gate keystone → 11).
+
+**Still open (NOT fixed here — judge's job):** completeness (were ALL real concerns found?) is not
+verifiable mechanically. Follow-ups: broaden exit-8 behaviour keyword set to include infra terms
+(logging/auth/tracing/error-handling/interceptor/middleware/filter); author a real intake-gate judge
+rubric enumerating concern classes + a "source has package X ⇒ scan must address X" mapping; ship a
+Source Context Manifest template so authored manifests are parseable.
+
+## 2026-09-16 — ADO-9000: intake cross-cutting hardening follow-ups 1–3 (completeness layer)
+
+Landed the three follow-ups flagged after the exit-9 fix:
+1. **Broadened exit-8 keywords** (`intake-verify.cjs`) to include infra concern terms
+   (logging·auth·authentication·authorization·authn·authz·tracing·telemetry·error-handling·
+   exception·interceptor·middleware·aspect·cross-cutting·caching·resilience·retry·validation).
+   An infra row cited to a doc now trips exit 8, same as `business-logic` did.
+2. **Authored a real intake-gate judge rubric** — added a "Shared (all three)" bullet to `judge.md`'s
+   per-skill list + a "## Judge rubric — intake gate" section in `source-context-intake-spec.md` with a
+   concern-class → detection-signal table (source has X ⇒ scan must address X). Security concern
+   present-but-unaddressed → BLOCK; other missing concern → REVISE. Calls out WCF `<behaviors>`
+   (errorHandler/eventTracer/conversationTracer) as the classic blind spot from the failed run.
+3. **Shipped `source-context-manifest-template.md`** (specs/) — pre-seeded concern rows + verifier-shaped
+   tables; referenced from the spec's artifact section and rewrite SKILL.md Step 1.5 §3.
+
+**Gotcha (ordering):** exit 8 runs BEFORE exit 9. Broadening exit-8 keywords meant the old
+`doccc` fixture (logging→arch.md#L1) started tripping exit 8 not 9 — had to switch that fixture to
+prose-only rows (no #anchor → citations()=[] → exit-8 skipped → exit-9 uncited owns it) and add a
+separate infra-8 test. Layering rule: exit 8 = a behaviour row WITH citations that are all docs;
+exit 9-uncited = a cross-cutting section with rows but NO resolvable source citation at all.
+
+**Verification:** `node tests/intake-verify.test.cjs` → 15 passed · 0 failed;
+`node scripts/gen-shared-index.cjs --check` → clean. specs/* is evergreen in freshness-manifest
+(no registration needed for the new template).
+
+**Division of labor now explicit:** script proves the scan EXISTS + is source-cited (mechanical,
+exits 8/9); judge proves it is COMPLETE (semantic, rubric-driven). The script cannot know what
+concerns a given source *should* have — that's the rubric's job.

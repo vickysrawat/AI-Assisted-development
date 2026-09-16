@@ -12,7 +12,7 @@
 > **WHAT REMAINS OURS**  
 > The Developer's Craft, Ethics & Responsibility in the Age of AI  
 > _"The machine can write the code now. What’s left is us — and that turns out to be the important part."_  
-> Vivek Rawat · 2026
+> Your Company · 2026
 
 **Narration**
 

@@ -304,3 +304,13 @@ retired alongside `migration`; per-skill `UPGRADE|REWRITE|REPLATFORM STATUS/RESU
 `icea-status`-style) added instead. Verification: `tests/migration-retirement.test.cjs` + `validate.js` §0a
 signpost checks (replacing the planned router tests). ADR 0061 records the decision. `migration-source-detect.cjs`
 retained as a family-shared detector.
+2026-09-16 — **AC-F8 R5 stage-flow wired (drift closed).** An LLM-as-judge fact-check found `SKILL.md`
+Step R5 still read "Deferred to Inc C" even though the AC-F8 engine + refs had shipped (Inc C) and are
+cross-referenced everywhere else — the engine (`replatform-nfr-assess.cjs`, tested 9/0) was disowned by
+the skill's own stage flow. Fix: R5 now invokes `replatform-nfr-assess.cjs assess`/`gate` per NFR
+(regulated-below-floor HARD BLOCK exit 16; `ceiling_flagged` must be stated), Well-Architected assembly
+(reuse `app-readiness` ERL + NFR pillars, no re-grade), golden-master pre→post smoke (verify subset), and
+a two-gate "done" recorded to `payload.replatform.NFR` with per-gate judge verdicts. No new script — pure
+orchestration over already-tested engines (symmetric to Rewrite Step 4/5 calling `rewrite-bal`). Stage-flow
+`← Inc C` marker + the "even while R5 is Inc C" caveat removed; new Hard Rule added. Scope: skill only
+(engine/refs/tests unchanged). validate.js green; replatform-nfr-assess 9/0.

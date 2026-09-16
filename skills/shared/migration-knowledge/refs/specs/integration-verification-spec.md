@@ -34,6 +34,11 @@ Verification runs in two tiers. Tier 2 is attempted whenever `additionalDirector
 service source. Never skip Tier 2 if the source is available — client-side evidence alone cannot
 classify what the service does.
 
+> **Enforced by the intake gate.** The "never skip Tier 2 when the source is reachable" rule is no
+> longer advisory: `scripts/intake-verify.cjs` (`source-context-intake-spec.md`) fails closed on a
+> `PARTIAL`/`unknown` row whose source is reachable in a configured root (exit 5) and on a
+> named-but-unwired dependency (exit 6). A `PARTIAL` used to defer resolvable work now blocks the gate.
+
 ### Tier 1 — Client-side (always available)
 
 Read the source app being migrated. Establishes **what the integration is** (Kind, Transport, Auth).

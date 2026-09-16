@@ -596,7 +596,7 @@ cost on sessions where no feature work is planned.
 ### Added — Azure CLI auth blocked; PAT-only decision recorded in MEMORY.md
 
 Azure CLI background calls (`az account get-access-token`) are blocked on the
-Kirkland network. This rules out the otherwise-preferred Entra ID Bearer token
+Corp network. This rules out the otherwise-preferred Entra ID Bearer token
 flow as a replacement for PAT auth. Added a `[manual] Priority: high` entry to
 `memory/MEMORY.md` recording this constraint so it is not re-raised as a future
 improvement suggestion. PAT via `AZURE_DEVOPS_PAT` Windows User Environment
@@ -673,7 +673,7 @@ exactly what happened and what to do next.
 When no ICEA was found it stopped with a "run /icea-feature first" message.
 
 A broader audit found that **every skill making ADO API calls** was missing the
-`--ssl-no-revoke -4` flags required on the Kirkland corporate network, and two
+`--ssl-no-revoke -4` flags required on the Corp corporate network, and two
 skills (`app-readiness` SKILL.md and its reference file) were using `-u ":$AZURE_DEVOPS_PAT"`
 which embeds the raw PAT value in the command line — visible in shell history and
 Claude Code transcripts. All reference files also used `python3` for JSON parsing,
@@ -2276,7 +2276,7 @@ Consolidated all generated-file entries into a single annotated block:
   content is never touched. This ensures every project gets Dream infrastructure regardless
   of whether CLAUDE.md was pre-existing. Also deploys `project-rules.md` as part of Step 3.
   Summary block now prompts the developer to fill in the Repository field in CLAUDE.md.
-- `plugin.json` — author updated to `Product Engineering`. Version bumped to `1.1.0`.
+- `plugin.json` — author updated to `Your Company`. Version bumped to `1.1.0`.
 - `README.md` — rules table updated to include `project-rules.md` row. `dream-init`
   description updated. Stack rules section renamed to "Stack and project rules". Repo
   structure tree updated.

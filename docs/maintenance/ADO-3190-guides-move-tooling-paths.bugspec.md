@@ -3,7 +3,7 @@
 - **ID:** ADO-3190 (internal plugin maintenance — no external ADO ticket)
 - **Tier:** T1
 - **Status:** ✅ Approved
-- **Approved by:** vivek.rawat@kirkland.com (chat approval, 2026-09-04)
+- **Approved by:** developer@example.com (chat approval, 2026-09-04)
 - **Area:** release/version tooling
 
 ## Root Cause

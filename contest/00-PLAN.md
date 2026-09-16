@@ -22,6 +22,18 @@ and scores well against the 6 judging criteria.
 | 6 | Legacy Migration Family (Upgrade/Rewrite/Replatform) | Working solution | `entries/06-migration-family.md` |
 | 7 | Production Readiness (App + Plugin) | Practical value | `entries/07-readiness.md` |
 | 8 | Support Handover (Operations + Go-Live) | Clear story / readiness | `entries/08-handover.md` |
+| 9 | The Persona Cast (bonus) | Creativity, personality & fun | `entries/09-persona-cast.md` |
+| 10 | The Critic (bonus) | Creativity + Working solution | `entries/10-critic.md` |
+| 11 | Agents That Can't Collude (bonus) | Responsible AI + Creativity | `entries/11-agents-cant-collude.md` |
+| 12 | The Application Landscape (bonus) | Practical value + Resourcefulness | `entries/12-application-landscape.md` |
+| 13 | Business Context (bonus) | Responsible AI + Practical value | `entries/13-business-context.md` |
+| 14 | The Context Budget (bonus) | Resourcefulness + Practical value | `entries/14-context-budget.md` |
+
+> Entries 9–14 are **bonus** entries added after the original 8. 9–11 lean into criterion 4
+> (creativity/personality/fun); 12–14 cover high-value capabilities the core set missed
+> (cross-repo landscape, domain-aware severity, context-budget discipline).
+> **Lens boundaries to preserve:** 12 (landscape) vs 3 (one-repo graph); 13 (severity policy) vs
+> 11 (airgapped grounding); 14 (attention/adherence) vs 4 (token cost).
 
 ## The 9 form fields (every entry must answer all)
 
@@ -55,6 +67,14 @@ and scores well against the 6 judging criteria.
   > *Operates on the local repo and Claude Code sessions; no source leaves the environment
   > except explicit ADO/Anthropic API calls the user initiates. Secrets are hook-blocked from
   > committed config; sensitive data is flagged via B1–B7 severity.*
+- **Platform-dependency disclosure (MANDATORY in field 8 of every entry).** This is a **Claude
+  Code plugin** — its skills (`SKILL.md`), hooks (`PreToolUse`/`PostToolUse`), slash commands,
+  model routing (Anthropic tiers), and runtime assumptions (`conversation_search`,
+  `~/.claude/plugins`, session URLs) are Claude-Code-native. **It will NOT run as-is on GitHub
+  Copilot, Cursor, or any other agent** — porting would mean reimplementing the hook system,
+  skill loader, session-history access, and command runtime on the target platform. Disclose
+  this honestly (the *ideas* port as patterns; the *implementation* does not). Verified against
+  `.claude-plugin/plugin.json` + 47 `SKILL.md` + 25 hooks on 2026-09-16.
 
 ## Per-entry expansion workflow
 

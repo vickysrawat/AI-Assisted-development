@@ -5,9 +5,27 @@
 
 ## One-line status
 
-Portfolio of **8 contest entries** scoped and seeded. Plan, tracker, measured-evidence (b),
-and word-for-word demo scripts (c) are **DONE**. Next step: expand each seed into a polished
-`contest/entries/NN-*.md` form document. **No `entries/*.md` created yet.**
+Portfolio of **14 contest entries** (8 core + 6 bonus) — **ALL 14 expanded and marked READY** in
+`contest/entries/`, each with a judge-defense study log in `contest/entries/learning-logs/` (the logs
+now live *inside* the entries folder) and a demo in `demo-scripts.md`. Plan, tracker, measured-evidence
+(b), and demo scripts (c) are DONE. Every entry:
+all 9 form fields, ≥1 labeled measured claim, demo linked, rubric self-check done (nothing ≤3).
+Bonus entries: 09 Persona Cast · 10 Critic · 11 Agents That Can't Collude (creativity/personality/fun);
+12 Application Landscape · 13 Business Context · 14 Context Budget (high-value capabilities the core missed).
+**Lens boundaries to preserve:** 3↔4 (graph artifact vs efficiency), 12↔3 (cross-repo landscape vs
+one-repo graph), 13↔11 (severity policy vs airgapped grounding), 14↔4 (attention/adherence vs token cost).
+**Voice:** all 11 `entries/*.md` are written in a warm, human register (Entry 1 is the template) —
+narrative openers, second person, real stakes, prose not tables — with all 9 fields and honest
+labels preserved. `entries/learning-logs/*.md` are intentionally kept crisp/mechanical (defense notes).
+Keep both conventions if editing. Logs link up two levels to shared assets (`../../measured-claims.md`,
+`../../demo-scripts.md`) and one level to their entry (`../NN-*.md`).
+**Platform disclosure (verified 2026-09-16):** this is a **Claude Code plugin** — it will NOT run
+as-is on GitHub Copilot, Cursor, or any other agent (skills/hooks/slash-commands/Anthropic routing
+are Claude-Code-native). Every entry's field 8 now carries a "**Runs on Claude Code**" honest
+limitation; the portfolio note lives in `00-PLAN.md` + `measured-claims.md`. Keep this disclosure
+if adding entries. The ideas port as patterns; the implementation doesn't.
+Notes: Entry 3 = "graph as **artifact**", Entry 4 = "graph as **efficiency engine**" (keep distinct);
+Entries 09 (personas) and 10 (critic) reinforce each other — personas power the critic's per-mode lenses.
 
 ## What this is
 
@@ -36,8 +54,9 @@ fields and score on 6 judging criteria (both listed in `00-PLAN.md`).
 
 ## Key facts already established (don't re-derive)
 
-- Repo scale (MEASURED): 49 skills · 47 shared specs · 44 rules · 25 hooks · 33 scripts ·
-  23 test files · 300/0 validate.js · 64 ADRs · 65 commits.
+- Repo scale (MEASURED, re-verified 2026-09-16): 49 skills · 47 shared specs · 44 rules · 25 hooks ·
+  34 scripts · 24 test files · 300/0 validate.js · 64 ADRs · 66 commits. (Counts drift as the repo
+  grows — re-run the `measured-claims.md` §1 verify commands before final submission.)
 - Cache efficiency (MEASURED, from 34 local session logs, ~30 days, 13,328 turns):
   **96.9% input-side tokens from cache; 97.6% of turns had a cache hit; 24.7M output tokens.**
   → This is Claude Code prompt caching over the plugin's own dev — NOT the plugin file-cache
@@ -47,14 +66,18 @@ fields and score on 6 judging criteria (both listed in `00-PLAN.md`).
 
 ## NEXT ACTION when resuming
 
-Expand entries into `contest/entries/NN-*.md`, one polished form doc each, in priority order:
-**1 → 4 → 2 → 3 → 5 → 6 → 7 → 8**. For each: fill all 9 fields, wire in a measured claim from
-`measured-claims.md`, link the matching `demo-scripts.md` section, run the rubric self-check
-(score 1–5 on all 6 criteria in the tracker), then mark READY.
+All 8 entries and all 8 learning logs are complete. Remaining work is the portfolio-level polish in
+the tracker's Open decisions:
+1. Decide folder location — keep `contest/` in the repo or move it out / gitignore before committing.
+2. Decide how many entries to actually submit (if the contest caps entries per person) — top picks:
+   01 (flagship, Responsible AI), 04 (strongest measured number), 02 (creativity).
+3. Optional: run the file-cache §3 benchmark to convert Entry 4's estimated figure to measured.
+4. Record backup demo captures for the entries presented live.
+5. Decide the orphan `TUTOR.md` (unrelated to the portfolio — move out or keep).
 
 Suggested resume prompt:
-> "Resume the contest portfolio. Read contest/RESUME.md, then expand Entry 1 and Entry 4 into
-> polished form docs under contest/entries/."
+> "Resume the contest portfolio. Read contest/RESUME.md. All 8 entries are READY — do a final
+> cross-entry consistency + rubric pass, then help me pick which 3–4 to submit."
 
 ## Open decisions (from tracker)
 

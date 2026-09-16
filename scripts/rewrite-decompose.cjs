@@ -4,14 +4,19 @@
 //                      the migration posture from stack distance: `port` ONLY when source and target
 //                      share language AND framework; any language/framework change forces
 //                      `re-architecture` (with keep-vs-redesign questions); no runnable oracle (or
-//                      an explicit flag) yields `rewrite-from-spec`. `decompose` turns a SOURCE module
-//                      graph into TARGET-space clusters + an acyclic dependency DAG + a worktree
-//                      schedule (parallelizable waves via Kahn topological sort); it reports cycles
-//                      rather than silently emitting a non-DAG.
+//                      an explicit flag) yields `rewrite-from-spec`. `decompose` is a GENERIC topo-sorter:
+//                      it turns WHATEVER module graph it is handed into clusters + an acyclic dependency
+//                      DAG + a worktree schedule (parallelizable waves via Kahn topological sort), and
+//                      reports cycles rather than silently emitting a non-DAG. "Target-space" is a
+//                      property of the INPUT, not this script — the skill authors a per-option
+//                      target-space projection of the source graph (port ≈ source seams; re-architecture
+//                      restructures) and feeds it in; `--space=source|target` records which space the
+//                      emitted DAG represents.
 // What it touches:     Reads --graph=<graph.json> when given (nodes[].id + edges[].{from,to}); else
 //                      reads inline --modules/--edges. Reads process.argv. Writes NOTHING.
 // What it does NOT do: No code generation, no git/worktree creation (it PLANS the schedule; the skill
-//                      creates worktrees behind the Write Gate), no network, no LLM, no mutation.
+//                      creates worktrees behind the Write Gate), no target knowledge (it sorts whatever
+//                      graph it is given — there is NO --option flag), no network, no LLM, no mutation.
 // APIs / commands:     Node stdlib: fs, path. Exit codes: posture 0; decompose 0=acyclic ·
 //                      11=cycle detected; 1=usage/error.
 // How to verify:       node scripts/rewrite-decompose.cjs posture --source-lang=java --source-fw=spring --target-lang=csharp --target-fw=aspnet --json
@@ -25,6 +30,9 @@ const OP       = (process.argv[2] || '').trim().toLowerCase();
 const JSON_OUT = process.argv.includes('--json');
 const arg = (n) => process.argv.find(a => a.startsWith(`--${n}=`))?.split('=').slice(1).join('=');
 const norm = (s) => (s || '').trim().toLowerCase();
+// Provenance only: which space the fed graph represents. Defaults to `source` (back-compat); the skill
+// passes `--space=target` when it feeds a per-option target-space projection. Does NOT change the sort.
+const SPACE = norm(arg('space')) === 'target' ? 'target' : 'source';
 
 // ── posture ───────────────────────────────────────────────────────────────────
 // DECISION: how the migration posture is chosen (it gates the whole rewrite)
@@ -141,7 +149,7 @@ function opDecompose() {
   const { order, waves, cycle } = topoWaves(ids, clusterEdges);
   const acyclic = cycle.length === 0;
   return {
-    op: 'decompose', acyclic,
+    op: 'decompose', space: SPACE, acyclic,
     clusters: [...clusters.values()],
     dag: clusterEdges,
     order, waves,
@@ -159,7 +167,7 @@ if (require.main === module) {
     let result, exit = 0;
     if (OP === 'posture') result = opPosture();
     else if (OP === 'decompose') { result = opDecompose(); exit = result.acyclic ? 0 : 11; }
-    else { process.stderr.write('usage: rewrite-decompose.cjs <posture|decompose> [--source-lang --source-fw --target-lang --target-fw --oracle] [--graph | --modules --edges] [--group-by-domain] [--json]\n'); process.exit(1); }
+    else { process.stderr.write('usage: rewrite-decompose.cjs <posture|decompose> [--source-lang --source-fw --target-lang --target-fw --oracle] [--graph | --modules --edges] [--group-by-domain] [--space=source|target] [--json]\n'); process.exit(1); }
 
     if (JSON_OUT) process.stdout.write(JSON.stringify(result, null, 2) + '\n');
     else if (result.op === 'posture') {
@@ -167,7 +175,7 @@ if (require.main === module) {
       (result.questions || []).forEach(q => lines.push(`  ? ${q}`));
       process.stdout.write(lines.join('\n') + '\n');
     } else {
-      const lines = [`clusters: ${result.clusters.length}`, `acyclic: ${result.acyclic}`, `order: ${result.order.join(' → ')}`, 'worktree waves:'];
+      const lines = [`space: ${result.space}`, `clusters: ${result.clusters.length}`, `acyclic: ${result.acyclic}`, `order: ${result.order.join(' → ')}`, 'worktree waves:'];
       result.worktree_plan.forEach(w => lines.push(`  wave ${w.wave}: ${w.clusters.join(', ')}`));
       if (result.cycles.length) lines.push(`CYCLE: ${result.cycles.join(', ')}`);
       process.stdout.write(lines.join('\n') + '\n');

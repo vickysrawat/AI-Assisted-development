@@ -2,7 +2,7 @@
 
 **Status:** ✅ Implemented — all phases complete (install.sh dispatcher deferred pending S10 validation)
 **Created:** 2026-07-30
-**Owner:** vivek.rawat@kirkland.com
+**Owner:** developer@example.com
 **Status lifecycle:** `📋 Planned` → `🚧 In progress` → `✅ Implemented` (update this line
 and the per-phase boxes in *Implementation Sequencing* as work lands).
 
@@ -717,7 +717,7 @@ Fix: During restore in setup-init bootstrap, if `.backup` exists, check if the c
   `install.sh`, the dispatcher could loop. Mitigation: dispatcher only fires when bash
   can't prompt; ps1/cjs never re-invoke install.sh. Add a `_DISPATCHED` env guard mirroring
   `_WINPTY_REEXEC` for defence-in-depth.
-- **Spaces in plugin path**: the repo lives under `OneDrive - Kirkland\Desktop\...` (spaces
+- **Spaces in plugin path**: the repo lives under `OneDrive - Corp\Desktop\...` (spaces
   and a hyphen). All `exec`/`-File` paths MUST stay quoted. `%~dp0` in `install.cmd` also
   contains spaces — the `"%~dp0install.ps1"` quoting handles it, verify explicitly.
 - **`install.cmd` + PowerShell arg passthrough**: `%*` forwarding of `--uninstall --yes`

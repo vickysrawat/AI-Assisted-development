@@ -7,7 +7,7 @@ Relates to: [[0046-dream-init-bootstrap-pattern]], [[0054-plugin-path-runtime-re
 
 ## Problem
 
-Multi-repo projects — a common K&E pattern where an Angular + Node.js frontend repo
+Multi-repo projects — a common enterprise pattern where an Angular + Node.js frontend repo
 depends on a separate .NET API repo — caused incorrect Tech Spec overlay selection.
 
 `detected_stacks` only captured stacks from the **primary repo** (the one `setup-init`

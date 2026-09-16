@@ -1,7 +1,7 @@
 # Plan — Harden the Migration Skill: As-Built Fidelity & Architecture-Doc
 # Status - Implemented
 > Run this in the **plugin repository** (ai-assisted-development, v3.15.0). Paths are relative to the plugin root.
-> Origin: retrospective on the KE.KirklandData migration (ADO-9999), *after* setup-init + the architecture
+> Origin: retrospective on the KE.CustomerData migration (ADO-9999), *after* setup-init + the architecture
 > gap analysis surfaced 13 doc-vs-code divergences.
 > **Complementary to** `docs/plans/migration-integration-verification-hardening.md` (the integration-
 > misclassification plan) — this plan does NOT repeat that work; it addresses the *different* lessons.
@@ -18,7 +18,7 @@ design-time docs against the code that was actually generated.** Result on ADO-9
 we only found by hand during the gap analysis —
 
 - endpoint count **57 (design) vs 49 (as-built)**;
-- a **phantom `kirklanddata_generalmatterdetails` role** in SECURITY/DEPLOYMENT docs, enforced nowhere;
+- a **phantom `customerdata_generalmatterdetails` role** in SECURITY/DEPLOYMENT docs, enforced nowhere;
 - **RiskMgmt documented as a service**, implemented as a direct SQL DB;
 - **WallBuilder documented as HttpClient**, implemented as WCF;
 - **Serilog / Moq / IMemoryCache / `/health/*`** in the docs, none matching as-built;
@@ -134,7 +134,7 @@ gate: *As-built reconciliation*.
    `golden-master-spec`, and `migration-report-spec` all cite it; `/migration-status` shows
    `asbuilt_reconciled`; `setup-status` reports the new version with no drift.
 2. **Regression against the known outcome (strongest test):** run the reconciliation step against the
-   completed KE.KirklandData target (`c:\Users\rawatv\source\KE.Common_Upgrade`). It MUST auto-detect the
+   completed KE.CustomerData target (`c:\Users\rawatv\source\KE.Common_Upgrade`). It MUST auto-detect the
    13 divergences we found by hand — endpoint **49≠57**, phantom `generalmatterdetails`, RiskMgmt DB-not-
    service, WallBuilder WCF-not-HttpClient, `RiskMgmtBaseUrl`/Serilog/Moq/IMemoryCache — emit the
    `ADO-9999-asbuilt-reconciliation.md` divergence report, and stamp the 5 Stage-1 docs with the

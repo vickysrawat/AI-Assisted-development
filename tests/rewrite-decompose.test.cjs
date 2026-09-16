@@ -58,5 +58,33 @@ const cyc = run(['decompose', '--modules=a,b', '--edges=a>b,b>a']);
 assert('CYCLE detected -> exit 11 + acyclic=false', cyc.code === 11 && cyc.json.acyclic === false, `code=${cyc.code} acyclic=${cyc.json.acyclic}`);
 assert('CYCLE names the members', (cyc.json.cycles || []).includes('a') && cyc.json.cycles.includes('b'), JSON.stringify(cyc.json.cycles));
 
+// Per-option differentiation is INPUT-driven — two DIFFERENT projected graphs must yield DIFFERENT DAGs.
+// This is the mechanical backing for "each option carries its own target-space DAG" (no --option flag):
+// Option A projection (port-ish: preserves 3 source seams) vs Option B projection (re-architecture:
+// merged into 2 clusters with a different dependency shape).
+const optA = run(['decompose', '--modules=auth,orders,shared', '--edges=auth>shared,orders>shared,orders>auth', '--space=target']);
+const optB = run(['decompose', '--modules=api,core', '--edges=api>core', '--space=target']);
+assert('per-option: different input graphs -> different cluster counts',
+  optA.json.clusters?.length === 3 && optB.json.clusters?.length === 2,
+  `A=${optA.json.clusters?.length} B=${optB.json.clusters?.length}`);
+assert('per-option: different input graphs -> different wave schedules',
+  JSON.stringify(optA.json.waves) !== JSON.stringify(optB.json.waves),
+  `A=${JSON.stringify(optA.json.waves)} B=${JSON.stringify(optB.json.waves)}`);
+
+// --option is NOT a real axis: passing it must NOT differentiate (it is silently ignored / non-existent).
+// Same graph + different --option => identical DAG. Differentiation must come from the graph, not a flag.
+const flagA = run(['decompose', '--modules=x,y', '--edges=x>y', '--option=A']);
+const flagB = run(['decompose', '--modules=x,y', '--edges=x>y', '--option=B']);
+assert('--option flag does not differentiate (same graph -> same DAG)',
+  JSON.stringify(flagA.json.waves) === JSON.stringify(flagB.json.waves) &&
+  flagA.json.clusters?.length === flagB.json.clusters?.length,
+  `A=${JSON.stringify(flagA.json.waves)} B=${JSON.stringify(flagB.json.waves)}`);
+
+// --space provenance: round-trips into output; defaults to source.
+const spDefault = run(['decompose', '--modules=m', '--edges=']);
+const spTarget = run(['decompose', '--modules=m', '--edges=', '--space=target']);
+assert('--space defaults to source', spDefault.json.space === 'source', JSON.stringify(spDefault.json.space));
+assert('--space=target round-trips into output', spTarget.json.space === 'target', JSON.stringify(spTarget.json.space));
+
 console.log(`\n  ${pass} passed · ${fail} failed`);
 process.exit(fail > 0 ? 1 : 0);

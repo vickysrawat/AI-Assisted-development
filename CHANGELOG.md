@@ -1002,7 +1002,7 @@ Open Questions, Request Flow, Rollback, Handover, Test Cases
 
 ### Added — techspec-aspnet-mvc-jquery.md: ASP.NET MVC + jQuery overlay
 New file defines framework-specific implementation sections for the
-primary K&E stack: Controller pattern, Service interface + stub/swap
+primary stack: Controller pattern, Service interface + stub/swap
 implementation, DTO/model, View (HTML + IIFE JS + CSS), XSS safety
 analysis table, anti-forgery table, reviewer checklist.
 

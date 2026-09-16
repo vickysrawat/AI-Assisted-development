@@ -640,7 +640,23 @@ console.log('\n▶ Deploy-stub delegation integrity (_project-deploy/commands/)'
 console.log('\n▶ Decoupling guards');
 {
   // (a) No company/personal identity may ship. docs/ (case studies) + this file are exempt.
-  const DENY = ['Vivek Rawat', 'Product Engineering', 'Kirkland', 'K&E', 'kirkland.com'];
+  //     Denied terms are derived at runtime — never hardcoded — so no company/personal
+  //     literal lives in this guard itself. Sources (merged + de-duped):
+  //       • IDENTITY_DENYLIST env var (comma-separated) — for CI or extra terms
+  //       • local git identity — user.name and the domain of user.email
+  const deriveDeny = () => {
+    const terms = (process.env.IDENTITY_DENYLIST || '').split(',').map(s => s.trim());
+    try {
+      const { execSync } = require('child_process');
+      const g = k => execSync(`git config ${k}`, { cwd: ROOT, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+      const name = g('user.name');
+      const email = g('user.email');
+      if (name) terms.push(name);
+      if (email.includes('@')) terms.push(email.split('@')[1]);
+    } catch (_) { /* no git identity available — fall back to env-only */ }
+    return [...new Set(terms.filter(Boolean))];
+  };
+  const DENY = deriveDeny();
   const SCAN_DIRS  = ['skills', 'commands', '_project-deploy'];
   const SCAN_FILES = ['.claude-plugin/marketplace.json', '.claude-plugin/plugin.json',
                       '.claude-plugin/config.json', 'install.sh', 'install.ps1', 'install.cjs',
@@ -650,9 +666,13 @@ console.log('\n▶ Decoupling guards');
   const files = [...SCAN_DIRS.filter(exists).flatMap(walk), ...SCAN_FILES.filter(exists)];
   const hits = [];
   files.forEach(f => { const c = read(f); DENY.forEach(t => { if (c.includes(t)) hits.push(`${f} → "${t}"`); }); });
-  hits.length === 0
-    ? ok('no company/personal identity in shipping content')
-    : bad('company/personal identity leaked into shipping content', hits.join(' | '));
+  if (DENY.length === 0) {
+    advisory('identity leak check skipped — no denied terms resolved (set IDENTITY_DENYLIST or git user.name/user.email)');
+  } else if (hits.length === 0) {
+    ok('no company/personal identity in shipping content');
+  } else {
+    bad('company/personal identity leaked into shipping content', hits.join(' | '));
+  }
 
   // (b) Data Access Convention must be stack-conditional, not an unconditional Dapper mandate.
   ['CLAUDE.md', '_project-deploy/CLAUDE.md'].forEach(f => {

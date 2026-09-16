@@ -5,7 +5,8 @@ description: >
   different stack. The LLM is a generative AUTHOR (unlike Upgrade's orchestrator role). Resolves the
   migration posture from stack distance (port only for same-language+same-framework; any change forces
   re-architecture), presents target OPTIONS across assurance × effort × TCO (or accepts a BYO design
-  held to the same scrutiny), decomposes the work in TARGET space along a dependency DAG, and generates
+  held to the same scrutiny), decomposes the work in TARGET space along a dependency DAG (one inferred
+  projection per option, committed from the target design), and generates
   one cluster per git worktree — each gated by design-quality, a per-cluster Behavioral Assurance Level
   (BAL) and an Enterprise-Readiness Level (ERL), behind a merge gate and a completion gate.
   Triggers on: "rewrite", "port to", "translate to", "Java to .NET", "Express to Angular".
@@ -63,9 +64,9 @@ Detect source stack                  (shared detector — migration-source-detec
   → Resolve POSTURE                   (stack distance: port | re-architecture | rewrite-from-spec)
   → Integration verification          (integration-verification-spec.md — before options)
      + Oracle mode detection          (golden-master-spec.md Step 1 — feeds assurance ceiling)
-  → Present OPTIONS (assurance × effort × TCO, INCLUDING DAG per option)
-     each option: clusters · wave schedule · effort · TCO · assurance ceiling
-     APPROVE OPTIONS → selected option's DAG committed
+  → Present OPTIONS (assurance × effort × TCO, INCLUDING a per-option target-space DAG projection)
+     each option: clusters · wave schedule · effort · TCO · assurance ceiling (DAG basis: INFERRED)
+     APPROVE OPTIONS → selected option's DAG committed (re-derived + promoted to `computed` at Step 2.5)
   → Author target design documents    (design-revision-spec.md → document-orchestrator.md)
      feedback loop available          (document-feedback.md · option-change-spec.md)
      APPROVE DESIGN
@@ -117,7 +118,23 @@ authored with unverified auth schemes. The developer must resolve them before th
 - Record in `decision_log.golden_master`
 - The oracle mode determines the **assurance ceiling** shown per option (no oracle → BAL caps at C/D)
 
-Record both outputs in the checkpoint before proceeding to Step 2.
+**3. Source-context intake gate** — per `$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/source-context-intake-spec.md`.
+Before options, read the source's own documented knowledge AND source code, then author the
+**Source Context Manifest** (`docs/migrations/{ADO}/source-context-manifest.md`, from
+`$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/source-context-manifest-template.md`): source context
+files (CLAUDE.md, architecture docs, settings), every `additionalDirectories` root, the cross-cutting
+concern scan (impl, not declaration), and **full source coverage** — every `graph.json` module marked
+`mapped`/`out-of-scope`, behavior-bearing units cited to a **source** `file#line`. Then verify:
+```bash
+node "$PLUGIN_DIR/scripts/intake-verify.cjs" verify --manifest=docs/migrations/{ADO}/source-context-manifest.md \
+  --skill=rewrite --inventory=docs/.../integration-inventory.md --json
+```
+Exit 0 → record `stage_gates.intake_context=PASS` + `core.source_context` (checkpoint-ledger.cjs).
+Exit 2/3/4/5/6/7/8 → **STOP** and resolve (missing manifest · uncovered root · dangling citation ·
+PARTIAL with reachable source · unwired dependency · unaccounted module · behavior cited to a doc).
+A judge pass confirms `unwired_candidates[]` and that the cross-cutting scan found real concerns.
+
+Record all three outputs in the checkpoint before proceeding to Step 2.
 
 ---
 
@@ -128,9 +145,20 @@ Present 2–3 target options with pros/cons across **assurance ceiling × effort
 instead supply a **BYO design** (image / design doc); it is held to the **same critic scrutiny** as
 generated options (`references/byo-design.md`) — never silently accepted.
 
-**Each option now includes DAG characterisation** — run `rewrite-decompose.cjs decompose` for each
-candidate option before presenting. Show per option:
-- Cluster count and wave schedule (parallelizable vs sequential)
+**Intake gate precondition (fail-closed).** Before decomposing, confirm the intake gate is PASS —
+`decompose` must not run on unread source:
+```bash
+node "$PLUGIN_DIR/scripts/intake-verify.cjs" check-gate --ado={ADO} --json   # non-zero → STOP, finish Step 1.5
+```
+
+**Each option carries its OWN target-space DAG** — there is no target application yet, so the source
+graph must NOT be decomposed identically for every option. For **each** candidate option, author an
+**inferred target-space projection** of the source module graph — reshape it through *that option's*
+posture + stack + keep-vs-redesign decisions (a `port` ⇒ ≈ source seams; a `re-architecture` ⇒
+merge/split modules, add/remove layers) — then feed the projection to `decompose`. Different option ⇒
+different projection ⇒ genuinely different DAG. The projection is **INFERRED** at this phase (no target
+app exists); it becomes `computed` post-design (Step 2.5). Show per option:
+- Cluster count and wave schedule (parallelizable vs sequential) — **basis: INFERRED (target-space projection)**
 - Estimated effort derived from cluster structure
 - Integration approach per service (from the Integration Inventory)
 - Assurance ceiling (from oracle mode detected in Step 1.5)
@@ -147,26 +175,35 @@ candidate option before presenting. Show per option:
 - `requires:` on compliance / security / NFR-floor routes to a named human before `APPROVE OPTIONS`.
 
 ```bash
+# Per option: feed that option's target-space projection (inline nodes/edges, or a small per-option
+# graph file). Differentiation lives in the INPUT graph — there is NO --option flag.
 node "$PLUGIN_DIR/scripts/rewrite-decompose.cjs" decompose \
-  --graph=<source-graph.json> --option=<A|B|C> [--group-by-domain] --json
+  --modules=<option's target modules> --edges=<option's target edges> --space=target --json
+#   ...or: --graph=<option-{A|B|C}-target-graph.json> --space=target
+# A `port` posture is the ONE case where the target ≈ source structure, so reusing the source graph
+# (--graph=<source-graph.json>) is legitimate there and only there.
 ```
 
-After `APPROVE OPTIONS`: the selected option's DAG is **committed** — it feeds both Step 2.5
-(design documents) and Step 3 (code generation). No separate decompose step needed.
+After `APPROVE OPTIONS`: the selected option's inferred DAG is the **committed** working baseline. At
+Step 2.5, once `target-component-architecture.md` is authored, **re-derive** the committed target-space
+DAG from the finalized component inventory (basis promoted from INFERRED → `computed`); that committed
+DAG feeds Step 3 (code generation).
 
 Write `[OPTION]` and `[DECISION]` (APPROVE OPTIONS) migration log entries per `migration-log-spec.md`.
 
 ## Step 2.5 — Target design documents (new)
 
-Runs after `APPROVE OPTIONS`, before any code generation. The selected option's DAG is already
-committed — the component architecture document is built from it.
+Runs after `APPROVE OPTIONS`, before any code generation. The selected option's **inferred** target-space
+DAG (from Step 2) is the working baseline the component architecture document is authored against; the
+committed DAG is re-derived from that document below (step 5).
 
-**1. Derive the dependency graph:**
+**1. Derive the document-authoring order:**
 ```bash
 node "$PLUGIN_DIR/scripts/graph-derive-documents.cjs" \
   --spec="$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/target-design-spec.md" --json
 ```
-Exit 1 (cycle) or exit 2 (parse error) → fix the template before proceeding.
+This graph orders which of the 7 design documents to author first (a *document* DAG, not the target
+component DAG). Exit 1 (cycle) or exit 2 (parse error) → fix the template before proceeding.
 
 **2. Author all 7 design documents** via `document-orchestrator.md` (wave-scheduled, parallel
 subagents). Each agent receives only the context it needs — never the full source codebase. The
@@ -179,6 +216,17 @@ Integration Inventory is shared state passed to all agents.
 
 **4. APPROVE DESIGN** — all 7 documents must reach `Status: APPROVED` with no PARTIAL/UNVERIFIED
 integration rows remaining. Records `payload.rewrite.gate_verdicts.design_approved = true`.
+
+**5. Re-derive the committed target-space DAG.** Now that `target-component-architecture.md` is APPROVED,
+project its finalized component inventory + dependencies into a target graph and re-run `decompose` to
+produce the **authoritative** DAG that feeds Step 3 — the basis is now `computed` (no longer INFERRED):
+```bash
+node "$PLUGIN_DIR/scripts/rewrite-decompose.cjs" decompose \
+  --modules=<target components> --edges=<target deps> --space=target --json
+#   ...or --graph=<target-component-graph.json>
+```
+Record it in `payload.rewrite` as the committed DAG. If it differs materially from the Step-2 inferred
+projection, note the delta in the migration log (the design refined the estimate — expected, not an error).
 
 Write `[DECISION]` entries (per document + APPROVE DESIGN) and `[REVISION]` entries (per feedback
 loop wave) per `migration-log-spec.md`.
@@ -207,7 +255,8 @@ Use the resolved profile's tokens for every stack-specific command below — `SK
 (verification, Step 4). Never hard-code `dotnet build` / `npm run build` from memory — read them from the
 profile.
 
-Then, for each cluster, in DAG-wave order (from Step 2's committed DAG), generate the target code in its
+Then, for each cluster, in DAG-wave order (from the committed target-space DAG — re-derived at Step 2.5
+from `target-component-architecture.md`, basis `computed`), generate the target code in its
 **own git worktree** so parallel clusters cannot collide. Design-Quality is gated at **two** points,
 both verified by the shared judge (`$PLUGIN_DIR/skills/shared/judge.md`) reading only the artifact +
 rubric + ground truth — see `references/design-quality.md`:
@@ -260,6 +309,11 @@ and is persisted to the shared ledger via `scripts/checkpoint-ledger.cjs` (`set-
 
 ## Hard Rules
 
+- NEVER present options before the **source-context intake gate** is PASS (`intake-verify.cjs`) — the
+  Source Context Manifest must cover every root + every `graph.json` module (full accounting) with
+  resolving citations; `decompose` calls `check-gate` and STOPs if it is not. No design on unread source.
+- NEVER accept `PARTIAL`/`unknown` when the resolving source is reachable in a configured root
+  (`additionalDirectories`) — resolve it at intake (exit 5), never defer it.
 - NEVER present options before the Integration Inventory is complete — PARTIAL rows are advisory
   during options but the oracle mode and integration approaches must be known.
 - NEVER generate code before `APPROVE DESIGN` closes — all 7 design documents must be approved.
@@ -274,6 +328,11 @@ and is persisted to the shared ledger via `scripts/checkpoint-ledger.cjs` (`set-
   is derived from the oracle mode detected at Step 1.5 and shown per option at Step 2.
 - ALWAYS characterise the DAG (cluster count, wave schedule) per option candidate at Step 2 —
   never present options without their decomposition shape.
+- The Step-2 per-option DAG is a **target-space projection** (basis INFERRED — no target app exists
+  yet); NEVER decompose the source graph identically for every option. Only a `port` posture may reuse
+  the source structure (target ≈ source); `re-architecture`/`rewrite-from-spec` require a reshaped
+  projection. Differentiation lives in the **input graph** fed to `decompose` — there is NO `--option`
+  flag. Pass `--space=target` so the emitted DAG records its space.
 - NEVER schedule worktrees against a cyclic DAG — break the cycle first (decompose exits 11).
 - BAL is **weakest-link** on **mechanical denominators** — NEVER average dimensions or grade by judgment.
 - NEVER merge a cluster at provisional BAL D; NEVER let a B-series cluster below floor pass the

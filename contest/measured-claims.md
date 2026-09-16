@@ -15,11 +15,16 @@ projected / not-yet-evaluated) when you copy a line into a form.
 | Shared spec primitives | **47** | `ls skills/shared/*.md \| wc -l` |
 | Layered coding-rule files | **44** | `ls _project-deploy/rules/*.md \| wc -l` |
 | Governance/automation hooks | **25** | `ls _project-deploy/hooks \| wc -l` |
-| Deterministic (non-LLM) scripts | **33** | `ls scripts/*.cjs scripts/*.js \| wc -l` |
-| Test files | **23** `.test.cjs` | `ls tests/*.test.cjs \| wc -l` |
+| Deterministic (non-LLM) scripts | **34** | `ls scripts/*.cjs scripts/*.js \| wc -l` |
+| Test files | **24** `.test.cjs` | `ls tests/*.test.cjs \| wc -l` |
 | Structural validation checks passing | **300 / 0** | `node tests/validate.js` |
 | Architecture Decision Records | **64** | `ls docs/adr/*.md \| wc -l` |
-| Git commits | **65** | `git rev-list --count HEAD` |
+| Git commits | **66** | `git rev-list --count HEAD` |
+
+> Re-verified against the codebase 2026-09-16 (`node tests/validate.js` → 300 passed / 0 failed).
+> These grow over time — re-run the verify commands before final submission. Note the validator is
+> `tests/validate.js` (Node); a separate `tests/validate.py` also exists but the 300/0 figure is the
+> JS validator's.
 
 **Use for:** any entry's credibility ("built as a disciplined, tested system, not a script").
 Especially Entry 1 (governance is hook-enforced, 25 hooks) and Entry 3/4.
@@ -95,6 +100,13 @@ performance claim:
   `⚠ TODO` rows rather than inventing content. (observed in skill specs)
 - **Reversible memory** — every `/dream` run is logged and reversible via `/dream-rollback`;
   audited by `/dream-audit`. (measured: skills exist + audit trail)
+- **Claude Code-native — NOT portable to other agents** — this is a Claude Code plugin:
+  `.claude-plugin/plugin.json` manifest, 47 `SKILL.md` skills, 25 `PreToolUse`/`PostToolUse`
+  hooks, slash-command stubs, Anthropic model routing, and runtime deps on `conversation_search`
+  / `~/.claude/plugins` / session URLs. It will **not** run as-is on GitHub Copilot, Cursor, or
+  any other agent. (measured: verified against plugin.json + skill/hook counts, 2026-09-16.)
+  The *concepts* (governance gate, provenance-labeled graph, capability-airgapped agents) are
+  portable patterns; the *implementation* is not. Disclose in every entry's field 8.
 
 ---
 

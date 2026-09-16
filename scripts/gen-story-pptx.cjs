@@ -269,7 +269,7 @@ let PAGE = 0; // auto-incrementing page counter (see addSlideNumber calls) — i
     x: 0.6, y: 4.75, w: 12, h: 0.3,
     fontFace: FONT, fontSize: 11, color: C.gold,
   });
-  s.addText('Vivek Rawat  ·  July 2026  ·  ai-assisted-development plugin', {
+  s.addText('Your Company  ·  July 2026  ·  ai-assisted-development plugin', {
     x: 0.6, y: 7.05, w: 12, h: 0.25,
     fontFace: FONT, fontSize: 9, color: '7a92a8',
   });

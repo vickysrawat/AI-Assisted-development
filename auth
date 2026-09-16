@@ -1,0 +1,50 @@
+{
+  "op": "decompose",
+  "space": "target",
+  "acyclic": true,
+  "clusters": [
+    {
+      "name": "auth",
+      "modules": [
+        "auth"
+      ]
+    },
+    {
+      "name": "orders",
+      "modules": [
+        "orders"
+      ]
+    },
+    {
+      "name": "shared",
+      "modules": [
+        "shared"
+      ]
+    }
+  ],
+  "dag": [],
+  "order": [
+    "auth",
+    "orders",
+    "shared"
+  ],
+  "waves": [
+    [
+      "auth",
+      "orders",
+      "shared"
+    ]
+  ],
+  "worktree_plan": [
+    {
+      "wave": 1,
+      "clusters": [
+        "auth",
+        "orders",
+        "shared"
+      ]
+    }
+  ],
+  "cycles": [],
+  "note": "Each wave is a batch of clusters generatable in parallel worktrees (deps satisfied)."
+}

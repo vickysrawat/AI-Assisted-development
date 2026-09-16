@@ -18,6 +18,7 @@
     "commands": [
       "ado-tasks",
       "app-readiness",
+      "articulate-as-human",
       "bug",
       "checkin",
       "code-review",
@@ -66,6 +67,7 @@
       "ado-tasks",
       "app-readiness",
       "architect",
+      "articulate-as-human",
       "checkin",
       "code-review",
       "critic",

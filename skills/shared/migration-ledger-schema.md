@@ -29,7 +29,14 @@ repurpose a core field; only add.
   "created_at": "2026-09-08",
   "updated_at": "2026-09-08",
   "source": { "stack": "dotnet", "from": "6", "to": "8", "roots": ["<repo or additionalDirectories path>"] },
-  "stage_gates": { "report": "PASS", "verify": "PASS" },   // names differ per skill, shape common
+  "source_context": {              // shared intake gate — source-context-intake-spec.md (additive)
+    "manifest_path": "docs/migrations/<ado>/source-context-manifest.md",
+    "verified": true,
+    "roots_expected": ["<repo>", "<dep-A>"],
+    "modules_total": 42, "modules_mapped": 39, "modules_out_of_scope": 3, // mapped+out_of_scope==total
+    "verified_at": "2026-09-16"
+  },
+  "stage_gates": { "intake_context": "PASS", "report": "PASS", "verify": "PASS" }, // names differ per skill, shape common
   "phase_history": [ { "phase": "report", "verdict": "PASS", "at": "2026-09-08" } ],
   "decision_log": [],             // ADR / precedent refs
   "judge_verdicts": [],           // per-gate judge output (judge.md)
@@ -41,6 +48,13 @@ repurpose a core field; only add.
 `scripts/migration-source-detect.cjs`) and the chosen target version. `source.roots` (string[],
 optional, absent-tolerant) records the source root(s) the detector scanned — the repo and/or
 `additionalDirectories` paths (multi-root). Additive; a ledger without it is valid.
+
+`source_context` + `stage_gates.intake_context` are the **shared source-context intake gate**
+(`source-context-intake-spec.md`, backed by `scripts/intake-verify.cjs`) — written by all three
+skills before options/gap-risk analysis. `intake_context: "PASS"` is set only after
+`intake-verify.cjs verify` exits 0; downstream steps call `intake-verify.cjs check-gate`, which
+**re-validates** `source_context` rather than trusting the flag (`modules_mapped + modules_out_of_scope
+== modules_total`). Additive and absent-tolerant; a ledger without `source_context` is valid.
 
 **Skill-owned PAYLOAD** — each skill owns `payload.<skill>`, versioned by that skill, NOT part of the
 shared contract and opaque to the others:

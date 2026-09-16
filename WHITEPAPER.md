@@ -8,7 +8,7 @@
 |---|---|
 | **Plugin** | `ai-assisted-development` |
 | **Version at writing** | 3.20.0 |
-| **Author** | Product Engineering |
+| **Author** | Your Company |
 | **Audience** | Engineering leadership, platform/AI architects, plugin maintainers |
 | **Companion docs** | [README.md](README.md) · [DEVELOPER-GUIDE.md](DEVELOPER-GUIDE.md) · [docs/adr/](docs/adr/) (59 decision records) |
 
