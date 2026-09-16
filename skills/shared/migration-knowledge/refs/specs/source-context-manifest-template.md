@@ -8,8 +8,9 @@
     - No PARTIAL/unknown row whose source is reachable in a root ........................ exit 5
     - Every graph.json module needs a `mapped`/`out-of-scope` disposition ............... exit 7
     - Behaviour-bearing rows cite SOURCE (file#line), never a doc ....................... exit 8
-    - The Cross-cutting concern scan present + source-grounded .......................... exit 9
-      (rewrite/replatform: rows cited to implementation; upgrade may state "none").
+    - Cross-cutting scan present + EVERY row source-grounded ............................ exit 9
+      (rewrite/replatform: each row cites implementation file#line — a doc or blank fails, and one
+       grounded row does NOT cover a doc-cited/blank sibling. upgrade may state "none".)
   Citation format: PROV as `relative/path#L<line>` — repo-relative, or relative to an
   additionalDirectories root. Replace every {placeholder}; leftover {…#L} will not resolve (exit 4).
 -->

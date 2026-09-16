@@ -93,6 +93,23 @@ function tableRows(text) {
     .filter(cells => !cells.every(c => /^-*:?-*$/.test(c) || c === '')); // drop separators/blank
 }
 
+// Data rows only — excludes markdown separators AND the header row of each contiguous table block
+// (first non-separator pipe-row in a block is the header). Used where each row must stand on its own.
+function tableDataRows(text) {
+  const lines = text.split('\n');
+  const isPipe = l => l.trim().startsWith('|');
+  const isSep  = l => { const t = l.trim(); return isPipe(l) && /^[\s|:-]+$/.test(t) && t.includes('-'); };
+  const out = []; let sawHeader = false;
+  for (const l of lines) {
+    if (!isPipe(l)) { sawHeader = false; continue; }   // non-pipe line breaks the table block
+    if (isSep(l)) continue;                             // separators never count
+    if (!sawHeader) { sawHeader = true; continue; }     // first non-sep row of the block = header
+    const cells = l.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+    if (!cells.every(c => c === '')) out.push(cells);
+  }
+  return out;
+}
+
 // ── verify ───────────────────────────────────────────────────────────────────
 function opVerify() {
   const manifest = arg('manifest');
@@ -171,25 +188,26 @@ function opVerify() {
   if (behaviorDocCited.length) emit({ reason: 'behavior-cited-to-doc', rows: behaviorDocCited.map(r => r.join(' | ')) },
     [`❌ Behavior-bearing unit(s) cited to a doc, not source — cite the implementation file#line:`, ...behaviorDocCited.map(r => '   ' + r.join(' | '))], 8);
 
-  // (9) cross-cutting concern scan — must be PRESENT, and for deep-scan skills grounded in source.
-  //     Closes the "empty section passes silently" hole: an absent/blank scan is how infra behaviors
-  //     (logging · auth · tracing · error-handling · DI/interceptors) slip through unread.
+  // (9) cross-cutting concern scan — FIRST-CLASS: present, and (deep-scan skills) EVERY concern row
+  //     grounded in source. Per-row, NOT section-wide: one grounded row must not cover a doc-cited or
+  //     uncited neighbour. Independent of the exit-8 keyword list — a concern with any name is caught.
   const ccHead = text.match(/^#{1,6}[^\n]*cross[- ]cutting[^\n]*$/im);
   if (!ccHead) emit({ reason: 'cross-cutting-missing' },
     ['❌ No cross-cutting concern scan section — add a "## Cross-cutting concern scan" section (impl, not declaration).'], 9);
   const ccAfter = text.slice(ccHead.index + ccHead[0].length);
   const ccNext = ccAfter.search(/^#{1,6}\s/m);
   const ccSection = ccNext === -1 ? ccAfter : ccAfter.slice(0, ccNext);
-  const ccRows = tableRows(ccSection);
-  const ccSourceCites = citations(ccSection)
-    .filter(t => !DOC_EXT.test(t.split('#')[0]) && resolveCitation(t, roots).ok);
+  const ccData = tableDataRows(ccSection);
+  const rowGrounded = r => citations(r.join(' '))
+    .some(t => !DOC_EXT.test(t.split('#')[0]) && resolveCitation(t, roots).ok);
   const deepScan = skill === 'rewrite' || skill === 'replatform';
   if (deepScan) {
-    if (!ccRows.length) emit({ reason: 'cross-cutting-empty' },
-      [`❌ Cross-cutting concern scan is empty — ${skill} requires a deep scan (logging · auth · tracing · error-handling · DI/interceptors), each cited to implementation source.`], 9);
-    if (!ccSourceCites.length) emit({ reason: 'cross-cutting-uncited' },
-      ['❌ Cross-cutting concern scan cites no resolvable source — cite the implementation (file#line), not a declaration or doc.'], 9);
-  } else if (!ccRows.length && !/\b(none|no delta|n\/?a|not applicable)\b/i.test(ccSection)) {
+    if (!ccData.length) emit({ reason: 'cross-cutting-empty' },
+      [`❌ Cross-cutting concern scan has no concern rows — ${skill} requires a deep scan (logging · auth · tracing · error-handling · DI/interceptors), each cited to implementation source.`], 9);
+    const ungrounded = ccData.filter(r => !rowGrounded(r));
+    if (ungrounded.length) emit({ reason: 'cross-cutting-uncited', rows: ungrounded.map(r => r.join(' | ')) },
+      [`❌ ${ungrounded.length} cross-cutting concern row(s) not grounded in source — EVERY row must cite implementation (file#line), not a doc or nothing:`, ...ungrounded.map(r => '   ' + r.join(' | '))], 9);
+  } else if (!ccData.length && !/\b(none|no delta|n\/?a|not applicable)\b/i.test(ccSection)) {
     emit({ reason: 'cross-cutting-stub' },
       ['❌ Cross-cutting concern scan is an unfilled stub — record the delta, or state "none" explicitly.'], 9);
   }
@@ -235,8 +253,8 @@ function opCheckGate() {
     else if (sc.skill === 'rewrite' || sc.skill === 'replatform') {
       const after = mtext.slice(cc.index + cc[0].length);
       const nh = after.search(/^#{1,6}\s/m);
-      if (!tableRows(nh === -1 ? after : after.slice(0, nh)).length)
-        problems.push('cross-cutting concern scan empty');
+      if (!tableDataRows(nh === -1 ? after : after.slice(0, nh)).length)
+        problems.push('cross-cutting concern scan empty (no concern rows)');
     }
   }
   if (problems.length) emit({ reason: 're-validation-failed', problems }, [`❌ intake_context=PASS but re-validation failed:`, ...problems.map(p => `   ${p}`)], 11);

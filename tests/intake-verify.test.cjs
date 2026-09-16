@@ -114,6 +114,19 @@ W('infra8.md', goodManifest.replace('src/orders.js#L2', 'arch.md#L2'));
 const infra8 = run(['verify', '--manifest=infra8.md', '--skill=rewrite']);
 assert('infra concern cited to doc -> exit 8', infra8.code === 8, `code=${infra8.code} ${JSON.stringify(infra8.json)}`);
 
+// 9 — FIRST-CLASS per-row grounding: a doc-cited concern row is NOT masked by a source-cited sibling,
+//     even when its name is outside the exit-8 keyword list (the scenario that was slipping through).
+W('maskcc.md', goodManifest.replace(/## Cross-cutting concern scan[\s\S]*$/,
+  '## Cross-cutting concern scan\n| Concern | Implementation | PROV |\n| logging | request logger | src/orders.js#L2 |\n| feature-flags | toggle provider | arch.md#L1 |\n'));
+const maskcc = run(['verify', '--manifest=maskcc.md', '--skill=rewrite']);
+assert('cross-cutting doc-cited sibling not masked -> exit 9', maskcc.code === 9 && maskcc.json.reason === 'cross-cutting-uncited', `code=${maskcc.code} ${JSON.stringify(maskcc.json)}`);
+
+// 9 — a header-only table (no concern rows) is empty, not "has rows"
+W('headcc.md', goodManifest.replace(/## Cross-cutting concern scan[\s\S]*$/,
+  '## Cross-cutting concern scan\n| Concern | Implementation | PROV |\n|---|---|---|\n'));
+const headcc = run(['verify', '--manifest=headcc.md', '--skill=rewrite']);
+assert('cross-cutting header-only -> exit 9 empty', headcc.code === 9 && headcc.json.reason === 'cross-cutting-empty', `code=${headcc.code} ${JSON.stringify(headcc.json)}`);
+
 // upgrade is lenient (delta-only): an empty scan with an explicit "none" note passes
 W('upcc.md', goodManifest.replace(/## Cross-cutting concern scan[\s\S]*$/, '## Cross-cutting concern scan\nnone — no cross-cutting delta in this upgrade.\n'));
 const upcc = run(['verify', '--manifest=upcc.md', '--skill=upgrade']);

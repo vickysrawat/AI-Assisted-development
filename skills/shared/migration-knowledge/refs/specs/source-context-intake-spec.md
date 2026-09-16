@@ -53,7 +53,7 @@ not trusted. See the script's SCRIPT REVIEW header for the exit-code contract.
 ## Two-layer detection
 - Script (deterministic, `intake-verify.cjs`): root coverage (exit 3), citation resolution (exit 4),
   PARTIAL contradiction (exit 5), unwired-dependency diff (exit 6), full module accounting (exit 7),
-  behaviour-cited-to-doc (exit 8), and cross-cutting scan presence + source-grounding (exit 9). The
+  behaviour-cited-to-doc (exit 8), and cross-cutting scan presence + per-row source-grounding (exit 9). The
   script proves the scan EXISTS and is cited to source — it cannot prove it is COMPLETE.
 - Judge (at the gate): completeness. Confirms `unwired_candidates[]` semantically and — the part the
   script cannot do — that the cross-cutting scan ADDRESSED every concern class the source actually
@@ -98,5 +98,7 @@ Checks:
 - NEVER present options / produce the gap-risk report before `verify` exits 0 and the gate is recorded.
 - NEVER accept `PARTIAL` when the resolving source is reachable in a configured root.
 - EVERY graph module must be accounted for; a behavior-bearing unit MUST cite source, not a doc.
+- EVERY cross-cutting concern row must cite source (`file#line`) — per-row, not section-wide: a single
+  grounded row does NOT cover a doc-cited or blank sibling (exit 9). Cross-cutting is first-class.
 - `check-gate` re-validates — a `set-gate PASS` without a passing manifest is not honored.
 - Reuse `scanRoots()` from `multi-root-scan.md` for roots — never re-improvise root logic.

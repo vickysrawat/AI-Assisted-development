@@ -395,3 +395,31 @@ exit 9-uncited = a cross-cutting section with rows but NO resolvable source cita
 **Division of labor now explicit:** script proves the scan EXISTS + is source-cited (mechanical,
 exits 8/9); judge proves it is COMPLETE (semantic, rubric-driven). The script cannot know what
 concerns a given source *should* have — that's the rubric's job.
+
+## 2026-09-16 — ADO-9000: cross-cutting made first-class (per-row grounding, exit 9)
+
+**Bug found by user after the follow-ups landed:** exit-9's grounding check was SECTION-WIDE
+(`ccSourceCites.length` over the whole cross-cutting section). One properly source-cited row vouched
+for the entire section, so a doc-cited or uncited concern whose name was OUTSIDE the exit-8 keyword
+list rode along masked → missed. Keyword-dependence was exactly what we were trying to escape.
+
+**Fix:** rewrote the exit-9 deep-scan check to be PER-ROW. Added `tableDataRows()` helper (excludes
+markdown separators AND the header row of each contiguous table block — robust to tables with OR
+without a `|---|` separator; first non-sep pipe-row of a block = header). Every concern data row must
+now carry ≥1 resolvable SOURCE (non-doc) citation; any ungrounded row → exit 9 `cross-cutting-uncited`
+(lists offending rows). Independent of the exit-8 keyword list — a concern with any name is caught.
+check-gate keystone switched to `tableDataRows` too (header-only no longer masks as "has rows").
+
+**Layering now (final):** exit 8 = a behaviour row WITH citations that are all docs (keyword-gated,
+manifest-wide); exit 9 = cross-cutting section missing / no data rows / ANY data row not source-grounded
+(per-row, keyword-independent). Belt-and-suspenders: a doc-cited cross-cutting row is caught by exit 8
+if its name matches a keyword, else by exit 9 per-row — it cannot be missed either way.
+
+**Gotcha (header detection):** `tableRows()` keeps header rows; a header has no citation so per-row
+grounding would false-positive on it. `tableDataRows()` drops headers. Fixtures/templates here omit
+the `|---|` separator, so header detection is POSITIONAL (first pipe-row of a contiguous block),
+NOT separator-based — a separator-based rule silently failed on the no-separator goodManifest.
+
+**Verification:** `node tests/intake-verify.test.cjs` → 17 passed · 0 failed. Decisive new tests:
+`maskcc` (source-cited + doc-cited sibling, feature-flags name not in keyword set → exit 9, was exit 0
+before) and `headcc` (header-only table → exit 9 empty). gen-shared-index --check clean.
