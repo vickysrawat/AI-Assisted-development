@@ -13,6 +13,8 @@
 //   • marketplace.json must NOT embed a version string (version lives in plugin.json only)
 // Warn-only (separate doc lifecycle, not a derived copy):
 //   • *.html guide  "documents-plugin-version: X.Y.Z"  — reminder to update before release
+//   • README.md     "**Version X.Y.Z**" prose header   — reminder to update before release
+//   • (WHITEPAPER.md is an intentional point-in-time essay — deliberately NOT tracked)
 
 const fs = require('fs');
 
@@ -51,6 +53,15 @@ for (const g of guideFiles) {
   if (!h) continue;
   const m = h.match(/documents-plugin-version:\s*([0-9]+\.[0-9]+\.[0-9]+)/);
   if (m && m[1] !== VERSION) warn.push(`${g} documents v${m[1]} (plugin is ${VERSION}) — update guide content + stamp before release`);
+}
+
+// README prose header — a narrative doc (separate lifecycle, like the guides): warn-only.
+// Matches the leading "**Version X.Y.Z**" marketing header. WHITEPAPER.md is intentionally
+// a point-in-time essay and is deliberately NOT tracked here.
+const readme = read('README.md');
+if (readme) {
+  const m = readme.match(/\*\*Version\s+([0-9]+\.[0-9]+\.[0-9]+)\*\*/);
+  if (m && m[1] !== VERSION) warn.push(`README.md prose header says v${m[1]} (plugin is ${VERSION}) — update the version paragraph before release`);
 }
 
 for (const w of warn) console.warn('  ⚠ ' + w);

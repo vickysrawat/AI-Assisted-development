@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Bump the plugin version. `.claude-plugin/plugin.json` "version" is the SINGLE SOURCE OF
 // TRUTH; this writes it and propagates the one derived display copy (the CLAUDE.md label),
-// prepends a CHANGELOG stub, warns about guide staleness, and runs the drift guard. Node-only
+// prepends a CHANGELOG stub, warns about guide + README staleness, and runs the drift guard. Node-only
 // (no Python). Run from the plugin root.
 //
 //   node scripts/bump-version.js <X.Y.Z>
@@ -59,6 +59,13 @@ for (const g of guideFiles) {
   const gv = m ? m[1] : 'NONE';
   if (gv !== NEW) console.log(`  ⚠ ${g} documents v${gv} — update its content AND stamp to ${NEW} before release`);
 }
+
+// 4b. README prose-header reminder (narrative doc — not auto-stamped; WHITEPAPER excluded).
+try {
+  const rm = fs.readFileSync('README.md', 'utf8').match(/\*\*Version\s+([0-9.]+)\*\*/);
+  const rv = rm ? rm[1] : 'NONE';
+  if (rv !== NEW) console.log(`  ⚠ README.md prose header says v${rv} — update its version paragraph to ${NEW} before release`);
+} catch (e) { /* no README */ }
 
 // 5. Drift guard
 console.log('');

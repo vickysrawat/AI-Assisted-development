@@ -73,3 +73,7 @@ Rules:
 | 0060 | Migration-owned source detection (`migration-source-detect.cjs` wraps repo-detect) — detector-output home narrowed to the ledger by 0062 | Accepted |
 | 0061 | Migration skill family split (Upgrade · Rewrite · Replatform); retire `migration`/`migration-status` | Accepted |
 | 0062 | Migration family owns its source/target mode on the ledger (`source.roots` added; `mode`+`goalLoop` blocks stripped from `checkpoint-schema.md`) — completes 0061, de-couples the family from the scan-resume checkpoint | Accepted |
+| 0063 | Bundled substrate: manifest-truth guard, real-artifact tests, terminology, generated README index | Accepted |
+| 0064 | business-context.md is mandatory (❌ Red in setup-status when absent); setup-sync Step 6b actively prompts to generate it; extends ADR 0057 | Accepted |
+| 0065 | REFRESH DOMAIN: on-demand business-context refresh with before/after diff (Step 4b) and staleness tiers (6 month Amber, 12 month Red) in setup-status; extends ADR 0057 and 0064 | Accepted |
+| 0066 | Rule file refresh: deploy-time snapshots (`.snapshots/`) + `.deploy-meta.json` staleness clock + `REFRESH RULES` keyword with per-file three-way diff (A=snapshot, B=current, C=canonical); extends ADR 0059 | Accepted |

@@ -172,6 +172,67 @@ if (exists('skills/shared/business-context-severity.md')) {
   b.includes('.claude/business-context.md') ? ok('business-context-severity: project-local resolution pointer present') : bad('business-context-severity: project-local resolution pointer missing');
 }
 
+// setup-status must contain the business-context.md check (1v) so it survives edits.
+if (exists('skills/setup-status/SKILL.md')) {
+  const ss = read('skills/setup-status/SKILL.md');
+  ss.includes('business-context.md') ? ok('setup-status: business-context.md check present (1v)') : bad('setup-status: missing business-context.md check', 'Add check 1v — .claude/business-context.md presence and domain info');
+  ss.includes('SET DOMAIN') ? ok('setup-status: SET DOMAIN remediation step present') : bad('setup-status: missing SET DOMAIN remediation in business-context check');
+  ss.includes('REFRESH DOMAIN') ? ok('setup-status: REFRESH DOMAIN staleness action present') : bad('setup-status: missing REFRESH DOMAIN in business-context staleness guidance');
+  ss.includes('retrievalDate') || ss.includes('ageDays') ? ok('setup-status: business-context staleness check present') : bad('setup-status: missing staleness check in 1v', 'Add retrievalDate age check — amber ≥180 days, red ≥365 days');
+}
+
+// setup-sync Step 6b must actively prompt for SET DOMAIN when business-context.md is absent.
+if (exists('skills/setup-sync/SKILL.md')) {
+  const sync = read('skills/setup-sync/SKILL.md');
+  sync.includes('SET DOMAIN') ? ok('setup-sync: SET DOMAIN prompt present (Step 6b)') : bad('setup-sync: missing SET DOMAIN prompt', 'Add Step 6b — active business-context.md generation prompt');
+  sync.includes('REFRESH DOMAIN') || sync.includes('business-context') ? ok('setup-sync: business-context handling present') : bad('setup-sync: missing business-context handling');
+}
+
+// REFRESH DOMAIN + REFRESH RULES keywords must exist in both CLAUDE.md files.
+['CLAUDE.md', '_project-deploy/CLAUDE.md'].forEach(f => {
+  if (exists(f)) {
+    const c = read(f);
+    c.includes('REFRESH DOMAIN') ? ok(`${f}: REFRESH DOMAIN keyword handler present`) : bad(`${f}: missing REFRESH DOMAIN keyword handler`, 'Add REFRESH DOMAIN row to §0a keyword handler table');
+    c.includes('REFRESH RULES') ? ok(`${f}: REFRESH RULES keyword handler present`) : bad(`${f}: missing REFRESH RULES keyword handler`, 'Add REFRESH RULES row to §0a keyword handler table');
+  }
+});
+
+// rule-refresh.md shared spec must exist with required sections.
+if (exists('skills/shared/rule-refresh.md')) {
+  const rr = read('skills/shared/rule-refresh.md');
+  rr.includes('.snapshots') ? ok('rule-refresh: snapshot path documented') : bad('rule-refresh: missing .snapshots reference');
+  rr.includes('.deploy-meta') ? ok('rule-refresh: deploy-meta path documented') : bad('rule-refresh: missing .deploy-meta reference');
+  rr.includes('three-way') ? ok('rule-refresh: three-way diff documented') : bad('rule-refresh: missing three-way diff description');
+  rr.includes('APPROVED') ? ok('rule-refresh: APPROVED gate documented') : bad('rule-refresh: missing APPROVED gate');
+  rr.includes('conflict') ? ok('rule-refresh: conflict handling documented') : bad('rule-refresh: missing conflict handling');
+  rr.includes('deployed_rules') ? ok('rule-refresh: manifest scope-check documented') : bad('rule-refresh: missing deployed_rules scope check');
+} else {
+  bad('skills/shared/rule-refresh.md exists', 'Create the rule-refresh shared spec');
+}
+
+// setup-status must have rule staleness check (1c-ter).
+if (exists('skills/setup-status/SKILL.md')) {
+  const ss = read('skills/setup-status/SKILL.md');
+  ss.includes('deploy-meta') ? ok('setup-status: rule staleness check (1c-ter) present') : bad('setup-status: missing rule staleness check', 'Add 1c-ter reading .deploy-meta.json');
+  ss.includes('REFRESH RULES') ? ok('setup-status: REFRESH RULES action present in staleness check') : bad('setup-status: missing REFRESH RULES in staleness guidance');
+}
+
+// bootstrap must write .deploy-meta.json and .snapshots/ for rule files.
+if (exists('scripts/setup-init-bootstrap.cjs')) {
+  const bs = read('scripts/setup-init-bootstrap.cjs');
+  bs.includes('.deploy-meta.json') ? ok('bootstrap: .deploy-meta.json written at rule deploy') : bad('bootstrap: missing .deploy-meta.json write in stepDeployRules');
+  bs.includes('.snapshots') ? ok('bootstrap: .snapshots/ written at rule deploy') : bad('bootstrap: missing .snapshots/ write in stepDeployRules');
+  bs.includes('rules/.snapshots') ? ok('bootstrap: .snapshots/ in gitignore entries') : bad('bootstrap: .snapshots/ not added to GITIGNORE_BASE');
+}
+
+// business-context-generation.md must have refresh mode and diff step.
+if (exists('skills/shared/business-context-generation.md')) {
+  const gen = read('skills/shared/business-context-generation.md');
+  gen.includes('REFRESH DOMAIN') ? ok('business-context-generation: refresh mode documented') : bad('business-context-generation: missing REFRESH DOMAIN mode');
+  gen.includes('4b') ? ok('business-context-generation: diff step (4b) present') : bad('business-context-generation: missing diff step 4b for refresh mode');
+  gen.includes('project-specific') && gen.includes('preserved') ? ok('business-context-generation: project-specific entry preservation documented') : bad('business-context-generation: missing project-specific entry preservation in refresh');
+}
+
 // The verbatim-locked `legal` preset must preserve the original B1-B7 (regression safety).
 if (exists('skills/shared/business-context-presets.md')) {
   const p = read('skills/shared/business-context-presets.md');
@@ -674,13 +735,16 @@ console.log('\n▶ Decoupling guards');
     bad('company/personal identity leaked into shipping content', hits.join(' | '));
   }
 
-  // (b) Data Access Convention must be stack-conditional, not an unconditional Dapper mandate.
-  ['CLAUDE.md', '_project-deploy/CLAUDE.md'].forEach(f => {
-    const c = read(f);
-    (!/Always use \*\*Dapper/.test(c) && c.includes('- .NET:') && c.includes('- Python:'))
-      ? ok(`${f}: Data Access Convention is stack-conditional`)
-      : bad(`${f}: Data Access Convention must be stack-conditional (per-stack bullets, no unconditional Dapper mandate)`);
-  });
+  // (b) Data Access Convention in root CLAUDE.md must be stack-conditional, not an unconditional
+  // Dapper mandate. _project-deploy/CLAUDE.md intentionally omits this section — it is covered
+  // by the deployed rule files (data-access-rules.md etc.) and must not appear in the template.
+  const rootClaude = read('CLAUDE.md');
+  (!/Always use \*\*Dapper/.test(rootClaude) && rootClaude.includes('- .NET:') && rootClaude.includes('- Python:'))
+    ? ok('CLAUDE.md: Data Access Convention is stack-conditional')
+    : bad('CLAUDE.md: Data Access Convention must be stack-conditional (per-stack bullets, no unconditional Dapper mandate)');
+  !read('_project-deploy/CLAUDE.md').includes('## Data Access Convention')
+    ? ok('_project-deploy/CLAUDE.md: Data Access Convention correctly absent (covered by rule files)')
+    : bad('_project-deploy/CLAUDE.md: Data Access Convention must be removed — it duplicates deployed rule files');
 
   // (c) Stack-context fallbacks must not assume a stack.
   ['skills/icea-feature/SKILL.md', 'skills/critic/SKILL.md', 'skills/pr-describe/SKILL.md'].forEach(f => {

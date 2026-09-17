@@ -130,8 +130,9 @@ node "$PLUGIN_DIR/scripts/intake-verify.cjs" verify --manifest=docs/migrations/{
   --skill=rewrite --inventory=docs/.../integration-inventory.md --json
 ```
 Exit 0 → record `stage_gates.intake_context=PASS` + `core.source_context` (checkpoint-ledger.cjs).
-Exit 2/3/4/5/6/7/8 → **STOP** and resolve (missing manifest · uncovered root · dangling citation ·
-PARTIAL with reachable source · unwired dependency · unaccounted module · behavior cited to a doc).
+Exit 2/3/4/5/6/7/8/9 → **STOP** and resolve (missing manifest · uncovered root · dangling citation ·
+PARTIAL with reachable source · unwired dependency · unaccounted module · behavior cited to a doc ·
+cross-cutting scan missing/empty/uncited).
 A judge pass confirms `unwired_candidates[]` and that the cross-cutting scan found real concerns.
 
 Record all three outputs in the checkpoint before proceeding to Step 2.

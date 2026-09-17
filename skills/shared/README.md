@@ -12,7 +12,7 @@ or writes shared state references these files instead of inventing its own conve
 
 <!-- BEGIN GENERATED: shared-specs (scripts/gen-shared-index.cjs) — do not hand-edit -->
 
-_46 shared specs — generated from `plugin.json` → `components.shared`. Refresh with `node scripts/gen-shared-index.cjs --write`._
+_47 shared specs — generated from `plugin.json` → `components.shared`. Refresh with `node scripts/gen-shared-index.cjs --write`._
 
 | Spec | Summary (spec H1) |
 |---|---|
@@ -52,6 +52,7 @@ _46 shared specs — generated from `plugin.json` → `components.shared`. Refre
 | `phase-d-spec.md` | Phase D — Deterministic Analysis Layer — Shared Spec |
 | `plugin-path-resolution.md` | Shared spec: canonical plugin-path & stack resolution |
 | `rubric-score-schema.md` | Rubric Score Schema |
+| `rule-refresh.md` | Rule Refresh Spec |
 | `runtime-generation-spec.md` | Runtime-Generation Resolution Spec |
 | `scope-flags-spec.md` | Scope Flags Specification |
 | `secrets-scan-spec.md` | Secrets Scan — Shared Specification |

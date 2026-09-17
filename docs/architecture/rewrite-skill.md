@@ -62,6 +62,7 @@ The whole build, from surveying the site to handing over the keys:
 ```
 Detect source stack  →  Resolve POSTURE
   →  Integration verification (Integration Inventory) + oracle-mode detection   [Step 1.5, before options]
+  →  SOURCE-CONTEXT INTAKE GATE (Source Context Manifest verified; fail-closed)  [Step 1.5, before options]
   →  Present OPTIONS (assurance/effort/TCO, INCLUDING the DAG per option) + options-insight, or accept BYO
         APPROVE OPTIONS → the selected option's DAG is committed
   →  Author 7 TARGET DESIGN documents → feedback loop (revision cascade / option change) → APPROVE DESIGN
@@ -90,7 +91,9 @@ is framed until the plans are signed off:
 ```mermaid
 flowchart TB
     A["Posture resolved"] --> IV["Integration verification - Integration Inventory + oracle mode (Step 1.5)"]
-    IV --> B["Options: assurance / effort / TCO + DAG per option + options-insight - or BYO, same scrutiny"]
+    IV --> IG{"source-context intake GATE - Source Context Manifest verified (fail-closed)"}
+    IG -->|"exit 2-9: manifest gap"| IGB["STOP - fix Source Context Manifest; decompose refuses via check-gate"]
+    IG -->|"intake_context = PASS"| B["Options: assurance / effort / TCO + DAG per option + options-insight - or BYO, same scrutiny"]
     B --> AO{"APPROVE OPTIONS"}
     AO -->|"selected option's DAG committed"| TD["Author 7 target design documents (orchestrated, wave-scheduled)"]
     TD --> FB{"feedback loop - revision cascade / option change"}
@@ -151,6 +154,41 @@ In the same step the skill detects the **oracle mode** (`self-run` | `provided-u
 `decision_log.golden_master`. This mode sets the **assurance ceiling** shown per option (no oracle
 → BAL caps at C/D) — so the highest grade the finished house *could* earn is visible **before** the
 developer commits to an option, never a nasty surprise at inspection time.
+
+## 6a. Proving the survey was actually done — the source-context intake gate (Step 1.5)
+
+Surveying (§6) is only worth anything if it *really happened*. The **source-context intake gate**
+is the building inspector who refuses to price the job until the surveyor produces a signed, photo'd
+survey covering every corner of the lot — including the neighbouring properties you were given keys
+to. It is **fail-closed**: not a reminder, but a locked door. It is a *sibling of* the Step-1
+"Intake & posture" **stage** but a different thing entirely — that stage sizes up the move; this
+**gate** proves the source was actually read before any option is priced.
+
+- **The artifact — the Source Context Manifest.** Written to
+  `docs/migrations/{ADO}/source-context-manifest.md` (authored from
+  `source-context-manifest-template.md`) *before* options. Its sections: **source context files** ·
+  **additional roots** (one per `additionalDirectories` entry) · **cross-cutting concern scan**
+  (implementation, not declaration — for Rewrite this is the **deep** profile) · **full source
+  coverage** — every `graph.json` module accounted for as `mapped` or `out-of-scope`.
+- **The rules that make it real.** Every substantive row carries a `PROV: {path}#{line}` provenance
+  citation that must resolve to a real file+line; a behavior-bearing unit (business-logic /
+  b-series / integration) must cite a **source** file, not a doc; and a `PARTIAL` row is prohibited
+  when the resolving source is reachable in a configured root — you don't get to shrug at a
+  connection whose code you were handed.
+- **The lock — `scripts/intake-verify.cjs`.** `verify` produces the verdict: exit 0 records
+  `stage_gates.intake_context=PASS` + `core.source_context` on the ledger; **exits 2–9 STOP** (2
+  manifest missing · 3 root uncovered · 4 dangling citation · 5 PARTIAL with reachable source · 6
+  unwired dependency · 7 module unaccounted · 8 behavior unit cited to a doc · 9 cross-cutting scan
+  missing/empty/uncited). The keystone is `check-gate`, which re-validates from the ledger (exit 10
+  gate-not-PASS/ledger-absent · 11 re-validation failed) so a hand-set gate is never trusted — and
+  **`rewrite-decompose.cjs decompose` calls `check-gate` *first***, which is why options cannot be
+  reached until intake genuinely passes.
+- **Multi-root, by construction.** The gate's root-coverage check is driven by `source.roots` on the
+  ledger CORE (the repo plus each `additionalDirectories` entry, per the canonical
+  `skills/shared/multi-root-scan.md` contract) — an uncovered root is exit 3, resolved here at
+  intake and never deferred. See [ADR 0062](../adr/0062-migration-mode-on-ledger.md)
+  (which added `source.roots`) and, for the detector lineage,
+  [ADR 0060](../adr/0060-migration-owned-source-detection.md).
 
 ## 7. Choosing the design — options × assurance × TCO + DAG + insight, or BYO (Step 2)
 
@@ -288,13 +326,15 @@ Every gate records an **independent judge** verdict (`skills/shared/judge.md`, r
 | Script | Role |
 |---|---|
 | `migration-source-detect.cjs` | family-shared source stack detection |
+| `intake-verify.cjs` | source-context intake gate (Step 1.5): `verify` (exit 0 records `intake_context=PASS`; 2–9 STOP) · `check-gate` (re-validate from ledger; 10/11) — `decompose` calls `check-gate` first (fail-closed chain point) |
 | `rewrite-decompose.cjs` | `posture` (port/re-architecture/rewrite-from-spec) · `decompose` (acyclic DAG, exit 11 on cycle) — run per option at Step 2 |
 | `graph-derive-documents.cjs` | derives the design-document dependency graph (waves) from `target-design-spec.md` `### Dependencies` blocks (exit 1 cycle / exit 2 parse error) |
 | `strategy-resolve.cjs` | resolves the target execution profile `strategies/{target}.md` (exit 0 resolved · 2 malformed · 3 stub · 4 missing) — run at the start of generation |
 | `rewrite-bal.cjs` | `bal` (weakest-link) · `merge-gate` (exit 12) · `completion-gate` (exit 13) |
 | `checkpoint-ledger.cjs` | shared resumable ledger (`payload.rewrite`) |
 
-Knowledge-tier specs the skill reads (reference texts, not tools): `integration-verification-spec.md`,
+Knowledge-tier specs the skill reads (reference texts, not tools): `source-context-intake-spec.md`,
+`source-context-manifest-template.md`, `integration-verification-spec.md`,
 `golden-master-spec.md`, `target-design-spec.md`, `options-insight-spec.md`, `design-revision-spec.md`,
 `document-orchestrator.md`, `document-feedback.md`, `option-change-spec.md`, `migration-log-spec.md`.
 
@@ -303,6 +343,9 @@ Knowledge-tier specs the skill reads (reference texts, not tools): `integration-
 Each of these is a rule Rewrite never breaks, and each protects either the old house (your
 reference) or the integrity of the new one:
 
+- **It never presents options before the source-context intake gate is PASS** — `decompose` calls
+  `intake-verify.cjs check-gate` first and STOPs on a gap; a hand-set gate is re-validated from the
+  ledger, never trusted.
 - **It never presents options before the Integration Inventory is complete** — the oracle mode and
   each connection's approach must be known first; PARTIAL rows are advisory at options but a **hard
   block at APPROVE DESIGN**.

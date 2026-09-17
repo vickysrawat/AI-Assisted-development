@@ -86,6 +86,7 @@ The whole relocation, R1 through R5:
 ```
 Detect topology
   → R1 Intake: 6R posture + integration verification (Integration Inventory) + oracle mode
+       + SOURCE-CONTEXT INTAKE GATE (Source Context Manifest verified; fail-closed, before options)
        + TCO options (options-insight) + NFR spec + feasibility (GREEN/YELLOW/RED) → APPROVE OPTIONS
   → R1.5 Target design documents (infra + deployment primary; component delta) → feedback loop → APPROVE DESIGN
   → R2 Decompose by cloud capability (reads target-infrastructure-architecture; landing zone = Tier-0 first)
@@ -103,7 +104,9 @@ and that review can send work back upstream to the drawing board:
 
 ```mermaid
 flowchart TB
-    R1["R1 Intake - 6R posture, integration verification, oracle mode, options-insight, NFR spec"] --> AO{"APPROVE OPTIONS"}
+    R1["R1 Intake - 6R posture, integration verification, oracle mode, options-insight, NFR spec"] --> IG{"source-context intake GATE - Source Context Manifest verified (fail-closed)"}
+    IG -->|"exit 2-9: manifest gap"| IGB["STOP - fix Source Context Manifest; plan (R2) refuses via check-gate"]
+    IG -->|"intake_context = PASS"| AO{"APPROVE OPTIONS"}
     AO --> TD["R1.5 Author design documents - infra + deployment primary, component delta"]
     TD --> FB{"feedback loop - revision cascade / option change"}
     FB -->|"corrections re-author affected docs"| TD
@@ -144,6 +147,23 @@ order:
 - **Detect the oracle mode** (`golden-master-spec.md` Step 1). The source is a running on-prem app,
   so `provided-url` is the natural default; recorded in `decision_log.golden_master`, and it feeds
   R5's final check.
+- **Prove the source was actually read — the source-context intake gate (fail-closed).** Before any
+  option is priced, the skill produces a **Source Context Manifest**
+  (`docs/migrations/{ADO}/source-context-manifest.md`, from `source-context-manifest-template.md`):
+  source context files · additional roots (one per `additionalDirectories` entry) · a cross-cutting
+  concern scan (for Replatform, **infra-relevant** depth) · **full source coverage** (every
+  `graph.json` module `mapped` or `out-of-scope`). Every substantive row carries a `PROV: {path}#{line}`
+  citation that must resolve; a `PARTIAL` integration whose source is reachable in a configured root
+  is prohibited. `scripts/intake-verify.cjs verify` records `stage_gates.intake_context=PASS` +
+  `core.source_context` on exit 0 and **STOPs on exits 2–9**; the keystone is `check-gate`, which
+  re-validates from the ledger (exit 10/11) — **`replatform-plan.cjs plan` (R2) calls `check-gate`
+  first**, so decomposition cannot start until intake genuinely passes. This is a checkpoint *within*
+  the R1 stage, distinct from the broader "sizing up the move" intake work around it. Its
+  root-coverage check is driven by `source.roots` on the ledger CORE (repo + `additionalDirectories`,
+  per `skills/shared/multi-root-scan.md`) — especially relevant here, where the on-prem source is
+  often reached as a Tier-2 `additionalDirectories` root; an uncovered root is exit 3, resolved at
+  intake, never deferred. See [ADR 0062](../adr/0062-migration-mode-on-ledger.md) (which added
+  `source.roots`) and [ADR 0060](../adr/0060-migration-owned-source-detection.md).
 - **Ask the intake questions — NEVER assume.** These genuinely differ per engagement, like asking
   which city you're moving to: target cloud (Azure/AWS/GCP), target **CI/CD platform** (Azure
   DevOps / GitHub Actions / GitLab), **IaC flavor** (Bicep / Terraform / ARM / Pulumi), environment
@@ -277,6 +297,7 @@ the lifting.
 | Script | Role |
 |---|---|
 | `migration-source-detect.cjs` | family-shared source runtime/topology detection |
+| `intake-verify.cjs` | source-context intake gate (R1): `verify` (exit 0 records `intake_context=PASS`; 2–9 STOP) · `check-gate` (re-validate from ledger; 10/11) — `plan` (R2) calls `check-gate` first (fail-closed chain point) |
 | `graph-derive-documents.cjs` | derives the design-document dependency graph (waves) from `target-design-spec.md` `### Dependencies` blocks (exit 1 cycle / exit 2 parse error) — R1.5 |
 | `strategy-resolve.cjs` | resolves the app execution profile for the **verify subset** (`--tokens=BUILD,TEST_ALL,SERVE,E2E`) to build/smoke the app on the new host — R5 (exit 0 resolved · 2 malformed · 3 stub · 4 missing) |
 | `replatform-plan.cjs` | `plan` (landing-zone Tier-0 decomposition + runbooks, author-only) · `execute` (exit 14 DENIED, flag OFF) · `reconcile-gate` (exit 15) |
@@ -284,7 +305,8 @@ the lifting.
 | `checkpoint-ledger.cjs` | shared resumable ledger (`payload.replatform`) |
 | `executor-seam.md` (shared) | future-autonomy flag contract (default OFF; prod+regulated permanent human) |
 
-Knowledge-tier specs the skill reads (reference texts, not tools): `integration-verification-spec.md`,
+Knowledge-tier specs the skill reads (reference texts, not tools): `source-context-intake-spec.md`,
+`source-context-manifest-template.md`, `integration-verification-spec.md`,
 `golden-master-spec.md`, `target-design-spec.md`, `options-insight-spec.md`, `design-revision-spec.md`,
 `document-orchestrator.md`, `document-feedback.md`, `option-change-spec.md`, `migration-log-spec.md`,
 `feasibility-spec.md`.
@@ -294,6 +316,9 @@ Knowledge-tier specs the skill reads (reference texts, not tools): `integration-
 Each rule below is one Replatform never breaks — most of them exist to protect the running business
 and the sanctity of the mover/architect seam:
 
+- **It never presents options before the source-context intake gate is PASS** — `plan` (R2) calls
+  `intake-verify.cjs check-gate` first and STOPs on a gap; a hand-set gate is re-validated from the
+  ledger, never trusted.
 - **It never presents options before the Integration Inventory is complete** — re-plumbing is a
   major cloud-cost driver; PARTIAL rows are advisory at options but a **hard block at APPROVE
   DESIGN**.

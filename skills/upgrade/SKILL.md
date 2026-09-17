@@ -158,7 +158,7 @@ module gets a `mapped`/`out-of-scope` disposition, so "unchanged" is asserted, n
 node "$PLUGIN_DIR/scripts/intake-verify.cjs" verify --manifest=docs/migrations/{ADO}/source-context-manifest.md \
   --skill=upgrade --json
 ```
-Exit 0 → record `stage_gates.intake_context=PASS` + `core.source_context`. Exit 2–8 → **STOP** and
+Exit 0 → record `stage_gates.intake_context=PASS` + `core.source_context`. Exit 2–9 → **STOP** and
 resolve. The gap/risk report (Step 4) cannot be gated PASS until this is done — see Step 8.
 2. **Ground on miss/stale.** Use WebSearch to find the change from an **authoritative** source
    (official migration guide / release notes / deprecation list). Never source a breaking-change

@@ -125,6 +125,58 @@ Include in output report line:
   .claude/rules/                     {✅ / ⚠️ / ❌}   project-rules + {N stack rules} ({list of deployed files})
 ```
 
+### 1c-ter — Rule file staleness
+
+Read `.claude/rules/.deploy-meta.json` to check how long ago each rule was deployed.
+Only runs when the manifest exists (i.e. check 1c passed or found a manifest).
+
+```bash
+node -e "
+  const fs = require('fs');
+  let meta = {};
+  try { meta = JSON.parse(fs.readFileSync('.claude/rules/.deploy-meta.json', 'utf8')); } catch(e) {
+    console.log('NO_META'); process.exit(0);
+  }
+  const today = Date.now();
+  for (const [file, m] of Object.entries(meta)) {
+    const ageDays = m.deployedAt
+      ? Math.floor((today - Date.parse(m.deployedAt)) / 86400000)
+      : -1;
+    console.log(file + ' deployedAt=' + (m.deployedAt || 'unknown') +
+                ' pluginVersion=' + (m.pluginVersion || 'unknown') +
+                ' ageDays=' + ageDays);
+  }
+" 2>/dev/null
+```
+
+Per-file status:
+- `ageDays` < 180 → ✅ Green
+- 180 ≤ `ageDays` < 365 → ⚠️ Amber — over 6 months since deploy; framework patterns or security rules may be outdated:
+  ```
+  ⚠ {file} last deployed {N} days ago ({deployedAt}, plugin v{pluginVersion}).
+    Type REFRESH RULES {file} to review what has changed and apply a three-way merge.
+  ```
+- `ageDays` ≥ 365 → ❌ Red — over 12 months; rule content is likely out of date:
+  ```
+  ❌ {file} last deployed {N} days ago — over 12 months.
+    Type REFRESH RULES {file} to review and refresh.
+  ```
+- `NO_META` → ⚠️ Amber — deployed before staleness tracking was introduced; run `/setup-sync` to seed the metadata
+
+Include in output report line (one line per stale file; omit files that are ✅):
+```
+  .claude/rules/ staleness          {✅ / ⚠️ / ❌}  {all N rules current | {file}: {N} days — REFRESH RULES {file}}
+```
+
+If any file is ⚠️ or ❌, include in recommended actions:
+```
+  Type REFRESH RULES {file}   — shows three-way diff (plugin changes + your edits vs baseline),
+                                 proposes merged result, writes only on APPROVED.
+  Type REFRESH RULES           — refresh all deployed rule files one at a time.
+```
+
+---
+
 ### 1c-bis — .NET version detection freshness (v3.19.0)
 
 For .NET projects, verify the per-project version spread is present and not stale. `versions[]` is
@@ -774,6 +826,73 @@ Include in output report line:
 
 ---
 
+### 1v — Business context policy (.claude/business-context.md)
+
+```bash
+ls .claude/business-context.md 2>/dev/null && echo "EXISTS" || echo "MISSING"
+```
+
+If EXISTS, read the first line (stub check) and extract provenance metadata:
+```bash
+head -1 .claude/business-context.md 2>/dev/null
+node -e "
+  const fs = require('fs');
+  try {
+    const txt = fs.readFileSync('.claude/business-context.md', 'utf8');
+    const comment = txt.match(/<!--([\s\S]*?)-->/);
+    if (!comment) { console.log('NO_METADATA'); process.exit(0); }
+    const meta = comment[1];
+    const domain       = (meta.match(/domain=([^\s·]+)/)  || [])[1] || 'unknown';
+    const jurisdiction = (meta.match(/jurisdiction=([^\s·]+)/) || [])[1] || 'unknown';
+    const grounded     = (meta.match(/web-grounded=(true|false)/) || [])[1] || 'unknown';
+    const date         = (meta.match(/date=([^\s]+)/)     || [])[1] || '';
+    const ageDays      = date ? Math.floor((Date.now() - Date.parse(date)) / 86400000) : -1;
+    console.log('domain=' + domain + ' jurisdiction=' + jurisdiction +
+                ' web-grounded=' + grounded + ' retrievalDate=' + date +
+                ' ageDays=' + ageDays);
+  } catch(e) { console.log('READ_ERROR'); }
+"
+```
+
+Status:
+- EXISTS, no stub marker, **and** `ageDays` < 180 → ✅ Green — show `domain · jurisdiction · web-grounded · retrieved {date} ({N} days ago)`
+- EXISTS, no stub marker, **and** 180 ≤ `ageDays` < 365 → ⚠️ Amber — policy is over 6 months old; regulations may have changed:
+  ```
+  ⚠ Business context policy last grounded {N} days ago ({date}).
+    Regulatory frameworks change — type REFRESH DOMAIN to re-ground against
+    current regulations and review what has changed before approving.
+  ```
+- EXISTS, no stub marker, **and** `ageDays` ≥ 365 → ❌ Red — policy is over 12 months old; must be refreshed:
+  ```
+  ❌ Business context policy last grounded {N} days ago ({date}) — over 12 months.
+    Regulations in this domain will have changed. Type REFRESH DOMAIN to re-ground,
+    review the before/after diff, and approve the updated policy.
+  ```
+- EXISTS but first line contains `⚠ Not yet generated` → ❌ Red — stub present but policy never generated; treat as MISSING
+- EXISTS but `NO_METADATA` (comment block absent) → ⚠️ Amber — file exists but provenance cannot be verified; consider running `REFRESH DOMAIN`
+- MISSING → ❌ Red:
+  ```
+  ❌ .claude/business-context.md is absent. All review skills (security, code-review,
+    checkin, critic, app-readiness) are using the neutral B-series fallback instead of
+    a domain-tailored severity policy. Regulated-data findings will be under-scored.
+
+  To generate it:
+    Type: SET DOMAIN
+    Claude will infer your domain from the architecture docs, ask one confirmation
+    question (domain + jurisdiction), ground the B-series in cited regulatory
+    frameworks, show you the draft, and write the file only when you type APPROVED.
+
+  Prerequisite: .claude/architecture/architecture-data.md should be populated first
+    so domain inference is accurate. If it is not, run /architect before SET DOMAIN.
+  ```
+
+Include in output report line:
+```
+  business-context.md                {✅ / ⚠️ / ❌}  {domain · jurisdiction · web-grounded · retrieved {date} ({N} days) | STALE ({N} days) — type REFRESH DOMAIN | MISSING — type SET DOMAIN}
+```
+
+---
+
 ## Step 2 — Compute overall health
 
 | Count of ❌ Red | Count of ⚠️ Amber | Overall |
@@ -812,6 +931,7 @@ Include in output report line:
   .claude/graph/graph-index.md       {✅ / ❌}       {N modules, structure: flat|domain | MISSING — run /setup-init}
   knowledge graph freshness          {✅ / ⚠️}       {N/N modules current | N stale — run /graph-sync}
   graph stale flag                   {✅ / ⚠️}       {no pending refresh | stale since last git pull — run /graph-sync}
+  business-context.md                {✅ / ❌}       {domain={domain}, jurisdiction={j}, web-grounded={bool} | MISSING — type SET DOMAIN to generate}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Overall: {✅ Fully initialised | ⚠️ Partially configured | ❌ Needs initialisation}
@@ -827,6 +947,10 @@ Recommended actions:
                          .gitignore on Git, .tfignore on TFVC (plugin entries +
                          repo walk for build artifacts)
   2. Run /architect    — fixes: architecture docs + the knowledge graph (.claude/graph/)
+  8. Type SET DOMAIN      — fixes: business-context.md missing or stub (run after /architect so
+                           domain inference reads populated architecture-data.md)
+     Type REFRESH DOMAIN  — fixes: business-context.md stale (re-grounds against current
+                           regulations, shows before/after diff, writes only on APPROVED)
   6. Run /graph-sync   — fixes: knowledge graph freshness, stale flag, graph-index
   7. Run /setup-sync   — fixes: plugin version drift (provisioned < installed) —
                          re-provisions version-sensitive artifacts (hooks, shared

@@ -16,11 +16,21 @@ exact word `APPROVED`) — NOT the ICEA `APPROVE ADO-{ID}` Write Gate.
 
 ---
 
-## Step 0 — Idempotency check
+## Step 0 — Idempotency check / refresh mode detection
+
+Two entry modes:
+
+- **First-time** (`SET DOMAIN` or called from architect/setup-init with no file present):
+  proceed directly to Step 1.
+- **Refresh** (`REFRESH DOMAIN` keyword, or `SET DOMAIN` when the file already exists):
+  load the current file's B-series table as `CURRENT_TRIGGERS` before proceeding.
+  After Step 4 produces the new draft, run **Step 4b** (diff) before the APPROVED gate.
 
 If `.claude/business-context.md` exists and is populated (no `⚠ Not yet generated` marker on
-line 1), do **not** clobber it. Report it exists and offer `refresh` (re-run) or `keep`. Only
-proceed to overwrite on an explicit refresh + `APPROVED`. (Mirrors `arch-populated-detect.md`.)
+line 1) and the caller is `SET DOMAIN` (not `REFRESH DOMAIN`): report it exists and offer
+`refresh` (re-run) or `keep`. Only proceed to overwrite on an explicit refresh + `APPROVED`.
+`REFRESH DOMAIN` bypasses this prompt and goes straight to refresh — no `refresh or keep`
+question needed. (Mirrors `arch-populated-detect.md`.)
 
 ## Step 1 — Infer + confirm domain, jurisdiction, secondary sensitivities
 
@@ -80,6 +90,47 @@ Compose `.claude/business-context.md`:
 
 IDs are `B1…Bn`; length is domain-defined. This file, once present, **takes precedence** over
 the neutral fallback in `business-context-severity.md`.
+
+## Step 4b — Refresh diff (refresh mode only)
+
+Only runs when in refresh mode (i.e. `CURRENT_TRIGGERS` was loaded in Step 0).
+
+Before showing the APPROVED gate, produce a three-section diff between the current file
+and the new draft:
+
+```
+## What's changing in your business context policy
+
+### Triggers modified
+| # | Field    | Before                          | After                           |
+|---|----------|---------------------------------|---------------------------------|
+| B2 | Trigger | Old trigger text                | New trigger text (updated cite) |
+
+### Triggers added
+| # | Trigger | Why Critical | Source |
+| Bk | …      | …            | {new citation} |
+
+### Triggers removed
+| # | Trigger | Why Critical | Reason removed |
+| B5 | …      | …            | No longer in scope for {jurisdiction} |
+
+### Unchanged
+{N} triggers unchanged.
+
+### Project-specific entries
+{list — these are preserved verbatim unless you explicitly remove them}
+```
+
+Rules:
+- **Verbatim-locked entries** (e.g. legal B1–B7): show in "unchanged" unless grounding
+  produced a conflicting rewrite attempt — surface that as a warning, never silently apply it.
+- **Project-specific entries** (`(project-specific)` label): always preserved in the new
+  draft; shown under "Project-specific entries" so they are visible.
+- If nothing changed (identical B-series): say so explicitly —
+  `"No trigger changes — regulatory grounding returned the same categories. APPROVED will
+  update the retrievalDate only."`
+
+---
 
 ## Step 5 — APPROVED gate + write
 

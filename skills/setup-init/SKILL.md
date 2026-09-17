@@ -259,19 +259,13 @@ fs.writeFileSync(p, JSON.stringify(m, null, 2));
 "
 ```
 
-**2a — `init_claude_md`** (if pending):
-Run `/init` NOW. Do not describe what you are about to do — execute immediately.
-Do not read or summarise the other pending items first. `/init` analyses the codebase
-and populates `./CLAUDE.md` with project-specific content. Wait for `/init` to fully
-complete, then mark `init_claude_md` done in the manifest before reading order 2.
-
-**2b — `resolve_git_bash_paths`** (if pending):
+**2a — `resolve_git_bash_paths`** (if pending):
 Bootstrap attempted auto-detection. Check manifest `operations.gitBashPaths`
 for `gitPath`/`bashPath` values. If either is null, ask the developer to run
 `where.exe git` / `where.exe bash` and substitute the `⚠ NOT DETECTED` placeholder
 in CLAUDE.md §0b manually. Mark done when both placeholders are resolved.
 
-**2c — `verify_external_dirs`** (if pending):
+**2b — `verify_external_dirs`** (if pending):
 Check manifest `operations.externalDirScan.externalPaths`. If non-empty,
 show the paths and ask the developer to confirm they match their local checkout.
 Correct any wrong paths in `.claude/settings.local.json`. Mark done when confirmed.

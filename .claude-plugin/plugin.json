@@ -165,6 +165,7 @@
       "business-context-presets",
       "business-context-grounding",
       "business-context-generation",
+      "rule-refresh",
       "change-manifest-spec",
       "change-tier-spec",
       "dismissed-findings-reconciliation",

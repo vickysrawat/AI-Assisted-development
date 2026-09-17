@@ -35,6 +35,18 @@ the horse's mouth, or an educated guess.
 | **VERIFIED** | A fact traced to an authoritative official source (host on the allowlist in `scripts/lib/source-classifier.cjs`). |
 | **INFERRED** | A fact with no/weak source; confidence auto-lowered; the offline knowledge tier is INFERRED by default. |
 
+## Source-context intake gate
+
+The fail-closed gate every sibling runs *before* options / gap-risk to prove the source was actually
+read (not just claimed). Spec: `source-context-intake-spec.md`; script: `scripts/intake-verify.cjs`.
+
+| Term | Meaning |
+|---|---|
+| **Source Context Manifest** | The gate's artifact at `docs/migrations/{ADO}/source-context-manifest.md` (authored from `source-context-manifest-template.md`): source context files · additional roots · cross-cutting concern scan · full source coverage (every `graph.json` module `mapped`/`out-of-scope`). |
+| **Intake gate / `intake_context`** | The fail-closed ledger gate set by `intake-verify.cjs verify` (exit 0) and re-validated by `check-gate` (a hand-set gate is never trusted). **Distinct from the R1/Step-1 "Intake" *stage***: that stage sizes up the move; this *gate* proves the source was read. |
+| **PROV** | Provenance tag — every substantive manifest row carries `PROV: {path}#{line}` resolving to a real file+line; behavior-bearing units must cite a **source** file, not a doc. |
+| **`source.roots`** | Ledger CORE `string[]` — the scan roots (repo + each `additionalDirectories` entry) the gate's root-coverage check runs over; multi-root by construction ([ADR 0062](../adr/0062-migration-mode-on-ledger.md), contract `skills/shared/multi-root-scan.md`). |
+
 ## Cloud & infrastructure
 
 The words for the new premises — the building, its services, and the machinery that provisions it —
@@ -76,7 +88,7 @@ into.
 | Abbr. | Full form | In context |
 |---|---|---|
 | **ICEA** | Intent · Context · Examples · Acceptance | The plugin's feature-spec artifact; migration skills use architecture docs / NFR specs as the governance substitute. |
-| **ADR** | Architecture Decision Record | Append-only decision log under `docs/adr/` (the family split is ADR 0061). |
+| **ADR** | Architecture Decision Record | Append-only decision log under `docs/adr/` (the family split is ADR 0061; the ledger owns source/target mode incl. `source.roots` per ADR 0062). |
 | **ADO** | Azure DevOps | Work-item tracker; `ADO-{ID}` scopes the Write Gate (`APPROVE ADO-{ID}`). |
 | **SRP** | Single Responsibility Principle | Why the orchestrator stays thin (sequence + gates + checkpoint only). |
 | **Write Gate** | (not an acronym) | No source/config/IaC/runbook is written until `APPROVE ADO-{ID}`. |

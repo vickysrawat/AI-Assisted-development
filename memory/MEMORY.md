@@ -1,5 +1,54 @@
 # MEMORY.md — Project memory (dream-managed)
 
+## 2026-09-17 — Migration architecture docs refreshed for the source-context intake gate + exit-range drift
+
+**Root cause of staleness.** `docs/architecture/{upgrade,rewrite,replatform,legacy-migration,migration-glossary}.md`
+were written 2026-09-14; the 2026-09-16 refactor (commit `9532c9f`, ADR 0062) added the fail-closed
+**source-context intake gate** (`scripts/intake-verify.cjs` + `source-context-intake-spec.md` +
+Source Context Manifest) and ledger `source.roots`/`source_context` — none of which the docs
+captured. The docs' only use of "intake" was the R1/Step-1 *stage* name, never the new *gate*.
+
+**Gate mechanics (verified, for future doc/skill work).** `intake-verify.cjs verify` exits
+**0/2–9** (9 = cross-cutting scan missing/empty/uncited); `check-gate` re-validates from the ledger
+(0/10/11) so a hand-set gate isn't trusted. Per-skill fail-closed chain point: rewrite = Step 1.5,
+`rewrite-decompose.cjs decompose` calls check-gate first; replatform = R1, `replatform-plan.cjs plan`
+calls it first; upgrade = Step 3, the **report gate** is the keystone (`upgrade-checkpoint.cjs
+set-gate --gate=report` refuses unless PASS — upgrade has no options stage to guard).
+
+**Convention confirmed.** These 5 files are prose+Mermaid *explainers* (not the skill source) and
+carry a consistent extended metaphor — rewrite = building a house, replatform = relocating a
+business, upgrade = a medical visit. Match that voice when editing. `legacy-migration-skill.md`
+documents the RETIRED monolithic skill (schema 1.10) — the intake gate does not apply retroactively;
+leave it. There is **no Mermaid linter** in the repo (diagrams render on GitHub) — verify diagram
+edits manually (node ids declared before use, balanced `{}`/`[]`, intact flow direction).
+
+**Drift also found + fixed in source.** All three SKILL.md files understated the verify range as
+`2–8`; corrected to `2–9` (rewrite:133, replatform:103, upgrade:161) through the Write Gate. ADR
+0062 filename is `0062-migration-mode-on-ledger.md` (not `...-source-target-mode.md`). Verified:
+`node tests/validate.js` → 324/0; `node tests/intake-verify.test.cjs` → 17/0; all newly cited paths
+resolve.
+
+## 2026-09-16 — Plugin version single-source model + which docs are tracked vs. intentionally untracked
+
+**Convention confirmed.** `.claude-plugin/plugin.json` "version" is the SINGLE SOURCE OF TRUTH.
+Version references fall into three tiers: (1) **hard-enforced derived copies** — CLAUDE.md
+`# Plugin version:` label and CHANGELOG `[X.Y.Z]` entry (auto-propagated by
+`scripts/bump-version.js`; `marketplace.json` must carry NO version); (2) **warn-only narrative
+docs** — `guides/*.html` `documents-plugin-version:` stamps + inline `vX.Y.Z` markers, and (now)
+the `README.md` `**Version X.Y.Z**` prose header; (3) **intentionally untracked** —
+`WHITEPAPER.md` is a point-in-time essay and is deliberately NOT flagged by the guard (user
+directive). `scripts/check-version-consistency.js` is the drift guard; `bump-version.js` wraps it.
+
+**Recurring cause of drift.** `bump-version.js` only auto-writes tier 1 — guides + README only get
+a *reminder*, so they silently lag each release. Fix when re-stamping guides: also add the new
+`[X.Y.Z]` row to each guide's "What's new since 3.0.0" `<ul>` (developer-guide.html has NO such
+list — stamp-only). Re-stamping alone is dishonest per the guard's own "update content AND stamp".
+
+**Action (3.24.0→3.25.0 catch-up).** Re-stamped all 3 guides + README to 3.25.0 (added 3.25.0
+multi-root-scanner changelog rows to user- & plugin-guide), and hardened the guard + bump script
+to warn on README drift (whitepaper excluded per user). Verified: `check-version-consistency.js`
+exits 0 clean; README regex confirmed to fire on simulated drift.
+
 ## 2026-09-16 — Retired legacy `skills/command-stubs/`; deployable stubs live only in `_project-deploy/commands/`
 
 **Convention confirmed.** There are three parallel stub sets and they are NOT interchangeable:

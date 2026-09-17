@@ -68,8 +68,8 @@ Here is the whole visit at a glance — from walking in the door to walking out 
 
 ```
 Detect stack + version  →  Classify  →  Plan version path  →  Tool preflight
-  →  Web-grounded Gap + Risk analysis (INCLUDES integration verification)
-  →  Decision-grade REPORT (the gap/risk report IS Document 7 / feasibility)
+  →  Web-grounded Gap + Risk analysis (INCLUDES integration verification + SOURCE-CONTEXT INTAKE GATE)
+  →  Decision-grade REPORT (the gap/risk report IS Document 7 / feasibility) — report gate can't PASS until intake does
   →  Delta design documents (NON-EMPTY deltas only) → feedback loop → APPROVE DESIGN
         infeasibility discovered here → route to REWRITE (discovered-late false-upgrade)
   →  [if proceed] baseline TAG + branch (oracle = self-run baseline)  →  run tool per hop (1 commit/hop)
@@ -99,7 +99,9 @@ flowchart TB
     A["Classify: upgrade"] --> B["Plan version path - multi-hop LTS ladder"]
     B --> C["Tool-availability preflight"]
     C --> D["Web-grounded gap/risk + integration verification - cache-first, VERIFIED or INFERRED"]
-    D --> E["Decision-grade Gap + Risk REPORT (IS Document 7) - headline deliverable"]
+    D --> IG{"source-context intake GATE - Source Context Manifest verified (fail-closed)"}
+    IG -->|"exit 2-9: manifest gap"| IGB["report gate cannot PASS - check-gate blocks set-gate report"]
+    IG -->|"intake_context = PASS"| E["Decision-grade Gap + Risk REPORT (IS Document 7) - headline deliverable"]
     E -->|"stops here"| V["still delivered - report stands alone"]
     E -->|"developer proceeds"| DD["Delta design documents - NON-EMPTY only"]
     DD --> FB{"feedback loop"}
@@ -174,6 +176,23 @@ ones that **break** — a library with no target-version equivalent, a changed a
 exactly the symptoms the report must surface. Tier 2 verification runs via `additionalDirectories`
 where the service source is available; the Integration Inventory feeds the report's integration
 rows and its `[INTEGRATION]` log entries.
+
+And the examination is **proven, not merely claimed** — a **source-context intake gate** runs inside
+this same step. The skill writes a **Source Context Manifest**
+(`docs/migrations/{ADO}/source-context-manifest.md`, from `source-context-manifest-template.md`) with
+a `PROV: {path}#{line}` citation on every substantive row; a `PARTIAL` row is prohibited where the
+source is reachable in a configured root. Upgrade runs the **lightest** manifest profile of the three
+siblings — the cross-cutting concern scan is **delta only** and Tier-2 dependency classification is
+limited to **breaking** integrations — but **full source coverage is still required** (every
+`graph.json` module `mapped` or `out-of-scope`). `scripts/intake-verify.cjs verify --skill=upgrade`
+records `stage_gates.intake_context=PASS` + `core.source_context` on exit 0 and **STOPs on exits
+2–9**. The gate's **keystone is the report gate itself**: `upgrade-checkpoint.cjs set-gate
+--gate=report` runs `intake-verify.cjs check-gate` (exit 10/11 → non-PASS) and **refuses to record
+the report as PASS until intake passes** — since Upgrade has no "options" stage to guard, the
+LLM-authored report is where the lock lives. Root coverage is driven by `source.roots` on the ledger
+CORE (repo + `additionalDirectories`, per `skills/shared/multi-root-scan.md`); an uncovered root is
+exit 3. See [ADR 0062](../adr/0062-migration-mode-on-ledger.md) (which added `source.roots`) and
+[ADR 0060](../adr/0060-migration-owned-source-detection.md).
 
 The **Gap + Risk report** (`references/gap-risk-report.md`) is the diagnosis written up: it states
 which side of the **tool-coverage line** the project sits on, classifies each item on the
@@ -258,11 +277,13 @@ The calibrated tools on the tray, each with one job:
 | `upgrade-classify.cjs` | classify upgrade / false-upgrade / unsupported / invalid (exit contract) |
 | `upgrade-tool-preflight.cjs` | probe the stack tool (available/outdated/needs-install/unknown) |
 | `upgrade-knowledge-cache.cjs` | cache + tag grounded facts (VERIFIED/INFERRED via `lib/source-classifier.cjs`) |
+| `intake-verify.cjs` | source-context intake gate (inside Step 3): `verify` (exit 0 records `intake_context=PASS`; 2–9 STOP) · `check-gate` (re-validate from ledger; 10/11) — `set-gate --gate=report` calls `check-gate` first, so the report gate can't PASS until intake does |
 | `graph-derive-documents.cjs` | derives the (reduced) design-document dependency graph from whatever delta documents are present (exit 1 cycle / exit 2 parse error) — Step 4.5 |
 | `upgrade-orchestrate.cjs` | `plan` (baseline+branch+commit-per-hop runbook) · `verify` (vs baseline oracle) |
 | `upgrade-checkpoint.cjs` | thin adapter over `checkpoint-ledger.cjs` for `payload.upgrade` |
 
 Knowledge-tier specs the skill reads (the reference texts, not instruments):
+`source-context-intake-spec.md`, `source-context-manifest-template.md`,
 `integration-verification-spec.md`, `feasibility-spec.md`, `target-design-spec.md`,
 `design-revision-spec.md`, `document-feedback.md`, `option-change-spec.md`,
 `golden-master-spec.md`, `options-insight-spec.md` (only where version-path / hosting options
@@ -284,6 +305,10 @@ harm":
   plus baseline vitals, always before the first incision.
 - **Integration verification runs inside the diagnosis** (Step 3), not as a separate pre-options
   appointment.
+- **The report gate cannot PASS until the source-context intake gate does** — `set-gate
+  --gate=report` runs `intake-verify.cjs check-gate` first; a `PARTIAL` row whose source is reachable
+  in a configured root is never accepted. Full source coverage (every `graph.json` module) is
+  required even on the lightest upgrade profile.
 - **It authors only non-empty delta documents** — never "No change" filler that buries the real
   findings.
 - **The gap/risk report *is* the feasibility document** (Document 7) — no separate

@@ -100,7 +100,7 @@ Detect source runtime topology
    node "$PLUGIN_DIR/scripts/intake-verify.cjs" verify --manifest=docs/migrations/{ADO}/source-context-manifest.md \
      --skill=replatform --inventory=docs/.../integration-inventory.md --json
    ```
-   Exit 0 → record `stage_gates.intake_context=PASS` + `core.source_context`. Exit 2–8 → **STOP** and
+   Exit 0 → record `stage_gates.intake_context=PASS` + `core.source_context`. Exit 2–9 → **STOP** and
    resolve. Options must not be presented until this is PASS.
 5. Ask the **intake questions** (NEVER assume — these differ per engagement):
    - target cloud (Azure / AWS / GCP)

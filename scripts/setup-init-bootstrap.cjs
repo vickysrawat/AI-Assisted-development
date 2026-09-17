@@ -227,6 +227,8 @@ const GITIGNORE_BASE = [
   // S14: the module skeleton is a transient build artifact — .claude/graph/ is otherwise
   // committed, so this dotfile must be explicitly excluded.
   '.claude/graph/.module-skeleton.json',
+  // Rule refresh snapshots — canonical copies of deployed rule files; regenerable, per-machine.
+  '.claude/rules/.snapshots/',
 ];
 
 // Required Dream sections in CLAUDE.md — checked by regex, sourced from plugin template
@@ -234,8 +236,6 @@ const CLAUDE_MD_SECTIONS = [
   { id: 'write_gate',       detectRe: /^## 0\. WRITE GATE/m,         pluginHeader: '## 0. WRITE GATE'         },
   { id: 'keyword_handlers', detectRe: /^## 0a\. Keyword Handlers/m,  pluginHeader: '## 0a. Keyword Handlers'  },
   { id: 'shell_git',        detectRe: /^## 0b\. Shell/m,             pluginHeader: '## 0b. Shell'             },
-  { id: 'project_overview', detectRe: /^## 1\. PROJECT OVERVIEW/m,   pluginHeader: '## 1. PROJECT OVERVIEW'   },
-  { id: 'data_access',      detectRe: /^## Data Access Convention/m, pluginHeader: '## Data Access Convention'},
   { id: 'feature_gate',     detectRe: /^## Feature Gate/m,           pluginHeader: '## Feature Gate'          },
   { id: 'dream',            detectRe: /^# Dream/m,                   pluginHeader: '# Dream'                  },
 ];
@@ -320,17 +320,15 @@ function loadManifest() {
 function initManifest(pluginDir) {
   // needsLLMPopulation only exists in init mode; sync mode has no LLM work
   const needsLLMPopulation = MODE === 'init' ? [
-    { id: 'init_claude_md',         order: 1, skill: '/init',      status: 'pending',
-      description: 'CLAUDE.md created from template — run /init to add project-specific content' },
-    { id: 'resolve_git_bash_paths', order: 2, skill: 'interactive',status: 'pending',
-      description: 'GIT_PATH / BASH_PATH placeholders in CLAUDE.md §0b need manual resolution' },
-    { id: 'verify_external_dirs',   order: 3, skill: 'interactive',status: 'pending',
+    { id: 'resolve_git_bash_paths', order: 1, skill: 'interactive',status: 'pending',
+      description: 'GIT_PATH / BASH_PATH / TARGET_BRANCH placeholders in CLAUDE.md §0b and §2 need resolution' },
+    { id: 'verify_external_dirs',   order: 2, skill: 'interactive',status: 'pending',
       description: 'Confirm external directory paths in settings.local.json match local checkout' },
-    { id: 'generate_architecture',  order: 4, skill: 'architect',  status: 'pending',
-      description: 'Run architect skill — generates architecture docs; Step 7-2 calls graph-extract-edges.js' },
-    { id: 'build_knowledge_graph',  order: 5, skill: 'graph-sync', status: 'pending',
+    { id: 'generate_architecture',  order: 3, skill: 'architect',  status: 'pending',
+      description: 'Run architect skill — generates architecture docs + project overview in CLAUDE.md; Step 7-2 calls graph-extract-edges.js' },
+    { id: 'build_knowledge_graph',  order: 4, skill: 'graph-sync', status: 'pending',
       description: 'Run graph-sync — refines graph.json, re-runs graph-extract-edges.js for EXTRACTED edges' },
-    { id: 'deploy_rules',           order: 6, skill: 'bootstrap-phase-2', status: 'pending',
+    { id: 'deploy_rules',           order: 5, skill: 'bootstrap-phase-2', status: 'pending',
       description: 'Deployed by bootstrap Phase 2 (called from architect Step 1 after repo type detection)' },
   ] : [];
 
@@ -1506,10 +1504,7 @@ function stepClaudeMd(manifest) {
     fs.writeFileSync(tmpPath, existing, 'utf8');
     fs.renameSync(tmpPath, targetPath);
     console.log('  ✓ CLAUDE.md    : all sections present, version stamped');
-    // Check adequacy to decide whether /init is needed
-    const needsInit = !hasProjectContent(existing);
-    if (!needsInit) markLLMItemDone(manifest, 'init_claude_md', 'CLAUDE.md existed with project content');
-    markStep(manifest, 'claudeMd', { claudeMdState: 'ok', sectionsAdded: [], needsInit });
+    markStep(manifest, 'claudeMd', { claudeMdState: 'ok', sectionsAdded: [] });
     return;
   }
 
@@ -1518,7 +1513,7 @@ function stepClaudeMd(manifest) {
   const added = [];
   for (const sec of missing) {
     const content = extractSection(pluginContent, sec.pluginHeader);
-    if (content) { additions += '\n\n---\n\n' + content; added.push(sec.id); }
+    if (content) { additions += '\n\n' + content; added.push(sec.id); }
     else warn(manifest, 'Section not found in plugin CLAUDE.md: ' + sec.pluginHeader);
   }
   let newContent = existing.trimEnd() + additions + '\n';
@@ -1527,9 +1522,7 @@ function stepClaudeMd(manifest) {
   fs.writeFileSync(tmpPath, newContent, 'utf8');
   fs.renameSync(tmpPath, targetPath);
   console.log('  ✓ CLAUDE.md    : ' + added.length + ' section(s) appended');
-  const needsInit = !hasProjectContent(existing);
-  if (!needsInit) markLLMItemDone(manifest, 'init_claude_md', 'CLAUDE.md had project content before section append');
-  markStep(manifest, 'claudeMd', { claudeMdState: 'sections_appended', sectionsAdded: added, needsInit });
+  markStep(manifest, 'claudeMd', { claudeMdState: 'sections_appended', sectionsAdded: added });
 }
 
 // Repairs stale §0a cross-session recovery handlers shipped before v3.13.x.
@@ -1548,12 +1541,6 @@ function repairRecoveryHandlers(content) {
   return content;
 }
 
-function hasProjectContent(claudeMdText) {
-  // Heuristic from setup-init Step 5 Phase 1: ≥15 lines AND contains a stack keyword
-  const lines    = claudeMdText.split('\n').length;
-  const hasStack = /\.NET|Angular|Node\.js|React|Spring|Python|FastAPI|Django|Flask|Java|TypeScript|VSTO|Office/i.test(claudeMdText);
-  return lines >= 15 && hasStack;
-}
 
 function markLLMItemDone(manifest, id, description) {
   const item = (manifest.needsLLMPopulation || []).find(x => x.id === id);
@@ -1580,10 +1567,24 @@ function stepDetectGitBashPaths(manifest) {
                 || ['/usr/bin/bash', '/bin/bash', 'C:/Program Files/Git/bin/bash.exe', 'C:/Program Files/Git/usr/bin/bash.exe'].find(p => fs.existsSync(p))
                 || null;
 
-  const targetPath = path.join(PROJECT_ROOT, 'CLAUDE.md');
+  // Detect the repo's default remote branch (TARGET_BRANCH placeholder in CLAUDE.md).
+  // Try symbolic-ref first (fast, offline); fall back to `git remote show origin` (network).
+  const targetBranch =
+    tryExec(() => {
+      const ref = execSync('git symbolic-ref refs/remotes/origin/HEAD', { encoding: 'utf8' }).trim();
+      return ref.replace('refs/remotes/origin/', '');
+    }) ||
+    tryExec(() => {
+      const out = execSync('git remote show origin', { encoding: 'utf8' });
+      const m = out.match(/HEAD branch:\s*(.+)/);
+      return m ? m[1].trim() : null;
+    }) ||
+    null;
+
+  const claudePath = path.join(PROJECT_ROOT, 'CLAUDE.md');
   let substituted = false;
-  if (fs.existsSync(targetPath)) {
-    let content = fs.readFileSync(targetPath, 'utf8');
+  if (fs.existsSync(claudePath)) {
+    let content = fs.readFileSync(claudePath, 'utf8');
     let changed = false;
     if (content.includes('{GIT_PATH}')) {
       content = content.replace(/\{GIT_PATH\}/g, gitPath || '⚠ NOT DETECTED — run where.exe git and update manually');
@@ -1593,10 +1594,14 @@ function stepDetectGitBashPaths(manifest) {
       content = content.replace(/\{BASH_PATH\}/g, bashPath || '⚠ NOT DETECTED — run where.exe bash and update manually');
       changed = true;
     }
-    if (changed) { atomicWrite(targetPath, content); substituted = true; }
+    if (content.includes('{TARGET_BRANCH}')) {
+      content = content.replace(/\{TARGET_BRANCH\}/g, targetBranch || '⚠ NOT DETECTED — update manually');
+      changed = true;
+    }
+    if (changed) { atomicWrite(claudePath, content); substituted = true; }
   }
 
-  const unresolved = [!gitPath && 'GIT_PATH', !bashPath && 'BASH_PATH'].filter(Boolean);
+  const unresolved = [!gitPath && 'GIT_PATH', !bashPath && 'BASH_PATH', !targetBranch && 'TARGET_BRANCH'].filter(Boolean);
   if (unresolved.length) {
     warn(manifest, 'Path detection: could not resolve ' + unresolved.join(', '));
   }
@@ -1606,16 +1611,17 @@ function stepDetectGitBashPaths(manifest) {
   // (already resolved in a prior init)" — only stays pending when a raw placeholder or a
   // NOT DETECTED marker actually remains for the developer to fix.
   let stillUnresolved = false;
-  if (fs.existsSync(targetPath)) {
-    stillUnresolved = /\{GIT_PATH\}|\{BASH_PATH\}|NOT DETECTED — run where/.test(fs.readFileSync(targetPath, 'utf8'));
+  if (fs.existsSync(claudePath)) {
+    stillUnresolved = /\{GIT_PATH\}|\{BASH_PATH\}|\{TARGET_BRANCH\}|NOT DETECTED — (run where|update manually)/.test(fs.readFileSync(claudePath, 'utf8'));
   }
   if (!stillUnresolved) {
-    markLLMItemDone(manifest, 'resolve_git_bash_paths', 'no unresolved git/bash placeholders remain in CLAUDE.md');
+    markLLMItemDone(manifest, 'resolve_git_bash_paths', 'no unresolved git/bash/branch placeholders remain in CLAUDE.md');
   }
 
-  console.log('  ✓ git/bash     : git=' + (gitPath ? path.basename(gitPath) : 'NOT FOUND')
-    + ', bash=' + (bashPath ? path.basename(bashPath) : 'NOT FOUND'));
-  markStep(manifest, 'gitBashPaths', { gitPath, bashPath, substituted, unresolved });
+  console.log('  ✓ git/bash/branch: git=' + (gitPath ? path.basename(gitPath) : 'NOT FOUND')
+    + ', bash=' + (bashPath ? path.basename(bashPath) : 'NOT FOUND')
+    + ', branch=' + (targetBranch || 'NOT FOUND'));
+  markStep(manifest, 'gitBashPaths', { gitPath, bashPath, targetBranch, substituted, unresolved });
 }
 
 // ── P: printSummary ───────────────────────────────────────────────────────────────
@@ -1882,6 +1888,8 @@ function stepDeployRules(manifest) {
   atomicWrite(hashesPath, hashLines.join('\n') + (hashLines.length ? '\n' : ''));
 
   // _deploy-manifest.json — audit trail (overwrite is otherwise silent)
+  const deployedAt   = new Date().toISOString().slice(0, 10);
+  const pluginVer    = (() => { try { return JSON.parse(fs.readFileSync(path.join(PLUGIN_DIR, '.claude-plugin', 'plugin.json'), 'utf8')).version || 'unknown'; } catch(e) { return 'unknown'; } })();
   atomicWrite(path.join(destDir, '_deploy-manifest.json'), JSON.stringify({
     threshold: THRESHOLD,
     mode: PER_PROJECT ? 'per-project' : 'repo-wide',
@@ -1891,7 +1899,28 @@ function stepDeployRules(manifest) {
     scoped_paths: Object.keys(scopedPaths).length ? scopedPaths : undefined,
     near_miss: nearMiss,
     repo_type: state.repo_type || null,
+    deployed_at: deployedAt,
+    plugin_version: pluginVer,
   }, null, 2));
+
+  // .claude/rules/.snapshots/ — canonical snapshot of each deployed rule file at deploy time.
+  // Used by REFRESH RULES to reconstruct A (original) for three-way diff:
+  //   A = snapshot (what was deployed), B = current file (may have dev edits), C = plugin canonical.
+  // Snapshots are gitignored; skipped_developer_edited files keep their prior snapshot.
+  const snapshotsDir = path.join(destDir, '.snapshots');
+  fs.mkdirSync(snapshotsDir, { recursive: true });
+  for (const file of deployed) {
+    const src = path.join(rulesDir, file);
+    try { fs.copyFileSync(src, path.join(snapshotsDir, file)); } catch(e) {}
+  }
+
+  // .claude/rules/.deploy-meta.json — per-file deploy timestamp + plugin version for staleness check.
+  const metaPath = path.join(destDir, '.deploy-meta.json');
+  let meta = {};
+  try { meta = JSON.parse(fs.readFileSync(metaPath, 'utf8')); } catch(e) {}
+  for (const file of deployed)      { meta[file] = { deployedAt, pluginVersion: pluginVer }; }
+  for (const file of skippedEdited) { if (!meta[file]) meta[file] = { deployedAt, pluginVersion: pluginVer }; }
+  atomicWrite(metaPath, JSON.stringify(meta, null, 2));
 
   if (DRYRUN && dryPlan.length) {
     console.log('  ℹ per-project rules DRY-RUN (no scoped files written):');

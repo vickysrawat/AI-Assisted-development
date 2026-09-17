@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- documents-plugin-version: 3.24.0 -->
+<!-- documents-plugin-version: 3.25.0 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -370,7 +370,7 @@
   <div class="hero-grid"></div>
   <div class="hero-glow"></div>
   <div class="hero-content">
-    <div class="hero-tag" style="margin-bottom:12px;">Claude Code Plugin · v3.24.0</div>
+    <div class="hero-tag" style="margin-bottom:12px;">Claude Code Plugin · v3.25.0</div>
     <h1>ai-assisted-<em>development</em></h1>
     <p class="sub">
       ICEA-driven development workflow for distributed .NET · Angular · Node.js teams.
@@ -378,7 +378,7 @@
       and guards code quality with scoped rules — all inside Claude Code.
     </p>
     <div class="hero-badges">
-        <span class="badge badge-gold">v3.24.0</span>
+        <span class="badge badge-gold">v3.25.0</span>
       <span class="badge badge-blue">.NET 8 / 10</span>
       <span class="badge badge-cyan">Angular 17+</span>
       <span class="badge badge-cyan">Java / Spring Boot</span>
@@ -393,6 +393,7 @@
 <section style="max-width:1100px;margin:24px auto 0;padding:16px 20px;background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #f59e0b;border-radius:8px;font-size:14px;line-height:1.6;">
   <strong style="color:#0f172a;">What's new since 3.0.0</strong>
   <ul style="margin:8px 0 0;padding-left:20px;color:#334155;">
+    <li><strong>3.25.0</strong> — <strong>Multi-root scanners &amp; knowledge graph (<code>additionalDirectories</code>).</strong> New shared spec <code>skills/shared/multi-root-scan.md</code> makes scan roots = repo root + the curated <code>additionalDirectories</code> dependency repos. The knowledge graph (<code>module-derive.cjs</code> / <code>graph-extract-edges.js</code>), <code>explain</code>, <code>icea-feature</code>, and <code>update-arch</code> are dependency-aware by default; the heavy scanners (<code>security</code>, <code>code-review</code>, <code>app-readiness</code>) stay repo-only unless invoked with <code>--with-deps</code>. The Write Gate now requires per-file confirmation for any write resolving <strong>outside the repo root</strong> — un-blanketable by <code>APPROVE ALL</code> (<a href="docs/migrations/033-3.25.0.md">migration 033</a>).</li>
     <li><strong>3.24.0</strong> — <strong>Flag commands prompt when invoked bare.</strong> A new universal convention (<code>skills/shared/flag-prompt-spec.md</code>) resolves a contradiction between <code>scope-flags-spec.md</code> and <code>interactive-menu-spec.md</code> that let <code>/code-review</code> and <code>/security-review</code> skip their scope menu. Every flag-taking command now prompts on a bare invocation with the previous default pre-selected as <em>recommended</em>; <strong>CI / non-interactive runs never prompt</strong> and fall back to the documented default, so gates and pipelines are unchanged.</li>
     <li><strong>3.23.0</strong> — <code>icea-floor</code> hook refresh: the block message now names the <code>/bug</code> path (not just <code>/icea-feature</code>), PowerShell-port exemption parity + ASCII-only strings, and a loud, justification-required, audited <code>SKIP_ICEA_FLOOR</code> escape hatch (mirrors <code>SKIP_FINDINGS_GATE</code>).</li>
     <li><strong>3.22.0</strong> — New <code>/knowledge-freshness</code> skill (EPIC ADO-9004): a deterministic, no-network validator (<code>check</code>) + gated web-grounded <code>refresh</code> keeps the migration family's offline INFERRED knowledge tier trustworthy.</li>
@@ -2625,7 +2626,7 @@ skills/&lt;skill&gt;/SKILL.md and execute it from Step 0 to the end.</pre></div>
 </div>
 
 <footer>
-  <span>ai-assisted-development · Claude Code Plugin · v3.24.0</span>
+  <span>ai-assisted-development · Claude Code Plugin · v3.25.0</span>
   <span>Your Company</span>
 </footer>
 

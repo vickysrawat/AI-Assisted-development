@@ -1095,6 +1095,25 @@ silently process or display regulated/confidential data or regulated individual 
 
 ---
 
+## Step — Project overview · thin caller
+
+After the architecture docs are populated and before handoff, write a 1–2 sentence project
+summary to `## 1. PROJECT OVERVIEW` in `./CLAUDE.md`. This is the only project-specific
+content that belongs in CLAUDE.md — all structure, patterns, and conventions live in
+`.claude/architecture/` and `.claude/rules/`.
+
+Derive the summary from the codebase read already in context: project name, what it does,
+primary technology. Maximum 2 sentences. No lists, no structure, no conventions.
+
+**Idempotency:** If the section already contains real content (more than the bare heading),
+offer `refresh` or `keep` — never clobber.
+
+Write directly to `./CLAUDE.md` by replacing the `## 1. PROJECT OVERVIEW` heading line and
+the blank line that follows it with the heading + the 1–2 sentence summary. No APPROVED gate
+is required (this is orientation context, not source code or config).
+
+---
+
 ## Step — Business context (domain policy) · thin caller
 
 After the architecture docs are populated (so `architecture-data.md` is available) and before
