@@ -27,9 +27,28 @@ Codebase Orientation step. If that file is missing, fall back to the project
 defaults below.
 
 **Default layers (used only when architecture.md is absent — it overrides this):**
-- Layers: backend · frontend · middleware (the actual stack is read from
-  `architecture.md`; common combinations include .NET/Angular/Node, Spring Boot,
-  and Python FastAPI/Django/Flask)
+
+When `architecture.md` is absent, derive active layers from `.claude/dream-init-state.json`:
+
+```bash
+node -e "
+try {
+  const s = JSON.parse(require('fs').readFileSync('.claude/dream-init-state.json','utf8'));
+  console.log(JSON.stringify(s.detected_stacks || []));
+} catch(_) { console.log('[]'); }
+"
+```
+
+Map detected stacks to layers:
+- `dotnet`, `aspnet-framework`, `spring-boot`, `python-fastapi`, `python-django`,
+  `python-flask`, `nodejs` (sole stack) → `backend`
+- `angular`, `react` → `frontend`
+- `nodejs` alongside another backend stack → `middleware` (service tier)
+- Always include: `database`, `qa`, `infra`
+
+If `dream-init-state.json` is also absent or `detected_stacks` is empty, fall back to
+the abstract defaults: `backend · frontend · middleware · database · qa · infra`.
+
 - Tracking: Azure DevOps — Epic → Feature → User Story → Task hierarchy
 - Branch: `feature/ADO-[ID]-short-description`
 - Commit: `[ADO-ID] Short description of change`

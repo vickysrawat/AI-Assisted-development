@@ -7,24 +7,24 @@
 
 Output this first — one row per task:
 
-> The rows below are **an example for one stack (Angular + .NET + Node.js)**. Substitute
-> the actual layers/frameworks from `architecture.md` — do not emit these literally.
+> Substitute the actual layer names, tags, and prefixes from the resolved stack in
+> `architecture.md`. The placeholders below show the structure — do not emit them literally.
 
 ```
 ADO #[ID] — [Feature Name] — Task Breakdown
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#   Layer     Title                                    Tags         Est
+#   Layer              Title                                    Tags           Est
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1   Angular   [FE] ComponentName — AC-F1 behaviour    fe;angular   4h
-2   Angular   [FE] Unit tests — ComponentName          fe;tests     2h
-3   .NET      [BE] ControllerName — AC-F1 endpoint    be;dotnet    3h
-4   .NET      [BE] Service + Repository — AC-F1       be;dotnet    4h
-5   .NET      [BE] Unit + integration tests            be;tests     3h
-6   Node.js   [SVC] ServiceName — AC-F1 logic         svc;nodejs   3h
-7   Node.js   [SVC] Jest tests — ServiceName           svc;tests    2h
-8   Database  [DB] Migration — TableName changes      db           2h
-9   QA        [QA] Test cases — Story #[ID]           qa           3h
-10  Infra     [INFRA] Pipeline config changes         infra        1h
+1   {frontend-layer}   [FE] ComponentName — AC-F1 behaviour    fe;{fe-tag}    4h
+2   {frontend-layer}   [FE] Unit tests — ComponentName          fe;tests       2h
+3   {backend-layer}    [BE] ControllerName — AC-F1 endpoint    be;{be-tag}    3h
+4   {backend-layer}    [BE] Service + Repository — AC-F1       be;{be-tag}    4h
+5   {backend-layer}    [BE] Unit + integration tests            be;tests       3h
+6   {service-layer}    [SVC] ServiceName — AC-F1 logic         svc;{svc-tag}  3h
+7   {service-layer}    [SVC] Tests — ServiceName                svc;tests      2h
+8   Database           [DB] Migration — TableName changes      db             2h
+9   QA                 [QA] Test cases — Story #[ID]           qa             3h
+10  Infra              [INFRA] Pipeline config changes         infra          1h
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
@@ -68,14 +68,16 @@ Blocks:     [Task N — title, or "none"]
 
 ## Naming Conventions
 
-| Layer | Prefix | Example |
+Use the layer names from the resolved stack. The prefixes below are fixed regardless of stack.
+
+| Layer | Prefix | Example (substitute your actual layer name) |
 |---|---|---|
-| Angular component | `[FE]` | `[FE] UserFilterComponent — AC-F1 filter behaviour` |
-| Angular tests | `[FE]` | `[FE] Unit tests — UserFilterComponent` |
-| .NET controller/service | `[BE]` | `[BE] UsersController — AC-F1 GET endpoint` |
-| .NET tests | `[BE]` | `[BE] xUnit tests — UserFilterService` |
-| Node.js service | `[SVC]` | `[SVC] NotificationService — AC-F2 email trigger` |
-| Node.js tests | `[SVC]` | `[SVC] Jest tests — NotificationService` |
+| Frontend component | `[FE]` | `[FE] UserFilterComponent — AC-F1 filter behaviour` |
+| Frontend tests | `[FE]` | `[FE] Unit tests — UserFilterComponent` |
+| Backend controller/service | `[BE]` | `[BE] UsersController — AC-F1 GET endpoint` |
+| Backend tests | `[BE]` | `[BE] Tests — UserFilterService` |
+| Service / middleware tier | `[SVC]` | `[SVC] NotificationService — AC-F2 email trigger` |
+| Service / middleware tests | `[SVC]` | `[SVC] Tests — NotificationService` |
 | DB migration | `[DB]` | `[DB] Migration — add FilterPresets table` |
 | QA test cases | `[QA]` | `[QA] Test cases — ADO #1847 user filter` |
 | Pipeline / config | `[INFRA]` | `[INFRA] Pipeline — add ICEA status gate` |
@@ -84,19 +86,20 @@ Blocks:     [Task N — title, or "none"]
 
 ## Rough Effort Guidelines
 
-Use these as starting ranges — flag that actual estimates need dev review:
+Use these as starting ranges — flag that actual estimates need dev review.
+Ranges apply regardless of the specific frontend/backend framework.
 
 | Task Type | Typical Range |
 |---|---|
-| Angular new component (simple) | 3–5h |
-| Angular new component (complex, with state) | 6–10h |
-| Angular unit tests | 1–3h |
-| .NET new endpoint (thin controller) | 2–4h |
-| .NET service + repo logic | 3–6h |
-| .NET unit + integration tests | 2–4h |
-| Node.js service (simple) | 2–4h |
-| Node.js service (complex, external calls) | 4–8h |
-| Node.js Jest tests | 1–3h |
+| Frontend — new component (simple) | 3–5h |
+| Frontend — new component (complex, with state) | 6–10h |
+| Frontend — unit tests | 1–3h |
+| Backend — new endpoint (thin controller/handler) | 2–4h |
+| Backend — service + repository/data-access logic | 3–6h |
+| Backend — unit + integration tests | 2–4h |
+| Service / middleware — simple logic | 2–4h |
+| Service / middleware — complex (external calls, orchestration) | 4–8h |
+| Service / middleware — tests | 1–3h |
 | DB migration (simple column/index) | 1–2h |
 | DB migration (new table, relationships) | 2–4h |
 | QA test case authoring | 2–4h |

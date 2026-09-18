@@ -47,7 +47,9 @@ paths: ["**/*"]
 - Always Single responsibility principle
 - Keep methods small
 - Prioritize simplicity
-- Do not assume and over complicate. 
+- Do not assume and over complicate.
+- Add comments for whole method on what it does, that can be understood by non technical person. 
+- For important sections of the code, provide comments that can be understood by non technical person 
 
 ## Script execution transparency
 

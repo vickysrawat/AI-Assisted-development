@@ -18,8 +18,8 @@ who has not read the ICEA — enough context to understand without being a novel
 ---
 
 ### Changes by Layer
-> One section per active layer from architecture.md. The headers below are an example
-> for an Angular/.NET/Node.js stack — rename them to your project's actual layers.
+> One section per active layer from architecture.md — use the actual layer names from
+> the resolved stack. Do not emit placeholder names literally.
 
 #### [Frontend layer] ([list component/view files changed])
 - [File]: [What it implements — reference AC]

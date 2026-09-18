@@ -56,7 +56,7 @@ order before critiquing — never guess a backend, frontend, or ORM:
    this run.
 
 Critique against the resolved stack only — do not flag artefacts for deviating from
-.NET/Angular conventions unless the resolved stack is .NET/Angular.
+conventions of a stack that differs from the resolved stack.
 
 ## Business context sensitivity
 

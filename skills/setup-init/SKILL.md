@@ -259,13 +259,20 @@ fs.writeFileSync(p, JSON.stringify(m, null, 2));
 "
 ```
 
-**2a — `resolve_git_bash_paths`** (if pending):
+**2a — `init_claude_md`** (if pending):
+Run `/init` NOW. Do not describe what you are about to do — execute immediately.
+Do not read or summarise the other pending items first. `/init` analyses the codebase
+and populates `./CLAUDE.md` with project-specific content (Common Commands, build, test,
+lint). Wait for `/init` to fully complete, then mark `init_claude_md` done in the manifest
+before reading order 2.
+
+**2b — `resolve_git_bash_paths`** (if pending):
 Bootstrap attempted auto-detection. Check manifest `operations.gitBashPaths`
 for `gitPath`/`bashPath` values. If either is null, ask the developer to run
 `where.exe git` / `where.exe bash` and substitute the `⚠ NOT DETECTED` placeholder
 in CLAUDE.md §0b manually. Mark done when both placeholders are resolved.
 
-**2b — `verify_external_dirs`** (if pending):
+**2c — `verify_external_dirs`** (if pending):
 Check manifest `operations.externalDirScan.externalPaths`. If non-empty,
 show the paths and ask the developer to confirm they match their local checkout.
 Correct any wrong paths in `.claude/settings.local.json`. Mark done when confirmed.
@@ -321,7 +328,7 @@ If output is `ASK`:
 
 ---
 
-### Step 3 — Analysis LLM work (manifest items order 4–5)
+### Step 3 — Analysis LLM work (manifest items order 4–7)
 
 **3a — `generate_architecture`** (if pending):
 ```
@@ -340,12 +347,87 @@ the CLAUDE.md `Domain:` line + dream-init-state.json `domain`).
 ```
 Wait for architect to complete. Mark `generate_architecture` done in manifest.
 
-**3b — `build_knowledge_graph`** (if pending):
+**3b — `cleanup_claude_md`** (if pending):
+
+Run the CLAUDE.md cleanup pass. This step routes the project-specific sections that
+`/init` wrote into CLAUDE.md to the correct rule files now that Bootstrap Phase 2 has
+deployed them. Execute the following sub-steps in order:
+
+**3b-i — Read and classify**
+
+Read `./CLAUDE.md`. Identify every section that was added by `/init` (i.e. sections
+whose headings are NOT in the plugin-managed list below). Classify each `/init` section
+by its content into one of these routing targets:
+
+| Content type | Target file |
+|---|---|
+| C# / .NET / ASP.NET coding conventions, patterns | `.claude/rules/csharp-dotnet-rules.md` |
+| Angular component / service / module conventions | `.claude/rules/angular-rules.md` |
+| React component / hook conventions | `.claude/rules/react-ecosystem-rules.md` |
+| Node.js / TypeScript / Express / Fastify / NestJS conventions | `.claude/rules/nodejs-typescript-rules.md` |
+| Java / Spring coding conventions | `.claude/rules/java-rules.md` |
+| Python / FastAPI / Django / Flask conventions | `.claude/rules/python-rules.md` |
+| Data access, SQL, ORM, repository patterns | `.claude/rules/data-access-rules.md` |
+| General design, project conventions, testing, cross-cutting | `.claude/rules/project-rules.md` |
+| Architecture overview, key files, project structure | **DISCARD** — architect owns these |
+
+Plugin-managed sections (never route, never remove):
+`## 0. WRITE GATE`, `## 0a.`, `## 0b.`, `## 1. PROJECT OVERVIEW`,
+`## 2. AZURE DEVOPS`, `## 3. DESIGN PHILOSOPHY`, `## 4. MODEL ROUTING`,
+`## Data Access Convention`, `## Feature Gate`, `## Common Commands` (keep in CLAUDE.md).
+
+**3b-ii — Show routing table and confirm**
+
+Print a routing summary before writing anything:
+
+```
+📋 CLAUDE.md cleanup — proposed routing:
+  "Section Title"  →  .claude/rules/csharp-dotnet-rules.md
+  "Section Title"  →  .claude/rules/project-rules.md
+  "Section Title"  →  DISCARD (architecture content)
+  ...
+
+Reply YES to apply, or SKIP to leave CLAUDE.md unchanged.
+```
+
+Wait for the developer to reply. If `SKIP`, mark `cleanup_claude_md` done and move on.
+
+**3b-iii — Write to rule files**
+
+For each routed section:
+1. Check the target rule file exists in `.claude/rules/` (deployed by Bootstrap Phase 2).
+   If the specific target does not exist, fall back to `.claude/rules/project-rules.md`.
+   If neither exists, discard with a warning.
+2. Append to the end of the target file under this marker (create the marker if absent):
+
+```markdown
+
+---
+
+## Project-Specific Conventions
+
+<!-- Added by /setup-init cleanup pass from /init output -->
+{section content here}
+```
+
+If the `## Project-Specific Conventions` marker already exists in the file, append the
+content inside it — do not add a second marker.
+
+**3b-iv — Strip from CLAUDE.md**
+
+Remove all routed (and discarded) `/init` sections from `./CLAUDE.md`. The result must
+contain only: plugin-managed sections + `## Common Commands`.
+
+Mark `cleanup_claude_md` done in manifest.
+
+---
+
+**3c — `build_knowledge_graph`** (if pending):
 
 > **ADR 0056 (v3.14+):** graph generation is now split into two sequential steps:
 > graph-create (initial build from the module skeleton) then graph-sync (LLM refinement).
 
-**Step 3c — graph-create (initial graph generation):**
+**Step 3c-i — graph-create (initial graph generation):**
 ```
 Read .claude/plugin-path.txt to get PLUGIN_DIR (if absent, use §1a resolver), then
 Read $PLUGIN_DIR/skills/graph-create/SKILL.md and execute it in full.
@@ -356,7 +438,7 @@ graph-index.md + per-module detail files.
 Wait for graph-create to complete. Confirm `.claude/graph/graph.json` and
 `.claude/graph/graph-index.md` exist.
 
-**Step 3b — graph-sync (LLM refinement, authoritative final pass):**
+**Step 3c-ii — graph-sync (LLM refinement, authoritative final pass):**
 ```
 Read .claude/plugin-path.txt to get PLUGIN_DIR (if absent, use §1a resolver), then
 Read $PLUGIN_DIR/skills/graph-sync/SKILL.md and execute it in full.

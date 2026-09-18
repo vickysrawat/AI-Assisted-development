@@ -35,8 +35,8 @@ order before proceeding — never guess a backend, frontend, or ORM:
    - state the stack inline for this one run (backend / frontend / middleware / auth /
      tracking) so ICEA drafting can proceed.
 
-All stack-specific acceptance criteria derive from the resolved stack — do not draft
-.NET/Angular-specific ACs unless the resolved stack is .NET/Angular.
+All stack-specific acceptance criteria derive from the resolved stack only — do not
+apply patterns or conventions from any stack that differs from the resolved stack.
 
 ## Business context severity
 

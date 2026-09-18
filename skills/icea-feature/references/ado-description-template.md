@@ -67,15 +67,16 @@ Scenario 5 — Permission Boundary
 
 ## Task Breakdown (generate after ADO description)
 
-For each AC, generate tasks using this naming convention (one section per active layer —
-the rows below are an example for an Angular/.NET/Node.js stack):
+For each AC, generate tasks using this naming convention (one section per active layer
+derived from the resolved stack in architecture.md — do not emit these placeholder
+names literally; substitute the actual layer names, prefixes, and tags for this project):
 
 | Layer | Task Title | Tags |
 |---|---|---|
-| Angular | [FE] ComponentName — AC-F1 behaviour | frontend; angular |
-| Angular | [FE] Unit tests — ComponentName | frontend; tests |
-| .NET | [BE] ControllerName — AC-F1 endpoint | backend; dotnet |
-| .NET | [BE] Unit + integration tests | backend; tests |
-| Node.js | [SVC] ServiceName — AC-F1 logic | service; nodejs |
+| {frontend-layer} | [FE] ComponentName — AC-F1 behaviour | frontend; {fe-tag} |
+| {frontend-layer} | [FE] Unit tests — ComponentName | frontend; tests |
+| {backend-layer} | [BE] ControllerName — AC-F1 endpoint | backend; {be-tag} |
+| {backend-layer} | [BE] Unit + integration tests | backend; tests |
+| {service-layer} | [SVC] ServiceName — AC-F1 logic | service; {svc-tag} |
 | Database | [DB] Migration — TableName changes | database |
 | QA | [QA] Test cases — Story #XXXX | qa |

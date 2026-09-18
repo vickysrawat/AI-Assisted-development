@@ -100,3 +100,217 @@ scenarios:
       triggered: true
       contains:
         - "dream_init_plugin_version"
+
+  # ── cleanup_claude_md step (order 5) ──────────────────────────────────────
+
+  - id: cleanup-shows-routing-table-before-writing
+    description: "Must show a routing table and ask YES/SKIP before writing anything"
+    input: |
+      Run the cleanup_claude_md step. CLAUDE.md contains a '## C# Coding Conventions'
+      section and a '## Angular Style Guide' section added by /init.
+    expect:
+      triggered: true
+      contains:
+        - "csharp-dotnet-rules.md"
+        - "angular-rules.md"
+        - "YES"
+        - "SKIP"
+      not_contains:
+        - "Written"
+        - "Appended"
+
+  - id: cleanup-csharp-routes-to-dotnet-rules
+    description: "C# / .NET conventions must route to csharp-dotnet-rules.md"
+    input: |
+      Run the cleanup_claude_md step. CLAUDE.md has a '## C# Coding Standards' section
+      with content about async/await patterns and nullable reference types.
+      .claude/rules/csharp-dotnet-rules.md exists.
+    expect:
+      triggered: true
+      contains:
+        - "csharp-dotnet-rules.md"
+      not_contains:
+        - "project-rules.md"
+        - "DISCARD"
+
+  - id: cleanup-angular-routes-to-angular-rules
+    description: "Angular component and module conventions must route to angular-rules.md"
+    input: |
+      Run the cleanup_claude_md step. CLAUDE.md has a '## Angular Guidelines' section
+      about standalone components and signal-based state.
+      .claude/rules/angular-rules.md exists.
+    expect:
+      triggered: true
+      contains:
+        - "angular-rules.md"
+      not_contains:
+        - "project-rules.md"
+
+  - id: cleanup-nodejs-routes-to-nodejs-rules
+    description: "Node.js / TypeScript conventions must route to nodejs-typescript-rules.md"
+    input: |
+      Run the cleanup_claude_md step. CLAUDE.md has a '## TypeScript Patterns' section
+      about strict mode, ESM imports, and Express middleware conventions.
+      .claude/rules/nodejs-typescript-rules.md exists.
+    expect:
+      triggered: true
+      contains:
+        - "nodejs-typescript-rules.md"
+
+  - id: cleanup-java-routes-to-java-rules
+    description: "Java / Spring conventions must route to java-rules.md"
+    input: |
+      Run the cleanup_claude_md step. CLAUDE.md has a '## Java Conventions' section
+      about Spring Boot dependency injection and Lombok usage.
+      .claude/rules/java-rules.md exists.
+    expect:
+      triggered: true
+      contains:
+        - "java-rules.md"
+
+  - id: cleanup-python-routes-to-python-rules
+    description: "Python / FastAPI / Django conventions must route to python-rules.md"
+    input: |
+      Run the cleanup_claude_md step. CLAUDE.md has a '## Python Style' section
+      about type hints, Pydantic models, and async FastAPI patterns.
+      .claude/rules/python-rules.md exists.
+    expect:
+      triggered: true
+      contains:
+        - "python-rules.md"
+
+  - id: cleanup-data-access-routes-to-data-access-rules
+    description: "Data access and SQL/ORM patterns must route to data-access-rules.md"
+    input: |
+      Run the cleanup_claude_md step. CLAUDE.md has a '## Database Patterns' section
+      about repository pattern usage and parameterised Dapper queries.
+      .claude/rules/data-access-rules.md exists.
+    expect:
+      triggered: true
+      contains:
+        - "data-access-rules.md"
+      not_contains:
+        - "csharp-dotnet-rules.md"
+
+  - id: cleanup-general-conventions-route-to-project-rules
+    description: "General design philosophy and testing conventions must route to project-rules.md"
+    input: |
+      Run the cleanup_claude_md step. CLAUDE.md has a '## Design Principles' section
+      about SOLID, DRY, and a '## Testing Strategy' section about unit vs integration tests.
+      .claude/rules/project-rules.md exists.
+    expect:
+      triggered: true
+      contains:
+        - "project-rules.md"
+
+  - id: cleanup-architecture-sections-discarded
+    description: "Architecture overview and key files sections must be discarded — not moved to any rule file"
+    input: |
+      Run the cleanup_claude_md step. CLAUDE.md has a '## Key Files' section and
+      an '## Architecture Overview' section added by /init.
+    expect:
+      triggered: true
+      contains:
+        - "DISCARD"
+      not_contains:
+        - "project-rules.md"
+        - "csharp-dotnet-rules.md"
+        - "architecture.md"
+
+  - id: cleanup-plugin-sections-never-routed
+    description: "Plugin-managed sections must never appear in the routing table or be removed"
+    input: |
+      Run the cleanup_claude_md step. CLAUDE.md contains the standard plugin sections:
+      WRITE GATE, Keyword Handlers, Shell & Git Configuration, PROJECT OVERVIEW,
+      AZURE DEVOPS, DESIGN PHILOSOPHY, MODEL ROUTING, Data Access Convention, Feature Gate.
+    expect:
+      triggered: true
+      not_contains:
+        - "WRITE GATE → "
+        - "Keyword Handlers → "
+        - "Feature Gate → "
+        - "MODEL ROUTING → "
+
+  - id: cleanup-common-commands-stays-in-claude-md
+    description: "Common Commands section must be kept in CLAUDE.md and never routed to a rule file"
+    input: |
+      Run the cleanup_claude_md step. CLAUDE.md has a '## Common Commands' section
+      with npx nx serve and npm run build commands added by /init.
+    expect:
+      triggered: true
+      not_contains:
+        - "Common Commands → "
+        - "DISCARD"
+
+  - id: cleanup-skip-leaves-claude-md-unchanged
+    description: "Replying SKIP must leave CLAUDE.md and all rule files completely unchanged"
+    input: |
+      Run the cleanup_claude_md step. Developer replies SKIP to the routing confirmation.
+    expect:
+      triggered: true
+      contains:
+        - "unchanged"
+      not_contains:
+        - "Written"
+        - "Appended"
+        - "Stripped"
+
+  - id: cleanup-fallback-to-project-rules-when-target-missing
+    description: "If the stack-specific rule file is absent, content must fall back to project-rules.md"
+    input: |
+      Run the cleanup_claude_md step. CLAUDE.md has a '## Angular Conventions' section
+      but .claude/rules/angular-rules.md does NOT exist. .claude/rules/project-rules.md exists.
+    expect:
+      triggered: true
+      contains:
+        - "project-rules.md"
+      not_contains:
+        - "angular-rules.md"
+
+  - id: cleanup-appends-under-project-specific-marker
+    description: "Content appended to rule files must appear under the ## Project-Specific Conventions marker"
+    input: |
+      Run the cleanup_claude_md step and append a C# conventions section to
+      csharp-dotnet-rules.md. Describe how you append the content.
+    expect:
+      triggered: true
+      contains:
+        - "Project-Specific Conventions"
+        - "setup-init cleanup"
+
+  - id: cleanup-no-duplicate-marker
+    description: "Must not add a second ## Project-Specific Conventions marker if one already exists"
+    input: |
+      Run the cleanup_claude_md step. csharp-dotnet-rules.md already contains a
+      '## Project-Specific Conventions' section from a previous run.
+    expect:
+      triggered: true
+      not_contains:
+        - "Project-Specific Conventions\n## Project-Specific Conventions"
+
+  - id: cleanup-multi-stack-routes-to-multiple-files
+    description: "A project with both .NET and Angular sections must route each to its own rule file"
+    input: |
+      Run the cleanup_claude_md step. CLAUDE.md has a '## C# Standards' section and
+      an '## Angular Component Guidelines' section. Both csharp-dotnet-rules.md and
+      angular-rules.md exist in .claude/rules/.
+    expect:
+      triggered: true
+      contains:
+        - "csharp-dotnet-rules.md"
+        - "angular-rules.md"
+
+  - id: cleanup-strips-routed-sections-from-claude-md
+    description: "After routing, the moved sections must be removed from CLAUDE.md"
+    input: |
+      Run the cleanup_claude_md step. CLAUDE.md has '## C# Coding Standards' and
+      '## Angular Guidelines'. After the developer confirms YES, describe what
+      remains in CLAUDE.md.
+    expect:
+      triggered: true
+      contains:
+        - "Common Commands"
+        - "WRITE GATE"
+      not_contains:
+        - "C# Coding Standards remains in CLAUDE.md"
+        - "Angular Guidelines remains in CLAUDE.md"

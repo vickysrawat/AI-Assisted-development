@@ -113,6 +113,16 @@ execute the skill immediately — priority over chat.
 
 Model env vars: `ICEA_MODEL` (generation) · `REVIEW_MODEL` (review) · `CRITIC_MODEL` · `INFRA_MODEL` (infrastructure). Override in `.claude/settings.json` → `env`. Full table: `skills/shared/model-routing-spec.md`.
 
+## Web Search Policy
+
+Before calling WebSearch or WebFetch, sanitize the query:
+- Remove all internal identifiers: class names, method names, file paths,
+  variable names, and any project- or organization-specific terms.
+- Replace them with generic technology descriptors.
+- The query must contain only publicly recognizable technology terms.
+Example: an internal error message containing a proprietary identifier →
+  language + framework + error type only.
+
 ## Feature Gate
 
 NEVER write implementation code for a new feature or capability without an approved ICEA on

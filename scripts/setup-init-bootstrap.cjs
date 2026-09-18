@@ -320,15 +320,19 @@ function loadManifest() {
 function initManifest(pluginDir) {
   // needsLLMPopulation only exists in init mode; sync mode has no LLM work
   const needsLLMPopulation = MODE === 'init' ? [
-    { id: 'resolve_git_bash_paths', order: 1, skill: 'interactive',status: 'pending',
+    { id: 'init_claude_md',         order: 1, skill: 'init',       status: 'pending',
+      description: 'Run /init — analyses codebase and populates CLAUDE.md with project-specific content (Common Commands, build, test, lint)' },
+    { id: 'resolve_git_bash_paths', order: 2, skill: 'interactive',status: 'pending',
       description: 'GIT_PATH / BASH_PATH / TARGET_BRANCH placeholders in CLAUDE.md §0b and §2 need resolution' },
-    { id: 'verify_external_dirs',   order: 2, skill: 'interactive',status: 'pending',
+    { id: 'verify_external_dirs',   order: 3, skill: 'interactive',status: 'pending',
       description: 'Confirm external directory paths in settings.local.json match local checkout' },
-    { id: 'generate_architecture',  order: 3, skill: 'architect',  status: 'pending',
+    { id: 'generate_architecture',  order: 4, skill: 'architect',  status: 'pending',
       description: 'Run architect skill — generates architecture docs + project overview in CLAUDE.md; Step 7-2 calls graph-extract-edges.js' },
-    { id: 'build_knowledge_graph',  order: 4, skill: 'graph-sync', status: 'pending',
+    { id: 'cleanup_claude_md',      order: 5, skill: 'llm',        status: 'pending',
+      description: 'Route /init-generated CLAUDE.md sections to correct rule files; strip from CLAUDE.md leaving only Common Commands + plugin sections' },
+    { id: 'build_knowledge_graph',  order: 6, skill: 'graph-sync', status: 'pending',
       description: 'Run graph-sync — refines graph.json, re-runs graph-extract-edges.js for EXTRACTED edges' },
-    { id: 'deploy_rules',           order: 5, skill: 'bootstrap-phase-2', status: 'pending',
+    { id: 'deploy_rules',           order: 7, skill: 'bootstrap-phase-2', status: 'pending',
       description: 'Deployed by bootstrap Phase 2 (called from architect Step 1 after repo type detection)' },
   ] : [];
 

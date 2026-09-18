@@ -77,3 +77,4 @@ Rules:
 | 0064 | business-context.md is mandatory (❌ Red in setup-status when absent); setup-sync Step 6b actively prompts to generate it; extends ADR 0057 | Accepted |
 | 0065 | REFRESH DOMAIN: on-demand business-context refresh with before/after diff (Step 4b) and staleness tiers (6 month Amber, 12 month Red) in setup-status; extends ADR 0057 and 0064 | Accepted |
 | 0066 | Rule file refresh: deploy-time snapshots (`.snapshots/`) + `.deploy-meta.json` staleness clock + `REFRESH RULES` keyword with per-file three-way diff (A=snapshot, B=current, C=canonical); extends ADR 0059 | Accepted |
+| 0067 | Web Search query sanitization policy — what the query may and must not contain; `## Web Search Policy` deployed to all target projects via `_project-deploy/CLAUDE.md` | Accepted |
