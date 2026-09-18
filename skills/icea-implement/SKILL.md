@@ -192,9 +192,14 @@ Read .claude/plugin-path.txt to get PLUGIN_DIR (if absent, use §1a resolver), t
 Read $PLUGIN_DIR/skills/critic/SKILL.md and execute it with mode = code, source = internal.
 ```
 
-The critic evaluates for ICEA traceability, simplicity, rules compliance,
-decision transparency, and hidden assumptions. This is Category C — no
-source files are read, only the in-context generated code.
+The critic evaluates for ICEA + Tech Spec traceability, simplicity, rules
+compliance, decision transparency, and hidden assumptions. Give it BOTH governing
+specs located in Step 2 — the approved ICEA (intent) and the approved Tech Spec
+(plan) — so it can check the three-way oracle ICEA → Tech Spec → code, not intent
+alone. On an ICEA↔Tech-Spec conflict the ICEA wins and the critic routes to
+`REVISE ADO-{ADO_ID}` (per critic CODE-mode precedence). This is Category C — the
+ICEA and Tech Spec are docs/ artefacts, not source; no source files are read, only
+the in-context generated code plus those two specs.
 
 Gate the disk write on the verdict:
 
@@ -213,9 +218,12 @@ Nothing reaches disk while verdict is REVISE.
 ## Step 4b — AC self-scoring goal-loop (completeness gate)
 
 Step 4a asks *is the code sound?* Step 4b asks *does the code satisfy every
-Acceptance Criterion this story owns?* — the completeness counterpart to the
-critic's quality check. It runs on the in-context code, still before any disk
-write, and it **augments** 4a; it does not replace it.
+Acceptance Criterion this story owns **and** realize every planned change in the
+approved scope?* — the completeness counterpart to the critic's quality check. "Done"
+depends on both **intent** (the ICEA ACs) and the **approved scope of change** (the
+Tech Spec's planned deliverables); code that passes every AC but leaves a planned
+file/change unbuilt is not done. It runs on the in-context code, still before any
+disk write, and it **augments** 4a; it does not replace it.
 
 Run the bounded goal-loop engine:
 
@@ -223,13 +231,27 @@ Run the bounded goal-loop engine:
 Read .claude/plugin-path.txt to get PLUGIN_DIR (if absent, use §1a resolver), then
 Read $PLUGIN_DIR/skills/shared/goal-loop-spec.md and run the engine with:
   goal       = the ICEA Goal one-liner
-  rubric     = the pending ACs for this story, taken VERBATIM from the ICEA
-               Acceptance section / tracker (id + text + functional|non-functional)
+  rubric     = the completion criteria for this story, each VERBATIM from its
+               source, as one ordered list combining intent + approved scope:
+                 • Intent — every pending AC from the ICEA Acceptance section /
+                   tracker (id = AC-F*/AC-NF*, type = functional | non-functional)
+                 • Approved scope of change — every planned deliverable in this
+                   story's scope from the Tech Spec's AC Coverage Matrix (AC→File
+                   table) + Files Changed section (id = the Tech Spec file/row ref,
+                   type = structural). This makes "done" require every planned
+                   change to be realized, not only that the ACs pass.
   artifact   = the in-context generated code from Step 4
   regenerate = re-run Step 4 code generation addressing each `remaining`,
                then re-run Step 4a (critic) on the result
   ceilings   = { maxIterations: 3 }
 ```
+
+> **Precedence (ICEA authoritative).** The ICEA is the ratified intent; the Tech Spec is
+> the approved plan. A structural criterion that is genuine scope creep vs the ICEA (a
+> planned change no AC justifies) is not a completion target — the Step 4a critic, sharing
+> this same iteration, flags it as a traceability REVISE and routes to `REVISE ADO-{ADO_ID}`.
+> The goal-loop scores completion of the plan; it never forces building scope the ICEA never
+> asked for.
 
 - The engine and the Step 4a critic share **one** iteration budget — one iteration
   is `regenerate → critic (4a) → self-score`. This keeps the ceiling meaningful and

@@ -41,7 +41,7 @@ The parent skill enters the engine with:
 | Input | Type | Description |
 |---|---|---|
 | `goal` | string | One-line "done" statement (e.g. the ICEA Goal one-liner). |
-| `rubric` | array | The criteria to score against, verbatim — see `rubric-score-schema.md` Inputs. |
+| `rubric` | array | The criteria to score against, verbatim — see `rubric-score-schema.md` Inputs. A completion rubric may combine two sources: **intent** criteria (the ICEA ACs — `functional`/`non-functional`) and **approved-scope-of-change** criteria (the Tech Spec's planned deliverables from its AC Coverage Matrix / Files Changed — `structural`). Both must be `PASS` for "done". Scoring code against a rubric drawn from the specs is not circular — the *code* is the artefact; the specs only supply criteria. |
 | `artifact` | in-context | The current output (e.g. generated code + its build/test result). |
 | `regenerate` | callback | "Produce a better artefact addressing `remaining`" — the parent supplies this (e.g. icea-implement re-runs Step 4 code generation). Uses the parent's **generation** tier. |
 | `ceilings.maxIterations` | number | Hard cap on iterations. Default **3** (icea-implement). |

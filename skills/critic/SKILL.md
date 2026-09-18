@@ -80,8 +80,8 @@ source-file-consent category — see `$PLUGIN_DIR/skills/shared/source-file-cons
 | `icea` | `internal` (called by icea-feature at Step 5, before the temp write) | **Category C** | The in-context ICEA draft + architecture docs. Never source. |
 | `icea` | `standalone` (`/critic icea ADO-<id>`) | **Category C** | The ICEA file at `docs/Release{R}/Sprint{S}/UserStory{id}/ADO-<id>-*.icea.md` + architecture docs. Never source. |
 | `tech` | `internal` (called by icea-feature at Step 8, before the temp write) | **Category C** | The on-disk approved ICEA + the in-context Tech Spec draft + architecture docs. Never source. |
-| `code` | `internal` (called by icea-implement at Step 4a) | **Category C** | The in-context generated code + the approved ICEA. Nothing is on disk yet, so no source file is read. |
-| `code` | `standalone` (`/critic code [ADO-<id>]`) | **Category A** | Staged/changed source files, announced before reading (same implicit-consent model as `/code-review --changed`). |
+| `code` | `internal` (called by icea-implement at Step 4a) | **Category C** | The in-context generated code + the approved ICEA (intent) + the approved Tech Spec (plan). Nothing is on disk yet, so no source file is read. |
+| `code` | `standalone` (`/critic code [ADO-<id>]`) | **Category A** (source) + **C** (docs) | Staged/changed source files, announced before reading (same implicit-consent model as `/code-review --changed`), plus the approved ICEA and Tech Spec (docs/ artefacts, Category C). |
 
 `tech` mode is **internal-only** — it is meaningful only while a freshly drafted
 Tech Spec is still in context beside its ICEA. The only path that reads source
@@ -305,11 +305,20 @@ notes are folded into the Step 9 review. An ICEA-fault concern is surfaced with 
 > correctness, and fit with the codebase's idioms per layer; expertise = this project's actual
 > stack. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
-Critique the generated implementation against five dimensions.
+Critique the generated implementation against five dimensions. The oracle is
+**three-way** — ICEA (intent) → Tech Spec (plan) → code (implementation). Both the
+approved ICEA and the approved Tech Spec are in context; use both.
+
+> **Precedence (ICEA authoritative, Tech Spec is the plan).** The ICEA is the ratified
+> intent and wins on conflict; the Tech Spec is the planned design. If the code satisfies
+> the ICEA but the Tech Spec itself contradicts the ICEA (a missing AC, a plan that drifts
+> from the Intent), do **not** rewrite the code around the bad plan — surface it and route
+> the developer to `REVISE ADO-{ID}`, the same escalation `tech` mode uses. The revise loop
+> here regenerates **code**, not the Tech Spec.
 
 | Dimension | The question the critic asks |
 |---|---|
-| **ICEA traceability** | Does every generated artefact map to an approved AC? Is anything generated that no AC asked for? Is any AC left with no implementing artefact? **D-option fidelity**: when the ICEA has selected D decisions, does the implementation follow the CHOSEN option? Deviation from a selected option without a recorded amendment is a REVISE — never a silent pivot (icea-decisions-spec §6). |
+| **Traceability (ICEA + Tech Spec)** | Does every generated artefact map to an approved AC **and** to a file the Tech Spec's AC→File matrix planned? Is anything generated that no AC asked for, or any file the Tech Spec did not plan (an orphan)? Is any AC — or any planned file — left with no implementing artefact? Does the implementation follow the Tech Spec's chosen approach for each AC, not merely a way to satisfy the AC? **D-option fidelity**: when the ICEA has selected D decisions, does the implementation follow the CHOSEN option? Deviation from a selected option — or from the planned design — without a recorded amendment is a REVISE, never a silent pivot (icea-decisions-spec §6). |
 | **Simplicity** | Per `CLAUDE.md` §3 — is there a simpler correct approach? Unnecessary abstraction, premature generics, speculative configurability, and deep coupling are findings, not style. |
 | **Rules compliance** | Spot-check the generated lines against the active rules: `dotnet-rules` (Clean Architecture, ProblemDetails, xUnit naming), `angular-rules` (standalone, OnPush, async pipe), `nodejs-rules` (Zod, AppError, no PII in logs), `project-rules` (no hardcoded secrets, no `any`, no `TODO` without ADO item). |
 | **Decision transparency** | For each non-trivial design choice, is there a `// DECISION:` block as `icea-feature` Step 6 requires? Missing rationale on a non-obvious choice is a finding. |
@@ -447,9 +456,10 @@ When invoked as `/critic code` standalone:
    ```
    🔎 Critic — code critique (standalone)
      Will read: {N} changed files ({list first 3, then "and N more"})
-     Why     : Critiquing already-written code against ICEA #{ID} for
-               traceability, simplicity, rules compliance, decision
-               transparency, and hidden assumptions.
+                + the approved ICEA and Tech Spec for #{ID} (docs/ artefacts)
+     Why     : Critiquing already-written code against the ICEA (intent) and
+               Tech Spec (plan) for #{ID} — traceability, simplicity, rules
+               compliance, decision transparency, and hidden assumptions.
      Token cost: ~{estimate}
    Proceeding. Type STOP to halt.
    ```

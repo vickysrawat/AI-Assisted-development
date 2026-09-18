@@ -1,5 +1,116 @@
 # MEMORY.md — Project memory (dream-managed)
 
+## 2026-09-17 — Goal-loop (icea-implement Step 4b) completion = intent + approved scope of change
+
+**Decision + rationale.** The completeness gate scored code against the **ICEA ACs only** — so
+code that passed every AC but left a Tech-Spec-planned file/change unbuilt read as "done". "Done"
+must depend on both **intent** (ICEA ACs) and the **approved scope of change** (the Tech Spec's
+planned deliverables).
+
+**Fix.** Step 4b's `rubric` is now one ordered list combining: intent criteria (ICEA ACs, type
+`functional`/`non-functional`) + approved-scope criteria (Tech Spec AC Coverage Matrix / Files
+Changed rows, type `structural`, id = the file/row ref). The rubric schema already had a
+`structural` type — that's the natural home for planned-deliverable criteria; no schema/enum change
+needed. Not circular: the **code** is the artefact; the specs only supply criteria (the "never run
+the loop on the ICEA/Tech Spec" rule still holds). **Precedence: ICEA authoritative** — a structural
+criterion that is scope creep vs the ICEA is not a completion target; the Step 4a critic (shared
+iteration) flags it as a traceability REVISE. The loop never forces building scope the ICEA never asked for.
+
+**Files touched.** icea-implement/SKILL.md Step 4b (intro + rubric input + precedence note),
+goal-loop-spec.md (rubric input row), rubric-score-schema.md (id/text/type rows). Docs/spec-only.
+
+## 2026-09-17 — CODE-mode critic now loads ICEA + Tech Spec (three-way traceability, ICEA authoritative)
+
+**Decision + rationale.** The internal code gate (icea-implement Step 4a → critic CODE mode)
+previously graded generated code against the **ICEA only** ([critic/SKILL.md](../skills/critic/SKILL.md)
+line 83 read "generated code + the approved ICEA"). But Step 4 generation is told to "Follow the Tech
+Spec exactly" — so the generator obeyed the plan while the critic graded only the intent. Gap: code
+that satisfied the ICEA but drifted from the Tech Spec's planned design (AC→File matrix, chosen
+approach, test derivation) was invisible to the critic. The sharp orphan/traceability checks lived only
+in TECH mode, which runs before code exists.
+
+**Fix.** CODE mode now reads a **three-way oracle: ICEA (intent) → Tech Spec (plan) → code**. Both
+specs are located in icea-implement Step 2 and passed to the critic; Category C unchanged (both are
+docs/, not source). **Precedence: ICEA is authoritative and wins on conflict; the Tech Spec is the
+plan.** If code satisfies the ICEA but the Tech Spec itself contradicts the ICEA, the critic does NOT
+rewrite code around the bad plan — it surfaces and routes to `REVISE ADO-{ID}` (same escalation TECH
+mode uses). The CODE revise loop still regenerates **code**, not the Tech Spec.
+
+**Files touched.** critic/SKILL.md (code-reads table rows for internal+standalone, CODE-mode dimension
+renamed "Traceability (ICEA + Tech Spec)" + precedence blockquote, standalone scope-report),
+icea-implement/SKILL.md Step 4a, guides/plugin-user-guide.html (critic table row + explanatory note).
+Docs/spec-only change — no plugin code path altered.
+
+## 2026-09-17 — Two new consolidated guides authored (user + maintainer); old 3 kept pending review
+
+**Decision.** The 3 guides (`user-guide.html`, `plugin-guide.html`, `developer-guide.html`) duplicated
+content. Target = **2 audience-split docs**: `guides/plugin-user-guide.html` (plugin USER) and
+`guides/plugin-developer-guide.html` (plugin MAINTAINER). This pass was **additive** — both new files
+created; the **old three left untouched** (retire after the user reviews the new two).
+
+**Build technique that worked.** Both new docs reuse the plugin-guide's look & feel by a Node builder
+(temp in `c:/tmp`, deleted after) that extracts the `<style>` block and the trailing scroll-spy
+`<script>` from `plugin-guide.html` verbatim and injects an authored sidebar + `<main>`. Reusing the
+CSS this way guarantees byte-identical offline styling (system fonts, zero CDN) without retyping 356
+CSS lines. Body content was authored inline in the builder (template literals — avoid `$` + brace
+sequences and backticks in content). Both stamped `<!-- documents-plugin-version: 3.25.0 -->` so the
+version guard globs them.
+
+**Content split.** User guide = 10 workflow sidebar groups, all 46 commands in the grouped catalog,
+ICEA loop + critic + quality/PR/migrate/readiness/codebase/Dream/keywords/model-routing; NO maintainer
+topics. Maintainer guide = orientation/why + component model (commands/skills/rules/shared/hooks/2
+subagents bc-searcher+bc-synthesizer) + extending (new-command.sh/new-skill.sh) + gates & governance +
+validators/tests + graph internals + release (bump-version → CHANGELOG → docs/migrations →
+check-version-consistency); links to the user guide instead of re-documenting commands.
+
+**Verified.** Offline-safe (0 external refs both), 46/46 commands in the user catalog, all nav anchors
+resolve (18 / 16), tag balance OK, cited ADR paths exist, audience separation clean (only intended
+cross-links), `check-version-consistency.js` green. Follow-up not yet done: retire/redirect the old 3
+guides once the new two are reviewed.
+
+## 2026-09-17 — Guides (user/plugin/developer) refreshed: current-state only, commands grouped by workflow phase
+
+**Convention confirmed for the three `guides/*.html`.** (1) They describe what the plugin does
+**now** — no "which version added X" history. The "What's new since 3.0.0" sections and all per-item
+`New vX.Y` / `(v1.26.0)` badges were removed; each guide now carries a single link to CHANGELOG.md.
+(2) Commands are presented in **10 workflow-phase groups** (Setup & session · Feature workflow (ICEA)
+· Quality & security · Pull requests · Migration · Readiness & operations · Codebase understanding ·
+Memory (Dream) · Metrics & analysis · Docs & writing), alphabetical within each group — not by
+release era and not one flat list. All **46** commands appear in the user-guide cards and the
+plugin-guide catalog (developer-guide stays workflow + keywords + extending, by design).
+
+**Staleness fixed.** Purged the retired `migration` / `migration-status` skill everywhere →
+`upgrade` / `rewrite` / `replatform` (+ `knowledge-freshness`); fixed stub counts 41/43 → **46**
+(canonical: 46 commands · 48 skills · 43 rules · 47 shared · 2 agents from plugin.json); added the
+two commands the guides never listed (`articulate-as-human`, `knowledge-freshness`) plus `graph-viz`
+and the PR commands; fixed the user-guide's broken sidebar (two `#commands-ref` readiness links →
+dropped the dead "Readiness" nav group, added the missing `#knowledge-graph` link).
+
+**Technique note.** For the plugin-guide's 220-line command catalog and its 45 scattered version
+badges, a throwaway Node generator + a regex stripper (`>New<` or inner text matching `v\d`, keeping
+semantic badges like Global/Mandatory/Project) was far safer than dozens of manual edits — but a Node
+write invalidates the Edit tool's cached read-state, so re-Read before the next Edit. Guides are docs
+(outside the Write Gate). Verified: 46/46 commands both catalogs, all nav anchors resolve, tag
+balance OK, `check-version-consistency.js` green.
+
+## 2026-09-17 — Convention: describe supported stacks by FAMILY + range, never pinned minor versions
+
+**Decision.** Human-facing marketing copy (guide hero chips/badges, README intro) must name stack
+**families with a coarse range**, not a single pinned minor. Root cause of recurring drift: pins like
+`.NET 8` / `Angular 17+` both go stale AND understate reality — the plugin supports a wide matrix
+(`_project-deploy/rules/`: csharp-framework48, ado-net-legacy, ef6, vsto, wcf, angular, react/next/
+nuxt/astro, java, python, node; detector `scripts/stack-signals.cjs`: dotnet-framework, dotnet-modern,
+wcf, …) with **version-aware per-project detection**. There is NO machine-readable supported-stacks
+list; the nearest human source of truth is the **CLAUDE.md header** "Supported backends/frontends"
+line — align all copies to it.
+
+**Applied.** README:3, user-guide hero chips (472), plugin-guide badges (382) → `.NET (Framework 4.x
+→ .NET 10)`, `Angular`, `React`, `Java/Spring Boot`, `Python`, `Node.js`. Added the missing **React**
+chip/badge to both guides (hero sentence already promised Angular/React; chips didn't list React).
+Left legitimate contextual mentions alone: README:88 ("bump to .NET 8" upgrade trigger example) and
+user-guide 3.19.0 changelog line (historically accurate). Developer-guide had no stack pins. User
+declined a lint guard — keep family-level via review.
+
 ## 2026-09-17 — Migration architecture docs refreshed for the source-context intake gate + exit-range drift
 
 **Root cause of staleness.** `docs/architecture/{upgrade,rewrite,replatform,legacy-migration,migration-glossary}.md`

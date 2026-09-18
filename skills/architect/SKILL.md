@@ -729,13 +729,13 @@ stack file overriding the shared one. Every repo type still resolves to the same
 | File | Populated by | Notes |
 |---|---|---|
 | `architecture.md` | File 1 prompt | includes two Mermaid diagrams (End-to-End + Layered) |
-| `architecture-{callchains\|flows\|api}.md` | File 2 prompt | stack-specific (see below) |
+| `architecture-{callchains\|flows\|api}.md` | File 2 prompt | stack-specific (see below), include mermaid diagrams |
 | `architecture-reference.md` | File 3 prompt | package versions, CI/CD, fan-in/out |
-| `architecture-data.md` | File 4 prompt | data model / schema / ownership |
+| `architecture-data.md` | File 4 prompt | data model / schema / ownership, include mermaid diagrams (entity relationship) |
 | `architecture-integrations.md` | File 5 prompt | external deps + resilience + failure |
 | `architecture-security.md` | File 6 prompt | trust zones + authorization model |
 | `architecture-decisions.md` | File 7 prompt | **seed-only** AD-NNN log (never invent rationale) |
-| `architecture-deployment.md` | Step 0.5 questionnaire | hosting/auth/secrets + NFR section |
+| `architecture-deployment.md` | Step 0.5 questionnaire | hosting/auth/secrets + NFR section, include mermaid diagrams |
 
 **Stack-specific File 2 name:**
 

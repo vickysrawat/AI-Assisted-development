@@ -34,9 +34,9 @@ The caller (the engine, on behalf of `icea-implement`) passes:
 |---|---|---|
 | `goal` | string | One-line statement of what "done" means. ICEA: the **Goal** one-liner. |
 | `rubric` | array | Ordered list of criteria to score against. See below. **Must be the criteria text verbatim** — never a paraphrase (a paraphrased rubric optimises the wrong target). |
-| `rubric[].id` | string | Stable criterion id. ICEA: the AC id (`AC-F1`, `AC-NF2`). |
-| `rubric[].text` | string | The criterion, verbatim from its source (ICEA Acceptance section / tracker, or the stage-completion rubric). |
-| `rubric[].type` | string | `functional` \| `non-functional` \| `structural`. |
+| `rubric[].id` | string | Stable criterion id. ICEA AC: the AC id (`AC-F1`, `AC-NF2`); Tech Spec scope item: the file/row ref from the AC Coverage Matrix (e.g. `TS:MatterController.cs`). |
+| `rubric[].text` | string | The criterion, verbatim from its source — ICEA Acceptance section / tracker (intent), the Tech Spec's AC→File / Files Changed rows (approved scope of change), or a stage-completion rubric. |
+| `rubric[].type` | string | `functional` \| `non-functional` \| `structural`. Intent ACs are `functional`/`non-functional`; a Tech Spec planned deliverable (a file/change that must exist for the plan to be realized) is `structural`. |
 | `artifact` | in-context | The current output being scored — e.g. generated code (icea-implement). Passed in context; not a disk path. |
 
 ---

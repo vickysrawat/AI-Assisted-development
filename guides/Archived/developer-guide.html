@@ -2500,64 +2500,56 @@ To start implementation:
       <div class="milestone-header">
         <div class="milestone-number" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: var(--ai-gray-400);">MG</div>
         <div>
-          <div class="milestone-title">Migrate an application to a new stack</div>
-          <div class="milestone-desc">A staged, gated, checkpoint-resumable pipeline that ports a whole application onto a new stack — with a Target Options Analysis up front and Golden-Master behavioral verification at the end.</div>
+          <div class="milestone-title">Migrate an application</div>
+          <div class="milestone-desc">There is no single <code>migration</code> command — it was split into three focused skills. Pick by what is actually changing. Each is ledger-backed with its own <code>RESUME</code> / <code>STATUS</code>.</div>
         </div>
       </div>
       <div class="steps">
         <div class="step">
           <div class="step-header" onclick="toggleStep(this)">
             <span class="step-num">A</span>
-            <span class="step-title">Run from inside the empty target folder</span>
-            <span class="step-badge command">/migration</span>
+            <span class="step-title">Same stack, higher version — edit in place</span>
+            <span class="step-badge command">/upgrade</span>
             <span class="step-chevron">&#8250;</span>
           </div>
           <div class="step-body"><div class="step-body-inner">
-            <p>Create the new (empty) <strong>target</strong> project folder, open Claude Code inside it, and run <code>/migration</code>. Provide the <strong>source</strong> application path when prompted — the skill reads the source read-only and drives everything from the target side. Supported routes: <strong>.NET Framework&nbsp;&rarr;&nbsp;.NET&nbsp;10</strong>, <strong>Java&nbsp;&harr;&nbsp;.NET</strong>, <strong>React&nbsp;+&nbsp;Express&nbsp;&rarr;&nbsp;Angular&nbsp;+&nbsp;.NET</strong>, and <strong>Node.js&nbsp;&rarr;&nbsp;.NET</strong>.</p>
+            <p>Move to a higher supported version of the <em>same</em> runtime (e.g. .NET&nbsp;6&nbsp;&rarr;&nbsp;8, Angular&nbsp;15&nbsp;&rarr;&nbsp;17). The LLM orchestrates the stack-native tool rather than hand-authoring the change, and the headline deliverable is a decision-grade <strong>Gap&nbsp;+&nbsp;Risk report</strong>. A false-upgrade (a cross-runtime boundary such as .NET&nbsp;Framework&nbsp;&rarr;&nbsp;.NET) is rejected and routed to <code>/rewrite</code>.</p>
             <div class="cmd-block">
               <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
-              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/migration</span> <span class="cmd-value">ADO-1847</span></pre>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/upgrade</span> <span class="cmd-value">ADO-1847</span></pre>
             </div>
-            <div class="callout warning"><span class="callout-icon">i</span><span>Run it from the target folder, not the source. The source is never modified — the migration only writes into the new target repository.</span></div>
           </div></div>
         </div>
         <div class="step">
           <div class="step-header" onclick="toggleStep(this)">
             <span class="step-num">B</span>
-            <span class="step-title">The staged, gated pipeline</span>
-            <span class="step-badge info">stage gates</span>
+            <span class="step-title">Different stack — translate the code to a new target</span>
+            <span class="step-badge command">/rewrite</span>
             <span class="step-chevron">&#8250;</span>
           </div>
           <div class="step-body"><div class="step-body-inner">
-            <p>The pipeline advances one stage at a time and <strong>pauses at every stage for an explicit <code>APPROVE&nbsp;&hellip;</code> gate</strong> — it self-approves nothing. Each stage writes a checkpoint so you can stop and resume across sessions.</p>
-            <table class="ref-table">
-              <thead><tr><th>Stage</th><th>What it produces</th><th>Gate</th></tr></thead>
-              <tbody>
-                <tr><td>Source read</td><td>Reads the source app and its knowledge graph to build a behavioral inventory.</td><td><code>APPROVE INVENTORY</code></td></tr>
-                <tr><td>Target Options Analysis</td><td>Weighs viable target designs and recommends one before any code is planned.</td><td><code>APPROVE OPTIONS</code></td></tr>
-                <tr><td>Architecture</td><td>Target architecture docs for the chosen option.</td><td><code>APPROVE ARCHITECTURE</code></td></tr>
-                <tr><td>Feasibility</td><td>Risk/effort feasibility pass against the architecture.</td><td><code>APPROVE FEASIBILITY</code></td></tr>
-                <tr><td>Cluster plan</td><td>Parallel migration clusters derived from the source graph.</td><td rowspan="2"><code>APPROVE MIGRATION</code></td></tr>
-                <tr><td>Per-cluster migration</td><td>Each cluster is ported on its own worktree branch of the target repo, then tests run.</td></tr>
-                <tr><td>Golden-Master + reconciliation</td><td>Golden-Master behavioral verification and an as-built reconciliation against the source.</td><td>&mdash;</td></tr>
-              </tbody>
-            </table>
-            <div class="callout info"><span class="callout-icon">i</span><span>Cluster work happens on isolated worktree branches, so parallel cluster agents never collide. Resume a partially-migrated cluster set with <code>MIGRATE RESUME ADO-{ID} [BACKEND|FRONTEND]</code>.</span></div>
+            <p>Out-of-place generative migration into a <strong>new target-folder application</strong> in a different stack (e.g. Java&nbsp;&rarr;&nbsp;.NET, Express&nbsp;&rarr;&nbsp;Angular). Resolves a posture from stack distance, presents target options across assurance&nbsp;&times;&nbsp;effort&nbsp;&times;&nbsp;TCO, decomposes along a dependency DAG, and generates one cluster per git worktree behind a design-quality gate, a per-cluster <strong>Behavioral Assurance Level (BAL)</strong>, and a two-gate merge/completion model. The source stays read-only as the intent oracle. Run it from the new target folder; provide the source path when prompted.</p>
+            <div class="cmd-block">
+              <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/rewrite</span> <span class="cmd-value">ADO-1847</span></pre>
+            </div>
+            <div class="callout warning"><span class="callout-icon">i</span><span>Run <code>/rewrite</code> from the target folder, not the source. The source is never modified — generation only writes into the new target repository.</span></div>
           </div></div>
         </div>
         <div class="step">
           <div class="step-header" onclick="toggleStep(this)">
             <span class="step-num">C</span>
-            <span class="step-title">Check progress &amp; resume</span>
-            <span class="step-badge command">/migration-status</span>
+            <span class="step-title">Same code, new host — on-prem &rarr; cloud</span>
+            <span class="step-badge command">/replatform</span>
             <span class="step-chevron">&#8250;</span>
           </div>
           <div class="step-body"><div class="step-body-inner">
-            <p>The read-only <code>/migration-status</code> skill projects the checkpoint — current phase, stage-gate state, cluster progress, and the next action — without changing anything. Each stage also has a targeted resume keyword (see <a href="#keywords">All Keywords</a>) so you can re-enter a specific stage after a break.</p>
+            <p>Move <em>where</em> the app runs, not what it is written in. The LLM <strong>authors</strong> the IaC, config, pipeline, and human-executable runbooks; a <strong>human executes</strong> anything touching real infrastructure or data (the executor seam). Classifies a 6R posture (rehost / replatform / refactor-for-cloud), decomposes by cloud capability behind a Tier-0 landing zone, and grades the result against an <strong>NFR&nbsp;+&nbsp;Well-Architected</strong> oracle with behavioral regression.</p>
             <div class="cmd-block">
               <div class="cmd-block-header"><span class="cmd-block-label">command</span><button class="cmd-copy" onclick="copyCmd(this)">copy</button></div>
-              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/migration-status</span> <span class="cmd-value">ADO-1847</span></pre>
+              <pre><span class="cmd-prompt">You:</span> <span class="cmd-keyword">/replatform</span> <span class="cmd-value">ADO-1847</span></pre>
             </div>
+            <div class="callout info"><span class="callout-icon">i</span><span>Check progress or resume any of the three with <code>UPGRADE&nbsp;/&nbsp;REWRITE&nbsp;/&nbsp;REPLATFORM STATUS ADO-{ID}</code> and <code>&hellip;&nbsp;RESUME ADO-{ID}</code>.</span></div>
           </div></div>
         </div>
       </div>
@@ -2898,41 +2890,17 @@ To start implementation:
           <code>SET DOMAIN</code>
           <p>Infer/confirm the business domain and jurisdiction, ground the B1&ndash;B7 severity series in cited regulatory frameworks, and write <code>.claude/business-context.md</code>.</p>
         </div>
-        <div class="keyword-card" onclick="copyText('MIGRATE ADO-{ID}')">
-          <code>MIGRATE ADO-{ID}</code>
-          <p>Run the staged migration pipeline for that ADO ID. Run from inside the empty target folder.</p>
+        <div class="keyword-card" onclick="copyText('UPGRADE ADO-{ID}')">
+          <code>UPGRADE ADO-{ID}</code>
+          <p>In-place same-stack version upgrade — orchestrates the stack-native tool and delivers a Gap&nbsp;+&nbsp;Risk report. Resume/inspect with <code>UPGRADE RESUME&nbsp;/&nbsp;STATUS ADO-{ID}</code>.</p>
         </div>
-        <div class="keyword-card" onclick="copyText('MIGRATE STATUS ADO-{ID}')">
-          <code>MIGRATE STATUS ADO-{ID}</code>
-          <p>Read-only migration-status projection — phase, stage-gates, clusters, next action.</p>
+        <div class="keyword-card" onclick="copyText('REWRITE ADO-{ID}')">
+          <code>REWRITE ADO-{ID}</code>
+          <p>Out-of-place translation to a NEW target-folder app in a different stack — posture, options, per-cluster BAL, two-gate merge/completion. Resume/inspect with <code>REWRITE RESUME&nbsp;/&nbsp;STATUS ADO-{ID}</code>.</p>
         </div>
-        <div class="keyword-card" onclick="copyText('MIGRATE RESUME ADO-{ID} [BACKEND|FRONTEND]')">
-          <code>MIGRATE RESUME ADO-{ID} [BACKEND|FRONTEND]</code>
-          <p>Resume migration from the Stage&nbsp;4 cluster checkpoint.</p>
-        </div>
-        <div class="keyword-card" onclick="copyText('MIGRATE OPTIONS ADO-{ID}')">
-          <code>MIGRATE OPTIONS ADO-{ID}</code>
-          <p>Resume/regenerate the Stage&nbsp;0.5 Target Options Analysis.</p>
-        </div>
-        <div class="keyword-card" onclick="copyText('MIGRATE INVENTORY ADO-{ID}')">
-          <code>MIGRATE INVENTORY ADO-{ID}</code>
-          <p>Resume/regenerate the Stage&nbsp;0.6 source behavioral inventory.</p>
-        </div>
-        <div class="keyword-card" onclick="copyText('MIGRATE ARCH ADO-{ID}')">
-          <code>MIGRATE ARCH ADO-{ID}</code>
-          <p>Resume/regenerate the Stage&nbsp;1 target architecture docs.</p>
-        </div>
-        <div class="keyword-card" onclick="copyText('MIGRATE FEAS ADO-{ID}')">
-          <code>MIGRATE FEAS ADO-{ID}</code>
-          <p>Resume/regenerate the Stage&nbsp;2 feasibility pass (requires architecture approved).</p>
-        </div>
-        <div class="keyword-card" onclick="copyText('MIGRATE CLUSTERS ADO-{ID}')">
-          <code>MIGRATE CLUSTERS ADO-{ID}</code>
-          <p>Resume/regenerate the Stage&nbsp;3 cluster specs (requires feasibility approved).</p>
-        </div>
-        <div class="keyword-card" onclick="copyText('APPROVE OPTIONS / INVENTORY / ARCHITECTURE / FEASIBILITY / MIGRATION ADO-{ID}')">
-          <code>APPROVE OPTIONS / INVENTORY / ARCHITECTURE / FEASIBILITY / MIGRATION ADO-{ID}</code>
-          <p>Migration stage-gate approvals — record the gate and continue. Work cross-session, like <code>APPROVE ADO-{ID}</code>.</p>
+        <div class="keyword-card" onclick="copyText('REPLATFORM ADO-{ID}')">
+          <code>REPLATFORM ADO-{ID}</code>
+          <p>Hosting/topology migration (on-prem&nbsp;&rarr;&nbsp;cloud) — the LLM authors IaC&nbsp;+&nbsp;runbooks and a human executes; NFR/Well-Architected oracle. Resume/inspect with <code>REPLATFORM RESUME&nbsp;/&nbsp;STATUS ADO-{ID}</code>.</p>
         </div>
         <div class="keyword-card" onclick="copyText('/operations')">
           <code>/operations</code>

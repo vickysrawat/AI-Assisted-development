@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<!-- documents-plugin-version: 3.25.0 -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ai-assisted-development — User Guide</title>
+  <style>
+    :root {
+      --bg:        #f1f5f9;
+      --surface:   #ffffff;
+      --surface2:  #f8fafc;
+      --border:    #e2e8f0;
+      --accent:    #3b82f6;
+      --accent2:   #06b6d4;
+      --gold:      #f59e0b;
+      --green:     #10b981;
+      --red:       #ef4444;
+      --amber:     #f59e0b;
+      --text:      #0f172a;
+      --muted:     #475569;
+      --dim:       #94a3b8;
+      --mono:      'Consolas', 'Cascadia Code', 'Courier New', monospace;
+      --display:   'Calibri', 'Candara', 'Segoe UI', sans-serif;
+      --body:      'Calibri', 'Candara', 'Segoe UI', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--body);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #e2e8f0; }
+    ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 60px 48px 56px;
+      background: #111827;
+      border-bottom: 1px solid #1e2d45;
+    }
+    .hero-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+    .hero-glow {
+      position: absolute;
+      top: -120px; left: -120px;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-content { position: relative; }
+    .hero-tag {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px; letter-spacing: 2px;
+      text-transform: uppercase; color: #67e8f9;
+      border: 1px solid rgba(6,182,212,0.3);
+      padding: 5px 14px; border-radius: 20px;
+      background: rgba(6,182,212,0.06); margin-bottom: 20px;
+    }
+    .hero-tag::before { content: ''; width: 6px; height: 6px;
+      background: var(--accent2); border-radius: 50%;
+      animation: pulse 2s infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.3; }
+    }
+    .hero h1 {
+      font-family: var(--display); font-size: clamp(2.8rem, 5vw, 4.8rem); font-weight: 800;
+      line-height: 1.05; letter-spacing: -1.5px; margin-bottom: 16px; color: #f1f5f9;
+    }
+    .hero h1 em { font-style: normal; color: var(--accent); }
+    .hero .sub {
+      font-size: 1.1rem; color: #94a3b8;
+      line-height: 1.6; margin-bottom: 32px;
+    }
+    .hero-badges { display: flex; gap: 10px; flex-wrap: wrap; }
+    .badge {
+      font-family: var(--mono); font-size: 11px; font-weight: 600;
+      padding: 5px 13px; border-radius: 6px; letter-spacing: 0.5px;
+    }
+    .badge-blue  { background: rgba(59,130,246,0.12); color: #93c5fd; border: 1px solid rgba(59,130,246,0.25); }
+    .badge-cyan  { background: rgba(6,182,212,0.1);  color: #67e8f9; border: 1px solid rgba(6,182,212,0.2); }
+    .badge-gold  { background: rgba(245,158,11,0.1); color: #fcd34d; border: 1px solid rgba(245,158,11,0.2); }
+    .badge-green { background: rgba(16,185,129,0.1); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.2); }
+
+    /* ── Layout ── */
+    .layout { display: grid; grid-template-columns: 300px 1fr; min-height: calc(100vh - 200px); }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      position: sticky; top: 0; height: 100vh;
+      overflow-y: auto; padding: 36px 0;
+      background: #111827; border-right: 1px solid #1e2d45;
+    }
+    .sidebar-section { margin-bottom: 4px; }
+    .sidebar-label {
+      font-family: var(--mono); font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 2px; color: var(--dim);
+      padding: 10px 24px 6px;
+    }
+    .sidebar a {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 24px; text-decoration: none;
+      color: #94a3b8; font-size: 15px;
+      border-left: 2px solid transparent;
+      transition: all 0.12s;
+    }
+    .sidebar a:hover { color: #f1f5f9; border-left-color: var(--accent); background: rgba(59,130,246,0.05); }
+    .sidebar a.active { color: var(--accent); border-left-color: var(--accent); background: rgba(59,130,246,0.1); }
+    .sidebar a .step-dot {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: #1a2235; border: 1px solid #1e2d45;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-size: 11px; flex-shrink: 0;
+    }
+    .sidebar a.mandatory .step-dot { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); color: #fca5a5; }
+    .sidebar a.recommended .step-dot { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3); color: #fcd34d; }
+    .sidebar a.optional .step-dot { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.2); color: #6ee7b7; }
+
+    /* ── Main content ── */
+    main { padding: 52px 40px 100px; width: 100%; }
+
+    /* ── Section ── */
+    section { margin-bottom: 72px; scroll-margin-top: 32px; }
+
+    .section-eyebrow {
+      font-family: var(--mono); font-size: 14px; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: #0e7490; margin-bottom: 10px;
+    }
+
+    h2 {
+      font-family: var(--display); font-size: 1.8rem; font-weight: 700;
+      color: #0f172a; margin-bottom: 8px; line-height: 1.2;
+    }
+    h2 .accent { color: var(--accent); }
+
+    .section-intro { color: var(--muted); font-size: 0.95rem; margin-bottom: 28px; }
+    .bullet-list, .numbered-list { margin: 0 0 20px; padding-left: 22px; color: var(--text, #334155); font-size: 0.92rem; line-height: 1.7; }
+    .bullet-list li, .numbered-list li { margin-bottom: 8px; }
+    .bullet-list { list-style: disc; }
+    .numbered-list { list-style: decimal; }
+
+    h3 {
+      font-family: var(--display); font-size: 1.05rem; font-weight: 700;
+      color: #1e293b; margin: 28px 0 12px;
+    }
+    p { color: var(--muted); margin-bottom: 12px; font-size: 0.94rem; }
+    .step-card p:last-child { margin-bottom: 0; }
+
+    /* ── Step cards ── */
+    .step-card {
+      position: relative;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 28px 28px 28px 72px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .step-card:hover { border-color: #94a3b8; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+    .step-card.mandatory { border-left: 4px solid #dc2626; }
+    .step-card.recommended { border-left: 4px solid #d97706; }
+    .step-card.optional { border-left: 4px solid #059669; }
+
+    .step-number {
+      position: absolute; left: 22px; top: 26px;
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-size: 13px; font-weight: 600;
+    }
+    .mandatory .step-number  { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+    .recommended .step-number { background: #fef3c7; color: #d97706; border: 1px solid #fcd34d; }
+    .optional .step-number   { background: #d1fae5; color: #059669; border: 1px solid #6ee7b7; }
+
+    .step-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 10px; }
+    .step-title { font-family: var(--display); font-size: 1.05rem; font-weight: 700; color: var(--text); }
+
+    .tag {
+      font-family: var(--mono); font-size: 10px; font-weight: 600;
+      padding: 3px 10px; border-radius: 4px; white-space: nowrap;
+      text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0;
+    }
+    .tag-mandatory   { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+    .tag-recommended { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
+    .tag-optional    { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+    .tag-once        { background: #cffafe; color: #0e7490; border: 1px solid #67e8f9; }
+    .tag-recurring   { background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; }
+
+    .step-desc { color: var(--muted); font-size: 0.92rem; margin-bottom: 14px; }
+
+    /* ── Warning block ── */
+    .warning {
+      background: #fff1f2; border: 1px solid #fca5a5;
+      border-radius: 8px; padding: 12px 16px; margin-top: 12px;
+      font-size: 0.87rem; color: #9f1239; display: flex; gap: 10px; line-height: 1.5;
+    }
+    .warning strong { color: #7f1d1d; }
+    .warning .wi { flex-shrink: 0; margin-top: 1px; }
+
+    /* ── Info block ── */
+    .info {
+      background: #eff6ff; border: 1px solid #93c5fd;
+      border-radius: 8px; padding: 12px 16px; margin-top: 12px;
+      font-size: 0.87rem; color: #1e40af; display: flex; gap: 10px; line-height: 1.5;
+    }
+    .info strong { color: #1e3a8a; }
+    .warning code { background: rgba(159,18,57,0.08); border-color: #fca5a5; color: #7f1d1d; }
+    .info code { background: rgba(30,64,175,0.08); border-color: #93c5fd; color: #1e3a8a; }
+    .info .wi { flex-shrink: 0; }
+
+    /* ── Code blocks ── */
+    .code-block {
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 8px; overflow: hidden; margin: 14px 0;
+      font-family: var(--mono);
+    }
+    .code-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px; background: #0f172a;
+      border-bottom: 1px solid #334155;
+    }
+    .code-lang { font-size: 11px; color: #94a3b8; letter-spacing: 0.5px; }
+    .code-body { padding: 16px 20px; font-size: 12.5px; line-height: 1.7; overflow-x: auto; white-space: pre; color: #e2e8f0; }
+    .code-body pre { padding: 0; margin: 0; background: none; border: none; border-radius: 0; font-size: inherit; line-height: inherit; white-space: pre; }
+    .code-body .kw  { color: #7dd3fc; }
+    .code-body .str { color: #86efac; }
+    .code-body .cmt { color: #94a3b8; font-style: italic; }
+    .code-body .cmd { color: #f9a8d4; }
+    .code-body .var { color: #fde68a; }
+
+    /* ── Command pill ── */
+    .cmd-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.25);
+      color: #93c5fd; padding: 4px 12px; border-radius: 6px;
+      margin: 3px 4px 3px 0;
+    }
+    .cmd-pill::before { content: '/'; color: var(--accent2); font-weight: 700; }
+
+    /* ── Inline code ── */
+    code {
+      font-family: var(--mono); font-size: 12px;
+      background: #f1f5f9; border: 1px solid #cbd5e1;
+      padding: 1px 6px; border-radius: 4px; color: #0f172a;
+    }
+
+    /* ── Feature grid ── */
+    .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+    .feature-card {
+      background: #ffffff; border: 1px solid #e2e8f0;
+      border-radius: 10px; padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      transition: border-color 0.12s, transform 0.12s, box-shadow 0.12s;
+    }
+    .feature-card:hover { border-color: #94a3b8; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .feature-card .fc-icon { font-size: 1.4rem; margin-bottom: 10px; }
+    .feature-card .fc-name {
+      font-family: var(--display); font-size: 0.92rem; font-weight: 700;
+      color: #0f172a; margin-bottom: 4px;
+    }
+    .feature-card .fc-trigger {
+      font-family: var(--mono); font-size: 10px; color: #0e7490;
+      margin-bottom: 8px;
+    }
+    .feature-card .fc-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+
+    /* ── Command table ── */
+    .cmd-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
+    .cmd-table thead th {
+      font-family: var(--mono); font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1.2px; color: #475569;
+      padding: 10px 16px; border-bottom: 2px solid #e2e8f0;
+      text-align: left; background: #f8fafc;
+    }
+    .cmd-table tbody td {
+      padding: 12px 16px; border-bottom: 1px solid #e2e8f0;
+      font-size: 0.88rem; vertical-align: top;
+    }
+    .cmd-table tbody tr:last-child td { border-bottom: none; }
+    .cmd-table tbody tr:hover td { background: #f8fafc; }
+    .cmd-table td:first-child { font-family: var(--mono); font-size: 11.5px; color: #1d4ed8; white-space: nowrap; }
+    .cmd-table td:last-child { color: var(--muted); }
+
+    /* ── Flow diagram ── */
+    .flow {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 0;
+      background: #f8fafc; border: 1px solid var(--border);
+      border-radius: 10px; padding: 20px 24px; margin: 16px 0;
+      overflow-x: auto;
+    }
+    .flow-step {
+      background: #ffffff; border: 1px solid #cbd5e1;
+      border-radius: 8px; padding: 10px 16px;
+      font-size: 12.5px; white-space: nowrap;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .flow-step .fs-label { font-family: var(--mono); font-size: 10px; color: #64748b; }
+    .flow-step .fs-name { color: #1e293b; font-weight: 600; }
+    .flow-arrow {
+      color: var(--accent); font-size: 1.1rem; padding: 0 10px;
+      flex-shrink: 0;
+    }
+
+    /* ── Lifecycle timeline ── */
+    .timeline { position: relative; padding-left: 28px; }
+    .timeline::before {
+      content: ''; position: absolute; left: 6px; top: 8px; bottom: 8px;
+      width: 2px; background: var(--border);
+    }
+    .tl-item { position: relative; margin-bottom: 28px; }
+    .tl-dot {
+      position: absolute; left: -26px; top: 4px;
+      width: 14px; height: 14px; border-radius: 50%;
+      border: 2px solid;
+    }
+    .tl-dot.once      { background: rgba(6,182,212,0.2); border-color: var(--accent2); }
+    .tl-dot.recurring { background: rgba(139,92,246,0.2); border-color: #8b5cf6; }
+    .tl-dot.ongoing   { background: rgba(16,185,129,0.2); border-color: var(--green); }
+    .tl-title { font-family: var(--display); font-size: 0.95rem; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+    .tl-meta  { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-bottom: 6px; }
+    .tl-desc  { font-size: 0.88rem; color: var(--muted); }
+
+    /* ── Footer ── */
+    footer {
+      background: #111827; border-top: 1px solid #1e2d45;
+      padding: 28px 64px; display: flex; justify-content: space-between;
+      align-items: center; font-size: 12px; color: var(--dim);
+      font-family: var(--mono);
+    }
+    footer span { color: #94a3b8; }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      main { padding: 32px 24px 80px; }
+      .hero { padding: 48px 24px 40px; }
+      .hero h1 { font-size: 2.2rem; }
+      .feature-grid { grid-template-columns: 1fr; }
+      footer { flex-direction: column; gap: 8px; padding: 24px; }
+    }
+    @media print {
+      .sidebar { display: none; }
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════ HERO ═══════════════════ -->
+<header class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+  <div class="hero-content">
+    <div class="hero-tag" style="margin-bottom:12px;">Plugin User Guide · v3.25.0</div>
+    <h1>ai-assisted-<em>development</em></h1>
+    <p class="sub">
+      ICEA-driven development for teams on Azure DevOps — language-agnostic across
+      .NET, Java/Spring, Python, and Node.js backends and Angular / React frontends.
+      Every feature starts with a spec; every PR is compliance-checked before it opens.
+    </p>
+    <div class="hero-badges">
+      <span class="badge badge-gold">v3.25.0</span>
+      <span class="badge badge-blue">.NET (Framework 4.x → .NET 10)</span>
+      <span class="badge badge-cyan">Angular</span>
+      <span class="badge badge-cyan">React</span>
+      <span class="badge badge-cyan">Java / Spring Boot</span>
+      <span class="badge badge-cyan">Python</span>
+      <span class="badge badge-cyan">Node.js</span>
+      <span class="badge badge-gold">Azure DevOps</span>
+    </div>
+  </div>
+</header>
+
+<section style="max-width:1100px;margin:24px auto 0;padding:16px 20px;background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #f59e0b;border-radius:8px;font-size:14px;line-height:1.6;color:#334155;">
+  For developers <strong>using</strong> the plugin. Maintaining or extending it? See the <strong>Plugin Developer Guide</strong>. Release history: <a href="../CHANGELOG.md">CHANGELOG.md</a>.
+</section>
+
+<div class="layout">
+<nav class="sidebar">
+  <div class="sidebar-section">
+    <div class="sidebar-label">Getting started</div>
+    <a href="#overview" class="optional"><span class="nav-icon">◈</span> What this plugin is</a>
+    <a href="#pat" class="mandatory"><span class="step-dot">1</span> Azure DevOps PAT</a>
+    <a href="#install" class="mandatory"><span class="step-dot">2</span> Install</a>
+    <a href="#setup" class="mandatory"><span class="step-dot">3</span> First-time setup</a>
+    <a href="#health" class="recommended"><span class="step-dot">4</span> Health check</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Build features (ICEA)</div>
+    <a href="#icea" class="optional"><span class="step-dot">→</span> The ICEA workflow</a>
+    <a href="#critic" class="optional"><span class="step-dot">→</span> The critic layer</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Quality &amp; delivery</div>
+    <a href="#quality" class="optional"><span class="nav-icon">🛡</span> Quality &amp; security</a>
+    <a href="#pr" class="optional"><span class="nav-icon">⤴</span> Pull requests</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Bigger moves</div>
+    <a href="#migrate" class="optional"><span class="step-dot">→</span> Migrate</a>
+    <a href="#readiness" class="optional"><span class="step-dot">→</span> Readiness &amp; ops</a>
+    <a href="#codebase" class="optional"><span class="step-dot">→</span> Understand the codebase</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Memory &amp; more</div>
+    <a href="#dream" class="optional"><span class="nav-icon">◌</span> Memory (Dream)</a>
+    <a href="#more" class="optional"><span class="step-dot">→</span> More commands</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Reference</div>
+    <a href="#commands" class="optional"><span class="step-dot">→</span> All commands</a>
+    <a href="#keywords" class="optional"><span class="step-dot">→</span> Keyword reference</a>
+    <a href="#model-routing" class="optional"><span class="nav-icon">🤖</span> Model routing</a>
+    <a href="#update" class="optional"><span class="step-dot">→</span> Update / uninstall</a>
+  </div>
+</nav>
+<main>
+
+  <section id="overview">
+    <div class="section-eyebrow">For developers using the plugin</div>
+    <h2>What this <em class="accent">plugin</em> is</h2>
+    <p class="section-intro">A spec-first development workflow for teams on Azure DevOps. Every feature starts from an approved <strong>ICEA</strong> (Intent · Context · Examples · Acceptance); code generation is gated on it, every PR is compliance-checked before it opens, and the plugin keeps a memory of your project's decisions between sessions — all inside Claude Code.</p>
+    <div class="feature-grid">
+      <div class="feature-card"><div class="fc-icon">◻</div><div class="fc-name">Spec-first</div><div class="fc-desc">No feature code is written until an ICEA is approved on disk. The gate is enforced mechanically, not by convention.</div></div>
+      <div class="feature-card"><div class="fc-icon">⚖</div><div class="fc-name">Quality-gated</div><div class="fc-desc">A critic reviews each artefact as it is produced; code-review, security, and a pre-commit check guard what lands.</div></div>
+      <div class="feature-card"><div class="fc-icon">◌</div><div class="fc-name">Remembers</div><div class="fc-desc">The Dream memory system consolidates decisions and gotchas so the next session starts with context, not a blank slate.</div></div>
+      <div class="feature-card"><div class="fc-icon">◈</div><div class="fc-name">Stack-aware</div><div class="fc-desc">Detects your stack per repo — .NET (Framework 4.x → .NET 10), Java/Spring, Python, Node.js, Angular, React — and loads matching rules.</div></div>
+    </div>
+    <div class="info"><span class="wi">ℹ</span><span><strong>Core principle:</strong> do not over-complicate. The plugin stops and asks when something is ambiguous rather than guessing, and it documents non-trivial choices as it goes.</span></div>
+    <div class="warning"><span class="wi">⚠</span><span>Maintaining or extending the plugin itself (adding skills/commands, releasing a version)? That lives in the <strong>Plugin Developer Guide</strong>, not here.</span></div>
+  </section>
+
+  <section id="pat">
+    <div class="section-eyebrow">Getting started · step 1</div>
+    <h2>Azure DevOps <em class="accent">PAT</em></h2>
+    <p class="section-intro">Skills that read or write work items, PRs, and metrics authenticate with a Personal Access Token. Create one before first use.</p>
+    <table class="cmd-table">
+      <thead><tr><th>Scope</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><code>Work Items (Read &amp; Write)</code></td><td>Read ICEA work items, create task breakdowns, log bugs.</td></tr>
+        <tr><td><code>Code (Read &amp; Write)</code></td><td>Read the diff and open pull requests.</td></tr>
+        <tr><td><code>Pull Request Threads (Read &amp; Write)</code></td><td>Post PR descriptions and review threads.</td></tr>
+      </tbody>
+    </table>
+    <p>Create it at <strong>Azure DevOps → User settings → Personal access tokens → New Token</strong>, then store it — best option first:</p>
+    <div class="step-card recommended"><div class="step-number">A</div><div class="step-header"><div class="step-title">Windows environment variable (recommended)</div><span class="tag tag-recommended">Best</span></div><p class="step-desc">Set <code>AZURE_DEVOPS_PAT</code> as a user environment variable. It never touches the repo and is shared across projects.</p></div>
+    <div class="step-card optional"><div class="step-number">B</div><div class="step-header"><div class="step-title">.claude/settings.local.json (gitignored)</div><span class="tag tag-optional">Alternative</span></div><p class="step-desc">Add it under <code>env</code> in <code>.claude/settings.local.json</code>, which is gitignored. Never put it in the committed <code>settings.json</code> — a write-time and pre-commit guard block secrets there.</p></div>
+    <div class="warning"><span class="wi">⚠</span><span>Never commit a PAT. If one is ever staged into <code>.claude/settings.json</code>, the secrets guard blocks the commit.</span></div>
+  </section>
+
+  <section id="install">
+    <div class="section-eyebrow">Getting started · step 2</div>
+    <h2><em class="accent">Install</em> the plugin</h2>
+    <p class="section-intro">The plugin runs inside Claude Code. Install it once per machine.</p>
+    <div class="code-block"><div class="code-header"><span class="code-lang">powershell</span></div><div class="code-body"><pre><span class="cmd">.install.ps1</span></pre></div></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">bash</span></div><div class="code-body"><pre><span class="cmd">bash install.sh</span></pre></div></div>
+    <div class="info"><span class="wi">ℹ</span><span><strong>VS Code users:</strong> after installing or updating, run <code>Developer: Reload Window</code> (<code>Ctrl+Shift+P</code>) to pick up changes.</span></div>
+  </section>
+
+  <section id="setup">
+    <div class="section-eyebrow">Getting started · step 3</div>
+    <h2>First-time <em class="accent">setup</em></h2>
+    <p class="section-intro">Open your project in Claude Code and run <span class="cmd-pill">setup-init</span>. It is idempotent and safe to re-run; it seeds infrastructure in order:</p>
+    <div class="timeline">
+      <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Memory files</div><div class="tl-desc"><code>memory/MEMORY.md</code> and <code>memory/dream-log.md</code>.</div></div>
+      <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Command stubs</div><div class="tl-desc">46 stubs to <code>.claude/commands/</code> — makes every command visible in the VS Code picker.</div></div>
+      <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Scoped rules</div><div class="tl-desc">Only the rule files matching your detected stack (from a 43-file layered set) — they activate automatically when Claude edits a matching file type.</div></div>
+      <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">CLAUDE.md</div><div class="tl-desc">Appends the plugin sections to an existing <code>CLAUDE.md</code>, or creates one.</div></div>
+      <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Architecture + knowledge graph</div><div class="tl-desc">Runs the deployment questionnaire, populates <code>.claude/architecture/</code>, and builds the codebase knowledge graph under <code>.claude/graph/</code>.</div></div>
+      <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">.gitignore</div><div class="tl-desc">Adds the plugin-required entries and offers to ignore detected build artifacts.</div></div>
+    </div>
+  </section>
+
+  <section id="health">
+    <div class="section-eyebrow">Getting started · step 4</div>
+    <h2>Health <em class="accent">check</em></h2>
+    <p class="section-intro">Run <span class="cmd-pill">setup-status</span> any time to confirm the plugin is wired up. It reports 🟢/🟡/🔴 across <strong>23 infrastructure checks</strong> — CLAUDE.md, memory, rules, stubs, architecture docs, the knowledge graph (index + freshness + stale flag), the deployment doc, caches, ignore-file coverage, open findings across all ledgers, model-version hygiene, and plugin-version drift — and prints a prioritised action list. After a plugin upgrade it flags <code>UPGRADE PENDING</code>; run <span class="cmd-pill">setup-sync</span> to re-provision.</p>
+  </section>
+
+  <section id="icea">
+    <div class="section-eyebrow">Build features</div>
+    <h2>The <em class="accent">ICEA</em> workflow</h2>
+    <p class="section-intro">This is the day-to-day loop. You never write feature code first — you agree the spec, then Claude implements exactly that. The gate is enforced by a rule pre-loaded each session and a server-side PR check, so it cannot be quietly skipped.</p>
+    <div class="flow">
+      <div class="flow-step"><span class="fs-label">1 · plan</span><span class="fs-name">Describe the feature</span></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step"><span class="fs-label">2 · ICEA</span><span class="fs-name">Draft + SAVE PLAN</span></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step"><span class="fs-label">3 · Tech Spec</span><span class="fs-name">SAVE ICEA → SAVE TECH</span></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step"><span class="fs-label">4 · approve</span><span class="fs-name">APPROVE ADO-{ID}</span></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step"><span class="fs-label">5 · build</span><span class="fs-name">IMPLEMENT ADO-{ID}</span></div>
+    </div>
+    <div class="feature-grid" style="margin-top:20px;">
+      <div class="feature-card"><div class="fc-name">1 · Start</div><div class="fc-desc">Run <span class="cmd-pill">icea-feature</span> (or describe a feature / paste an ADO #). Claude asks clarifying questions and drafts the plan. It will not generate code yet.</div></div>
+      <div class="feature-card"><div class="fc-name">2 · ICEA</div><div class="fc-desc">Reply <code>SAVE PLAN ADO-{ID}</code> to persist the plan and draft the ICEA (Intent · Context · Examples · Acceptance). The critic checks it before it is written for your review.</div></div>
+      <div class="feature-card"><div class="fc-name">3 · Tech Spec</div><div class="fc-desc"><code>SAVE ICEA ADO-{ID}</code> runs the critic gate and drafts the Tech Spec; <code>SAVE TECH ADO-{ID}</code> writes it (blocks on unresolved open questions).</div></div>
+      <div class="feature-card"><div class="fc-name">4 · Approve</div><div class="fc-desc">Your tech lead reviews the docs on disk and you reply <code>APPROVE ADO-{ID}</code>. Only this exact word unblocks code generation.</div></div>
+      <div class="feature-card"><div class="fc-name">5 · Implement</div><div class="fc-desc"><code>IMPLEMENT ADO-{ID}</code> generates code for the approved ICEA (Epics go story by story). Every write still passes the Write Gate.</div></div>
+      <div class="feature-card"><div class="fc-name">Any time · Status</div><div class="fc-desc"><code>STATUS ADO-{ID}</code> shows exactly where a work item is and the next action — the perfect re-entry point after a break.</div></div>
+    </div>
+
+    <h3>Change tiers — you never pick one</h3>
+    <p>The plugin classifies each change mechanically so small work isn't buried in ceremony:</p>
+    <ul>
+      <li><strong>T1 micro</strong> (&le;1 file, &le;20 lines, no signature/dependency/sensitive-path changes): a one-line auto-ICEA is written and work proceeds immediately. The critic still reviews the result. Say <code>STOP</code> to force a full ICEA.</li>
+      <li><strong>T2 standard</strong>: the full ICEA draft → <code>APPROVE</code> cycle.</li>
+      <li><strong>T3 elevated</strong> (auth paths, public endpoints, new dependencies, sensitive data, schema changes): full ICEA plus mandatory permission-boundary examples.</li>
+    </ul>
+    <p>Tiers only move <em>up</em>: if a T1 change grows past its bounds, <span class="cmd-pill">checkin</span> blocks the commit and routes you to a full ICEA. A <strong>change manifest</strong> lists every file the model expects to touch before any code exists; at check-in the prediction is scored against the real diff to improve future predictions (it never blocks).</p>
+
+    <h3>Emergency bypass</h3>
+    <div class="warning"><span class="wi">⚠</span><span>Prefix your message with <code>/skip-icea</code> to bypass the Feature Gate. Claude warns once and proceeds; the bypass is logged and audited. Not recommended for regular use — it lifts <em>only</em> the Feature Gate, never the Write Gate, secrets scan, or findings gate.</span></div>
+  </section>
+
+  <section id="critic">
+    <div class="section-eyebrow">Build features</div>
+    <h2>The <em class="accent">critic</em> layer</h2>
+    <p class="section-intro">The critic is a second-pass reviewer that checks an artefact <em>at the moment it is produced, before it is saved</em>. It runs automatically at three points and can also be run on demand with <span class="cmd-pill">critic</span>.</p>
+    <table class="cmd-table">
+      <thead><tr><th>Gate</th><th>When</th><th>What it checks</th></tr></thead>
+      <tbody>
+        <tr><td>ICEA draft</td><td>Before the ICEA is written for review</td><td>Completeness, testability, B1–B7 coverage, scope vs Intent. Auto-revises up to 2×.</td></tr>
+        <tr><td>Tech Spec draft</td><td>Before the Tech Spec is written</td><td>ICEA↔design traceability, coverage-matrix completeness, decision-option fidelity.</td></tr>
+        <tr><td>Generated code</td><td>After code is generated, before any file is written</td><td>ICEA + Tech Spec traceability (three-way: intent &rarr; plan &rarr; code; ICEA wins on conflict), simplicity, rules compliance, decision transparency, hidden assumptions.</td></tr>
+      </tbody>
+    </table>
+    <div class="info"><span class="wi">ℹ</span><span><strong>Why a critic when there's already code review?</strong> Code review runs on files that already exist — the spec is out of context by then. The critic runs while the ICEA, the Tech Spec, and the fresh code are all in front of Claude, so it can ask the one thing a later scan can't: <em>does this do exactly what the approved AC asked and what the Tech Spec planned — no more, no less?</em></span></div>
+  </section>
+
+  <section id="quality">
+    <div class="section-eyebrow">Quality &amp; delivery</div>
+    <h2>Quality &amp; <em class="accent">security</em></h2>
+    <p class="section-intro">Findings from every scanner are fingerprinted (<code>FP-xxxxxxxx</code>) into per-tool ledgers, so a finding is tracked across runs — fix it with <span class="cmd-pill">fix</span> or suppress it with <span class="cmd-pill">dismiss</span> (with a required justification).</p>
+    <div class="feature-grid">
+      <div class="feature-card"><div class="fc-name">code-review</div><div class="fc-desc">Static-analysis-style review with cross-run tracking — new defects flagged, fixed ones marked with git attribution. Scope flags: <code>--changed</code> <code>--pr</code> <code>--full</code> <code>--ci</code> <code>--area</code>.</div></div>
+      <div class="feature-card"><div class="fc-name">security-review</div><div class="fc-desc">OWASP/CVSS/CWE review; a static asset audit runs first (flags real data in <code>public/</code>). Business-context severity can escalate findings. Same scope flags.</div></div>
+      <div class="feature-card"><div class="fc-name">dynamic-scan</div><div class="fc-desc">Runtime DAST via OWASP ZAP in Docker against a running app/API. Safe passive by default; <code>--full</code>/<code>--scope</code> for gated active scans.</div></div>
+      <div class="feature-card"><div class="fc-name">checkin</div><div class="fc-desc">Pre-commit gate: code-review + ICEA compliance + secrets scan + open Critical/High findings, in one pass. Emits a pre-filled commit command when green.</div></div>
+    </div>
+    <div class="info"><span class="wi">ℹ</span><span>Run a flag-taking scanner with no flag and it shows a short menu with the sensible default pre-selected. In CI / non-interactive runs there is no prompt — the documented default is used.</span></div>
+  </section>
+
+  <section id="pr">
+    <div class="section-eyebrow">Quality &amp; delivery</div>
+    <h2>Pull <em class="accent">requests</em></h2>
+    <p class="section-intro">Three commands take you from diff to an open, compliance-checked PR.</p>
+    <div class="timeline">
+      <div class="tl-item"><div class="tl-dot ongoing"></div><div class="tl-title">Describe</div><div class="tl-meta">/pr-describe</div><div class="tl-desc">Reads the diff against the base branch, maps every changed file to an Acceptance Criterion, and flags scope creep.</div></div>
+      <div class="tl-item"><div class="tl-dot ongoing"></div><div class="tl-title">Verify (optional)</div><div class="tl-meta">/pr-spec-review</div><div class="tl-desc">Full PR-vs-ICEA traceability matrix — compliance, code review, and gaps — before you open anything.</div></div>
+      <div class="tl-item"><div class="tl-dot ongoing"></div><div class="tl-title">Create</div><div class="tl-meta">/pr-create</div><div class="tl-desc">Runs the compliance + findings gates, then submits the PR to Azure DevOps or GitHub (remote auto-detected) — or saves a draft artifact if you skip the connection.</div></div>
+    </div>
+  </section>
+
+  <section id="migrate">
+    <div class="section-eyebrow">Bigger moves</div>
+    <h2><em class="accent">Migrate</em> an application</h2>
+    <p class="section-intro">There is no single "migrate" command — pick by what is actually changing. Each is ledger-backed with its own <code>RESUME</code> and <code>STATUS</code>.</p>
+    <div class="feature-grid">
+      <div class="feature-card"><div class="fc-icon">⬆️</div><div class="fc-name">upgrade</div><div class="fc-trigger">same stack, higher version</div><div class="fc-desc">In-place bump (e.g. .NET 6 → 8, Angular 15 → 17). Orchestrates the stack-native tool and delivers a decision-grade Gap + Risk report; a false-upgrade (cross-runtime) is routed to <code>/rewrite</code>.</div></div>
+      <div class="feature-card"><div class="fc-icon">🔀</div><div class="fc-name">rewrite</div><div class="fc-trigger">different stack</div><div class="fc-desc">Generative translation into a NEW target-folder app (e.g. Java → .NET, Express → Angular). Posture → options → per-cluster Behavioral Assurance Level (BAL) → two-gate merge/completion. Source stays read-only.</div></div>
+      <div class="feature-card"><div class="fc-icon">☁️</div><div class="fc-name">replatform</div><div class="fc-trigger">new host (on-prem → cloud)</div><div class="fc-desc">Moves where the app runs. The LLM authors IaC + runbooks; a human executes anything touching real infra/data. Graded against an NFR + Well-Architected oracle.</div></div>
+      <div class="feature-card"><div class="fc-icon">🧭</div><div class="fc-name">knowledge-freshness</div><div class="fc-trigger">keep advice current</div><div class="fc-desc">Validates and (with approval) refreshes the migration family's offline reference knowledge. Modes: check | refresh.</div></div>
+    </div>
+  </section>
+
+  <section id="readiness">
+    <div class="section-eyebrow">Bigger moves</div>
+    <h2>Readiness &amp; <em class="accent">operations</em></h2>
+    <div class="feature-grid">
+      <div class="feature-card"><div class="fc-name">app-readiness</div><div class="fc-desc">Enterprise/Solution Architect production-readiness assessment across 8 domains (pipeline, resilience, observability, security, scalability, data integrity, runbook, tests). Flags <code>--quick</code>/<code>--full</code>.</div></div>
+      <div class="feature-card"><div class="fc-name">plugin-readiness</div><div class="fc-desc">AI Architect readiness of the plugin itself across 6 domains — reads plugin state only, never your source.</div></div>
+      <div class="feature-card"><div class="fc-name">operations</div><div class="fc-desc">Generates a master Operational Runbook (Markdown + offline HTML) — the doc a support engineer opens during an incident. Unknowns render as ⚠ TODO, never fabricated.</div></div>
+      <div class="feature-card"><div class="fc-name">go-live</div><div class="fc-desc">Generates a Support-Transition Acceptance Checklist — the one-time go/no-go gate an incoming support team uses to accept the app.</div></div>
+    </div>
+  </section>
+
+  <section id="codebase">
+    <div class="section-eyebrow">Bigger moves</div>
+    <h2>Understand the <em class="accent">codebase</em></h2>
+    <p class="section-intro">The plugin keeps a lightweight map of your codebase under <code>.claude/graph/</code> — an index plus one small detail file per module. Skills read this map for fast orientation instead of scanning source, which keeps token cost down on large repositories.</p>
+    <div class="feature-grid">
+      <div class="feature-card"><div class="fc-name">explain</div><div class="fc-desc">Answers "where does X live / what depends on Y" from the architecture docs and knowledge graph — no source scanning by default. Tells you exactly which file to open for detail.</div></div>
+      <div class="feature-card"><div class="fc-name">graph-sync</div><div class="fc-desc">Refreshes the graph incrementally — only stale modules regenerate. A git hook flags staleness after a pull; <code>setup-status</code> surfaces it.</div></div>
+      <div class="feature-card"><div class="fc-name">graph-viz</div><div class="fc-desc">Renders an offline HTML map of modules, dependencies, and hot-spots. <code>--3d</code> for a WebGL view.</div></div>
+      <div class="feature-card"><div class="fc-name">update-arch</div><div class="fc-desc">Refreshes the prose architecture docs for changed areas; <code>--deployment</code> re-runs the questionnaire.</div></div>
+    </div>
+  </section>
+
+  <section id="dream">
+    <div class="section-eyebrow">Memory</div>
+    <h2>Memory — the <em class="accent">Dream</em> system</h2>
+    <p class="section-intro">Dream consolidates what happened in your sessions into durable project memory, so the next session starts with the decisions, conventions, and gotchas already loaded — not a blank slate. It proposes changes and waits for tiered approval before writing.</p>
+    <div class="flow">
+      <div class="flow-step"><span class="fs-label">Phase 1</span><span class="fs-name">Read sessions</span></div><span class="flow-arrow">→</span>
+      <div class="flow-step"><span class="fs-label">Phase 2</span><span class="fs-name">Score entries</span></div><span class="flow-arrow">→</span>
+      <div class="flow-step"><span class="fs-label">Phase 3</span><span class="fs-name">Propose ADD/UPDATE/DELETE</span></div><span class="flow-arrow">→</span>
+      <div class="flow-step"><span class="fs-label">Phase 4</span><span class="fs-name">Tiered approval</span></div><span class="flow-arrow">→</span>
+      <div class="flow-step"><span class="fs-label">Phase 5</span><span class="fs-name">Write memory</span></div>
+    </div>
+    <div class="feature-grid" style="margin-top:20px;">
+      <div class="feature-card"><div class="fc-name">dream</div><div class="fc-desc">Run a consolidation pass every 5–8 sessions. Proposes operations with justification; you approve by tier.</div></div>
+      <div class="feature-card"><div class="fc-name">dream-health</div><div class="fc-desc">A browser dashboard (<code>memory/health.html</code>) of confidence scores, the decay curve, and promote candidates.</div></div>
+      <div class="feature-card"><div class="fc-name">dream-audit</div><div class="fc-desc">Quarterly quality audit — flags uncited facts and contradicted promotions, feeding rollback history into scoring.</div></div>
+      <div class="feature-card"><div class="fc-name">dream-rollback</div><div class="fc-desc">Reverts a specific /dream run from the audit trail. Auditable and itself reversible.</div></div>
+    </div>
+  </section>
+
+  <section id="more">
+    <div class="section-eyebrow">More</div>
+    <h2>More <em class="accent">commands</em></h2>
+    <div class="feature-grid">
+      <div class="feature-card"><div class="fc-name">ado-tasks</div><div class="fc-desc">Breaks an approved ICEA into one Azure DevOps task per Acceptance Criterion per active layer.</div></div>
+      <div class="feature-card"><div class="fc-name">sprint-metrics</div><div class="fc-desc">Post-sprint KPIs — ICEA compliance, PR rejection, rework — via the ADO REST API.</div></div>
+      <div class="feature-card"><div class="fc-name">token-analysis</div><div class="fc-desc">Analyses token consumption across recent sessions and flags expensive prompts. Persistent cache — only the delta is processed.</div></div>
+      <div class="feature-card"><div class="fc-name">product-docs</div><div class="fc-desc">Generates a Product Detail Document and/or User Guide as self-contained HTML.</div></div>
+      <div class="feature-card"><div class="fc-name">articulate-as-human</div><div class="fc-desc">Scans a generated document for AI-sounding writing and reports by tier with file:line; rewrites only flagged spans, only on request.</div></div>
+    </div>
+  </section>
+
+  <section id="commands">
+    <div class="section-eyebrow">Reference</div>
+    <h2>All <em class="accent">commands</em></h2>
+    <p class="section-intro">All 46 commands, grouped by the phase of work where you reach for them. Type <code>/&lt;name&gt;</code> in Claude Code, or use the keyword shown.</p>
+      <h3>Setup & session</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>/setup-init</code></td><td>One-time per-project setup — seeds all infrastructure incl. the deployment questionnaire, deploys the 46 command stubs + detected-stack rules, runs the architect skill and builds the knowledge graph. Safe to re-run.</td></tr>
+          <tr><td><code>/setup-status</code></td><td>Read-only infrastructure health check across 23 items with a prioritised action list.</td></tr>
+          <tr><td><code>/setup-sync</code></td><td>Re-provisions an existing project after a plugin upgrade — applies only version-sensitive changes and re-stamps the version. Run when setup-status reports UPGRADE PENDING. Idempotent.</td></tr>
+          <tr><td><code>/setup-teardown</code></td><td>Removes plugin-managed content by scope (--full/--skills/--hooks/--rules/--commands/--state). Dry-runs first and requires CONFIRM. memory/ and .claude/architecture/ are never removed.</td></tr>
+          <tr><td><code>/session-start</code></td><td>Zero-cost session warm-up — stack, last decision, last fix, sessions since /dream, and any Red infrastructure items.</td></tr>
+          <tr><td><code>/gitignore-sync</code></td><td>Ensures the ignore file carries the plugin's managed block (Git .gitignore / TFVC .tfignore) — never touches your own lines. Arg: --with-artifacts.</td></tr>
+          <tr><td><code>/sync-dirs</code></td><td>Re-syncs additionalDirectories in settings.local.json by scanning manifests for module references outside the solution root. Idempotent.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Feature workflow (ICEA)</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>/icea-feature</code></td><td>Invoke the ICEA planning gate. Blocks feature code until an approved ICEA exists. Arg: ADO-&lt;id&gt; or a feature description.</td></tr>
+          <tr><td><code>/icea-approve</code></td><td>Marks an ICEA + Tech Spec approved by ADO ID (reads state from disk). Unblocks code generation. Keyword: APPROVE ADO-&lt;id&gt;.</td></tr>
+          <tr><td><code>/icea-implement</code></td><td>Generates and writes implementation code for an approved ICEA. Epics implement story by story. Keyword: IMPLEMENT ADO-&lt;id&gt;.</td></tr>
+          <tr><td><code>/icea-revise</code></td><td>Revises an existing ICEA + Tech Spec and re-gates code generation until re-approved. Keyword: REVISE ADO-&lt;id&gt;.</td></tr>
+          <tr><td><code>/icea-status</code></td><td>Shows the current state of all ICEA files for a work item plus the exact next action. Keyword: STATUS ADO-&lt;id&gt;.</td></tr>
+          <tr><td><code>/icea-review</code></td><td>Checks a PR or diff against its ICEA and reports pass/fail compliance.</td></tr>
+          <tr><td><code>/ado-tasks</code></td><td>One Azure DevOps task per Acceptance Criterion per active layer, from an approved ICEA. Arg: ADO-&lt;id&gt;.</td></tr>
+          <tr><td><code>/bug</code></td><td>Lightweight ICEA-lite for confirmed bugs — one approval cycle, then the fix.</td></tr>
+          <tr><td><code>/goal-loop</code></td><td>Orchestrator that sequences icea-feature &rarr; approve &rarr; implement, stopping at every gate; inside implement it self-scores generated code against the ACs until met. Never writes or approves for you.</td></tr>
+          <tr><td><code>/critic</code></td><td>Standalone second-opinion pass — <code>icea</code> or <code>code</code> mode. Also auto-runs inside icea-feature and icea-implement.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Quality & security</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>/code-review</code></td><td>Cache-aware static-analysis review with persistent cross-run tracking. Flags: --changed --pr --full --ci --area.</td></tr>
+          <tr><td><code>/security-review</code></td><td>OWASP/CVSS/CWE review with a static asset audit first. Same scope flags as code-review. (Auto-invoke skill: <code>security</code>.)</td></tr>
+          <tr><td><code>/dynamic-scan</code></td><td>Runtime DAST via OWASP ZAP/Docker against a running app/API. Safe passive default; --full/--scope for gated active scans.</td></tr>
+          <tr><td><code>/dismiss</code></td><td>Marks a ledger finding dismissed with a required justification (false-positive / wont-fix / accepted-risk / by-design). Args: FP-xxxxxxxx &lt;reason&gt; "&lt;justification&gt;" [--undo].</td></tr>
+          <tr><td><code>/fix</code></td><td>Applies a fingerprinted remediation from any ledger (code-review / security / dynamic-scan). Arg: FP-xxxxxxxx.</td></tr>
+          <tr><td><code>/checkin</code></td><td>Pre-commit gate — code-review + ICEA compliance + secrets scan + open findings (Check D) in one pass. Pass/fail verdict + a pre-filled commit command.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Pull requests</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>/pr-create</code></td><td>Compliance + findings gate &rarr; confirm &rarr; submit the PR to Azure DevOps or GitHub (remote auto-detected), or save a draft artifact.</td></tr>
+          <tr><td><code>/pr-describe</code></td><td>Generates an ICEA-compliant PR description from the git diff, mapping changed files to Acceptance Criteria and flagging scope creep.</td></tr>
+          <tr><td><code>/pr-spec-review</code></td><td>PR-vs-ICEA traceability report: compliance, code review, coverage matrix, and gaps.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Migration</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>/upgrade</code></td><td>In-place same-stack version upgrade — orchestrates the stack-native tool, delivers a Gap + Risk report, routes a false-upgrade to /rewrite. Keyword: UPGRADE ADO-&lt;id&gt; (RESUME / STATUS).</td></tr>
+          <tr><td><code>/rewrite</code></td><td>Out-of-place generative migration to a NEW target folder in a different stack. Per-cluster Behavioral Assurance Level (BAL) with a two-gate merge/completion model. Keyword: REWRITE ADO-&lt;id&gt; (RESUME / STATUS).</td></tr>
+          <tr><td><code>/replatform</code></td><td>Hosting/topology migration (on-prem &rarr; cloud). The LLM authors IaC + human-executable runbooks; a human executes real infra/data. NFR + Well-Architected oracle. Keyword: REPLATFORM ADO-&lt;id&gt; (RESUME / STATUS).</td></tr>
+          <tr><td><code>/knowledge-freshness</code></td><td>Validates (check) and, with approval, refreshes the migration family's offline reference knowledge so upgrade/rewrite/replatform advice stays current. Modes: check | refresh.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Readiness & operations</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>/app-readiness</code></td><td>Enterprise Architect production-readiness review across 8 domains. Flags: --quick --full.</td></tr>
+          <tr><td><code>/plugin-readiness</code></td><td>AI Architect review across 6 domains — reads plugin state only, never source.</td></tr>
+          <tr><td><code>/operations</code></td><td>Generates a master Operational Runbook (Markdown + offline HTML) from the codebase. A documentation generator — no approval gate; unknowns render as &#9888; TODO, never fabricated.</td></tr>
+          <tr><td><code>/go-live</code></td><td>Generates a Support-Transition Acceptance Checklist (go/no-go gate) from the prod-readiness report, security + code-review ledgers, and deployment architecture. No approval gate.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Codebase understanding</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>/explain</code></td><td>Answers structural questions from the architecture docs and knowledge graph — no source scanning by default.</td></tr>
+          <tr><td><code>/graph-sync</code></td><td>Incrementally refreshes .claude/graph/ — regenerates only stale module detail files, detects new modules, restructures flat&rarr;domain past 30 modules. Flag: --effort low|medium.</td></tr>
+          <tr><td><code>/graph-viz</code></td><td>Renders a self-contained offline HTML map of the knowledge graph (nodes by type, edges by confidence, hubs flagged). Reads graph.json only. Flag: --3d.</td></tr>
+          <tr><td><code>/update-arch</code></td><td>Targeted architecture.md prose refresh for changed areas. Flag: --deployment re-runs the questionnaire. For the module graph, use /graph-sync.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Memory (Dream)</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>/dream</code></td><td>6-phase session-to-memory consolidation with tiered approval.</td></tr>
+          <tr><td><code>/dream-health</code></td><td>Generates memory/health.html with confidence and decay visualisations.</td></tr>
+          <tr><td><code>/dream-audit</code></td><td>Quarterly memory quality audit — flags uncited facts, surfaces contradicted promotions, feeds rollback history into confidence scoring.</td></tr>
+          <tr><td><code>/dream-rollback</code></td><td>Reverts a specific /dream run using the audit trail. Auditable and itself reversible.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Metrics & analysis</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>/sprint-metrics</code></td><td>Post-sprint KPIs — ICEA compliance, PR rejection, and rework — via the ADO REST API.</td></tr>
+          <tr><td><code>/token-analysis</code></td><td>Token-consumption analysis across recent sessions with a persistent cache; flags expensive prompts.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Docs & writing</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>/product-docs</code></td><td>Generates a Product Detail Document and/or User Guide as self-contained HTML.</td></tr>
+          <tr><td><code>/articulate-as-human</code></td><td>Scans a generated document for AI-sounding writing patterns and reports by tier with file:line; rewrites only flagged spans, only on request. Args: &lt;path&gt; [--json].</td></tr>
+        </tbody>
+      </table>
+
+  </section>
+
+  <section id="keywords">
+    <div class="section-eyebrow">Reference</div>
+    <h2>Keyword <em class="accent">reference</em></h2>
+    <p class="section-intro">These keywords work in any message — no slash command needed. The ADO ID is case-insensitive.</p>
+    <table class="cmd-table">
+      <thead><tr><th>Keyword</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>SAVE PLAN ADO-{ID}</code></td><td>Persist the plan and draft the ICEA.</td></tr>
+        <tr><td><code>SAVE ICEA ADO-{ID}</code></td><td>Run the critic gate, save the ICEA, and draft the Tech Spec.</td></tr>
+        <tr><td><code>SAVE TECH ADO-{ID}</code></td><td>Write the Tech Spec (blocks on open questions).</td></tr>
+        <tr><td><code>APPROVE ADO-{ID}</code></td><td>Approve the ICEA + Tech Spec and unblock code generation. <code>APPROVE ADO-{ID} Story-{N}</code> for one story.</td></tr>
+        <tr><td><code>APPROVE ALL ADO-{ID}</code></td><td>Standing Write-Gate approval for the current plan — still shows each diff, just no per-file pause. <code>REVOKE ALL ADO-{ID}</code> cancels it.</td></tr>
+        <tr><td><code>IMPLEMENT ADO-{ID}</code></td><td>Generate code for the approved ICEA (optionally <code>Story-{N}</code>).</td></tr>
+        <tr><td><code>REVISE ADO-{ID}</code></td><td>Revise the ICEA/Tech Spec and re-gate code generation.</td></tr>
+        <tr><td><code>STATUS ADO-{ID}</code></td><td>Show current state and the exact next action.</td></tr>
+        <tr><td><code>BUG ADO-{ID} — {description}</code></td><td>Log a bug entry for that work item.</td></tr>
+        <tr><td><code>UPGRADE / REWRITE / REPLATFORM ADO-{ID}</code></td><td>Start a migration; each also has <code>… RESUME</code> and <code>… STATUS</code>.</td></tr>
+        <tr><td><code>SET DOMAIN</code></td><td>Infer/confirm the business domain so business-context severity is tuned to your domain.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="model-routing">
+    <div class="section-eyebrow">Reference</div>
+    <h2>Model <em class="accent">routing</em></h2>
+    <p class="section-intro">Skills route to different models by task type. Override any of these in <code>.claude/settings.json</code> → <code>env</code>.</p>
+    <table class="cmd-table">
+      <thead><tr><th>Tier</th><th>Env var · default</th><th>Used for</th></tr></thead>
+      <tbody>
+        <tr><td>Generation</td><td><code>ICEA_MODEL</code> · claude-opus-4-8</td><td>ICEA/spec/code generation, task breakdown, PR descriptions, docs.</td></tr>
+        <tr><td>Review</td><td><code>REVIEW_MODEL</code> · claude-sonnet-4-6</td><td>Code review, security, dynamic-scan, PR compliance, the critic (via <code>CRITIC_MODEL</code>).</td></tr>
+        <tr><td>Infrastructure</td><td><code>INFRA_MODEL</code> · claude-sonnet-4-6</td><td>Dream, architect, setup-status, metrics, token-analysis, graph-sync.</td></tr>
+      </tbody>
+    </table>
+    <div class="warning"><span class="wi">⚠</span><span>Never commit <code>.claude/settings.json</code> if it holds your PAT — confirm it is gitignored first.</span></div>
+  </section>
+
+  <section id="update">
+    <div class="section-eyebrow">Reference</div>
+    <h2>Update &amp; <em class="accent">uninstall</em></h2>
+    <div class="code-block"><div class="code-header"><span class="code-lang">powershell</span></div><div class="code-body"><pre><span class="cmd">.install.ps1 -Update</span>
+<span class="cmd">.install.ps1 -Uninstall</span></pre></div></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">bash</span></div><div class="code-body"><pre><span class="cmd">bash install.sh --update</span>
+<span class="cmd">bash install.sh --uninstall</span></pre></div></div>
+    <p>After upgrading, run <span class="cmd-pill">setup-sync</span> in each project to apply version-sensitive changes. Uninstalling never touches your project's <code>.claude/</code>, <code>memory/</code>, or <code>CLAUDE.md</code>.</p>
+  </section>
+
+  </main>
+</div>
+
+<footer>
+  <span>ai-assisted-development · User Guide · v3.25.0</span>
+  <span>Your Company</span>
+</footer>
+
+<script>
+  // Active sidebar link on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const links = document.querySelectorAll('.sidebar a[href^="#"]');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const a = document.querySelector(`.sidebar a[href="#${e.target.id}"]`);
+        if (a) a.classList.add('active');
+      }
+    });
+  }, { threshold: 0.3, rootMargin: '-10% 0px -60% 0px' });
+  sections.forEach(s => io.observe(s));
+</script>
+
+</body>
+</html>
