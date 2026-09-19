@@ -88,10 +88,11 @@ for (const f of files) {
   if (ext === '.cs') { let m; const re = /^\s*namespace\s+([A-Za-z_][\w.]*)/gm; while ((m = re.exec(src))) if (!(m[1] in nsToNode)) nsToNode[m[1]] = node; }
   else if (ext === '.java') { let m; const re = /^\s*package\s+([A-Za-z_][\w.]*)\s*;/gm; while ((m = re.exec(src))) if (!(m[1] in pkgToNode)) pkgToNode[m[1]] = node; }
 }
+const nsKeys = Object.keys(nsToNode).sort((a, b) => b.length - a.length);
+const pkgKeys = Object.keys(pkgToNode).sort((a, b) => b.length - a.length);
 // longest-prefix namespace/package resolver
-function resolveNs(map, ns) {
+function resolveNs(map, keys, ns) {
   if (map[ns]) return map[ns];
-  const keys = Object.keys(map).sort((a, b) => b.length - a.length);
   for (const k of keys) if (ns === k || ns.startsWith(k + '.')) return map[k];
   return null;
 }
@@ -134,11 +135,11 @@ for (const f of files) {
 
   } else if (ext === '.cs') {
     let m; const re = /^\s*using\s+(?:static\s+)?([A-Za-z_][\w.]*)\s*;/gm;
-    while ((m = re.exec(src))) addEdge(from, resolveNs(nsToNode, m[1]));
+    while ((m = re.exec(src))) addEdge(from, resolveNs(nsToNode, nsKeys, m[1]));
 
   } else if (ext === '.java') {
     let m; const re = /^\s*import\s+(?:static\s+)?([A-Za-z_][\w.]*)\.[A-Za-z_]\w*\s*;/gm;
-    while ((m = re.exec(src))) addEdge(from, resolveNs(pkgToNode, m[1]));
+    while ((m = re.exec(src))) addEdge(from, resolveNs(pkgToNode, pkgKeys, m[1]));
 
   } else if (ext === '.csproj') {
     let m; const re = /<ProjectReference\s+[^>]*Include\s*=\s*"([^"]+)"/g;
