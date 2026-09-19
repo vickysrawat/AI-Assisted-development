@@ -122,6 +122,32 @@ If there are open bugs, ask:
 Generate implementation code for each pending AC in order.
 Follow the Tech Spec exactly — do not deviate or invent.
 
+**Tracker and audit — mark story as in progress:**
+
+Locate the tracker and audit files:
+```bash
+TRACKER=$(find docs -path "*UserStory${ADO_ID}*" -name "ADO-${ADO_ID}-*.tracker.md" 2>/dev/null | head -1)
+AUDIT_FILE=$(find docs -path "*UserStory${ADO_ID}*" -name "ADO-${ADO_ID}-*.ai-audit.md" 2>/dev/null | head -1)
+```
+
+Update the tracker — change the story/implementation section `**Status:** ⏳ Pending` to `**Status:** 🔄 In Progress`:
+- For STORY type: find `## Implementation — ADO #{ADO_ID}` section
+- For EPIC type: find `## Story {N} — ` section matching the story being implemented
+
+Append to the audit file:
+```
+| {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | implementation | impl-started | {Story N \| ADO #{ADO_ID}} | - | Implementing: {AC-Fx, AC-Fy, … \| full story scope} |
+```
+
+Get the ISO 8601 timestamp and actor once — reuse for all audit rows in this story:
+```bash
+TS=$(date '+%Y-%m-%dT%H:%M:%S')
+ACTOR=$(node -e "const i=require('.claude/hooks/audit-append.cjs').resolveIdentity();console.log(i.verified_actor||i.os_user||'UNRESOLVED')" 2>/dev/null || echo "UNRESOLVED")
+```
+
+Initialise counters in context (reset at Step 4 start for this story):
+`critic_revise_count = 0` · `build_issue_count = 0` · `follow_up_count = 0`
+
 **Determine active layers from architecture docs, not assumption.**
 Read `.claude/architecture/architecture.md` for the stack. If absent,
 fall back to the `# Stack:` line in `CLAUDE.md`. Generate only layers
@@ -213,6 +239,28 @@ Gate the disk write on the verdict:
 
 Nothing reaches disk while verdict is REVISE.
 
+**Audit logging and tracker follow-ups — code critic gate:**
+
+For each REVISE verdict + fix attempt: increment `critic_revise_count`, then:
+1. Append audit row:
+   ```
+   | {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | implementation | code-critic-revise | {Story N \| ADO #{ADO_ID}} | {critic_revise_count} | {one-line finding — e.g. "Missing null guard in GetById controller"} |
+   ```
+2. Increment `follow_up_count`. Append a Follow-ups row to the tracker under the correct story/implementation section:
+   ```
+   | {follow_up_count} | {issue — one line, root cause noted} | {fix applied — one line} | {file(s) changed} |
+   ```
+
+On PASS or PASS WITH NOTES, append audit row:
+```
+| {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | implementation | code-critic-pass | {Story N \| ADO #{ADO_ID}} | {critic_revise_count} retries | Critic: {verdict} |
+```
+
+On ACCEPT AS-IS escalation (after ceiling), append audit row:
+```
+| {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | implementation | code-critic-accept | {Story N \| ADO #{ADO_ID}} | {critic_revise_count} retries | Escalated after {critic_revise_count} retries — unmet ACs carried to Write Gate |
+```
+
 ---
 
 ## Step 4b — AC self-scoring goal-loop (completeness gate)
@@ -267,6 +315,20 @@ Read $PLUGIN_DIR/skills/shared/goal-loop-spec.md and run the engine with:
 The loop never writes and never issues `APPROVE` — it stops AT the Write Gate.
 Nothing reaches disk until Step 5.
 
+**Audit logging — goal-loop:**
+
+After each goal-loop iteration, append:
+```
+| {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | implementation | goal-loop-iter | {Story N \| ADO #{ADO_ID}} | iter {N} of {max} | {percentDone}% — {unmet AC count} ACs remaining: {AC ids} |
+```
+
+On goal met (100%), append:
+```
+| {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | implementation | goal-loop-complete | {Story N \| ADO #{ADO_ID}} | - | All ACs met — proceeding to Write Gate |
+```
+
+On escalation (ceiling or no progress), do NOT append a completion row — the ACCEPT AS-IS / HALT outcome is captured by Step 4a's escalation row and carried into the Write Gate prompt.
+
 ---
 
 ## Step 5 — Write Gate (source code only)
@@ -308,6 +370,89 @@ After writing, update the tracker immediately (no gate — tracking artefact):
 - AC rows: `⏳ Pending` → `✅ Done`
 - Update `Last Updated` date
 - If all ACs are done, write `Status: COMPLETE` to the ICEA file
+
+**Populate the tracker's implementation section (no gate — tracking artefact):**
+
+Find the correct section in the tracker:
+- STORY type → `## Implementation — ADO #{ADO_ID}`
+- EPIC type → `## Story {N} — {title}`
+
+Update each sub-section in place:
+
+**1. Status:** `🔄 In Progress` → `✅ Done`
+
+**2. Delivered** — replace the placeholder with a bullet per module/file cluster written. One bullet per layer. Be specific — name the component/class/file and its purpose:
+```
+- `{layer}`: `{ClassName}` — {one-line purpose} (`{primary/file/path}`)
+- `{layer}`: `{ServiceName}` — {one-line purpose} (`{primary/file/path}`)
+```
+
+**3. Tests added** — replace the placeholder with one line per spec file:
+```
+- `{spec-file.spec.ts}` — {N} cases: {brief scope, e.g. "AC-F1 positive/negative, AC-F2 edge cases"}
+```
+
+**4. Design decisions** — extract each `// DECISION:` block from the written code and format as:
+```
+- **{decision topic}:** {chosen option} — {reason in one line}. Rejected: {alternatives}.
+```
+If no `// DECISION:` blocks were written: _(no non-trivial design choices in this story)_
+
+**5. Known gaps** — list any deferred items, partially-met ACs, or ACCEPT AS-IS outcomes carried from Step 4b. If the story was fully met with no deferrals:
+```
+_(none — all ACs fully met)_
+```
+
+**6. Generate lessons learned section:**
+
+Read the audit trail rows for this story (from `impl-started` to `story-complete`). Group revision rows by phase and count:
+
+| Phase | Audit events to count |
+|---|---|
+| Plan | `plan-revised` |
+| ICEA | `icea-revised` · `icea-critic-revise` |
+| Tech Spec | `tech-revised` · `tech-critic-revise` |
+| Code | `code-critic-revise` |
+| Build | `build-issue` |
+
+**Rule:** Only generate a lesson for a phase with ≥ 2 events OR ≥ 2 follow-up rows. A single event is noise.
+
+For qualifying phases, read the Summary column of each revision row to extract what changed, group by theme, and generate a specific actionable "next time" item.
+
+Append to the tracker story/implementation section:
+
+```markdown
+### Lessons learned
+
+**Revision summary**
+| Phase | Count | Dominant themes (from audit summaries) |
+|---|---|---|
+| {phase} | {N} | {theme × count · theme × count} |
+
+**Root cause analysis**
+{2–3 sentences synthesising what drove the revisions and follow-ups. Be specific —
+name the gap (e.g. "Azure AD policy not identified before ICEA") not the category
+(e.g. "auth issues"). Cross-reference Follow-ups table root causes.}
+
+**What to do differently next time**
+- [ ] {specific actionable item — e.g. "Ask for Azure AD policy name before drafting ICEA for any story touching auth"}
+- [ ] {specific actionable item}
+```
+
+If all phases had ≤ 1 event and ≤ 1 follow-up:
+```markdown
+### Lessons learned
+_(Clean delivery — no recurring patterns identified in this story)_
+```
+
+**Audit logging — story complete:**
+```bash
+AUDIT_FILE=$(find docs -path "*UserStory${ADO_ID}*" -name "ADO-${ADO_ID}-*.ai-audit.md" 2>/dev/null | head -1)
+```
+Append:
+```
+| {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | implementation | story-complete | {Story N \| ADO #{ADO_ID}} | {critic_revise_count} critic retries · {follow_up_count} follow-ups | ACs written: {AC-F1, AC-F2, …} |
+```
 
 Confirm:
 ```
@@ -356,3 +501,45 @@ Run the pre-commit gate on the just-written code while context is fresh. This co
 Complementary to the pre-write gates: 4a (critic) checks intent-alignment and 4b
 (goal-loop) checks AC completeness — both PRE-write; checkin checks defects / secrets /
 findings POST-write. Keep all three.
+
+**Audit logging and tracker follow-ups — build gate:**
+
+```bash
+AUDIT_FILE=$(find docs -path "*UserStory${ADO_ID}*" -name "ADO-${ADO_ID}-*.ai-audit.md" 2>/dev/null | head -1)
+TRACKER=$(find docs -path "*UserStory${ADO_ID}*" -name "ADO-${ADO_ID}-*.tracker.md" 2>/dev/null | head -1)
+```
+
+On checkin ✅ or ⚠ (first pass or after all fixes):
+```
+| {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | build | checkin-pass | {Story N \| ADO #{ADO_ID}} | {build_issue_count} fixes applied | checkin: {verdict} |
+```
+
+For each checkin ❌ FAIL + fix cycle:
+1. Increment `build_issue_count`. Append audit row:
+   ```
+   | {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | build | build-issue | {Story N \| ADO #{ADO_ID}} | {build_issue_count} | {finding category}: {one-line description} |
+   ```
+2. After fix is written and re-staged, increment `follow_up_count`. Append Follow-ups row to the tracker under the correct story/implementation section:
+   ```
+   | {follow_up_count} | {issue description — root cause in one line} | {fix applied — one line} | {file(s) changed} |
+   ```
+3. After re-checkin passes, append audit row:
+   ```
+   | {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | build | build-fixed | {Story N \| ADO #{ADO_ID}} | {build_issue_count} | Fix verified — checkin passed |
+   ```
+
+---
+
+## Hard Rules
+
+- ALWAYS update the tracker story/implementation section Status to `🔄 In Progress` at Step 4 start — before any code generation
+- ALWAYS append the `impl-started` audit row at Step 4 start
+- ALWAYS append `code-critic-revise` audit rows and tracker Follow-ups for every critic REVISE+fix cycle in Step 4a
+- ALWAYS append `goal-loop-iter` audit rows for every goal-loop iteration in Step 4b
+- ALWAYS populate tracker Delivered, Tests added, Design decisions, and Known gaps sections at Step 6 — never leave them as placeholders after implementation
+- ALWAYS update the tracker story/implementation section Status to `✅ Done` at Step 6
+- ALWAYS append the `story-complete` audit row at Step 6
+- ALWAYS append `build-issue`, Follow-ups tracker row, and `build-fixed` audit rows for each checkin ❌ FAIL + fix cycle in Step 7
+- ALWAYS append `checkin-pass` audit row when checkin ✅ / ⚠ in Step 7
+- NEVER leave Follow-ups table empty after a REVISE cycle or build failure — every rework leaves a row
+- NEVER populate Delivered or Tests sections before the Write Gate — only write them after APPROVE and the code is on disk

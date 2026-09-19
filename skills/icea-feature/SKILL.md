@@ -299,6 +299,16 @@ Re-output only the changed section after each edit.
 Update open question list as answers are given.
 Never write anything to disk during this phase.
 
+**Audit logging — plan revision rounds:**
+Maintain `plan_revision_count = 0` in context (reset at Step 3 start). After each correction is applied and the updated section is re-output, increment `plan_revision_count` and append to the audit file:
+```bash
+AUDIT_FILE="docs/Release${RELEASE_ID}/Sprint${SPRINT_ID}/UserStory${ADO_ID}/ADO-${ADO_ID}-{feature}.ai-audit.md"
+```
+Append row:
+```
+| {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | plan | plan-revised | plan | {plan_revision_count} | {one-line: what changed — e.g. "Assumptions: added risk for auth timeout"} |
+```
+
 **After every response during Step 3, end with this exact line — no exceptions:**
 ```
 Review the plan. When ready: SAVE PLAN ADO-{ADO_ID}
@@ -349,16 +359,24 @@ Initial content:
 # AI Audit Trail — {Feature Name}
 ADO #{ADO_ID} · Release {RELEASE_ID} · Sprint {SPRINT_ID}
 
-| # | Date | User | Event | Triggered by | Summary |
-|---|---|---|---|---|---|
-| 1 | {YYYY-MM-DD} | {actor} | Plan generated | SAVE PLAN | {one-line summary of plan scope} |
+> **Column guide:** Category = metrics bucket · Event = machine-readable type · Artifact = what was affected · Iter = revision/retry counter (- when N/A)
+
+| # | Date | Actor | Category | Event | Artifact | Iter | Summary |
+|---|---|---|---|---|---|---|---|
+| 1 | {YYYY-MM-DDTHH:MM:SS} | {actor} | plan | plan-generated | plan | - | {one-line summary of plan scope} |
 ```
 
 `{actor}` is the resolved identity — get it once with:
 ```bash
 ACTOR=$(node -e "const i=require('.claude/hooks/audit-append.cjs').resolveIdentity();console.log(i.verified_actor||i.os_user||'UNRESOLVED')" 2>/dev/null || echo "UNRESOLVED")
 ```
-Use `$ACTOR` for the User cell in every row you append below.
+Use `$ACTOR` for the Actor cell in every row you append below.
+
+Get the ISO 8601 timestamp once and reuse for all rows in the same response:
+```bash
+TS=$(date '+%Y-%m-%dT%H:%M:%S')
+```
+Use `$TS` for the Date cell — never use a plain `YYYY-MM-DD` date in audit rows.
 
 Confirm and immediately proceed to Step 5:
 ```
@@ -441,6 +459,16 @@ notes into the `⚠ ICEA GAPS` list below so the developer sees them. If the loo
 surfaces after 2 retries, honour the developer's `ACCEPT AS-IS` / `GUIDE` / `HALT`
 choice before writing.
 
+**Audit logging — ICEA draft critic (Step 5):**
+Append a row for each critic attempt:
+```bash
+AUDIT_FILE="docs/Release${RELEASE_ID}/Sprint${SPRINT_ID}/UserStory${ADO_ID}/ADO-${ADO_ID}-{feature}.ai-audit.md"
+```
+- Each REVISE retry (retry index 1 or 2):
+  `| {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | icea | icea-critic-revise | ICEA draft | {retry N} | {one-line finding summary} |`
+- Final PASS / PASS WITH NOTES:
+  `| {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | icea | icea-critic-pass | ICEA draft | - | Critic: {verdict} |`
+
 Write the draft to the temp folder (TEMP_WRITE_EXEMPT — see below):
 ```bash
 mkdir -p temp
@@ -491,6 +519,16 @@ Accept freeform corrections in chat. After each change:
 Update gap list as answers are given.
 Resolve D-blocks before SAVE ICEA.
 Never write to the permanent docs/ location during this phase.
+
+**Audit logging — ICEA revision rounds:**
+Maintain `icea_revision_count = 0` in context (reset at Step 6 start). After each correction is applied and `temp/ADO-{ADO_ID}-icea.md` is rewritten, increment `icea_revision_count` and append:
+```bash
+AUDIT_FILE="docs/Release${RELEASE_ID}/Sprint${SPRINT_ID}/UserStory${ADO_ID}/ADO-${ADO_ID}-{feature}.ai-audit.md"
+```
+Append row:
+```
+| {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | icea | icea-revised | ICEA | {icea_revision_count} | {one-line: section changed — e.g. "Context: answered auth policy gap"} |
+```
 
 **After every response during Step 6, end with this exact line — no exceptions:**
 ```
@@ -550,9 +588,15 @@ Append to the AI audit trail file:
 ```bash
 AUDIT_FILE="docs/Release${RELEASE_ID}/Sprint${SPRINT_ID}/UserStory${ADO_ID}/ADO-${ADO_ID}-{feature}.ai-audit.md"
 ```
-Append row (include the resolved `$ACTOR` in the User cell):
+Append two rows (include the resolved `$ACTOR` in the Actor cell):
+
+Critic result row:
 ```
-| {next #} | {YYYY-MM-DD} | {actor} | ICEA drafted | SAVE ICEA | Critic: {PASS/PASS WITH NOTES/REVISE+ACCEPT} |
+| {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | icea | icea-critic-{pass\|revise} | ICEA | - | Critic: {verdict} |
+```
+Save event row:
+```
+| {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | icea | icea-saved | ICEA | {icea_revision_count} revisions | Critic: {PASS/PASS WITH NOTES/REVISE+ACCEPT} |
 ```
 If this save used `SAVE ICEA ADO-{ADO_ID} ACCEPT` (critic REVISE overridden), also record the
 outcome in the governance audit trail:
@@ -633,7 +677,10 @@ Read $PLUGIN_DIR/skills/shared/context-budget-check.md and execute it with:
   ]
   saved_context = "ICEA at: docs/Release{R}/Sprint{S}/UserStory{ADO_ID}/ADO-{ADO_ID}-{feature}.icea.md"
 
-On `BUDGET_STOP` or `BUDGET_WARN`: ⛔ stop — wait for developer reply.
+**⛔ BUDGET_WARN / BUDGET_STOP — HARD STOP:**
+Do NOT proceed to template selection or any drafting until the developer replies.
+BUDGET_WARN is not "proceed with caution" — it is a blocking gate, identical to BUDGET_STOP.
+
 On `BUDGET_OK` or `BUDGET_SKIPPED`: proceed to template selection.
 On `TECH ADO-{ADO_ID} CONTINUE` or `TECH ADO-{ADO_ID} FORCE`:
   - If FORCE: write `temp/ADO-{ADO_ID}-tech-force.flag` (empty file) FIRST —
@@ -754,29 +801,7 @@ The base template defines the skeleton. The overlay replaces the
 framework-specific sections (Files Changed, Controller/Service/View/Node.js
 implementation, API Changes, Auth & Security, Reviewer Checklist).
 
-**Key sections to populate from the ICEA:**
-
-| ICEA section | → Tech Spec section |
-|---|---|
-| Acceptance Criteria (all ACs) | AC Coverage Matrix — one row per AC |
-| System Context table | Files Changed — starting point for file list |
-| Examples (Happy Path, Error States) | Test Cases — positive/negative rows |
-| Dependencies | Open Questions — any unconfirmed dependencies |
-| Success Metrics | Definition of Done — NF AC verification methods |
-
-**AC Coverage Matrix — mandatory, never skip:**
-- List every AC from the ICEA in the AC→File table
-- For each AC, identify which file(s) implement it
-- For each file, list all ACs it satisfies in the File→AC table
-- Any AC with no file mapping = ⚠ gap — must be resolved before SAVE TECH
-- Any file with no AC mapping = ⚠ orphan — must be justified or removed
-
-**Test Cases — derived from AC list, never skip:**
-- Every functional AC (AC-F*) gets one positive unit test row and one
-  negative unit test row at minimum
-- Integration tests cover the deployed end-to-end flows
-- NF ACs (AC-NF*) get explicit verification method stated in a note
-- Use AC IDs as the reference column so icea-implement can find them
+**⚠ SIZE FIRST — before any drafting begins:**
 
 **Section 11 — Sizing and Story Breakdown:**
 
@@ -811,8 +836,34 @@ The Story Breakdown table in the ICEA is also updated with this information.
 
 | Sizing result | Template to use | Flow |
 |---|---|---|
-| STORY (total SP ≤ 5) | `techspec-base.md` + overlay | Existing single-spec flow — continue below |
+| STORY (total SP ≤ 5) | `techspec-base.md` + overlay | Single-spec flow — continue below |
 | EPIC (total SP > 5) | `techspec-epic-level.md` | Epic-level spec flow — see below |
+
+**If STORY — proceed with single-spec drafting:**
+
+**Key sections to populate from the ICEA:**
+
+| ICEA section | → Tech Spec section |
+|---|---|
+| Acceptance Criteria (all ACs) | AC Coverage Matrix — one row per AC |
+| System Context table | Files Changed — starting point for file list |
+| Examples (Happy Path, Error States) | Test Cases — positive/negative rows |
+| Dependencies | Open Questions — any unconfirmed dependencies |
+| Success Metrics | Definition of Done — NF AC verification methods |
+
+**AC Coverage Matrix — mandatory, never skip:**
+- List every AC from the ICEA in the AC→File table
+- For each AC, identify which file(s) implement it
+- For each file, list all ACs it satisfies in the File→AC table
+- Any AC with no file mapping = ⚠ gap — must be resolved before SAVE TECH
+- Any file with no AC mapping = ⚠ orphan — must be justified or removed
+
+**Test Cases — derived from AC list, never skip:**
+- Every functional AC (AC-F*) gets one positive unit test row and one
+  negative unit test row at minimum
+- Integration tests cover the deployed end-to-end flows
+- NF ACs (AC-NF*) get explicit verification method stated in a note
+- Use AC IDs as the reference column so icea-implement can find them
 
 **If EPIC — switch to epic-level spec generation:**
 
@@ -874,7 +925,7 @@ For each story in the Story Breakdown (in order, starting at Story 1):
      Print summary: `✅ Story {N} drafted — {Story Title} · {X} ACs · {Y} SP`
      (or: `⚠ Story {N} drafted with flags — review temp/ADO-{ADO_ID}-Story-{N}-tech.md`)
 
-Write tracker draft to temp/ (Status reflects actual generation result: ✅ clean, ⚠ flagged, ⏳ not yet generated):
+Write tracker draft to temp/ using the rich epic format (Story Board + one section per story; Status per story reflects generation result: ✅ clean, ⚠ flagged, ⏳ not yet generated; Delivered/Tests/Follow-ups/Design decisions/Known gaps sections initialised as placeholders — filled by icea-implement):
 ```bash
 temp/ADO-{ADO_ID}-tracker.md
 ```
@@ -927,6 +978,16 @@ contradictory Intent), do not rewrite the Tech Spec around it — surface it and
 tell the developer to run `REVISE ADO-{ADO_ID}` then re-run `TECH ADO-{ADO_ID}`.
 Only on `PASS` / `PASS WITH NOTES` proceed to write the temp file; carry residual
 notes into the Step 9 review.
+
+**Audit logging — Tech Spec draft critic (Step 8):**
+Append a row for each critic attempt:
+```bash
+AUDIT_FILE="docs/Release${RELEASE_ID}/Sprint${SPRINT_ID}/UserStory${ADO_ID}/ADO-${ADO_ID}-{feature}.ai-audit.md"
+```
+- Each REVISE retry (retry index 1 or 2):
+  `| {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | tech-spec | tech-critic-revise | Tech Spec draft | {retry N} | {one-line finding summary} |`
+- Final PASS / PASS WITH NOTES:
+  `| {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | tech-spec | tech-critic-pass | Tech Spec draft | - | Critic: {verdict} |`
 
 **⚠ COMPLETENESS SELF-CHECK — run after critic PASS, before writing to temp:**
 
@@ -1033,6 +1094,16 @@ If a Tech Spec change implies an ICEA change:
 ⚠ This affects the ICEA — update via REVISE ADO-{ID} then re-run TECH ADO-{ID}
 ```
 
+**Audit logging — Tech Spec revision rounds:**
+Maintain `tech_revision_count = 0` in context (reset at Step 9 start). After each correction is applied and `temp/ADO-{ADO_ID}-tech.md` is rewritten, increment `tech_revision_count` and append:
+```bash
+AUDIT_FILE="docs/Release${RELEASE_ID}/Sprint${SPRINT_ID}/UserStory${ADO_ID}/ADO-${ADO_ID}-{feature}.ai-audit.md"
+```
+Append row:
+```
+| {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | tech-spec | tech-revised | Tech Spec | {tech_revision_count} | {one-line: section changed — e.g. "AC Coverage Matrix: mapped AC-F3 to new service file"} |
+```
+
 **After every response during Step 9, end with this exact line — no exceptions:**
 ```
 Review the Tech Spec in VS Code preview. When ready: SAVE TECH ADO-{ADO_ID}
@@ -1105,26 +1176,114 @@ docs/Release{RELEASE_ID}/Sprint{SPRINT_ID}/UserStory{ADO_ID}/
 
 3. Write Tracker (derived — no interaction):
 
-   **Story tracker** (Type: STORY, total SP ≤ 5) — tracks ACs:
-   ```
+   **Story tracker** (Type: STORY, total SP ≤ 5):
+   ```markdown
    # Tracker — {Feature Name}
    ADO #{ADO_ID} · Type: STORY · {N} SP
+   Branch: feature/ADO-{ADO_ID}-{feature-slug}
 
+   ## Status Legend
+   | Status | Meaning |
+   |---|---|
+   | ⏳ Pending | Not yet implemented |
+   | 🔄 In Progress | Active implementation |
+   | ✅ Done | Implemented and written |
+   | 🐛 Bug | Bug found — see Follow-ups |
+   | 🚫 Blocked | Stopped — see Notes |
+
+   ## AC Board
    | AC | Description | SP | Status | Notes |
    |---|---|---|---|---|
    | AC-F1 | {desc} | {SP} | ⏳ Pending | |
+
+   ---
+
+   ## Implementation — ADO #{ADO_ID}
+   **Status:** ⏳ Pending
+
+   ### Delivered
+   _(populated during implementation)_
+
+   ### Tests added
+   _(populated during implementation)_
+
+   ### Follow-ups / bugs fixed
+   | # | Issue | Fix | Files |
+   |---|---|---|---|
+
+   ### Design decisions
+   _(populated during implementation)_
+
+   ### Known gaps
+   _(populated during implementation)_
    ```
 
-   **Epic tracker** (Type: EPIC, total SP > 5) — tracks stories:
-   ```
+   **Epic tracker** (Type: EPIC, total SP > 5) — one story section per entry in the Story Breakdown:
+   ```markdown
    # Tracker — {Feature Name}
    ADO #{ADO_ID} · Type: EPIC · {N} SP total
+   Branch: feature/ADO-{ADO_ID}-{feature-slug}
 
+   ## Status Legend
+   | Status | Meaning |
+   |---|---|
+   | ⏳ Pending | Not yet implemented |
+   | 🔄 In Progress | Active implementation |
+   | ✅ Done | Implemented and verified |
+   | 🐛 Bug | Bug found — see Follow-ups |
+   | 🚫 Blocked | Stopped — see Notes |
+
+   ## Story Board
    | Story | Child ADO # | Logical scope | SP | Status | Notes |
    |---|---|---|---|---|---|
    | 1 | TBD | {scope} | {SP} | ⏳ Pending | |
    | 2 | TBD | {scope} | {SP} | ⏳ Pending | |
+
+   ---
+
+   ## Story 1 — {Logical scope title}
+   **Status:** ⏳ Pending
+   **Child ADO:** TBD
+
+   ### Delivered
+   _(populated during implementation)_
+
+   ### Tests added
+   _(populated during implementation)_
+
+   ### Follow-ups / bugs fixed
+   | # | Issue | Fix | Files |
+   |---|---|---|---|
+
+   ### Design decisions
+   _(populated during implementation)_
+
+   ### Known gaps
+   _(populated during implementation)_
+
+   ---
+
+   ## Story 2 — {Logical scope title}
+   **Status:** ⏳ Pending
+   **Child ADO:** TBD
+
+   ### Delivered
+   _(populated during implementation)_
+
+   ### Tests added
+   _(populated during implementation)_
+
+   ### Follow-ups / bugs fixed
+   | # | Issue | Fix | Files |
+   |---|---|---|---|
+
+   ### Design decisions
+   _(populated during implementation)_
+
+   ### Known gaps
+   _(populated during implementation)_
    ```
+   Repeat the story section block for each story in the Story Breakdown.
    Child ADO numbers filled when IMPLEMENT ADO-{ADO_ID} Story-{N} is run.
 
 4. If EPIC: move all story specs from temp/ to permanent — see **Step 10 Epic Save** below.
@@ -1133,9 +1292,15 @@ docs/Release{RELEASE_ID}/Sprint{SPRINT_ID}/UserStory{ADO_ID}/
    ```bash
    AUDIT_FILE="docs/Release${RELEASE_ID}/Sprint${SPRINT_ID}/UserStory${ADO_ID}/ADO-${ADO_ID}-{feature}.ai-audit.md"
    ```
-   Append row (include the resolved `$ACTOR` in the User cell):
+   Append two rows (include the resolved `$ACTOR` in the Actor cell):
+
+   Critic result row:
    ```
-   | {next #} | {YYYY-MM-DD} | {actor} | Tech Spec drafted | SAVE TECH | Critic: {PASS/PASS WITH NOTES/REVISE+ACCEPT} |
+   | {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | tech-spec | tech-critic-{pass\|revise} | Tech Spec | - | Critic: {verdict} |
+   ```
+   Save event row:
+   ```
+   | {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | tech-spec | tech-saved | Tech Spec | {tech_revision_count} revisions | Critic: {PASS/PASS WITH NOTES/REVISE+ACCEPT} |
    ```
    If this save used `SAVE TECH ADO-{ADO_ID} ACCEPT` (critic REVISE overridden), also log the outcome:
    ```bash
@@ -1157,7 +1322,7 @@ docs/Release{RELEASE_ID}/Sprint{SPRINT_ID}/UserStory{ADO_ID}/
   ICEA Critic   → ...ADO-{ADO_ID}-{feature}.icea-critic-{YYYY-MM-DD}.md
   Tech Critic   → ...ADO-{ADO_ID}-{feature}.icea-tech-critic-{YYYY-MM-DD}.md
   Tracker       → ...ADO-{ADO_ID}-{feature}.tracker.md
-  AI Audit      → ...ADO-{ADO_ID}-{feature}.ai-audit.md
+  AI Audit      → ...ADO-{ADO_ID}-{feature}.ai-audit.md  [{N} plan revisions · {N} ICEA revisions · {N} tech revisions]
   Epic doc      → ...ADO-{ADO_ID}-{feature}.epic.md  (Epic only)
   Temp files cleaned up.
 
@@ -1355,6 +1520,9 @@ transparency). Never name the persona in any artifact — note this is distinct 
 - ALWAYS update gap / open question list after each answer
 - ALWAYS warn and require CONFIRM if open questions remain at SAVE PLAN time
 - NEVER allow SAVE TECH with open ❓ blocks — open questions are a hard block (no CONFIRM bypass); developer MUST answer them first
+- ALWAYS append an audit row to ai-audit.md after each plan revision round (Step 3), ICEA revision round (Step 6), and Tech Spec revision round (Step 9) — never batch or skip
+- ALWAYS append audit rows for every critic REVISE retry and final PASS verdict in Steps 5, 7, 8, and 10
+- ALWAYS initialize the tracker with the rich format (Status Legend + AC/Story Board + per-story sections: Delivered, Tests, Follow-ups, Design decisions, Known gaps) — never write the flat board-only format
 - ALWAYS populate ICEA from plan — carry forward all answered items automatically
 - ALWAYS update Story Breakdown in ICEA when Tech Spec sizing is complete
 - ALWAYS clean up temp files on SAVE TECH (rm -f temp/ADO-{ID}-icea.md temp/ADO-{ID}-tech.md)

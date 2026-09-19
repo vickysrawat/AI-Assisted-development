@@ -1,0 +1,49 @@
+# Python — OFFLINE FALLBACK ONLY
+# Primary source: GitHub Python.gitignore (fetched at setup time)
+# This file is used only when the network is unavailable during setup-init.
+# Added once by setup-init — edit freely, not managed or overwritten by gitignore-sync.
+
+## Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+## Virtual environments
+.venv/
+venv/
+env/
+.env/
+ENV/
+
+## Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+.eggs/
+wheels/
+
+## Test / coverage
+.tox/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+## Environment files
+.env
+.env.local
+.env.*.local
+
+## IDE
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+## OS
+.DS_Store
+Thumbs.db

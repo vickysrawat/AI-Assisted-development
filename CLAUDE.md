@@ -123,6 +123,11 @@ Recognised globally, no /command needed. ADO ID is case-insensitive (`ADO-1847`,
 | `REWRITE STATUS ADO-{ID}` | Re-entry point (like `icea-status`): read the rewrite's ledger (`payload.rewrite`) fresh, render state, end with the single Next action. Read-only. Per `skills/shared/migration-ledger-schema.md` § Status & Resume |
 | `REPLATFORM STATUS ADO-{ID}` | Re-entry point (like `icea-status`): read the replatform's ledger (`payload.replatform`) fresh, render state, end with the single Next action. Read-only. Per `skills/shared/migration-ledger-schema.md` § Status & Resume |
 | `MIGRATE`, `MIGRATE RESUME`, `MIGRATE STATUS`, `MIGRATE OPTIONS`, `MIGRATE INVENTORY`, `MIGRATE ARCH`, `MIGRATE FEAS`, `MIGRATE CLUSTERS`, `APPROVE OPTIONS`, `APPROVE INVENTORY`, `APPROVE ARCHITECTURE`, `APPROVE FEASIBILITY`, `APPROVE MIGRATION` (each `ADO-{ID}`) | **RETIRED** — the legacy `migration`/`migration-status` skills are gone. Do NOT auto-route. Reply with the signpost so the human picks a named skill: same stack + higher version → `UPGRADE ADO-{ID}` · different stack (translate the code) → `REWRITE ADO-{ID}` · on-prem → cloud (move the host) → `REPLATFORM ADO-{ID}`. See `docs/migrations/2026-09-migration-skill-family.md`. |
+| `METRICS RELEASE-{N}` | Run the release-metrics skill for Release {N} — generates `release-metrics/release-metrics-R{N}-{date}.md` (Mermaid) and `.html` (Chart.js) covering all ADOs in the release |
+| `METRICS RELEASE-{N} SPRINT-{S}` | Same as above but scoped to a single sprint |
+| `METRICS RELEASE-{N} VS RELEASE-{M}` | Same as above with explicit trend comparison against Release {M} |
+| `LESSONS RELEASE-{N}` | Alias for `METRICS RELEASE-{N}` — produces the same dual-output report; the Lessons tab is the primary focus |
+| `LESSONS ADO-{ID}` | Re-generate the lessons learned section for a single ADO — reads its ai-audit.md and tracker.md, rewrites the `### Lessons learned` section in the tracker. Use when the auto-generated lessons were thin due to low context at story-complete time |
 
 ---
 

@@ -22,6 +22,35 @@ directly and cannot be skipped inside a longer setup flow.
 It is safe to run any time: it **creates the ignore file if missing**, writes plugin
 entries inside a **managed block**, and **never removes or reorders your own lines**.
 
+## Two-pass model
+
+The ignore file is built in two distinct passes with different ownership:
+
+| Pass | Content | Source | Managed by |
+|---|---|---|---|
+| 1 — Plugin block | Plugin-generated dirs only (temp/, CodeReviews/, security/, etc.) | `$PLUGIN_DIR/_project-deploy/.gitignore` managed block | `gitignore-sync` — safe to re-run any time; overwrites only the managed block |
+| 2 — Stack entries | Build artifacts, IDE files, dependencies per detected stack | Official tooling (see below) — bundled templates are offline fallback only | `setup-init` / `setup-sync` — written **once**, never overwritten; developer owns after that |
+
+**`/gitignore-sync` only runs Pass 1.** Stack entries (Pass 2) are added by `setup-init`
+at project initialisation time and are not touched again — they belong to the developer.
+Re-running `/gitignore-sync` never disturbs the stack section.
+
+**Pass 2 source priority** (same tooling Visual Studio and VS Code use):
+
+| Stack | Primary source | Fallback |
+|---|---|---|
+| dotnet / dotnet_framework | `dotnet new gitignore` (CLI — always current with SDK) | `stacks/dotnet.gitignore` |
+| angular | GitHub `Node.gitignore` + Angular additions (`.angular/cache/`, `dist/`) | `stacks/angular.gitignore` |
+| nodejs | GitHub `Node.gitignore` | `stacks/nodejs.gitignore` |
+| java | GitHub `Java.gitignore` | `stacks/java.gitignore` |
+| python | GitHub `Python.gitignore` | `stacks/python.gitignore` |
+
+GitHub template base URL: `https://raw.githubusercontent.com/github/gitignore/main/{Name}.gitignore`
+
+Bundled fallback templates live at `$PLUGIN_DIR/skills/gitignore-sync/stacks/` and are
+used only when the dotnet CLI is absent or network is unavailable. The confirmation output
+notes which source was used.
+
 > **Why this detects the VCS first.** `.gitignore` is completely inert on TFVC —
 > TFS ignores it, so writing one gives zero protection and generated files
 > (`memory/health.html`, `security/`, the credential file) can still be checked in.
@@ -62,18 +91,43 @@ the repo's VCS.
 ## Step 1 — Write the plugin entries (always)
 
 Write the script below to `.claude/_gi-write.cjs`, then run
-`node .claude/_gi-write.cjs git` (substitute the actual VCS value from Step 0 —
-`git` or `tfvc`). Capture the output, then delete `.claude/_gi-write.cjs`.
+`node .claude/_gi-write.cjs git "$PLUGIN_DIR"` (substitute the actual VCS value from
+Step 0 — `git` or `tfvc` — and `$PLUGIN_DIR` from `.claude/plugin-path.txt`).
+The script reads the managed-block entries from `$PLUGIN_DIR/_project-deploy/.gitignore`
+(single source of truth) with a hardcoded fallback if the template is unavailable.
+Capture the output, then delete `.claude/_gi-write.cjs`.
 
 ```javascript
 // Written to .claude/_gi-write.cjs and executed as: node .claude/_gi-write.cjs <vcs>
 const fs = require('fs');
+const path = require('path');
 const VCS = process.argv[2] || 'git';
+const PLUGIN_DIR = process.argv[3] || '';
 const F = VCS === 'tfvc' ? '.tfignore' : '.gitignore';
-// SYNC WITH: scripts/setup-init-bootstrap.cjs GITIGNORE_BASE — must be identical.
+// Single source of truth: $PLUGIN_DIR/_project-deploy/.gitignore
+// Extract the managed block entries from that template rather than duplicating them here.
 // settings.json is NOT ignored (committed/shared, secret-free). Each `dir/*` entry MUST
 // precede its `!dir/<ledger>` re-include — git cannot re-include a file under an ignored dir.
-const BASE = ['.claude/settings.local.json','.claude/security-checkpoint.json','.claude/code-review-checkpoint.json','.claude/file-cache.json','.claude/dream-init-state.json','memory/health.html','CodeReviews/*','!CodeReviews/code-review-ledger.md','security/*','!security/security-ledger.md','dynamic-scan/*','!dynamic-scan/dynamic-scan-ledger.md','token-analysis/','prod-readiness/','temp/','.claude/plugin-path.txt','.claude/session-context.json'];
+function loadBaseFromTemplate(pluginDir) {
+  const tmpl = path.join(pluginDir, '_project-deploy', '.gitignore');
+  if (!pluginDir || !fs.existsSync(tmpl)) {
+    // Fallback hardcoded list — kept in sync with _project-deploy/.gitignore
+    return ['.claude/settings.local.json','.claude/security-checkpoint.json','.claude/code-review-checkpoint.json','.claude/file-cache.json','.claude/dream-init-state.json','memory/health.html','CodeReviews/*','!CodeReviews/code-review-ledger.md','security/*','!security/security-ledger.md','dynamic-scan/*','!dynamic-scan/dynamic-scan-ledger.md','token-analysis/','prod-readiness/','temp/','.claude/plugin-path.txt','.claude/session-context.json'];
+  }
+  const lines = fs.readFileSync(tmpl, 'utf8').split(/\r?\n/);
+  const BEGIN = '# === ai-assisted-development (managed) ===';
+  const END   = '# === end ai-assisted-development ===';
+  let inside = false;
+  const entries = [];
+  for (const l of lines) {
+    if (l.trim() === BEGIN) { inside = true; continue; }
+    if (l.trim() === END)   { inside = false; break; }
+    if (inside && l.trim() && !l.startsWith('#')) entries.push(l.trim());
+  }
+  return entries.length ? entries :
+    ['.claude/settings.local.json','.claude/security-checkpoint.json','.claude/code-review-checkpoint.json','.claude/file-cache.json','.claude/dream-init-state.json','memory/health.html','CodeReviews/*','!CodeReviews/code-review-ledger.md','security/*','!security/security-ledger.md','dynamic-scan/*','!dynamic-scan/dynamic-scan-ledger.md','token-analysis/','prod-readiness/','temp/','.claude/plugin-path.txt','.claude/session-context.json'];
+}
+const BASE = loadBaseFromTemplate(PLUGIN_DIR);
 // TFVC syntax: backslash separators, no trailing slash on directories.
 const ENTRIES = VCS === 'tfvc' ? BASE.map(e => e.replace(/\//g,'\\').replace(/\\$/,'')) : BASE;
 const BEGIN = '# === ai-assisted-development (managed) ===';

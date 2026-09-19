@@ -1,0 +1,39 @@
+# Java / Spring Boot — OFFLINE FALLBACK ONLY
+# Primary source: GitHub Java.gitignore (fetched at setup time)
+# This file is used only when the network is unavailable during setup-init.
+# Added once by setup-init — edit freely, not managed or overwritten by gitignore-sync.
+
+## Build output
+target/
+build/
+out/
+*.class
+*.jar
+*.war
+*.ear
+
+## Maven
+.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.properties
+
+## Gradle
+.gradle/
+gradle/wrapper/gradle-wrapper.jar
+
+## IDE
+.idea/
+*.iml
+*.ipr
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+## Logs
+logs/
+*.log
+
+## OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,33 @@
+# Angular — OFFLINE FALLBACK ONLY
+# Primary source: GitHub Node.gitignore + Angular additions (fetched at setup time)
+# This file is used only when the network is unavailable during setup-init.
+# Added once by setup-init — edit freely, not managed or overwritten by gitignore-sync.
+
+## Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+## Build output
+dist/
+.angular/cache/
+
+## Test coverage
+coverage/
+
+## Environment files (keep .env.example)
+.env
+.env.local
+.env.*.local
+
+## IDE
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+## OS
+.DS_Store
+Thumbs.db
