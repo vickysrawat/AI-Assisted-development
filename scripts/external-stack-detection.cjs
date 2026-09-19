@@ -6,12 +6,13 @@
 //
 // Stack tokens written:
 //   dotnet           — modern .NET Core / .NET 5+ / .NET 10
-//   dotnet_framework — legacy .NET Framework 4.x (System.Web or System.ServiceModel)
+//   dotnet_framework — legacy .NET Framework 4.x (net[1-4] TFM; fallback: <Reference> to System.Web or System.ServiceModel)
 //   vsto             — Visual Studio Tools for Office add-in or document customization
 //   angular          — Angular app (angular.json present)
+//   react            — React app (react in package.json dependencies)
 //   nodejs           — Node.js server (express/fastify/hono/@nestjs/core in package.json)
-//   java             — Maven or Gradle project
-//   python           — pyproject.toml or requirements.txt present
+//   java             — Maven or Gradle project (pom.xml or build.gradle present)
+//   python           — Python project (pyproject.toml or requirements.txt present)
 //
 // dotnet and dotnet_framework are mutually exclusive — never both for the same repo.
 // vsto always accompanies dotnet_framework (VSTO is always .NET Framework).
@@ -85,16 +86,47 @@ for (var i = 0; i < externalDirs.length; i++) {
       stacks['vsto'] = true;
       stacks['dotnet_framework'] = true; // VSTO is always .NET Framework
     } else {
-      // dotnet_framework: System.Web (MVC/WebForms) OR System.ServiceModel (WCF)
-      // dotnet: modern .NET Core / .NET 5+ / .NET 10
-      // Mutually exclusive — never add both.
-      var isFramework = csprojFiles.some(function(f) {
+      // dotnet vs dotnet_framework — mutually exclusive, never add both.
+      // Step 1: TFM-first — read the target project's own version declaration.
+      //   Modern : net\d+. (e.g. net8.0, net10.0), netstandard, netcoreapp
+      //   Framework: net[1-4] without a dot (e.g. net48, net472)
+      // TargetFrameworks (plural) may list multiple TFMs; prefer modern if any is modern.
+      var modernTfmRe    = /^(net\d+\.|netstandard|netcoreapp)/;
+      var frameworkTfmRe = /^net[1-4]/;
+      var tfmRe          = /<TargetFrameworks?>([\s\S]*?)<\/TargetFrameworks?>/;
+      var dotnetToken    = 'dotnet'; // default to modern
+      var tfmFound       = false;
+
+      for (var fi = 0; fi < csprojFiles.length && !tfmFound; fi++) {
         try {
-          var c = fs.readFileSync(f, 'utf8');
-          return c.indexOf('System.Web') !== -1 || c.indexOf('System.ServiceModel') !== -1;
-        } catch(e) { return false; }
-      });
-      stacks[isFramework ? 'dotnet_framework' : 'dotnet'] = true;
+          var cContent = fs.readFileSync(csprojFiles[fi], 'utf8');
+          var tfmMatch = cContent.match(tfmRe);
+          if (tfmMatch) {
+            tfmFound = true;
+            var tfms = tfmMatch[1].split(';').map(function(t) { return t.trim(); });
+            if (tfms.some(function(t) { return modernTfmRe.test(t); })) {
+              dotnetToken = 'dotnet';
+            } else if (tfms.some(function(t) { return frameworkTfmRe.test(t); })) {
+              dotnetToken = 'dotnet_framework';
+            }
+          }
+        } catch(e) {}
+      }
+
+      if (!tfmFound) {
+        // Step 2: no TargetFramework element found — fall back to reference-name heuristic,
+        // scoped to <Reference> (GAC, Framework-only) not <PackageReference> (NuGet).
+        var frameworkRefRe = /<Reference\s[^>]*Include="System\.(Web|ServiceModel)[^"]*"/;
+        var isFramework = csprojFiles.some(function(f) {
+          try {
+            var fc = fs.readFileSync(f, 'utf8');
+            return frameworkRefRe.test(fc);
+          } catch(e) { return false; }
+        });
+        dotnetToken = isFramework ? 'dotnet_framework' : 'dotnet';
+      }
+
+      stacks[dotnetToken] = true;
     }
   }
 
@@ -116,7 +148,7 @@ for (var i = 0; i < externalDirs.length; i++) {
     stacks['angular'] = true;
   }
 
-  // Node.js: package.json with known server framework dependency
+  // Node.js + React: read package.json once; each check uses its own authoritative dep key(s).
   var pkgPath = path.join(dir, 'package.json');
   if (fileExists(pkgPath)) {
     try {
@@ -125,6 +157,9 @@ for (var i = 0; i < externalDirs.length; i++) {
       var nodeFrameworks = ['express', 'fastify', 'hono', '@nestjs/core'];
       if (nodeFrameworks.some(function(d) { return d in deps; })) {
         stacks['nodejs'] = true;
+      }
+      if ('react' in deps) {
+        stacks['react'] = true;
       }
     } catch(e) {}
   }
