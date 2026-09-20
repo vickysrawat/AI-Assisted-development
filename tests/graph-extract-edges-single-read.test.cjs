@@ -34,46 +34,48 @@ function writeGraph(nodes) {
 }
 const node = (id, mod, p) => ({ id, module: mod, domain: mod.toLowerCase(), type: 'service', detailFile: `graph/${id}.md`, entryPoint: `${p}/entry`, paths: [p], fingerprint: id, hub: false });
 
-test('graph-extract-edges resolves Python absolute and relative imports', () => {
-  w(path.join(repo, 'src', 'client', 'main.py'), 'import deep.tools\nimport pkgmod\n');
-  w(path.join(repo, 'src', 'relconsumer', 'main.py'), 'from .subpkg.helper import VALUE\n');
-  w(path.join(repo, 'src', 'relconsumer', 'subpkg', 'helper.py'), 'VALUE = 1\n');
-  w(path.join(repo, 'deep', 'tools.py'), 'X = 1\n');
-  w(path.join(repo, 'pkgmod', '__init__.py'), 'Y = 1\n');
+try {
+  test('graph-extract-edges resolves Python absolute and relative imports', () => {
+    w(path.join(repo, 'src', 'client', 'main.py'), 'import deep.tools\nimport pkgmod\n');
+    w(path.join(repo, 'src', 'relconsumer', 'main.py'), 'from .subpkg.helper import VALUE\n');
+    w(path.join(repo, 'src', 'relconsumer', 'subpkg', 'helper.py'), 'VALUE = 1\n');
+    w(path.join(repo, 'deep', 'tools.py'), 'X = 1\n');
+    w(path.join(repo, 'pkgmod', '__init__.py'), 'Y = 1\n');
 
-  writeGraph([
-    node('pyclient', 'PyClient', 'src/client/**'),
-    node('pyshared', 'PyShared', 'deep/**'),
-    node('pypkg', 'PyPkg', 'pkgmod/**'),
-    node('pyrelconsumer', 'PyRelConsumer', 'src/relconsumer/**'),
-    node('pyreltarget', 'PyRelTarget', 'src/relconsumer/subpkg/**'),
-  ]);
+    writeGraph([
+      node('pyclient', 'PyClient', 'src/client/**'),
+      node('pyshared', 'PyShared', 'deep/**'),
+      node('pypkg', 'PyPkg', 'pkgmod/**'),
+      node('pyrelconsumer', 'PyRelConsumer', 'src/relconsumer/**'),
+      node('pyreltarget', 'PyRelTarget', 'src/relconsumer/subpkg/**'),
+    ]);
 
-  const { code, stdout, stderr } = runNode(EXTRACT_EDGES, ['--dry-run'], repo);
-  assert(code === 0, `expected exit 0, got ${code} (stderr: ${stderr})`);
-  assert(/pyclient -> pyshared/.test(stdout), `absolute import edge pyclient->pyshared missing (stdout: ${stdout})`);
-  assert(/pyclient -> pypkg/.test(stdout), `absolute package edge pyclient->pypkg missing (stdout: ${stdout})`);
-  assert(/pyrelconsumer -> pyreltarget/.test(stdout), `relative import edge pyrelconsumer->pyreltarget missing (stdout: ${stdout})`);
-});
+    const { code, stdout, stderr } = runNode(EXTRACT_EDGES, ['--dry-run'], repo);
+    assert(code === 0, `expected exit 0, got ${code} (stderr: ${stderr})`);
+    assert(/pyclient -> pyshared/.test(stdout), `absolute import edge pyclient->pyshared missing (stdout: ${stdout})`);
+    assert(/pyclient -> pypkg/.test(stdout), `absolute package edge pyclient->pypkg missing (stdout: ${stdout})`);
+    assert(/pyrelconsumer -> pyreltarget/.test(stdout), `relative import edge pyrelconsumer->pyreltarget missing (stdout: ${stdout})`);
+  });
 
-test('graph-extract-edges resolves .tsx and .jsx relative imports', () => {
-  w(path.join(repo, 'src', 'ui', 'app.tsx'), 'import { util } from "../shared/util";\nexport const App = () => util;\n');
-  w(path.join(repo, 'src', 'web', 'view.jsx'), 'const util = require("../shared/util");\nexport default util;\n');
-  w(path.join(repo, 'src', 'shared', 'util.js'), 'export const util = 1;\n');
+  test('graph-extract-edges resolves .tsx and .jsx relative imports', () => {
+    w(path.join(repo, 'src', 'ui', 'app.tsx'), 'import { util } from "../shared/util";\nexport const App = () => util;\n');
+    w(path.join(repo, 'src', 'web', 'view.jsx'), 'const util = require("../shared/util");\nexport default util;\n');
+    w(path.join(repo, 'src', 'shared', 'util.js'), 'export const util = 1;\n');
 
-  writeGraph([
-    node('tsxmod', 'TsxMod', 'src/ui/**'),
-    node('jsxmod', 'JsxMod', 'src/web/**'),
-    node('sharedmod', 'SharedMod', 'src/shared/**'),
-  ]);
+    writeGraph([
+      node('tsxmod', 'TsxMod', 'src/ui/**'),
+      node('jsxmod', 'JsxMod', 'src/web/**'),
+      node('sharedmod', 'SharedMod', 'src/shared/**'),
+    ]);
 
-  const { code, stdout, stderr } = runNode(EXTRACT_EDGES, ['--dry-run'], repo);
-  assert(code === 0, `expected exit 0, got ${code} (stderr: ${stderr})`);
-  assert(/tsxmod -> sharedmod/.test(stdout), `tsx edge tsxmod->sharedmod missing (stdout: ${stdout})`);
-  assert(/jsxmod -> sharedmod/.test(stdout), `jsx edge jsxmod->sharedmod missing (stdout: ${stdout})`);
-});
-
-fs.rmSync(BASE, { recursive: true, force: true });
+    const { code, stdout, stderr } = runNode(EXTRACT_EDGES, ['--dry-run'], repo);
+    assert(code === 0, `expected exit 0, got ${code} (stderr: ${stderr})`);
+    assert(/tsxmod -> sharedmod/.test(stdout), `tsx edge tsxmod->sharedmod missing (stdout: ${stdout})`);
+    assert(/jsxmod -> sharedmod/.test(stdout), `jsx edge jsxmod->sharedmod missing (stdout: ${stdout})`);
+  });
+} finally {
+  fs.rmSync(BASE, { recursive: true, force: true });
+}
 
 console.log(`\n${passed} passed · ${failed} failed`);
 process.exit(failed ? 1 : 0);
