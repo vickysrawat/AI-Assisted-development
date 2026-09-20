@@ -77,21 +77,62 @@ for (const r of roots) walk(r);
 const fileToNode = {};
 for (const f of files) { const o = ownerOf(f); if (o) fileToNode[f] = o; }
 
+function readSafe(f) { try { return fs.readFileSync(f, 'utf8'); } catch (e) { return ''; } }
+const JS_CODE_EXT = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
+const records = []; // Single-read parse records; this reduces duplicate per-file I/O.
+for (const f of files) {
+  const from = fileToNode[f]; if (!from) continue;
+  const ext = path.extname(f).toLowerCase();
+  const src = readSafe(f); if (!src) continue;
+  const rec = { file: f, from, ext, declarations: [], refs: [] };
+
+  if (JS_CODE_EXT.has(ext)) {
+    let m;
+    let re = /(?:import|export)[\s\S]*?from\s*['"]([^'"]+)['"]/g; while ((m = re.exec(src))) if (m[1].startsWith('.')) rec.refs.push({ kind: 'rel-js', spec: m[1] });
+    re = /\bimport\s*['"]([^'"]+)['"]/g;                          while ((m = re.exec(src))) if (m[1].startsWith('.')) rec.refs.push({ kind: 'rel-js', spec: m[1] });
+    re = /\brequire\(\s*['"]([^'"]+)['"]\s*\)/g;                  while ((m = re.exec(src))) if (m[1].startsWith('.')) rec.refs.push({ kind: 'rel-js', spec: m[1] });
+
+  } else if (ext === '.py') {
+    let m;
+    let re = /^\s*from\s+(\.*[\w.]*)\s+import\s+/gm;
+    while ((m = re.exec(src))) rec.refs.push({ kind: 'py', spec: m[1] });
+    re = /^\s*import\s+([\w.]+)/gm;
+    while ((m = re.exec(src))) rec.refs.push({ kind: 'py', spec: m[1] });
+
+  } else if (ext === '.cs') {
+    let m; const nsRe = /^\s*namespace\s+([A-Za-z_][\w.]*)/gm;
+    while ((m = nsRe.exec(src))) rec.declarations.push({ kind: 'cs-namespace', spec: m[1] });
+    const usingRe = /^\s*using\s+(?:static\s+)?([A-Za-z_][\w.]*)\s*;/gm;
+    while ((m = usingRe.exec(src))) rec.refs.push({ kind: 'cs-using', spec: m[1] });
+
+  } else if (ext === '.java') {
+    let m; const pkgRe = /^\s*package\s+([A-Za-z_][\w.]*)\s*;/gm;
+    while ((m = pkgRe.exec(src))) rec.declarations.push({ kind: 'java-package', spec: m[1] });
+    const importRe = /^\s*import\s+(?:static\s+)?([A-Za-z_][\w.]*)\.[A-Za-z_]\w*\s*;/gm;
+    while ((m = importRe.exec(src))) rec.refs.push({ kind: 'java-import', spec: m[1] });
+
+  } else if (ext === '.csproj') {
+    let m; const re = /<ProjectReference\s+[^>]*Include\s*=\s*"([^"]+)"/g;
+    while ((m = re.exec(src))) rec.refs.push({ kind: 'csproj-ref', spec: m[1] });
+  }
+
+  records.push(rec);
+}
+
 // ── namespace/package → node maps (C#, Java) ─────────────────────────────────
 const nsToNode = {}; // C# namespace  → node id
 const pkgToNode = {}; // Java package → node id
-function readSafe(f) { try { return fs.readFileSync(f, 'utf8'); } catch (e) { return ''; } }
-for (const f of files) {
-  const node = fileToNode[f]; if (!node) continue;
-  const ext = path.extname(f).toLowerCase();
-  const src = (ext === '.cs' || ext === '.java') ? readSafe(f) : '';
-  if (ext === '.cs') { let m; const re = /^\s*namespace\s+([A-Za-z_][\w.]*)/gm; while ((m = re.exec(src))) if (!(m[1] in nsToNode)) nsToNode[m[1]] = node; }
-  else if (ext === '.java') { let m; const re = /^\s*package\s+([A-Za-z_][\w.]*)\s*;/gm; while ((m = re.exec(src))) if (!(m[1] in pkgToNode)) pkgToNode[m[1]] = node; }
+for (const rec of records) {
+  for (const d of rec.declarations) {
+    if (d.kind === 'cs-namespace' && !(d.spec in nsToNode)) nsToNode[d.spec] = rec.from;
+    else if (d.kind === 'java-package' && !(d.spec in pkgToNode)) pkgToNode[d.spec] = rec.from;
+  }
 }
+const nsKeys = Object.keys(nsToNode).sort((a, b) => b.length - a.length);
+const pkgKeys = Object.keys(pkgToNode).sort((a, b) => b.length - a.length);
 // longest-prefix namespace/package resolver
-function resolveNs(map, ns) {
+function resolveNs(map, keys, ns) {
   if (map[ns]) return map[ns];
-  const keys = Object.keys(map).sort((a, b) => b.length - a.length);
   for (const k of keys) if (ns === k || ns.startsWith(k + '.')) return map[k];
   return null;
 }
@@ -107,45 +148,28 @@ function resolveRelFile(fromFile, spec, exts) {
   return null;
 }
 
-// ── extract imports per file → target node ────────────────────────────────────
+// Absolute Python imports resolve from graph source roots (repo root and any dependency roots),
+// not matcher bases, so `import pkg.sub` resolves to `<sourceRoot>/pkg/sub.py`.
+const sourceRoots = [...new Set(nodes.map(n => norm(n.sourceRoot || REPO)).filter(Boolean))];
+// ── resolve parsed refs per file → target node ────────────────────────────────
 const edgeSet = new Set(); // "from\tto"
 function addEdge(from, to) { if (from && to && from !== to) edgeSet.add(from + '\t' + to); }
 
-for (const f of files) {
-  const from = fileToNode[f]; if (!from) continue;
-  const ext = path.extname(f).toLowerCase();
-  const src = readSafe(f); if (!src) continue;
-
-  if (['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'].includes(ext)) {
-    let m;
-    const specs = [];
-    let re = /(?:import|export)[\s\S]*?from\s*['"]([^'"]+)['"]/g; while ((m = re.exec(src))) specs.push(m[1]);
-    re = /\bimport\s*['"]([^'"]+)['"]/g;                          while ((m = re.exec(src))) specs.push(m[1]);
-    re = /\brequire\(\s*['"]([^'"]+)['"]\s*\)/g;                  while ((m = re.exec(src))) specs.push(m[1]);
-    for (const s of specs) { if (s.startsWith('.')) { const tf = resolveRelFile(f, s, JS_EXT); if (tf) addEdge(from, fileToNode[tf]); } }
-
-  } else if (ext === '.py') {
-    let m;
-    // from X import ... / from . import ... / from ..pkg import
-    let re = /^\s*from\s+(\.*[\w.]*)\s+import\s+/gm;
-    while ((m = re.exec(src))) addEdge(from, resolvePy(f, m[1]));
-    re = /^\s*import\s+([\w.]+)/gm;
-    while ((m = re.exec(src))) addEdge(from, resolvePy(f, m[1]));
-
-  } else if (ext === '.cs') {
-    let m; const re = /^\s*using\s+(?:static\s+)?([A-Za-z_][\w.]*)\s*;/gm;
-    while ((m = re.exec(src))) addEdge(from, resolveNs(nsToNode, m[1]));
-
-  } else if (ext === '.java') {
-    let m; const re = /^\s*import\s+(?:static\s+)?([A-Za-z_][\w.]*)\.[A-Za-z_]\w*\s*;/gm;
-    while ((m = re.exec(src))) addEdge(from, resolveNs(pkgToNode, m[1]));
-
-  } else if (ext === '.csproj') {
-    let m; const re = /<ProjectReference\s+[^>]*Include\s*=\s*"([^"]+)"/g;
-    while ((m = re.exec(src))) {
-      const refWin = m[1].split('\\').join('/');
-      const target = norm(path.posix.normalize(path.posix.dirname(norm(f)) + '/' + refWin));
-      addEdge(from, fileToNode[target] || ownerOf(target));
+for (const rec of records) {
+  for (const ref of rec.refs) {
+    if (ref.kind === 'rel-js') {
+      const tf = resolveRelFile(rec.file, ref.spec, JS_EXT);
+      if (tf) addEdge(rec.from, fileToNode[tf]);
+    } else if (ref.kind === 'py') {
+      addEdge(rec.from, resolvePy(rec.file, ref.spec));
+    } else if (ref.kind === 'cs-using') {
+      addEdge(rec.from, resolveNs(nsToNode, nsKeys, ref.spec));
+    } else if (ref.kind === 'java-import') {
+      addEdge(rec.from, resolveNs(pkgToNode, pkgKeys, ref.spec));
+    } else if (ref.kind === 'csproj-ref') {
+      const refWin = ref.spec.split('\\').join('/');
+      const target = norm(path.posix.normalize(path.posix.dirname(norm(rec.file)) + '/' + refWin));
+      addEdge(rec.from, fileToNode[target] || ownerOf(target));
     }
   }
 }
@@ -162,11 +186,10 @@ function resolvePy(fromFile, mod) {
     const base = sub ? dir + '/' + sub : dir;
     return fileToNode[norm(base + '.py')] || fileToNode[norm(base + '/__init__.py')] || ownerOf(base + '.py');
   }
-  // absolute dotted: try under each root
+  // absolute dotted: resolve from each graph source root.
   const sub = rel.replace(/\./g, '/');
-  for (const r of roots) {
-    const base = r ? r + '/' + sub : sub;
-    const cand = fileToNode[norm(base + '.py')] || fileToNode[norm(base + '/__init__.py')];
+  for (const r of sourceRoots) {
+    const cand = fileToNode[norm(r + '/' + sub + '.py')] || fileToNode[norm(r + '/' + sub + '/__init__.py')];
     if (cand) return cand;
   }
   return null;
