@@ -63,6 +63,14 @@ execute the skill immediately — priority over chat.
 | `SAVE ICEA ADO-{ID} ACCEPT` | Override critic REVISE verdict and save ICEA anyway (with audit note) |
 | `SAVE TECH ADO-{ID}` | Write Tech Spec to disk — hard blocks if open questions remain (no bypass) |
 | `SAVE TECH ADO-{ID} ACCEPT` | Save Tech Spec despite critic REVISE verdict (override with audit note) |
+| `SAVE TEST ADO-{ID}` | Run test-plan skill — generate or refresh the QA test plan for any ADO (icea/upgrade/rewrite/replatform source auto-detected) |
+| `SAVE TEST ADO-{ID} --source {type}` | Run test-plan skill with explicit source override (icea · upgrade · rewrite · replatform) |
+| `SAVE TEST ADO-{ID} --subagent` | Run test-plan skill in subagent mode — parallel suite generation, no prompts, no budget warning |
+| `EXPAND TEST ADO-{ID}` | Expand all stub suites in the test plan that have an approved source artifact on disk |
+| `EXPAND TEST ADO-{ID} Suite-N` | Expand a single named stub suite |
+| `EXPAND TEST ADO-{ID} TC-{ID}` | Expand a single TC stub to full steps |
+| `REFRESH TEST ADO-{ID}` | Re-generate cross-cutting suites (Regression, Security, NFR) from current source artifact |
+| `REFRESH TEST ADO-{ID} --combine` | Re-assemble the rewrite combined test plan doc from current cluster files (no cluster files modified) |
 | `PLAN ADO-{ID}` | Invoke icea-feature skill — cross-session recovery at Step 5 (draft ICEA from saved plan on disk) |
 | `ICEA ADO-{ID}` | Invoke icea-feature skill — cross-session recovery at Step 8 (draft Tech Spec from saved ICEA; EPIC branch active) |
 | `TECH ADO-{ID}` | Invoke icea-feature skill — cross-session recovery at Step 8 (draft Tech Spec from saved ICEA; EPIC branch active) |

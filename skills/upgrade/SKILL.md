@@ -273,6 +273,24 @@ substrate** (`skills/shared/judge.md`, `skills/shared/migration-ledger-schema.md
 `payload.upgrade` namespace. (The local `references/judge-inline.md` / `checkpoint-inline.md` are now
 redirects to the shared docs.)
 
+## Step 8a — Generate test plan (after verify passes)
+
+After Step 7 verification passes (`upgrade-orchestrate.cjs verify` exits 0), invoke
+the test-plan skill in subagent mode — no prompt, no budget warning:
+
+```
+Read $PLUGIN_DIR/skills/test-plan/SKILL.md and execute it with:
+  --source upgrade --subagent
+  ADO ID: {ADO_ID}
+Record the returned test plan path in the ledger:
+  payload.upgrade.testPlanPath = {path}
+```
+
+If the test-plan skill fails, log a warning in the migration log and continue — the
+upgrade is not gated on test plan generation.
+
+---
+
 ## Hard Rules
 
 - NEVER record the `report` gate PASS before the **source-context intake gate** is PASS — the report

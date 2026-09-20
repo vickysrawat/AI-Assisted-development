@@ -308,6 +308,32 @@ node "$PLUGIN_DIR/scripts/rewrite-bal.cjs" completion-gate --bal=<final> --floor
 Every gate records an independent **judge** verdict (`$PLUGIN_DIR/skills/shared/judge.md`, risk-scaled)
 and is persisted to the shared ledger via `scripts/checkpoint-ledger.cjs` (`set-gate` / `set-payload`).
 
+## Step 5a — Generate test plan per cluster (after each BAL gate passes)
+
+After each cluster passes its BAL gate (Step 4) and before the merge gate (Step 5),
+invoke the test-plan skill in subagent mode for that cluster:
+
+```
+Read $PLUGIN_DIR/skills/test-plan/SKILL.md and execute it with:
+  --source rewrite --subagent
+  ADO ID: {ADO_ID}
+  Cluster index: {N}
+Record the returned cluster test plan path in the ledger:
+  payload.rewrite.clusters[N].testPlanPath = {path}
+```
+
+When the last cluster's BAL gate passes and its test plan is written, the test-plan
+skill automatically assembles the combined document (`ADO-{ID}-rewrite.test-plan.md`)
+from all cluster files. Record the combined path:
+```
+  payload.rewrite.combinedTestPlanPath = {path}
+```
+
+If the test-plan skill fails for a cluster, log a warning in the migration log and
+continue — the merge gate is not blocked by test plan generation failure.
+
+---
+
 ## Hard Rules
 
 - NEVER present options before the **source-context intake gate** is PASS (`intake-verify.cjs`) — the

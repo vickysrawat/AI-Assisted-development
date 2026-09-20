@@ -235,6 +235,24 @@ hard-block (step 1). Record the result to the shared ledger `payload.replatform.
 independent judge verdict (`$PLUGIN_DIR/skills/shared/judge.md`) via `checkpoint-ledger.cjs`
 `set-gate` / `set-payload`. Write `[DECISION]` migration log entries per `migration-log-spec.md`.
 
+## Step R5a — Generate test plan (after IaC authoring completes)
+
+After IaC authoring is complete and before the NFR gate, invoke the test-plan skill
+in subagent mode:
+
+```
+Read $PLUGIN_DIR/skills/test-plan/SKILL.md and execute it with:
+  --source replatform --subagent
+  ADO ID: {ADO_ID}
+Record the returned test plan path in the ledger:
+  payload.replatform.testPlanPath = {path}
+```
+
+If the test-plan skill fails, log a warning in the migration log and continue — the
+NFR gate is not blocked by test plan generation failure.
+
+---
+
 ## Hard Rules
 - NEVER present options before the **source-context intake gate** is PASS (`intake-verify.cjs`) — `plan`
   (R2) calls `check-gate` and STOPs otherwise. The Source Context Manifest must fully account for every

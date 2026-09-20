@@ -542,4 +542,20 @@ For each checkin ❌ FAIL + fix cycle:
 - ALWAYS append `build-issue`, Follow-ups tracker row, and `build-fixed` audit rows for each checkin ❌ FAIL + fix cycle in Step 7
 - ALWAYS append `checkin-pass` audit row when checkin ✅ / ⚠ in Step 7
 - NEVER leave Follow-ups table empty after a REVISE cycle or build failure — every rework leaves a row
+- ALWAYS offer the test-plan skill after checkin passes — do not silently skip it (AC-F50)
+
+---
+
+## Step 8 — Offer test plan generation
+
+After checkin passes (Step 7 ✅ or ⚠), invoke the test-plan skill:
+
+```
+Read $PLUGIN_DIR/skills/test-plan/SKILL.md and execute Steps 1–2 for this ADO ID
+with --source icea. The developer prompt (Step 2) is shown — if the developer
+replies N, exit cleanly without blocking story closure.
+```
+
+This step is **non-blocking**: if the developer declines or the skill errors, log
+a warning and stop — story closure is not gated on test plan generation.
 - NEVER populate Delivered or Tests sections before the Write Gate — only write them after APPROVE and the code is on disk
