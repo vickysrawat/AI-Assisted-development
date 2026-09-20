@@ -250,6 +250,26 @@ for (const [name, prepare] of [
   }
 }
 
+// Graph with partial source coverage (non-zero srcCount) must also fall back.
+{
+  const root = mk({
+    'package.json': '{"name":"api","main":"index.js","dependencies":{"express":"^4"}}',
+    'src/main/server.js': 'console.log("ok");',
+    'src/hidden/auth.js': 'const passport = require("passport");',
+  });
+  try {
+    writeGraph(root, [graphNode('main', 'src/main/**')]);
+    writeStateFingerprint(root);
+    const result = runMode(root);
+    assert(result.mode === 'fallback', 'expected fallback for partial source coverage, got ' + result.mode);
+    ok('partial source coverage falls back');
+  } catch (e) {
+    bad('partial source coverage falls back', e.message);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+}
+
 // Foreign/no-graph root continues to behave like a normal external source root.
 {
   const result = runMode(node);

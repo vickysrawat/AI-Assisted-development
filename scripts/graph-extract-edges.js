@@ -34,6 +34,15 @@ if (!nodes.length) { console.error('graph-extract-edges: no nodes in graph — r
 // ProjectReferences resolve. See skills/shared/multi-root-scan.md.
 const norm = p => (p || '').replace(/\\/g, '/').replace(/^\.\//, '');
 const REPO = norm(path.resolve(ROOT));
+const isAbs = p => path.isAbsolute(p || '');
+function within(absBase, absPath) {
+  const rel = path.relative(absBase, absPath);
+  return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
+}
+function toAbsSourceRoot(p) {
+  if (!p) return REPO;
+  return norm(path.resolve(isAbs(p) ? p : path.resolve(ROOT, p)));
+}
 function globToRegex(g) {
   let re = '';
   for (let i = 0; i < g.length; i++) {
@@ -50,8 +59,10 @@ function globBase(g) { const i = g.search(/[*?]/); const b = i < 0 ? g : g.slice
 // node path matchers, most-specific (longest base) first. Each glob resolves against the
 // node's sourceRoot (dependency repo) or the repo root, so matchers key ABSOLUTE paths.
 const matchers = [];
+const nodeSourceRoot = {};
 for (const n of nodes) {
-  const nodeBase = n.sourceRoot ? norm(n.sourceRoot) : REPO;
+  const nodeBase = toAbsSourceRoot(n.sourceRoot);
+  nodeSourceRoot[n.id] = nodeBase;
   for (const g of (n.paths || [])) {
     const gg = norm(nodeBase + '/' + g);
     matchers.push({ id: n.id, re: globToRegex(gg), base: globBase(gg) });
@@ -77,13 +88,23 @@ for (const r of roots) walk(r);
 const fileToNode = {};
 for (const f of files) { const o = ownerOf(f); if (o) fileToNode[f] = o; }
 
-function readSafe(f) { try { return fs.readFileSync(f, 'utf8'); } catch (e) { return ''; } }
+function readSource(f) {
+  try { return { ok: true, text: fs.readFileSync(f, 'utf8') }; }
+  catch (e) { return { ok: false, text: '', error: e }; }
+}
 const JS_CODE_EXT = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
+// Regex extractor boundary (intentional): this is not a full language parser.
+// Known limits include dynamic JS imports/path aliases, Python comma-import and some
+// namespace-package attribution cases, C# aliases/global usings, and Java wildcard imports.
 const records = []; // Single-read parse records; this reduces duplicate per-file I/O.
+const readFailureNodes = new Set();
+const readFailures = [];
 for (const f of files) {
   const from = fileToNode[f]; if (!from) continue;
   const ext = path.extname(f).toLowerCase();
-  const src = readSafe(f); if (!src) continue;
+  const read = readSource(f);
+  if (!read.ok) { readFailureNodes.add(from); readFailures.push({ file: f, error: read.error }); continue; }
+  const src = read.text;
   const rec = { file: f, from, ext, declarations: [], refs: [] };
 
   if (JS_CODE_EXT.has(ext)) {
@@ -148,9 +169,14 @@ function resolveRelFile(fromFile, spec, exts) {
   return null;
 }
 
-// Absolute Python imports resolve from graph source roots (repo root and any dependency roots),
-// not matcher bases, so `import pkg.sub` resolves to `<sourceRoot>/pkg/sub.py`.
-const sourceRoots = [...new Set(nodes.map(n => norm(n.sourceRoot || REPO)).filter(Boolean))];
+// Absolute Python imports use this deterministic policy:
+//   1) importing node's sourceRoot
+//   2) primary repo root
+//   3) other dependency roots (fallback only)
+// If fallback roots produce multiple owning nodes, the result is ambiguous and no EXTRACTED edge
+// is emitted (never rely on node-order tie-breaking).
+const sourceRoots = [...new Set(nodes.map(n => nodeSourceRoot[n.id] || REPO).filter(Boolean))];
+const pyAmbiguous = new Set();
 // ── resolve parsed refs per file → target node ────────────────────────────────
 const edgeSet = new Set(); // "from\tto"
 function addEdge(from, to) { if (from && to && from !== to) edgeSet.add(from + '\t' + to); }
@@ -186,11 +212,54 @@ function resolvePy(fromFile, mod) {
     const base = sub ? dir + '/' + sub : dir;
     return fileToNode[norm(base + '.py')] || fileToNode[norm(base + '/__init__.py')] || ownerOf(base + '.py');
   }
-  // absolute dotted: resolve from each graph source root.
+  // absolute dotted policy:
+  //   1) importer sourceRoot
+  //   2) repo root
+  //   3) dependency roots (must be unique; otherwise ambiguous/no EXTRACTED edge)
   const sub = rel.replace(/\./g, '/');
-  for (const r of sourceRoots) {
-    const cand = fileToNode[norm(r + '/' + sub + '.py')] || fileToNode[norm(r + '/' + sub + '/__init__.py')];
-    if (cand) return cand;
+  const importerNode = fileToNode[norm(fromFile)];
+  const importerRoot = nodeSourceRoot[importerNode] || REPO;
+  function nodeAt(r) {
+    const candFile = norm(r + '/' + sub + '.py');
+    const candInit = norm(r + '/' + sub + '/__init__.py');
+    return fileToNode[candFile] || fileToNode[candInit] || null;
+  }
+  const importerNodeHit = nodeAt(importerRoot);
+  if (importerNodeHit) return importerNodeHit;
+  const repoRoots = [];
+  for (const r of sourceRoots) if (r && within(REPO, r) && !repoRoots.includes(r)) repoRoots.push(r);
+  if (!repoRoots.includes(REPO)) repoRoots.unshift(REPO);
+  const repoNodes = new Set();
+  const repoHits = [];
+  for (const r of repoRoots.filter(r => r !== importerRoot)) {
+    const hit = nodeAt(r);
+    if (hit) { repoNodes.add(hit); repoHits.push(r); }
+  }
+  if (repoNodes.size === 1) return [...repoNodes][0];
+  if (repoNodes.size > 1) {
+    const key = `${fromFile}\t${mod}\trepo:${[...repoNodes].sort().join(',')}`;
+    if (!pyAmbiguous.has(key)) {
+      pyAmbiguous.add(key);
+      console.error(`graph-extract-edges: ambiguous Python absolute import "${mod}" in ${fromFile} across repo roots: ${repoHits.join(', ')}`);
+    }
+    return null;
+  }
+  const fallbackRoots = [];
+  for (const r of sourceRoots) if (r && r !== importerRoot && r !== REPO && !fallbackRoots.includes(r)) fallbackRoots.push(r);
+  const depNodes = new Set();
+  const depHits = [];
+  for (const r of fallbackRoots.filter(r => r !== REPO)) {
+    const hit = nodeAt(r);
+    if (hit) { depNodes.add(hit); depHits.push(r); }
+  }
+  if (depNodes.size === 1) return [...depNodes][0];
+  if (depNodes.size > 1) {
+    const key = `${fromFile}\t${mod}\t${[...depNodes].sort().join(',')}`;
+    if (!pyAmbiguous.has(key)) {
+      pyAmbiguous.add(key);
+      console.error(`graph-extract-edges: ambiguous Python absolute import "${mod}" in ${fromFile} across dependency roots: ${depHits.join(', ')}`);
+    }
+    return null;
   }
   return null;
 }
@@ -207,10 +276,14 @@ const nodeIds = new Set(nodes.map(n => n.id));
 const found = edgeSet; // "from\tto" pairs confirmed in source
 const result = [];
 const confirmedPairs = new Set();
+let preservedOnReadFailure = 0;
 for (const e of (graph.edges || [])) {
   if (!nodeIds.has(e.from) || !nodeIds.has(e.to)) continue;                 // dangling → drop
   const pair = e.from + '\t' + e.to;
-  if (e.confidence === 'EXTRACTED' && !found.has(pair)) continue;          // stale EXTRACTED → drop
+  if (e.confidence === 'EXTRACTED' && !found.has(pair)) {
+    if (readFailureNodes.has(e.from)) { preservedOnReadFailure++; result.push(ordered_(e)); continue; }
+    continue;                                                                // stale EXTRACTED → drop
+  }
   const edge = ordered_(e);
   if (found.has(pair)) { edge.confidence = 'EXTRACTED'; confirmedPairs.add(pair); } // parser confirms → EXTRACTED
   result.push(edge);
@@ -239,6 +312,10 @@ const json = JSON.stringify(out, null, 2) + '\n';
 const nExtracted = merged.filter(e => e.confidence === 'EXTRACTED').length;
 const nOther = merged.length - nExtracted;
 const summary = `graph-extract-edges: ${nExtracted} EXTRACTED edge(s) from ${files.length} file(s) across ${nodes.length} module(s); kept ${nOther} INFERRED/AMBIGUOUS.`;
+if (readFailures.length) {
+  const preview = readFailures.slice(0, 3).map(x => `${x.file} (${x.error && x.error.message ? x.error.message : 'read failed'})`).join('; ');
+  console.error(`graph-extract-edges: warning: ${readFailures.length} file(s) could not be read; preserved ${preservedOnReadFailure} existing EXTRACTED edge(s) for affected modules. ${preview}${readFailures.length > 3 ? '; ...' : ''}`);
+}
 if (DRY) {
   console.log('[dry-run] ' + summary);
   for (const e of merged.filter(x => x.confidence === 'EXTRACTED')) console.log('  ' + e.from + ' -> ' + e.to + ' [' + e.type + ']');

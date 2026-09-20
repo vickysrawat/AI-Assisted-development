@@ -231,6 +231,29 @@ function scanRoot(root) {
   return scanPaths([root], []);
 }
 
+function hasSourceOutsideScanRoots(root, scanRoots) {
+  const covered = uniqueScanRoots(scanRoots || []);
+  const coveredAbs = covered.map(r => path.resolve(r));
+  function rec(dir, depth) {
+    if (depth > MAX_DEPTH) return false;
+    let ents;
+    try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch (_) { return false; }
+    for (const e of ents) {
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) {
+        if (!PRUNE.has(e.name) && rec(full, depth + 1)) return true;
+      } else {
+        const ext = path.extname(e.name).toLowerCase();
+        if (!SRC_EXTS.includes(ext)) continue;
+        const abs = path.resolve(full);
+        if (!coveredAbs.some(base => isWithin(base, abs))) return true;
+      }
+    }
+    return false;
+  }
+  return rec(path.resolve(root), 0);
+}
+
 function readStoredBuildfileFingerprint(root) {
   const state = readJson(path.join(root, '.claude', 'dream-init-state.json'));
   return state?.generations_meta?.buildfile_fingerprint || '';
@@ -271,8 +294,15 @@ function graphScanContext(root, detectMeta) {
 function scanRootWithGraphFastPath(root, detectMeta, tokens) {
   const graph = graphScanContext(root, detectMeta);
   if (!graph) return { mode: 'fallback', scan: scanRoot(root) };
+  const rootAbs = path.resolve(root);
+  const alreadyFullRoot = graph.scanRoots.some(r => path.resolve(r) === rootAbs);
+  if (!alreadyFullRoot && hasSourceOutsideScanRoots(rootAbs, graph.scanRoots)) {
+    return { mode: 'fallback', scan: scanRoot(root) };
+  }
   const scan = scanPaths(graph.scanRoots, graph.extraFiles);
-  if ((tokens || []).length > 0 && scan.srcCount === 0) return { mode: 'fallback', scan: scanRoot(root) };
+  if ((tokens || []).length > 0 && scan.srcCount === 0) {
+    return { mode: 'fallback', scan: alreadyFullRoot ? scan : scanRoot(root) };
+  }
   return { mode: 'graph', scan };
 }
 
@@ -379,6 +409,7 @@ module.exports = {
   graphScanContext,
   main,
   parseArgs,
+  hasSourceOutsideScanRoots,
   scanPaths,
   scanRoot,
   scanRootWithGraphFastPath,
