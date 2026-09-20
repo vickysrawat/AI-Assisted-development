@@ -583,3 +583,23 @@ NOT separator-based — a separator-based rule silently failed on the no-separat
 **Verification:** `node tests/intake-verify.test.cjs` → 17 passed · 0 failed. Decisive new tests:
 `maskcc` (source-cited + doc-cited sibling, feature-flags name not in keyword set → exit 9, was exit 0
 before) and `headcc` (header-only table → exit 9 empty). gen-shared-index --check clean.
+## 2026-09-20 — PerformanceImprovement: graph extractor single-read deferred resolution
+
+Approved and landed the graph extractor performance revision in `scripts/graph-extract-edges.js`:
+the extractor now keeps file discovery/ownership, but reads each owned source or project file only
+once, emits a compact intermediate record (`file`, `owner`, `ext`, declarations, deferred refs),
+then builds namespace/package indexes and resolves JS/TS, Python, C#, Java, and `.csproj`
+dependencies in a second in-memory phase. Raw source text is not retained after parsing.
+
+**Why this shape:** selective C#/Java caching was too narrow for Angular/React JS/TS and Python.
+The stable architecture is now explicit: parse once → build indexes → resolve deferred refs →
+merge/serialize with existing EXTRACTED/INFERRED/AMBIGUOUS semantics unchanged.
+
+**Regression contract:** `tests/graph-extract-edges-single-read.test.cjs` monkey-patches
+`fs.readFileSync` via `NODE_OPTIONS=--require` to prove every relevant fixture file is read exactly
+once while also covering JS/TS import+export-from+require, Python imports, C# exact/longest-prefix
+namespace resolution, Java exact/longest-prefix package resolution, `.csproj` `ProjectReference`,
+stale EXTRACTED removal, preserved INFERRED/AMBIGUOUS edges, and byte-identical repeated output.
+
+**Verification:** `node tests/graph-extract-edges-single-read.test.cjs` → 1 passed · 0 failed;
+`node tests/graph-multiroot.test.cjs` → 4 passed · 0 failed.
