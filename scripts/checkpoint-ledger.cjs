@@ -1,13 +1,44 @@
+#!/usr/bin/env node
+// SCRIPT REVIEW
+// What it does:        Shared migration-family checkpoint LEDGER (extracted from Story-1's inline
+//                      upgrade-checkpoint at the second consumer — rule-of-three). One ledger per
+//                      ADO with a shared CORE envelope (schema_version, skill discriminator, ado_id,
+//                      timestamps, source, stage_gates, phase_history, decision_log, judge_verdicts)
+//                      and a per-skill PAYLOAD namespace (payload.<skill>) opaque to other skills.
+//                      Exposes a LIBRARY api (require) + a generic CLI (init|get|validate|set-gate|
+//                      set-payload). Every write is a MERGE-WRITE — read whole, change only owned
+//                      keys, preserve everything else (tolerant reader → skew-safe across skills
+//                      sharing one ledger). Single active writer assumed.
+//                      `validate` (A2/A4) is a deterministic, read-only fail-closed check that must
+//                      pass before a resume or phase-advance boundary is allowed to proceed: it
+//                      rejects a missing/empty/malformed/structurally-invalid ledger, an ADO/skill
+//                      mismatch, and (optionally) a tracker file that is missing or lacks a
+//                      "## Next action" section. It NEVER repairs or recreates state — a failed
+//                      validation only reports; recovery is a separate, explicit, human-approved step.
+// What it touches:     Reads/writes ONE JSON ledger file (path supplied by the caller / --file);
+//                      `validate` additionally reads (never writes) an optional --tracker file.
+// What it does NOT do: No network, no git, no code edits, no LLM. Never deletes keys it does not own;
+//                      never rebuilds the file from scratch. `validate` never mutates the ledger or
+//                      the tracker, even on failure — it is read-only in every branch.
+// APIs / commands:     Node stdlib: fs (sync JSON), path. Library: coreEnvelope, load, save,
+//                      ensurePayload, setGate, setPayload, validateLedgerFile, validateTrackerText.
+//                      CLI exit codes: 0=ok · 7=absent · 8=empty · 9=malformed JSON ·
+//                      10=invalid structure (schema/core fields) · 11=ADO mismatch ·
+//                      12=skill mismatch · 13=tracker missing · 14=tracker empty ·
+//                      15=tracker missing "## Next action" · 1=usage/error.
+// How to verify:       node tests/checkpoint-ledger.test.cjs  -> "N passed · 0 failed".
+
 'use strict';
 const fs   = require('fs');
 const path = require('path');
 
 const SCHEMA_VERSION = '1.0';
 
+// ── Library ─────────────────────────────────────────────────────────────────
 function coreEnvelope({ skill, ado, stack, from, to, now }) {
   return {
     schema_version: SCHEMA_VERSION,
-    skill: skill || null,
+    skill: skill || null,               // which skill last wrote (discriminator)
     ado_id: ado || null,
     created_at: now,
     updated_at: now,
@@ -16,7 +47,7 @@ function coreEnvelope({ skill, ado, stack, from, to, now }) {
     phase_history: [],
     decision_log: [],
     judge_verdicts: [],
-    payload: {},
+    payload: {},                        // per-skill namespaces added on demand
   };
 }
 
@@ -31,6 +62,8 @@ function save(file, cp) {
   fs.writeFileSync(file, JSON.stringify(cp, null, 2) + '\n');
 }
 
+// Tolerant reader: ensure the substructures a writer owns exist WITHOUT touching foreign fields.
+// `skill` + `skeleton` seed that skill's payload namespace idempotently (never overwrites data).
 function normalize(cp, skill, skeleton) {
   cp.stage_gates   ??= {};
   cp.phase_history ??= [];
@@ -43,6 +76,14 @@ function normalize(cp, skill, skeleton) {
 
 function ensurePayload(cp, skill, skeleton) { normalize(cp, skill, skeleton); return cp.payload[skill]; }
 
+// DECISION: how the shared ledger stays skew-safe when >1 skill shares one ADO ledger
+// Options considered:
+//   A) each skill writes its own file — rejected: loses the single migration ledger / hand-off
+//      contract the family design requires (upgrade → hand-off → rewrite is one journey)
+//   B) full-object overwrite per write — rejected: a newer skill's fields get clobbered by an
+//      older skill's writer (skew)
+//   C) merge-write on a normalized load — chosen: read whole, mutate only owned keys, preserve the
+//      rest (incl. unknown newer fields); additive-only core; matches README "skew-safe"
 function setGate(cp, skill, gate, verdict, now) {
   normalize(cp, skill);
   cp.stage_gates[gate] = verdict;
@@ -60,6 +101,11 @@ function setPayload(cp, skill, patch, now) {
   return cp;
 }
 
+// DECISION (A2/A4 — session design principle: "validate before use, fail closed, never silently
+// repair"). `validate` is deterministic and read-only. It intentionally does NOT try to fix,
+// recreate, or infer a corrected ledger/tracker — that would hide the very drift it exists to
+// catch. Recovery (e.g. re-`init`, or a future reconstruct-from-tracker capability) is always a
+// separate, explicit, human-approved action taken AFTER validate reports the problem.
 function validateTrackerText(text) {
   if (!text || !String(text).trim()) return { ok: false, status: 'tracker-empty', code: 14 };
   if (!String(text).includes('## Next action')) return { ok: false, status: 'tracker-next-action-missing', code: 15 };
@@ -142,6 +188,7 @@ module.exports = {
   validateTrackerText,
 };
 
+// ── Generic CLI ───────────────────────────────────────────────────────────
 if (require.main === module) {
   const OP = (process.argv[2] || '').trim().toLowerCase();
   const JSON_OUT = process.argv.includes('--json');
