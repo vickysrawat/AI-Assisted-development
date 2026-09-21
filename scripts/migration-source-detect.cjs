@@ -292,9 +292,6 @@ function scanRootWithGraphFastPath(root, detectMeta, tokens) {
   if (!alreadyFullRoot && graph.coverage.hasOutsideSource) {
     return { mode: 'fallback', scan: scanRoot(root) };
   }
-  if (!alreadyFullRoot && graph.coverage.hasOutsideSignal) {
-    return { mode: 'fallback', scan: scanRoot(root) };
-  }
 
   const scan = scanPaths(graph.scanRoots, graph.coverage.extraFiles);
   if ((tokens || []).length > 0 && scan.srcCount === 0) {
