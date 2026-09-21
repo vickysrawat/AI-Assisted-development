@@ -50,8 +50,19 @@ assert('VALIDATE passes on a valid ledger',
   valid.code === 0 && valid.json.status === 'ok' && valid.json.checkpoint?.ado_id === '9000',
   `code=${valid.code} json=${valid.stdout}`);
 
+const wrongSkill = run(['validate', '--skill=rewrite', '--ado=9000']);
+assert('VALIDATE rejects wrong skill before that skill has initialized the shared ledger',
+  wrongSkill.code === 1
+  && wrongSkill.json.reason === 'checkpoint-skill-mismatch'
+  && Array.isArray(wrongSkill.json.next_steps) && wrongSkill.json.next_steps.length > 0,
+  `code=${wrongSkill.code} json=${wrongSkill.stdout}`);
+
 // upgrade writes its payload
 run(['set-payload', '--skill=upgrade', '--ado=9000', '--payload-json={"hops":["7","8"],"baseline_tag":"pre-upgrade/dotnet-6"}', '--now=2026-09-08']);
+const rewriteInit = run(['init', '--skill=rewrite', '--ado=9000', '--now=2026-09-08']);
+assert('INIT seeds an additional skill namespace on an existing shared ledger',
+  rewriteInit.code === 0 && rewriteInit.json.status === 'exists' && typeof rewriteInit.json.checkpoint?.payload?.rewrite === 'object',
+  `code=${rewriteInit.code} json=${rewriteInit.stdout}`);
 // P-U4 — rewrite writes ALONGSIDE upgrade; both payloads preserved (merge-write across skills)
 const rw = run(['set-payload', '--skill=rewrite', '--ado=9000', '--payload-json={"clusters":3,"posture":"port"}', '--now=2026-09-08']);
 assert('P-U4 rewrite payload written', rw.json.payload?.clusters === 3 && rw.json.payload?.posture === 'port', JSON.stringify(rw.json.payload));
@@ -84,13 +95,6 @@ assert('VALIDATE rejects wrong ADO with structured reason + next steps',
   && wrongAdo.json.reason === 'checkpoint-ado-mismatch'
   && Array.isArray(wrongAdo.json.next_steps) && wrongAdo.json.next_steps.length > 0,
   `code=${wrongAdo.code} json=${wrongAdo.stdout}`);
-
-const wrongSkill = run(['validate', '--skill=rewrite', '--ado=9000']);
-assert('VALIDATE rejects wrong skill with structured reason + next steps',
-  wrongSkill.code === 1
-  && wrongSkill.json.reason === 'checkpoint-skill-mismatch'
-  && Array.isArray(wrongSkill.json.next_steps) && wrongSkill.json.next_steps.length > 0,
-  `code=${wrongSkill.code} json=${wrongSkill.stdout}`);
 
 // get on missing -> absent exit 7
 reset();

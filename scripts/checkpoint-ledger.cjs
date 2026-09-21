@@ -250,14 +250,14 @@ function validateLedgerFile(file, { expectedSkill, expectedAdo } = {}) {
     });
   }
 
-  if (expectedSkill && checkpoint.skill !== expectedSkill) {
+  if (expectedSkill && checkpoint.skill !== expectedSkill && !Object.prototype.hasOwnProperty.call(checkpoint.payload, expectedSkill)) {
     return buildValidationFailure('checkpoint-skill-mismatch', {
       file,
       expectedSkill,
       expectedAdo,
       foundSkill: checkpoint.skill,
       foundAdo: checkpoint.ado_id,
-      details: [`expected skill "${expectedSkill}" but found "${checkpoint.skill}"`],
+      details: [`expected skill "${expectedSkill}" but found "${checkpoint.skill}" and no payload.${expectedSkill} namespace is present`],
     });
   }
 
@@ -346,6 +346,10 @@ if (require.main === module) {
         save(FILE, cp); result = { op: 'init', status: 'created', file: FILE, checkpoint: cp };
       } else {
         const existing = loadValidated(FILE, { expectedAdo: ADO || undefined });
+        if (SKILL && !Object.prototype.hasOwnProperty.call(existing.payload, SKILL)) {
+          ensurePayload(existing, SKILL, {});
+          save(FILE, existing);
+        }
         result = { op: 'init', status: 'exists', file: FILE, checkpoint: existing };
       }
     } else if (OP === 'get') {
@@ -361,14 +365,14 @@ if (require.main === module) {
       result = { op: 'validate', status: 'ok', file: FILE, ado: validation.ado, skill: validation.skill, checkpoint: validation.checkpoint };
     } else if (OP === 'set-gate') {
       if (!arg('gate') || !arg('verdict')) throw new Error('set-gate requires --gate and --verdict');
-      const cp = setGate(loadValidated(FILE, { expectedAdo: ADO || undefined }), SKILL, arg('gate'), arg('verdict'), NOW);
+      const cp = setGate(loadValidated(FILE, { expectedSkill: SKILL || undefined, expectedAdo: ADO || undefined }), SKILL, arg('gate'), arg('verdict'), NOW);
       save(FILE, cp); result = { op: 'set-gate', status: 'ok', file: FILE, gate: arg('gate'), verdict: arg('verdict'), checkpoint: cp };
     } else if (OP === 'set-payload') {
       if (!SKILL) throw new Error('set-payload requires --skill');
       let patch = {};
       if (arg('payload-json') !== undefined) patch = JSON.parse(arg('payload-json'));
       else if (arg('key') !== undefined) patch = { [arg('key')]: arg('value') };
-      const cp = setPayload(loadValidated(FILE, { expectedAdo: ADO || undefined }), SKILL, patch, NOW);
+      const cp = setPayload(loadValidated(FILE, { expectedSkill: SKILL || undefined, expectedAdo: ADO || undefined }), SKILL, patch, NOW);
       save(FILE, cp); result = { op: 'set-payload', status: 'ok', file: FILE, payload: cp.payload[SKILL], checkpoint: cp };
     } else {
       process.stderr.write('usage: checkpoint-ledger.cjs <init|get|validate|set-gate|set-payload> --skill=<s> --ado=<id> [--gate --verdict] [--key --value | --payload-json] [--file --now]\n');
