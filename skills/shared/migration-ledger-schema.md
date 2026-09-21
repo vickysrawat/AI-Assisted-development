@@ -105,15 +105,20 @@ and driven by this one contract. The LEDGER is the authoritative journey record.
 true state + the one next step).
 
 **Step 1 — Load context fresh (read-only).** For the invoking skill `<skill>` and the ADO:
-1. Read `.claude/migration/<ado>.checkpoint.json` directly (`JSON.parse`; tolerant reader — tolerate
+1. Read `docs/migrations/<ado>/migration-tracker.md` **first** — this is the committed,
+   human-readable resume file. It contains the current phase/step, all committed artifact paths,
+   open blockers, and the exact next action. Use it as the primary orientation source.
+   If absent (pre-tracker migration), fall back to the next step.
+2. Read `.claude/migration/<ado>.checkpoint.json` (`JSON.parse`; tolerant reader — tolerate
    unknown/absent fields; missing → "none in progress"). Take `source`, `stage_gates`, `phase_history`,
-   `judge_verdicts`, `payload.<skill>`. **This alone is sufficient for the render + Next action.**
+   `judge_verdicts`, `payload.<skill>`. Use for script-level gate state not captured in the tracker.
+   **The tracker is primary; the checkpoint JSON is supplementary.**
    > Read-only — do NOT use the `checkpoint-ledger.cjs` write CLI (that CLI exists for skew-safe merge
    > *writes*). Reading is a plain JSON load, exactly as `icea-status` reads its files.
-2. OPTIONAL enrichment (best-effort): if `payload.<skill>` records artifact PATHS (e.g. `report_path`,
+3. OPTIONAL enrichment (best-effort): if `payload.<skill>` records artifact PATHS (e.g. `report_path`,
    `iac_dir`, `cluster_specs[]`), read those fresh to enrich the render. NEVER guess a path or fabricate
    presence — if the payload doesn't record it, omit it. The ledger, not a filesystem scan, is the map.
-3. ICEA/tracker for the ADO (if present) — governing status only.
+4. ICEA/tracker for the ADO (if present) — governing status only.
 
 **Step 2 — Render.**
 
@@ -150,6 +155,7 @@ Resume = orient, then continue — uniform for all three skills:
 3. Any state change is written via `checkpoint-ledger.cjs set-gate / set-payload` (skew-safe merge-write).
 Read-only orientation first; only the continuation writes. Missing ledger → tell the user to start
 (`UPGRADE|REWRITE|REPLATFORM ADO-{ID}`). A skill continues from ONLY its own `payload.<skill>`.
+If the tracker file exists but the checkpoint JSON is missing (e.g. git-ignored file was lost after context overflow): the tracker file is sufficient to resume — read it, orient from its "Next action", and continue without the checkpoint JSON. Recreate the checkpoint JSON via `checkpoint-ledger.cjs init` before running any scripts that require it.
 
 ## Governance (bundled standalone)
 
