@@ -18,6 +18,7 @@
 
 'use strict';
 const path = require('path');
+const { spawnSync } = require('child_process');
 const ledger = require('./checkpoint-ledger.cjs');
 
 const SKILL = 'upgrade';
@@ -25,6 +26,34 @@ const SKILL = 'upgrade';
 const SKELETON = () => ({ hops: [], baseline_tag: null, gate_verdicts: {} });
 
 module.exports = { SKELETON };
+
+/**
+ * A report PASS is only legal after the intake verifier has revalidated the ledger.
+ * Keep this check at the adapter boundary so direct/manual checkpoint calls cannot
+ * bypass the Upgrade skill's fail-closed report gate.
+ */
+function requireIntakeForReportPass(file, ado) {
+  const verifier = path.join(__dirname, 'intake-verify.cjs');
+  const result = spawnSync(process.execPath, [
+    verifier,
+    'check-gate',
+    `--ado=${ado}`,
+    `--file=${file}`,
+    '--json',
+  ], { encoding: 'utf8' });
+
+  if (result.error) throw new Error(`report gate intake validation could not run: ${result.error.message}`);
+  if (result.status !== 0) {
+    let detail = '';
+    try {
+      const output = JSON.parse(result.stdout || '{}');
+      detail = output.reason || (Array.isArray(output.problems) ? output.problems.join('; ') : 'intake gate is not PASS');
+    } catch (_) {
+      detail = (result.stderr || result.stdout || '').trim() || 'intake gate is not PASS';
+    }
+    throw new Error(`cannot record report=PASS before intake verification passes (${detail})`);
+  }
+}
 
 if (require.main === module) {
   const OP       = (process.argv[2] || '').trim().toLowerCase();
@@ -54,6 +83,7 @@ if (require.main === module) {
     } else if (OP === 'set-gate') {
       const gate = arg('gate'), verdict = arg('verdict');
       if (!gate || !verdict) throw new Error('set-gate requires --gate=<name> and --verdict=<PASS|REVISE|BLOCK|approved>');
+      if (gate === 'report' && verdict === 'PASS') requireIntakeForReportPass(FILE, ADO);
       const cp = ledger.setGate(ledger.load(FILE) || freshWithPayload(), SKILL, gate, verdict, NOW);
       ledger.ensurePayload(cp, SKILL, SKELETON());
       ledger.save(FILE, cp);
@@ -64,6 +94,7 @@ if (require.main === module) {
       const patch = {};
       if (arg('baseline-tag') !== undefined) patch.baseline_tag = arg('baseline-tag');
       if (arg('hops') !== undefined) patch.hops = arg('hops').split(',').map(h => h.trim()).filter(Boolean);
+      if (arg('gate') === 'report' && arg('verdict') === 'PASS') requireIntakeForReportPass(FILE, ADO);
       ledger.setPayload(cp, SKILL, patch, NOW);
       if (arg('gate') !== undefined && arg('verdict') !== undefined) { cp.payload.upgrade.gate_verdicts[arg('gate')] = arg('verdict'); ledger.save(FILE, cp); }
       else ledger.save(FILE, cp);
