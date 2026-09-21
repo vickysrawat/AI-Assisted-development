@@ -166,7 +166,10 @@ const nestedFallback = run([nested]);
 fs.writeFileSync(path.join(nested, '.claude', 'graph', '.stale'), '1');
 const nestedFallbackStale = run([nested]);
 fs.rmSync(path.join(nested, '.claude', 'graph', '.stale'));
+if (JSON.stringify(nestedFallback.descriptor) === JSON.stringify(nestedFallbackStale.descriptor)) ok('fresh graph-backed run matches stale fallback for nested signals');
+else bad('fresh graph-backed run matches stale fallback for nested signals', 'graph-backed descriptor diverged from fallback');
 check('graph-backed scan matches fallback for nested manifests/config files', [nested], d => {
+  assert(JSON.stringify(d) === JSON.stringify(nestedFallback.descriptor), 'fresh graph-backed descriptor changed unexpectedly');
   assert(JSON.stringify(d) === JSON.stringify(nestedFallbackStale.descriptor), 'graph-backed descriptor differs from fallback');
   assert(d.dataLayer.includes('Node ORM (TypeORM/Sequelize/Prisma)'), 'nested package.json signal missing');
   assert(d.dataLayer.includes('JPA/Hibernate'), 'nested pom.xml signal missing');
