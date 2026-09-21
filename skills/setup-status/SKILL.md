@@ -740,6 +740,81 @@ Include in the output report line:
 
 ---
 
+### 1r-bis — Latest released version (plugin-manifest.json)
+
+Check whether a formally released version of the plugin is available in the developer's
+local plugin repo that has not yet been applied to this project. This check is local-only —
+it reads the `plugin-manifest.json` committed to the plugin repo by the release script.
+It does not make network calls. If the developer has not yet run `git pull` in the plugin
+directory, this check reflects the local state, not remote.
+
+```bash
+node -e "
+const fs   = require('fs');
+const path = require('path');
+
+// Resolve plugin directory
+let pluginDir = '';
+try { pluginDir = fs.readFileSync('.claude/plugin-path.txt', 'utf8').trim(); } catch(e) {}
+if (!pluginDir) { console.log('NO_PLUGIN_PATH'); process.exit(0); }
+
+// Read plugin-manifest.json from the plugin repo
+const manifestPath = path.join(pluginDir, 'plugin-manifest.json');
+let manifest = null;
+try { manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')); } catch(e) {
+  console.log('NO_MANIFEST');
+  console.log('PLUGIN_DIR=' + pluginDir);
+  process.exit(0);
+}
+
+// Read provisioned version from this project's state file
+let provisioned = '';
+try {
+  const s = JSON.parse(fs.readFileSync('.claude/dream-init-state.json', 'utf8'));
+  provisioned = s.dream_init_plugin_version || '';
+} catch(e) {}
+
+console.log('MANIFEST_LATEST='  + (manifest.latest   || '?'));
+console.log('MANIFEST_RELEASED='+ (manifest.released || '?'));
+console.log('MANIFEST_BREAKING='+ (!!manifest.breaking));
+console.log('MANIFEST_SUMMARY=' + (manifest.summary  || ''));
+console.log('PROVISIONED='      + provisioned);
+console.log('PLUGIN_DIR='       + pluginDir);
+" 2>/dev/null
+```
+
+Parse the output. Compare `MANIFEST_LATEST` vs `PROVISIONED` as semver
+(split on `.`, compare numerically left to right):
+
+**If `MANIFEST_LATEST > PROVISIONED`:** ⚠️ Amber — new release available in local plugin repo:
+```
+⚠ Plugin release v{MANIFEST_LATEST} ({MANIFEST_RELEASED}) is available in your local plugin repo.
+  Currently installed in this project: v{PROVISIONED}
+  {If MANIFEST_BREAKING: ⚠ This release contains breaking changes — review CHANGELOG before syncing.}
+  {If MANIFEST_SUMMARY non-empty: Summary: {MANIFEST_SUMMARY}}
+  Run /setup-sync to apply.
+```
+
+**If `MANIFEST_LATEST == PROVISIONED` (or older):** ✅ Green — up to date with local plugin repo.
+
+**If `NO_MANIFEST`:** ℹ️ Blue — manifest not present (pre-release-pipeline setup or first install).
+
+**If `NO_PLUGIN_PATH`:** ℹ️ Blue — plugin path not configured; skip check.
+
+**Always include this reminder** (regardless of comparison result):
+```
+  ℹ To check for newer releases: git pull in {PLUGIN_DIR}
+    (This check reflects your local plugin repo — pull first before trusting the above.)
+```
+
+Include in output report line:
+```
+  plugin release    {✅ / ⚠️ / ℹ️}  {v{latest} ({released}) — up to date | v{latest} available — run /setup-sync | manifest not present}
+                                     ℹ git pull in {PLUGIN_DIR} to check for remote updates
+```
+
+---
+
 ### 1s — Knowledge graph: graph-index.md
 
 ```bash
@@ -893,6 +968,167 @@ Include in output report line:
 
 ---
 
+### 1w — Governance roles (.claude/ApprovalRoles.json) and audit trail (.claude/audit/)
+
+```bash
+node -e "
+const fs=require('fs'),path=require('path');
+
+// ApprovalRoles.json
+try {
+  const r=JSON.parse(fs.readFileSync('.claude/ApprovalRoles.json','utf8'));
+  const leads=(r.tech_leads||[]).length;
+  const officers=(r.security_officers||[]).length;
+  console.log('ROLES_EXISTS leads='+leads+' officers='+officers);
+} catch(e) { console.log('ROLES_MISSING'); }
+
+// .claude/audit/ event files
+const auditDir=path.join('.claude','audit');
+if(!fs.existsSync(auditDir)) { console.log('AUDIT_MISSING'); }
+else {
+  const entries=fs.readdirSync(auditDir).filter(f=>f.endsWith('.json')&&!f.startsWith('.'));
+  console.log('AUDIT_OK entries='+entries.length);
+}
+"
+```
+
+ApprovalRoles.json status:
+- `ROLES_EXISTS` with leads > 0 or officers > 0 → ✅ Green — show counts
+- `ROLES_EXISTS` with leads = 0 and officers = 0 → ⚠️ Amber — file present but empty (opt-out mode or not yet configured):
+  ```
+  ⚠ .claude/ApprovalRoles.json is empty — all role checks pass silently (opt-out mode).
+    To configure: edit .claude/ApprovalRoles.json and add tech_leads / security_officers arrays.
+    Or re-run /setup-init — Step 2d will prompt for the values.
+  ```
+- `ROLES_MISSING` → ⚠️ Amber — run `/setup-sync` to deploy the empty template (bootstrap seeds it):
+  ```
+  ⚠ .claude/ApprovalRoles.json is absent — run /setup-sync to deploy the empty template,
+    then edit it to configure roles (or re-run /setup-init to be prompted).
+  ```
+
+Audit trail status:
+- `AUDIT_OK` with entries ≥ 0 → ✅ Green — show entry count (0 = no governance events yet, expected on new projects)
+- `AUDIT_MISSING` → ⚠️ Amber — run `/setup-sync` (bootstrap creates `.claude/audit/` and seeds `.gitkeep`)
+
+Include in output report lines:
+```
+  ApprovalRoles.json              {✅ / ⚠️}  {tech_leads: N, security_officers: N | empty (opt-out) | MISSING — run /setup-sync}
+  .claude/audit/                  {✅ / ⚠️}  {N governance events | 0 events (none recorded yet) | MISSING — run /setup-sync}
+```
+
+---
+
+### 1x — LLM cost governance (.claude/cost-governance.json + model tier config)
+
+Two checks in one node call:
+
+```bash
+node -e "
+const fs = require('fs');
+
+// Check 1: cost-governance.json
+try {
+  const c = JSON.parse(fs.readFileSync('.claude/cost-governance.json', 'utf8'));
+  const budget  = c.monthly_token_budget;
+  const updated = c._pricing_updated || 'unknown';
+  console.log('COST_EXISTS budget=' + (budget !== null && budget !== undefined ? budget : 'null') + ' updated=' + updated);
+} catch(e) { console.log('COST_MISSING'); }
+
+// Check 2: model tier env vars
+try {
+  const s   = JSON.parse(fs.readFileSync('.claude/settings.json', 'utf8'));
+  const env = s.env || {};
+  const set   = ['ICEA_MODEL', 'REVIEW_MODEL', 'INFRA_MODEL'].filter(k => env[k]);
+  const unset = ['ICEA_MODEL', 'REVIEW_MODEL', 'INFRA_MODEL'].filter(k => !env[k]);
+  console.log('MODELS set=' + set.join(',') + ' unset=' + unset.join(','));
+} catch(e) { console.log('MODELS NO_SETTINGS'); }
+"
+```
+
+**cost-governance.json status:**
+- `COST_EXISTS` with `budget != null` → ✅ Green — cost tracking configured
+- `COST_EXISTS` with `budget == null` → ℹ️ Blue — file present, budget threshold not set (cost estimation still works; set `monthly_token_budget` in the file to enable budget alerts)
+- `COST_MISSING` → ⚠️ Amber — run `/setup-sync` to deploy the default config
+
+**Model tier status:**
+- All 3 vars set → ✅ Green — model tiers pinned; no drift risk on upgrade
+- Any unset → ⚠️ Amber:
+  ```
+  ⚠ Model tiers {unset} not explicitly set in .claude/settings.json → env.
+    Plugin defaults are used but change on upgrade — unexpected cost or behaviour changes possible.
+    Add to .claude/settings.json → env:
+      "ICEA_MODEL": "claude-opus-4-8",
+      "REVIEW_MODEL": "claude-sonnet-4-6",
+      "INFRA_MODEL": "claude-haiku-4-5-20251001"
+  ```
+
+Include in output report lines:
+```
+  cost-governance.json           {✅ / ℹ️ / ⚠️}  {budget: $N/month | no budget set | MISSING — run /setup-sync}
+  model tier config              {✅ / ⚠️}        {all 3 explicit | {N} unset — drift risk on upgrade}
+```
+
+---
+
+### 1y — Dependency vulnerability scan CI coverage
+
+Detect the project stack and check whether `azure-pipelines.yml` includes a dep-scan step.
+
+```bash
+node -e "
+const fs = require('fs');
+
+// Detect stack from state
+let stacks = [];
+try { stacks = JSON.parse(fs.readFileSync('.claude/dream-init-state.json','utf8')).detected_stacks || []; } catch(e) {}
+
+// Map stack keys to template names
+const templateMap = {
+  dotnet:           'dep-scan-dotnet.yml',
+  dotnet_framework: 'dep-scan-dotnet.yml',
+  nodejs:           'dep-scan-node.yml',
+  react:            'dep-scan-node.yml',
+  angular:          'dep-scan-node.yml',
+  python:           'dep-scan-python.yml',
+  java:             'dep-scan-java.yml',
+  spring_boot:      'dep-scan-java.yml',
+};
+
+const templates = [...new Set(stacks.map(s => templateMap[s]).filter(Boolean))];
+if (!templates.length) { console.log('NO_STACK_DETECTED'); process.exit(0); }
+console.log('TEMPLATES=' + templates.join(','));
+
+// Check azure-pipelines.yml for any dep-scan reference
+let pipelineContent = '';
+try { pipelineContent = fs.readFileSync('azure-pipelines.yml', 'utf8'); } catch(e) { console.log('NO_PIPELINE'); process.exit(0); }
+
+const hasScan = /dep.scan|npm audit|dotnet list package.*vulnerable|pip.audit|dependency.check/i.test(pipelineContent);
+console.log('SCAN_DETECTED=' + hasScan);
+"
+```
+
+Status:
+- `NO_STACK_DETECTED` → ℹ️ Blue — stack not yet detected; run `/setup-init` to detect
+- `NO_PIPELINE` → ⚠️ Amber — no `azure-pipelines.yml` found; dep-scan cannot be verified
+- `SCAN_DETECTED=true` → ✅ Green — dep-scan step detected in pipeline:
+  ```
+  ✅ Dependency scan detected in azure-pipelines.yml for stack: {stacks}
+  ```
+- `SCAN_DETECTED=false` → ⚠️ Amber — pipeline exists but no dep-scan step:
+  ```
+  ⚠ No dependency vulnerability scan found in azure-pipelines.yml.
+    Applicable template(s) for your stack ({stacks}):
+    {for each template}
+      Read $PLUGIN_DIR/_project-deploy/ci/{template} and add to your pipeline.
+  ```
+
+Include in output report line:
+```
+  dep-scan CI coverage               {✅ / ⚠️ / ℹ️}   {dep-scan detected | not found — add dep-scan-{stack}.yml | no pipeline file}
+```
+
+---
+
 ## Step 2 — Compute overall health
 
 | Count of ❌ Red | Count of ⚠️ Amber | Overall |
@@ -927,11 +1163,18 @@ Include in output report line:
   skill usage                        {ℹ️}              {top skill: N invocations | run token-analysis to populate}
   model versions                     {✅ / ⚠️ / ℹ️}  {gen=..., review=..., infra=..., reviewed: {date}}
   plugin version                     {✅ / ⚠️ / ℹ️ / ❌}  {provisioned {old} = installed {new} | UPGRADE PENDING {old}->{new} — run /setup-sync}
+  plugin release                     {✅ / ⚠️ / ℹ️}       {v{latest} ({released}) — up to date | v{latest} available — run /setup-sync | manifest not present}
+                                                          ℹ git pull in {PLUGIN_DIR} to check for remote updates
   prod-readiness                     {✅ / ⚠️ / 🔴}  {app: N days old, plugin: N days old | not yet run}
   .claude/graph/graph-index.md       {✅ / ❌}       {N modules, structure: flat|domain | MISSING — run /setup-init}
   knowledge graph freshness          {✅ / ⚠️}       {N/N modules current | N stale — run /graph-sync}
   graph stale flag                   {✅ / ⚠️}       {no pending refresh | stale since last git pull — run /graph-sync}
   business-context.md                {✅ / ❌}       {domain={domain}, jurisdiction={j}, web-grounded={bool} | MISSING — type SET DOMAIN to generate}
+  ApprovalRoles.json                 {✅ / ⚠️}       {tech_leads: N, security_officers: N | empty (opt-out) | MISSING — run /setup-sync}
+  .claude/audit/                     {✅ / ⚠️}       {N governance events | 0 events (none yet) | MISSING — run /setup-sync}
+  cost-governance.json               {✅ / ℹ️ / ⚠️}  {budget: $N/month | no budget set | MISSING — run /setup-sync}
+  model tier config                  {✅ / ⚠️}        {all 3 explicit | N unset — drift risk on upgrade}
+  dep-scan CI coverage               {✅ / ⚠️ / ℹ️}   {dep-scan detected in azure-pipelines.yml | not found — add dep-scan-{stack}.yml template | no pipeline file found}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Overall: {✅ Fully initialised | ⚠️ Partially configured | ❌ Needs initialisation}

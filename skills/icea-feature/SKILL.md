@@ -135,6 +135,27 @@ reading raw source files:
      `⚠ [NFR target not captured]` and note it in Context (mirror the deployment advisory).
    - If `architecture-security.md` or `architecture-data.md` is absent, note in Context:
      "⚠ Security/data model not captured — run `/update-arch --security` / `--data`."
+3b. **Read `.claude/project-knowledge.md`** — the accumulated pattern library for this
+    codebase, managed by Dream and the KNOWLEDGE commands. Apply relevant entries when
+    drafting the ICEA.
+
+    ```bash
+    cat .claude/project-knowledge.md 2>/dev/null || echo "NOT_FOUND"
+    ```
+
+    If `NOT_FOUND` or the file contains only the empty-state line → skip silently.
+
+    If entries exist:
+    - Read `$PLUGIN_DIR/skills/shared/project-knowledge-spec.md` for the entry format.
+    - **Treat entries as patterns observed at a point in time.** Verify each against the
+      current codebase before applying. Flag conflicts rather than silently following a
+      stale entry — note any conflict in the ICEA Context section.
+    - For entries whose pattern addresses a dependency the feature touches, explicitly
+      include the dependency contract in the ICEA Context section.
+    - Note at the top of the drafted ICEA which patterns were applied:
+      `ℹ Applied {N} pattern(s) from project-knowledge.md: "{title1}", "{title2}"…`
+      Skip this note if zero entries were applicable.
+
 4. If none of the above exist, prompt the developer:
    ```
    ⚠ No architecture docs found.
@@ -299,6 +320,14 @@ Re-output only the changed section after each edit.
 Update open question list as answers are given.
 Never write anything to disk during this phase.
 
+**Story-quality tracking:**
+Maintain `clarification_count = 0` and `clarification_topics = []` in context throughout Steps 2–3.
+Increment `clarification_count` and append the topic to `clarification_topics` each time a
+feature-clarifying question must be asked (beyond the 3 identifiers: ADO#, Release#, Sprint#).
+Examples of qualifying questions: "what service does this call?", "what role can access this?",
+"what happens on error?", "what is the response shape?". Logging questions about identifiers
+(ADO#, Release#, Sprint#) do NOT count — only questions about the feature itself.
+
 **Audit logging — plan revision rounds:**
 Maintain `plan_revision_count = 0` in context (reset at Step 3 start). After each correction is applied and the updated section is re-output, increment `plan_revision_count` and append to the audit file:
 ```bash
@@ -377,6 +406,20 @@ Get the ISO 8601 timestamp once and reuse for all rows in the same response:
 TS=$(date '+%Y-%m-%dT%H:%M:%S')
 ```
 Use `$TS` for the Date cell — never use a plain `YYYY-MM-DD` date in audit rows.
+
+**Story-quality signal — write if clarifications were needed (best-effort):**
+
+```bash
+PLUGIN_DIR=$(cat .claude/plugin-path.txt 2>/dev/null || echo "")
+# Only write if clarification_count > 0 (feature-clarifying questions were needed)
+[ -n "$PLUGIN_DIR" ] && [ "{clarification_count}" -gt "0" ] && \
+  node "$PLUGIN_DIR/scripts/signal-write.cjs" \
+    --type story-quality \
+    --category clarifications-required \
+    --ado-id "${ADO_ID}" \
+    --count "{clarification_count}" \
+    --detail "{clarification_topics joined with ', '}" 2>/dev/null || true
+```
 
 Confirm and immediately proceed to Step 5:
 ```

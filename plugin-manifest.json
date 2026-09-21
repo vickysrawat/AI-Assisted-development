@@ -1,0 +1,6 @@
+{
+  "latest": "3.25.0",
+  "released": "2026-09-20",
+  "breaking": false,
+  "summary": "Enterprise readiness: governance enforcement hooks, test integration gate, generated unit tests, plugin CI/CD release pipeline"
+}

@@ -657,22 +657,92 @@ command, or reference doc, and if the manifests drift from `config.json`.
 > **Single source of truth: `.claude-plugin/plugin.json` → `version`.** Runtime readers
 > (`setup-init`, `setup-sync`, `install.sh`/`.ps1`) read it live and never drift. `marketplace.json`
 > carries **no** version (it references the plugin by `source`; the version is plugin.json's).
-> The only static copy derived from it is the `CLAUDE.md` `# Plugin version:` label.
+> The only static copies derived from it are the `CLAUDE.md` and `_project-deploy/CLAUDE.md`
+> `# Plugin version:` labels.
 
-> **Use the bump command — never hand-edit the version.**
-> `./scripts/bump-version.sh <X.Y.Z>` (full release pass: also re-syncs hooks + runs the Python
-> validator when present) or, if Python is unavailable, `node scripts/bump-version.js <X.Y.Z>`.
-> It sets `plugin.json`, propagates the `CLAUDE.md` label, prepends a CHANGELOG stub, warns on
-> guide staleness, and runs the drift guard. Version writes are all Node — no Python needed.
+> **Use `npm run bump:*` — never hand-edit the version.**
+> The release script (`scripts/release.cjs`) wraps `bump-version.js` and additionally
+> updates `_project-deploy/CLAUDE.md` and seeds `plugin-manifest.json` (used by target
+> projects for staleness detection). The two-phase flow is:
+> 1. **Bump** — bumps all version files, opens a CHANGELOG stub.
+> 2. **Release** — commits + creates annotated tag; pushing the tag triggers CI validation.
 
-1. Make all changes on a feature branch.
-2. Run the bump command above, then fill in the prepended `CHANGELOG.md` stub — be specific: list affected files and the exact behaviour change.
-3. Optionally refresh narrative version mentions (the `README.md` headline, the `*.html` guides) — these are *documentation*, not the canonical version; the bump command warns when guides lag.
-4. If model defaults changed, follow the [updating model defaults](#updating-model-defaults) checklist.
-5. Run `node tests/runner.js` and confirm all scenarios pass.
-6. Confirm no drift: `node scripts/check-version-consistency.js` (also suitable for CI — exits non-zero on any mismatch).
-7. Open a PR to `main`. PR title format: `[vX.Y.Z] Short description`.
-8. After merge, tag the commit: `git tag vX.Y.Z && git push --tags`.
+### Step-by-step release
+
+```
+# On a clean working tree, after merging your feature branch to main/dev:
+
+# 1. Bump the version (choose one):
+npm run bump:patch    # bug fix, spec update, documentation
+npm run bump:minor    # new skill, new command, new shared spec
+npm run bump:major    # breaking change to shared spec or cache schema
+
+# For a breaking change, add the flag:
+npm run bump:major -- --breaking
+
+# 2. Fill in the CHANGELOG.md stub (replace the TODO with what changed — be specific).
+#    Optionally update plugin-manifest.json "summary" with a one-line description.
+#    If model defaults changed: follow the Updating model defaults checklist below.
+
+# 3. Commit and tag:
+npm run release
+
+# 4. Push:
+git push origin main
+git push origin v{N}     # e.g. git push origin v3.26.0
+
+# CI runs release validation on the tag — tests + version consistency checks.
+# If CI fails: fix the issue and cut a new version (do not re-use the broken tag).
+```
+
+### What the release script does
+
+| Phase | Command | Actions |
+|---|---|---|
+| Bump | `npm run bump:patch\|minor\|major` | Reads version from `plugin.json` → computes new version → calls `bump-version.js` (updates `plugin.json` + `CLAUDE.md` + prepends CHANGELOG stub) → updates `_project-deploy/CLAUDE.md` → seeds `plugin-manifest.json` |
+| Release | `npm run release` | Validates CHANGELOG stub is filled → validates version consistency → checks tag doesn't exist → stages release files → creates commit `chore: release v{N}` → creates annotated tag |
+
+### What CI validates on a tag push
+
+1. Structural validator passes
+2. Jest unit suite passes
+3. `check-version-consistency.js` passes — all version labels match
+4. Tag name matches `plugin.json` version
+5. `plugin-manifest.json` latest matches `plugin.json` version
+
+If any step fails: the tag is broken. Fix the issue and run `npm run bump:patch && npm run release` to cut a corrected version. Never re-use a broken tag.
+
+---
+
+## Dependency vulnerability scanning
+
+CI runs `npm audit --audit-level=high` on every push and every tag. The full JSON report is published as a pipeline artifact (`dependency-audit`) even when the scan fails, so the team can review the complete findings list.
+
+Run locally at any time:
+
+```bash
+npm run audit            # fails on high/critical — same gate as CI
+npm audit --audit-level=low   # see all severities including low/moderate
+```
+
+### Handling a finding
+
+| Severity | Action |
+|---|---|
+| Critical / High | Block — fix before merging. Run `npm audit fix` or update the dependency manually. |
+| Moderate | Informational — does not fail CI. Review and update on the next release cycle. |
+| Low | Informational — does not fail CI. Track in CHANGELOG if fixed. |
+
+**`npm audit fix`** applies safe, non-breaking upgrades within the semver range declared in `package.json`. Run it, verify tests still pass (`npm test`), then commit.
+
+**`npm audit fix --force`** applies breaking upgrades. Only use when the safe fix is not available. Review the diff carefully — a breaking upgrade to `jest` or `c8` can change test behaviour.
+
+**If no fix is available** (upstream has not patched the vulnerability):
+1. Check if the vulnerability is reachable in the plugin's usage of the package (many CVEs in devDependencies are not exploitable in CI-only contexts).
+2. If not reachable: document the acceptance in `CHANGELOG.md` with the CVE ID, the reason it is not exploitable, and the date reviewed.
+3. If reachable: replace the dependency or pin to the last safe version and open a tracking issue.
+
+Never suppress the audit with `npm config set audit false` or `--no-audit` — remove the gate only if you add an equivalent one.
 
 ### Version semantics
 

@@ -22,22 +22,42 @@ Write an entry whenever one of these triggers fires:
 
 Detail: `skills/shared/dream-reference.md`.
 
+**Designated Dream runner (team projects):** Dream writes to `memory/topic-*.md`,
+`memory/MEMORY.md`, `memory/topic-signals.md`, and `.claude/project-knowledge.md`.
+To avoid merge conflicts, **designate one team member (typically the Tech Lead) to run
+`/dream` each sprint.** Other developers write signal files to `.claude/signals/` and
+memory entries to `memory/MEMORY.md` freely — both are committed and team-shared.
+The Dream runner consolidates them, clears processed signal files, and commits the result.
+
 ## 0. WRITE GATE — Applies to source code and config files only
 
-Source code and config files are NEVER written to disk until the developer replies
-`APPROVE ADO-{ID}`. ICEA/Tech Spec/Epic/Tracker docs and `memory/` follow the
-draft-then-save flow instead (see the `SAVE PLAN`/`SAVE ICEA`/`SAVE TECH` handlers in §0a).
+**Source code** is NEVER written to disk until the developer replies `APPROVE ADO-{ID}`.
+
+**Config files** use a lighter path — `APPROVE CONFIG` — no ADO required. A secret scan runs
+inline before the prompt; the write is blocked if secrets are found. An audit entry is written
+automatically on approval. High-risk config (CI/CD pipelines, IaC) requires an escalation
+acknowledgment before `APPROVE CONFIG` is accepted. Env files (`.env`, `.env.*`) are blocked
+entirely if not in `.gitignore` — no approval path exists for committed env files.
+
+ICEA/Tech Spec/Epic/Tracker docs and `memory/` follow the draft-then-save flow instead
+(see the `SAVE PLAN`/`SAVE ICEA`/`SAVE TECH` handlers in §0a).
 
 **Pre-plan gate:** ICEA drafting is BLOCKED until `SAVE PLAN ADO-{ID}` — not inline, not to
 temp/. Sequence is strictly Plan → `SAVE PLAN` → ICEA → `SAVE ICEA` → Tech Spec → `SAVE TECH`.
 
-When a skill would write source/config it MUST instead: (1) show the changes — a unified diff
-(changed lines + 3 lines of context) for edits, full content for new files; (2) show the target
-path; (3) display this prompt and stop:
-
+When a skill would write source it MUST instead show the diff + path then stop:
 ```
 📁 WRITE PENDING — reply APPROVE ADO-{ID} to write, or SKIP to discard.
    Path: {full/file/path}
+```
+
+When a skill would write a config file it MUST instead run the secret scan inline then stop:
+```
+📁 WRITE PENDING — config change
+   Path: {full/file/path}
+   Secret scan: ✅ clean   [or ❌ BLOCKED — {reason}]
+
+   Reply APPROVE CONFIG to write, or SKIP to discard.
 ```
 
 Full gate semantics, artefact timing, and batch approval rules: `skills/shared/write-gate-spec.md`.
@@ -74,8 +94,10 @@ execute the skill immediately — priority over chat.
 | `PLAN ADO-{ID}` | Invoke icea-feature skill — cross-session recovery at Step 5 (draft ICEA from saved plan on disk) |
 | `ICEA ADO-{ID}` | Invoke icea-feature skill — cross-session recovery at Step 8 (draft Tech Spec from saved ICEA; EPIC branch active) |
 | `TECH ADO-{ID}` | Invoke icea-feature skill — cross-session recovery at Step 8 (draft Tech Spec from saved ICEA; EPIC branch active) |
+| `APPROVE CONFIG` | Approve a pending config file write — no ADO required. Secret scan must have passed (shown inline before this prompt). Audit entry written automatically. For high-risk config (CI/CD, IaC): escalation acknowledgment required first. |
 | `APPROVE ADO-{ID}` | Run icea-approve skill for that ADO ID |
 | `APPROVE ADO-{ID} Story-{N}` | Run icea-approve skill for that story |
+| `APPROVE ADO-{ID} --skip-test-gate` | Run icea-approve — bypass the test plan existence gate (spike or prototype only). Writes an audit entry automatically. |
 | `APPROVE ALL ADO-{ID}` | Grant standing Write-Gate approval for the current plan/ADO — subsequent source/config writes proceed without a per-file pause, but each diff + path is still shown. Does NOT skip Feature/secrets/findings gates. Scope: this session + this ADO only. |
 | `REVOKE ALL ADO-{ID}` | Cancel a standing `APPROVE ALL` — return to per-file `APPROVE ADO-{ID}` |
 | `IMPLEMENT ADO-{ID}` | Run icea-implement skill for that ADO ID |
@@ -97,6 +119,16 @@ execute the skill immediately — priority over chat.
 | `REWRITE STATUS ADO-{ID}` | Re-entry point: read rewrite ledger fresh, render state, end with the single Next action. Read-only. Per `skills/shared/migration-ledger-schema.md` |
 | `REPLATFORM STATUS ADO-{ID}` | Re-entry point: read replatform ledger fresh, render state, end with the single Next action. Read-only. Per `skills/shared/migration-ledger-schema.md` |
 | `MIGRATE` (and all MIGRATE variants, each `ADO-{ID}`) | **RETIRED** — `migration`/`migration-status` skills are gone. Do NOT auto-route. Use: `UPGRADE ADO-{ID}` (same stack, higher version) · `REWRITE ADO-{ID}` (different stack) · `REPLATFORM ADO-{ID}` (on-prem → cloud). See `docs/migrations/2026-09-migration-skill-family.md`. |
+| `LESSONS ADO-{ID}` | Re-generate the lessons learned section for a single ADO — reads its ai-audit.md and tracker.md, rewrites the `### Lessons learned` section in the tracker. Then asks: "Does any lesson here belong in project-knowledge.md? (yes / no)" — on yes, shows the candidate entry and writes to `.claude/project-knowledge.md` on confirmation. |
+| `KNOWLEDGE ADD` | Add a new entry to `.claude/project-knowledge.md` — prompt for title, source ADO(s), code anchor (optional), pattern text. Write after confirmation. See `skills/shared/project-knowledge-spec.md` for format. |
+| `KNOWLEDGE REMOVE {N}` | Show entry N from `.claude/project-knowledge.md` and remove after explicit confirmation. |
+| `KNOWLEDGE UPDATE {N}` | Show current entry N from `.claude/project-knowledge.md`, prompt for replacement text, write after confirmation. |
+| `ONBOARDING GUIDE` | Run onboarding-guide skill — generate `docs/ONBOARDING.md` if it does not exist. Reads architecture docs + ApprovalRoles.json + stack detection. Skips silently if file already exists. |
+| `ONBOARDING GUIDE --refresh` | Run onboarding-guide skill — regenerate `docs/ONBOARDING.md` unconditionally (overwrites). |
+| `GOVERNANCE REPORT` | Run governance-report skill — sprint governance & quality report for the tech lead. Reads `.claude/audit/` + ledgers + token-graph. Saves to `governance/`. |
+| `GOVERNANCE REPORT --since {date}` | Same, scoped from a specific date. |
+| `GOVERNANCE REPORT --days {N}` | Same, for the last N days. |
+| `GOVERNANCE REPORT --sprint {N}` | Same, scoped to Sprint N (reads sprint dates from docs/). |
 
 ## 0b. Shell & Git Configuration
 
@@ -104,6 +136,10 @@ execute the skill immediately — priority over chat.
 - Never rely on `HEAD` as a symbolic ref — resolve with `git rev-parse HEAD` first.
 
 ## 1. PROJECT OVERVIEW
+
+<!-- One or two sentences: what this system does and who uses it.
+     Full architecture detail belongs in .claude/architecture/architecture.md
+     (populated by /architect — run it if not yet done). -->
 
 ## 2. AZURE DEVOPS
 

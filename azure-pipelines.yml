@@ -1,17 +1,143 @@
-# CI gate — node-only (no npm). ADO-9000 Story 3 (AC-F11). The enforcement is the `node …` commands;
-# this pipeline just runs them (host-adaptable). GitHub Actions equivalent: docs/ci-substrate-drift-check.md.
-trigger: { branches: { include: [ main, dev ] } }
-pr: { branches: { include: [ main, dev ] } }
+# CI + Release validation — ai-assisted-development plugin
+#
+# Stages:
+#   CI              — structural validation + Jest suite + coverage (branches/PRs)
+#   ReleaseValidation — same tests + version/tag consistency (tag pushes only)
+#
+# Release flow (developer):
+#   npm run bump:patch|minor|major   → bumps version, seeds manifest, opens CHANGELOG stub
+#   npm run release                  → commits + annotated tag
+#   git push origin main && git push origin v{N}
+#   CI runs ReleaseValidation — if it fails, the tag is broken; fix and cut a new version.
+#
+trigger:
+  branches:
+    include: [main, dev]
+  tags:
+    include: ['v*']
+
+pr:
+  branches:
+    include: [main, dev]
+
 pool: { vmImage: ubuntu-latest }
-steps:
-  - task: NodeTool@0
-    inputs: { versionSpec: '20.x' }
-    displayName: Use Node 20
-  - script: node tests/validate.js
-    displayName: Structural validator (0 failures required)
-  - script: |
-      set -e
-      for t in tests/*.test.cjs; do echo "▶ $t"; node "$t"; done
-    displayName: Unit suite (incl. substrate-drift + migration-retirement — the AC-F11 drift enforcement)
-  - script: node tests/migration-validation/run-selftest.cjs
-    displayName: Migration validators self-test (golden-master + inventory-trace + frontend-parity)
+
+stages:
+
+  # ── CI: branches and PRs ──────────────────────────────────────────────────
+  - stage: CI
+    displayName: CI — validate and test
+    condition: not(startsWith(variables['Build.SourceBranch'], 'refs/tags/'))
+    jobs:
+      - job: Test
+        displayName: Structural validation + Jest suite
+        steps:
+          - task: NodeTool@0
+            inputs: { versionSpec: '20.x' }
+            displayName: Use Node 20
+
+          - script: npm ci
+            displayName: Install dependencies
+
+          - script: node tests/validate.js
+            displayName: Structural validator (0 failures required)
+
+          - script: npm run test:coverage
+            displayName: Jest unit suite + coverage
+            env:
+              JEST_JUNIT_OUTPUT_DIR: $(Build.ArtifactStagingDirectory)/test-results
+
+          - task: PublishTestResults@2
+            displayName: Publish test results
+            condition: always()
+            inputs:
+              testResultsFormat: JUnit
+              testResultsFiles: '$(Build.ArtifactStagingDirectory)/test-results/junit.xml'
+              failTaskOnFailedTests: true
+
+          - task: PublishCodeCoverageResults@2
+            displayName: Publish coverage
+            condition: always()
+            inputs:
+              summaryFileLocation: coverage/cobertura-coverage.xml
+
+          - script: npm audit --audit-level=high --json > $(Build.ArtifactStagingDirectory)/audit-report.json; npm audit --audit-level=high
+            displayName: Dependency vulnerability scan (fail on high/critical)
+            # Runs npm audit twice: once for the JSON artifact, once for human-readable output.
+            # Fails the build if any high or critical CVE is found in any dependency.
+            # Low/moderate vulnerabilities in test tooling are reported but do not fail.
+
+          - task: PublishBuildArtifacts@1
+            displayName: Publish audit report
+            condition: always()
+            inputs:
+              pathToPublish: $(Build.ArtifactStagingDirectory)/audit-report.json
+              artifactName: dependency-audit
+
+  # ── Release validation: tag pushes only ──────────────────────────────────
+  - stage: ReleaseValidation
+    displayName: Release validation
+    condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/v')
+    jobs:
+      - job: Validate
+        displayName: Validate release tag
+        steps:
+          - task: NodeTool@0
+            inputs: { versionSpec: '20.x' }
+            displayName: Use Node 20
+
+          - script: npm ci
+            displayName: Install dependencies
+
+          - script: node tests/validate.js
+            displayName: Structural validator
+
+          - script: npm run test:coverage
+            displayName: Jest unit suite + coverage
+            env:
+              JEST_JUNIT_OUTPUT_DIR: $(Build.ArtifactStagingDirectory)/test-results
+
+          - task: PublishTestResults@2
+            displayName: Publish test results
+            condition: always()
+            inputs:
+              testResultsFormat: JUnit
+              testResultsFiles: '$(Build.ArtifactStagingDirectory)/test-results/junit.xml'
+              failTaskOnFailedTests: true
+
+          - script: npm audit --audit-level=high --json > $(Build.ArtifactStagingDirectory)/audit-report.json; npm audit --audit-level=high
+            displayName: Dependency vulnerability scan (fail on high/critical)
+
+          - task: PublishBuildArtifacts@1
+            displayName: Publish audit report
+            condition: always()
+            inputs:
+              pathToPublish: $(Build.ArtifactStagingDirectory)/audit-report.json
+              artifactName: dependency-audit
+
+          - script: node scripts/check-version-consistency.js
+            displayName: Version consistency across all files
+
+          - script: |
+              TAG=$(echo "$(Build.SourceBranchName)")
+              VERSION=$(node -e "console.log(require('./.claude-plugin/plugin.json').version)")
+              if [ "v$VERSION" != "$TAG" ]; then
+                echo "❌ Tag $TAG does not match plugin.json version v$VERSION"
+                exit 1
+              fi
+              echo "✅ Tag $TAG matches plugin.json v$VERSION"
+            displayName: Tag matches plugin.json version
+
+          - script: |
+              if [ ! -f plugin-manifest.json ]; then
+                echo "❌ plugin-manifest.json is missing — run npm run bump:patch|minor|major first"
+                exit 1
+              fi
+              MANIFEST_VER=$(node -e "console.log(require('./plugin-manifest.json').latest)")
+              PLUGIN_VER=$(node -e "console.log(require('./.claude-plugin/plugin.json').version)")
+              if [ "$MANIFEST_VER" != "$PLUGIN_VER" ]; then
+                echo "❌ plugin-manifest.json latest ($MANIFEST_VER) does not match plugin.json ($PLUGIN_VER)"
+                exit 1
+              fi
+              echo "✅ plugin-manifest.json latest=$MANIFEST_VER matches plugin.json"
+            displayName: plugin-manifest.json matches version

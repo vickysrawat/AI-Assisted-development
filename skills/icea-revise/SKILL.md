@@ -286,6 +286,41 @@ If the file is found, append a row for each revised document:
 (Only append rows for documents that were actually revised in this session.)
 If no audit file is found, skip silently — do not block the revision.
 
+**Governance audit event (best-effort — never blocks):**
+```bash
+PLUGIN_DIR=$(cat .claude/plugin-path.txt 2>/dev/null || echo "")
+AUDIT_MODEL=$(node -e "try{const e=(JSON.parse(require('fs').readFileSync('.claude/settings.json','utf8')).env||{});console.log(e.REVIEW_MODEL||'claude-sonnet-4-6');}catch(_){console.log('claude-sonnet-4-6');}" 2>/dev/null || echo "claude-sonnet-4-6")
+[ -n "$PLUGIN_DIR" ] && node "$PLUGIN_DIR/scripts/audit-write.cjs" \
+  --event REVISE_ADO \
+  --ado-id "${ADO_ID}" \
+  --model "$AUDIT_MODEL" \
+  --verdict "revised" \
+  --context "ICEA revised — status reset to DRAFT" 2>/dev/null || true
+```
+
+**ICEA quality signal — automatic revision signal (best-effort):**
+
+Determine which section(s) changed by comparing the before/after ICEA content.
+Map to a category and write one signal per primary section changed:
+
+```
+Section changed → category:
+  Context section   → context-incomplete
+  Examples section  → examples-underspecified
+  AC section        → ac-not-testable
+  Intent section    → intent-unclear
+  Post-approval + Tech Lead asked for change → tech-lead-feedback
+  Post-approval + scope expanded/reduced    → scope-changed
+```
+
+```bash
+[ -n "$PLUGIN_DIR" ] && node "$PLUGIN_DIR/scripts/signal-write.cjs" \
+  --type revision \
+  --category "{category from mapping}" \
+  --ado-id "${ADO_ID}" \
+  --detail "{section changed + one-line reason, e.g. 'Examples — return shape not concrete'}" 2>/dev/null || true
+```
+
 **Plan sync warning:**
 If the ICEA Intent or Context was substantively changed, check whether a
 plan file exists on disk:

@@ -27,6 +27,31 @@ completion. Never truncated — the full history is the asset.
 
 ---
 
+## Initialization
+
+The migration log MUST be created with its full header **before** the first event entry is written.
+The creating skill is responsible for this — it is not created implicitly.
+
+Header template (copy verbatim, fill in bracketed values):
+
+```markdown
+# Migration Log — {ADO ID}: {feature/migration name}
+> Living document. Updated at every decision point. Never truncated — the full history is the asset.
+> Source: {source app name} · Target: {target stack/host} · Skill: {Rewrite | Replatform | Upgrade}
+> Started: {date} · ADO: {ADO ID}
+>
+> Session continuation: share this file alongside the design documents and integration inventory.
+> Future migrations of similar apps: read the ## Lessons section.
+
+---
+```
+
+Create `docs/migrations/{ADO}/` if the directory does not exist.
+
+---
+
+---
+
 ## Authorship model
 
 | Author | Writes |
@@ -35,6 +60,25 @@ completion. Never truncated — the full history is the asset.
 | **Developer** | Reasoning, context, and lessons: why a decision was made, what was rejected and why, what would be done differently |
 
 The skill writes the skeleton; the developer fills in the reasoning. An event with only skill-authored content is incomplete — the reasoning is what makes the log valuable.
+
+---
+
+## Required disk artifacts
+
+All decision-grade artifacts generated during a migration must have a disk file. The migration
+log is the human-readable index; standalone report files are the decision-grade records.
+
+| Skill | Artifact | Path |
+|---|---|---|
+| Upgrade | Gap + Risk Report | `docs/migrations/{ADO}/ADO-{ID}-gap-risk-report.md` |
+| Rewrite | Per-cluster BAL + ERL | `docs/migrations/{ADO}/ADO-{ID}-cluster-{N}-assurance.md` |
+| Rewrite | Combined assurance summary | `docs/migrations/{ADO}/ADO-{ID}-assurance-summary.md` |
+| Replatform | NFR assurance + WA + behavioral regression | `docs/migrations/{ADO}/ADO-{ID}-nfr-assurance-report.md` |
+| Replatform | Reconciliation gate results | `docs/migrations/{ADO}/ADO-{ID}-reconciliation-report.md` |
+| All | Full judge analysis | In migration log `[DECISION]` entry — `**Judge analysis:**` field |
+| All | Full options insight | In migration log `[OPTION]` entry — full table + comparative insight |
+
+---
 
 ---
 
@@ -109,6 +153,10 @@ APPROVE DESIGN for a single document, or any explicit acceptance of a change).
 ### [DECISION] {what was approved} — {date}
 
 **Approved:** {specific artifact or gate — e.g. "APPROVE OPTIONS — Option B selected"}
+**Judge verdict:** {PASS | REVISE | BLOCK} — model: {model used} — {date}
+**Judge analysis:** {full text of the judge's output — every finding, every flagged item, every
+  reasoning chain. Skill-authored verbatim from judge output; never summarised or paraphrased.
+  If no findings: "No findings — artifact met the rubric."}
 **Reasoning:** {developer's explicit reasoning — not a summary, the actual rationale}
 **Alternatives rejected at this point:** {anything specifically considered and discarded}
 **Constraints that shaped this decision:** {technical, business, or compliance constraints}
@@ -267,6 +315,11 @@ eliminating the need for future teams to learn them the hard way.
 ## Hard rules
 
 - NEVER truncate the log — the full history is the asset.
+- ALWAYS initialize `docs/migrations/{ADO}/migration-log.md` with its full header BEFORE writing
+  the first event entry — the file must exist before any [INTEGRATION], [FINDING], or [OPTION]
+  entries are appended to it.
+- The `**Judge analysis:**` field in `[DECISION]` entries MUST be verbatim judge output — not a
+  paraphrase. The log is the only human-readable record of the analysis.
 - EVERY formal approval (`APPROVE OPTIONS`, `APPROVE DESIGN`, etc.) writes a `[DECISION]` entry.
 - EVERY feedback loop revision wave writes a `[REVISION]` entry — automatically.
 - EVERY `[RISK-ACCEPTED]` entry MUST be developer-authored — the skill cannot accept a risk on the

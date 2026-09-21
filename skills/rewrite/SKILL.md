@@ -81,6 +81,11 @@ Detect source stack                  (shared detector — migration-source-detec
 
 ## Step 1 — Intake & posture (implemented — AC-F4)
 
+**Friction reduction (once per session).** Before the first Bash call, run the offer per
+`$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/friction-reduction-spec.md` — check
+whether `.claude/settings.local.json` already has the recommended patterns; if not, ask the
+developer once. YES → merge patterns + confirm; NO → continue without writing.
+
 1. **Detect** the source stack (do NOT re-implement detection):
    ```bash
    node "$PLUGIN_DIR/scripts/migration-source-detect.cjs" --roots=<source> --json
@@ -106,6 +111,10 @@ Run before options are presented. Produces two outputs that feed the options pre
 - Produces the **Integration Inventory** (`docs/.../integration-inventory.md`)
 - Classification per service: data-access-only | business-logic | mixed | unknown
 - Options derived per service: inline as project | NuGet package | keep external
+- **Initialize the migration log** before writing any entries. Create the log file with its
+  required header (per `migration-log-spec.md` § Initialization):
+  `docs/migrations/{ADO}/migration-log.md` — create `docs/migrations/{ADO}/` if absent.
+  This is a documentation artifact — not subject to the Write Gate.
 - Write `[INTEGRATION]` migration log entries per `migration-log-spec.md`
 
 **PARTIAL rows during options:** advisory — highlighted and flagged in the options table but
@@ -113,10 +122,14 @@ not a hard block at `APPROVE OPTIONS`. PARTIAL rows become a **hard block at `AP
 `target-security-architecture.md` and `target-integration-architecture.md` cannot be accurately
 authored with unverified auth schemes. The developer must resolve them before the design gate closes.
 
-**2. Oracle mode detection** — per `$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/golden-master-spec.md` Step 1:
-- Determine the oracle mode for this migration: `self-run` | `provided-url` | `deferred-capture` | `skipped`
-- Record in `decision_log.golden_master`
-- The oracle mode determines the **assurance ceiling** shown per option (no oracle → BAL caps at C/D)
+**2. Oracle mode selection** — per `$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/golden-master-spec.md` § Developer presentation:
+- STOP and run the oracle mode developer presentation — present all four modes with their
+  assurance-ceiling consequences, ask explicitly whether a dev/test URL is available, and wait
+  for the developer's response before recording.
+- Record the developer's explicit choice (never the auto-detected recommendation alone) in
+  `decision_log.golden_master` and write an `[OPTION]` migration log entry for the mode decision.
+- The oracle mode determines the **assurance ceiling** shown per option at Step 2:
+  no oracle or deferred → BAL caps at C/D; this is stated up front, not as a surprise at the gate.
 
 **3. Source-context intake gate** — per `$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/source-context-intake-spec.md`.
 Before options, read the source's own documented knowledge AND source code, then author the
@@ -245,7 +258,7 @@ node "$PLUGIN_DIR/scripts/strategy-resolve.cjs" --target=<target-token> --json
 
 | Exit | Meaning | Action |
 |---|---|---|
-| 0 | resolved (`STATUS: implemented`, full token contract present) | proceed; if `unverified:true` (⚠ MATURITY) **warn the developer** before relying on it |
+| 0 | resolved (`STATUS: implemented`, full token contract present) | proceed; if `unverified:true`, log a `⚠ MATURITY` warning in the migration log — informational, no developer response required |
 | 2 | implemented but a required token is missing (malformed profile) | **STOP** — fix the profile |
 | 3 | `STATUS` not `implemented` (stub) | **STOP** — target not runnable |
 | 4 | no profile file for the target token | **STOP** — never fall back to another stack's toolchain (same honest-refusal rule as an unmapped source) |
@@ -289,6 +302,28 @@ node "$PLUGIN_DIR/scripts/rewrite-bal.cjs" bal --cluster=<name> \
 flagged — surfaced to developer at Step 2 options; not a surprise here). Assemble the whole-target
 **ERL** from the app-readiness 8 domains — designed-in at Tier 0, not audited at the end
 (`references/erl.md`). Record both in the ledger (`payload.rewrite.BAL/ERL`).
+
+**Save assurance results to disk.** After the cluster's BAL and ERL grades are determined, write the
+full per-cluster assurance record to:
+
+```
+docs/migrations/{ADO}/ADO-{ADO_ID}-cluster-{N}-assurance.md
+```
+
+Include: oracle mode, all inputs to `rewrite-bal.cjs` (behaviors-total, behaviors-verified,
+tests-total, tests-passing, coverage), BAL grade and which dimension was the weakest-link, ERL
+grade per app-readiness domain, ceiling flags if any. Documentation artifact — not subject to the
+Write Gate. Record the path in the ledger:
+  `checkpoint-ledger.cjs set-payload --namespace=rewrite
+  --payload='{"clusters[N].assurancePath":"docs/migrations/{ADO}/ADO-{ADO_ID}-cluster-{N}-assurance.md"}'`
+
+When the completion gate passes (Step 5), write the combined summary to:
+
+```
+docs/migrations/{ADO}/ADO-{ADO_ID}-assurance-summary.md
+```
+
+All clusters, their BAL/ERL grades, and the final whole-target assurance.
 
 Write `[DECISION]` migration log entries per BAL gate per `migration-log-spec.md`.
 
@@ -367,4 +402,12 @@ continue — the merge gate is not blocked by test plan generation failure.
 - SOURCE is read-only; the target is a NEW folder; no generated code to target before `APPROVE DESIGN`.
 - ALWAYS record posture, options decision, integration inventory, and the DAG in the shared ledger.
 - ALWAYS invoke plugin scripts via the resolved `$PLUGIN_DIR` — never a bare relative path.
+- ALWAYS initialize `docs/migrations/{ADO}/migration-log.md` with its full header BEFORE writing
+  the first event entry — the file must exist before any [INTEGRATION] entries are appended to it.
+- ALWAYS save per-cluster BAL + ERL results to `ADO-{ID}-cluster-{N}-assurance.md` — the
+  checkpoint JSON is machine-only and not human-reviewable.
+- ALWAYS write the combined assurance summary to `ADO-{ID}-assurance-summary.md` after the
+  completion gate passes.
+- ALWAYS present oracle mode options with assurance-ceiling consequences and wait for explicit
+  developer choice before recording — NEVER auto-select or infer the mode from silence.
 - Write migration log entries per `migration-log-spec.md` at each phase — never defer logging.

@@ -124,6 +124,39 @@ Stop.
 
 ---
 
+## Step 2b — RBAC check for Critical and High severity
+
+Read the severity from the finding block located in Step 2. If severity is **Critical** or **High**, run the RBAC check before displaying the finding:
+
+```bash
+PLUGIN_DIR=$(cat .claude/plugin-path.txt 2>/dev/null || echo "")
+[ -n "$PLUGIN_DIR" ] && node "$PLUGIN_DIR/scripts/rbac-check.cjs" --action DISMISS_HIGH_SEVERITY
+```
+
+Read the JSON output:
+- `allowed: false` → show the block message and stop:
+  ```
+  ⛔ BLOCKED — {result.message}
+
+  Dismissing Critical/High findings requires a Security Officer.
+  Ask one of the authorised approvers to run this command in their session:
+    /dismiss {FP} {reason} "{justification}"
+
+  To escalate or discuss:
+    Annotate the finding in the ledger and raise in your next security review.
+  ```
+  Then write the RBAC_BLOCK audit event (best-effort):
+  ```bash
+  node "$PLUGIN_DIR/scripts/audit-write.cjs" --event RBAC_BLOCK --finding-id "${FP}" --verdict "blocked" --context "DISMISS_HIGH_SEVERITY: insufficient role" 2>/dev/null || true
+  ```
+  Stop — do not proceed to Step 3.
+
+- `allowed: true` (or `reason: opt-out-mode`) → proceed to Step 3.
+
+For **Medium and Low** severity findings, skip this check entirely — any developer may dismiss.
+
+---
+
 ## Step 3 — Display the finding and confirm
 
 Show the finding before making any change:
@@ -204,6 +237,18 @@ and run its canonical node script (do NOT re-implement the parse/move/re-count i
 - `statusTo`: `- **Status**: Dismissed` followed by the dismissal fields — Dismissed date `{today}`,
   Dismissed by `{dismissed_by}`, Reason `{reason}`, Justification `{justification}`, Verify flag `none`
 - `summaryDec`: `Open`  ·  `summaryInc`: `Dismissed`
+
+After the ledger update completes, write the governance audit event (best-effort — never blocks):
+
+```bash
+AUDIT_MODEL=$(node -e "try{const e=(JSON.parse(require('fs').readFileSync('.claude/settings.json','utf8')).env||{});console.log(e.REVIEW_MODEL||'claude-sonnet-4-6');}catch(_){console.log('claude-sonnet-4-6');}" 2>/dev/null || echo "claude-sonnet-4-6")
+node "$PLUGIN_DIR/scripts/audit-write.cjs" \
+  --event DISMISS \
+  --finding-id "${FP}" \
+  --model "$AUDIT_MODEL" \
+  --verdict "${REASON}" \
+  --context "${JUSTIFICATION}" 2>/dev/null || true
+```
 
 ---
 

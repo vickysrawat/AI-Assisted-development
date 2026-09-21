@@ -1,0 +1,36 @@
+# _project-deploy/ci/icea-gate.yml
+# ─────────────────────────────────────────────────────────────────────────────
+# ICEA governance gate — Azure DevOps pipeline task template
+#
+# Copy these steps into your project's azure-pipelines.yml to enforce ICEA
+# governance on pull requests. Runs the same validate-governance.cjs script
+# as the pre-commit hook — same rules, server-side enforcement.
+#
+# Prerequisites:
+#   - Node.js 20+ available (add NodeTool@0 task if not already present)
+#   - Repo checked out (checkout: self)
+#   - scripts/validate-governance.cjs present in the repo root
+#
+# Placement: add after checkout + Node setup, before build/test steps.
+# ─────────────────────────────────────────────────────────────────────────────
+
+steps:
+
+  - task: NodeTool@0
+    displayName: 'Governance gate — ensure Node 20'
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+    inputs:
+      versionSpec: '20.x'
+
+  - script: node scripts/validate-governance.cjs
+    displayName: 'ICEA governance gate (ICEA exists + config security)'
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+    env:
+      NODE_GOVERNANCE_MODE: ci
+    # Fails the pipeline (exit 1) if:
+    #   - Source file committed without an approved ICEA for the ADO ID
+    #   - .env file not in .gitignore
+    #   - Secret/credential detected in a config file
+    # Warns (exit 0) for:
+    #   - High-risk config changes (CI/CD pipeline, IaC) — audit entry written
+    #   - hotfix/ branch ICEA bypass — audit entry written

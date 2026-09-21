@@ -76,6 +76,12 @@ Detect source runtime topology
 ```
 
 ## Step R1 — Intake, posture, integration verification, NFR spec, options (implemented — AC-F7; extended)
+
+**Friction reduction (once per session).** Before the first Bash call, run the offer per
+`$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/friction-reduction-spec.md` — check
+whether `.claude/settings.local.json` already has the recommended patterns; if not, ask the
+developer once. YES → merge patterns + confirm; NO → continue without writing.
+
 1. Detect the source runtime topology (do NOT re-implement detection):
    ```bash
    node "$PLUGIN_DIR/scripts/migration-source-detect.cjs" --roots=<source> --json
@@ -88,10 +94,17 @@ Detect source runtime topology
    private endpoint, WCF → REST/CoreWCF). Produce the **Integration Inventory** before options — it
    feeds the infrastructure/security design documents and the TCO estimate (integration rework is a
    significant cost driver). Tier 2 via `additionalDirectories` where the service source is available.
-   Write `[INTEGRATION]` migration log entries.
-4. **Oracle mode detection** — per `golden-master-spec.md` Step 1. The source is a running on-prem app,
-   so `provided-url` is the natural default. Record in `decision_log.golden_master` — feeds R5 behavioral
-   regression (the intent record persists in the ledger through to R5).
+   **Initialize the migration log** before writing any entries. Create the log file with its required
+   header (per `migration-log-spec.md` § Initialization):
+   `docs/migrations/{ADO}/migration-log.md` — create `docs/migrations/{ADO}/` if absent.
+   This is a documentation artifact — not subject to the Write Gate.
+   Write `[INTEGRATION]` migration log entries per `migration-log-spec.md`.
+4. **Oracle mode selection** — per `golden-master-spec.md` § Developer presentation. The source is a
+   running on-prem app so `provided-url` is the likely best choice — but STOP and present all four
+   modes with their NFR assurance consequences; ask explicitly whether a URL is available. Never
+   assume `provided-url` without the developer confirming. Record the developer's explicit choice
+   in `decision_log.golden_master` — this feeds the R5 behavioral regression step (the intent
+   record persists in the ledger through to R5). Write an `[OPTION]` migration log entry.
 4b. **Source-context intake gate** — per `$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/source-context-intake-spec.md`.
    Author the **Source Context Manifest** (`docs/migrations/{ADO}/source-context-manifest.md`) from the
    source's docs + code (cross-cutting scan = infra-relevant; Tier-2 for integrations; **source coverage =
@@ -189,6 +202,17 @@ node "$PLUGIN_DIR/scripts/replatform-plan.cjs" reconcile-gate --steps-total=<N> 
 Cutover blocked (exit 15) on any failing step — the runbook shows the failing PASS/FAIL step; a human
 decides. The real prod cutover is the Nth rehearsal, human-executed, LLM monitoring reconciliation + smoke + NFR.
 
+**Save reconciliation gate results to disk.** After `replatform-plan.cjs reconcile-gate` runs,
+write the full results (step-by-step PASS/FAIL table with failure details and the overall gate
+verdict) to:
+
+```
+docs/migrations/{ADO}/ADO-{ADO_ID}-reconciliation-report.md
+```
+
+Documentation artifact — not subject to the Write Gate. Overwritten on each gate re-run
+(reconciliation is re-run when failing steps are fixed; always reflects the latest gate state).
+
 ## Step R5 — NFR assurance + Well-Architected + behavioral regression (implemented — AC-F8)
 Runs **after R4** (the human-executed cutover — the target is now deployed). This is where "done" is
 *proven, not asserted* — Replatform's PRIMARY oracle is non-functional. The LLM/human runs the drills;
@@ -234,6 +258,20 @@ unmeasurable NFR) **+** a Well-Architected posture **+** behavioral regression p
 hard-block (step 1). Record the result to the shared ledger `payload.replatform.NFR` and each gate's
 independent judge verdict (`$PLUGIN_DIR/skills/shared/judge.md`) via `checkpoint-ledger.cjs`
 `set-gate` / `set-payload`. Write `[DECISION]` migration log entries per `migration-log-spec.md`.
+
+**Save NFR assurance results to disk.** After all NFR grades are computed, write the full assurance
+table to:
+
+```
+docs/migrations/{ADO}/ADO-{ADO_ID}-nfr-assurance-report.md
+```
+
+Include: per-NFR rows (name · measurability tag · evidence grade · load profile · assurance verdict ·
+ceiling flag · gate result), the Well-Architected domain summary (8 domains, ERL), and the behavioral
+regression result (oracle mode, pre-move vs post-move smoke verdict). Documentation artifact — not
+subject to the Write Gate. Record the path in the ledger:
+  `checkpoint-ledger.cjs set-payload --namespace=replatform
+  --payload='{"nfrReportPath":"docs/migrations/{ADO}/ADO-{ADO_ID}-nfr-assurance-report.md"}'`
 
 ## Step R5a — Generate test plan (after IaC authoring completes)
 
@@ -282,3 +320,10 @@ NFR gate is not blocked by test plan generation failure.
   REUSE existing outputs (`app-readiness` ERL, golden-master) — never re-grade a pillar by hand.
 - `refactor-for-cloud` **OVERLAYS** Rewrite via the shared ledger — Replatform never redesigns application code.
 - ALWAYS invoke plugin scripts via the resolved `$PLUGIN_DIR`; record posture/options/NFR/decomposition in the ledger.
+- ALWAYS initialize `docs/migrations/{ADO}/migration-log.md` with its full header BEFORE writing
+  the first event entry — the file must exist before any [INTEGRATION] entries are appended to it.
+- ALWAYS save reconciliation gate results to `ADO-{ID}-reconciliation-report.md` after each run.
+- ALWAYS save the full NFR assurance results (NFR table + Well-Arch summary + behavioral regression)
+  to `ADO-{ID}-nfr-assurance-report.md` — checkpoint JSON is machine-only.
+- ALWAYS present oracle mode options with assurance-ceiling consequences and wait for explicit
+  developer choice before recording — NEVER auto-select or infer the mode from silence.

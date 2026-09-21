@@ -1,0 +1,37 @@
+# _project-deploy/ci/dep-scan-node.yml
+# ─────────────────────────────────────────────────────────────────────────────
+# Dependency vulnerability scan — Azure DevOps pipeline task template
+#
+# FOR NODE.JS PROJECTS. Uses npm audit, which queries the npm advisory registry.
+# This is the canonical named version of dep-scan.yml (kept for backward compat).
+#
+# Copy these steps into your project's azure-pipelines.yml to fail PRs on
+# high or critical CVEs in any npm dependency.
+#
+# Prerequisites:
+#   - Node.js 20+ available on the build agent (add NodeTool@0 if needed)
+#   - package-lock.json present (npm audit requires the lockfile)
+#   - npm ci must have run before this step
+#
+# Placement: add after npm ci, before build/test steps.
+# ─────────────────────────────────────────────────────────────────────────────
+
+steps:
+
+  - script: |
+      npm audit --audit-level=high --json > $(Build.ArtifactStagingDirectory)/dep-audit-node.json
+      npm audit --audit-level=high
+    displayName: 'Dependency vulnerability scan — Node.js npm (fail on high/critical)'
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+    # Fails the pipeline (exit non-zero) if any high or critical CVE is found.
+    # Low/moderate vulnerabilities appear in the artifact but do not fail the build.
+    # To investigate locally:   npm audit --audit-level=low
+    # To apply safe auto-fixes: npm audit fix
+    # To suppress a false positive: /dismiss FP-{fingerprint} in the security ledger.
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Node.js dep-audit report'
+    condition: and(always(), eq(variables['Build.Reason'], 'PullRequest'))
+    inputs:
+      pathToPublish: $(Build.ArtifactStagingDirectory)/dep-audit-node.json
+      artifactName: dependency-audit-node

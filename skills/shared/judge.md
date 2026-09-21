@@ -51,6 +51,26 @@ verified? which modality/oracle never ran?). Its findings become the next round 
 - The judge NEVER writes code/artifacts and NEVER issues `APPROVE` — it only returns a verdict.
 - Default to `REVISE`/`BLOCK` when evidence is missing — an unproven claim is not a `PASS`.
 - Record every verdict in the ledger (`judge_verdicts` / `stage_gates`) via `checkpoint-ledger.cjs`.
+- ALWAYS write the full judge analysis to the migration log [DECISION] entry — not just the verdict.
+  The ledger is for machines; the log is for humans.
+
+---
+
+## Full analysis capture — migration log (required for all skills)
+
+The checkpoint ledger records the machine-readable verdict. The migration log is the
+human-readable audit trail. Both are required; neither substitutes for the other.
+
+**After recording the verdict**, append the **full judge analysis text** (every finding, every
+flagged item, every claim challenged, every reasoning chain — verbatim, not summarised or
+paraphrased) to the migration log at the corresponding gate's `[DECISION]` entry, in a
+`**Judge analysis:**` field (see `migration-log-spec.md` for the updated template).
+
+- If the judge returned PASS with no findings: write "No findings — artifact met the rubric."
+- If the judge panel ran (top-risk tier): capture each panellist's output separately, then the
+  agree/escalate conclusion.
+- If no `[DECISION]` entry exists yet: create the skeleton and pre-fill `**Judge analysis:**`,
+  leaving developer fields as `{TODO: fill in reasoning}`.
 
 ## Per-skill gate rubrics
 

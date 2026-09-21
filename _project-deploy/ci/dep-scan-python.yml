@@ -1,0 +1,47 @@
+# _project-deploy/ci/dep-scan-python.yml
+# ─────────────────────────────────────────────────────────────────────────────
+# Dependency vulnerability scan — Azure DevOps pipeline task template
+#
+# FOR PYTHON PROJECTS. Uses pip-audit, which queries the Python Packaging
+# Advisory Database (PyPA) and optionally the OSV database.
+#
+# Copy these steps into your project's azure-pipelines.yml to fail PRs on
+# any known CVE in a Python dependency.
+#
+# pip-audit exits 1 if any vulnerability is found (fails the pipeline step).
+# It reports on packages in the active virtual environment or requirements files.
+#
+# Prerequisites:
+#   - Python 3.8+ installed on the build agent (add UsePythonVersion@0 if needed)
+#   - Dependencies installed (pip install -r requirements.txt must have run, or
+#     use --requirement flag to scan without installing — see pip-audit docs)
+#
+# Placement: add after dependency install, before test steps.
+# ─────────────────────────────────────────────────────────────────────────────
+
+steps:
+
+  - script: |
+      set -euo pipefail
+      pip install pip-audit --quiet
+      pip-audit \
+        --format json \
+        --output "$(Build.ArtifactStagingDirectory)/dep-audit-python.json" \
+        --progress-spinner off
+    displayName: 'Dependency vulnerability scan — Python pip-audit (fail on any CVE)'
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+    # pip-audit exits 1 if any vulnerable package is detected — the step fails and
+    # the JSON report is still written (via --output) for artifact publishing below.
+    # Alternatives:
+    #   Scan requirements file without installing:
+    #     pip-audit --requirement requirements.txt --format json --output ...
+    #   Skip packages without advisories:
+    #     pip-audit --skip-editable
+    # To suppress a false positive: /dismiss FP-{fingerprint} in the security ledger.
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Python dep-audit report'
+    condition: and(always(), eq(variables['Build.Reason'], 'PullRequest'))
+    inputs:
+      pathToPublish: $(Build.ArtifactStagingDirectory)/dep-audit-python.json
+      artifactName: dependency-audit-python

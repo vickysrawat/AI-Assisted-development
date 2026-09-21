@@ -1,0 +1,42 @@
+# _project-deploy/ci/dep-scan.yml
+# ─────────────────────────────────────────────────────────────────────────────
+# Dependency vulnerability scan — Azure DevOps pipeline task template
+#
+# FOR NODE.JS PROJECTS ONLY. Copy these steps into your project's
+# azure-pipelines.yml to fail PRs on high or critical CVEs in any dependency.
+#
+# For other stacks, use the appropriate tool:
+#   .NET    — dotnet list package --vulnerable --include-transitive
+#   Python  — pip-audit (install: pip install pip-audit)
+#   Java    — OWASP Dependency-Check or Snyk (require separate setup)
+# See Item 14 in the enterprise-tracker for the multi-stack follow-up plan.
+#
+# Prerequisites:
+#   - Node.js 20+ available (add NodeTool@0 task if not already present)
+#   - Repo checked out (checkout: self)
+#   - package-lock.json present (required for npm audit)
+#
+# Placement: add after npm ci, before build/test steps.
+# ─────────────────────────────────────────────────────────────────────────────
+
+steps:
+
+  - script: |
+      npm audit --audit-level=high --json > $(Build.ArtifactStagingDirectory)/audit-report.json
+      npm audit --audit-level=high
+    displayName: 'Dependency vulnerability scan (fail on high/critical)'
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+    # Fails the pipeline (exit non-zero) if any high or critical CVE is found.
+    # Low/moderate vulnerabilities are reported in the artifact but do not fail.
+    # To investigate a finding: npm audit --audit-level=low
+    # To apply safe automatic fixes:  npm audit fix
+    # To accept a finding with justification: npm audit fix --force (review carefully)
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish audit report'
+    condition: and(always(), eq(variables['Build.Reason'], 'PullRequest'))
+    inputs:
+      pathToPublish: $(Build.ArtifactStagingDirectory)/audit-report.json
+      artifactName: dependency-audit
+    # The JSON report is published even when the scan fails so the team can
+    # review the full findings list in the pipeline artifacts tab.

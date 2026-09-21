@@ -75,3 +75,13 @@ Overall feasibility: {🟢|🟡|🔴|⛔} {one-line verdict}
 - NEVER present an `INFERRED` claim as a settled fact, and NEVER fabricate a source to reach `VERIFIED`.
 - A dependency with no target-compatible version is a hard ⛔ BLOCKER — never soften it to proceed.
 - ALWAYS emit a decision-grade report even on a RED/BLOCKER verdict (value without execution).
+- ALWAYS write the full report to `docs/migrations/{ADO}/ADO-{ADO_ID}-gap-risk-report.md` before
+  presenting the APPROVE REPORT gate — a chat-only report is not a decision-grade deliverable.
+
+---
+
+## Disk artifact
+
+Saved to `docs/migrations/{ADO}/ADO-{ADO_ID}-gap-risk-report.md` — full content, all sections
+from the skeleton above, verbatim. Written before the APPROVE REPORT gate so the developer
+retains the full analysis regardless of whether they continue to execution.

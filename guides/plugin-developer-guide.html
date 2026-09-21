@@ -374,7 +374,7 @@
     <h1>ai-assisted-<em>development</em></h1>
     <p class="sub">
       For plugin <strong>maintainers</strong> — how the commands, skills, rules, shared specs,
-      hooks, and knowledge graph are built, governed, and released. Everything is declared in
+      hooks, governance scripts, and knowledge graph are built, governed, and released. Everything is declared in
       <code>.claude-plugin/plugin.json</code> and guarded by deterministic validators.
     </p>
     <div class="hero-badges">
@@ -417,6 +417,8 @@
   <div class="sidebar-section">
     <div class="sidebar-label">Governance &amp; graph</div>
     <a href="#governance" class="optional"><span class="nav-icon">⚖</span> Gates &amp; governance</a>
+    <a href="#audit" class="optional"><span class="step-dot">→</span> Audit trail &amp; RBAC</a>
+    <a href="#signals" class="optional"><span class="step-dot">→</span> ICEA quality signals</a>
     <a href="#tests" class="optional"><span class="nav-icon">✓</span> Validators &amp; tests</a>
     <a href="#graph" class="optional"><span class="step-dot">→</span> Knowledge graph</a>
   </div>
@@ -432,8 +434,8 @@
     <div class="section-eyebrow">For plugin maintainers</div>
     <h2>Why this <em class="accent">exists</em></h2>
     <p class="section-intro">This guide is for people who <strong>maintain or extend the plugin itself</strong> — adding commands and skills, authoring rules, changing governance, and cutting releases. If you are looking for how to <em>use</em> the plugin in a project, see the <strong>User Guide</strong>.</p>
-    <p>The plugin accreted from a real problem: LLM coding assistants are fast but unaccountable. Each layer here solves a failure the last one exposed — the ICEA gate stops unspecced code; the critic catches spec/scope drift before it reaches disk; the Write Gate keeps a human in the loop on every file; scoped rules keep generated code idiomatic per stack; and the Dream memory keeps decisions from evaporating between sessions. The guiding constraint is <strong>simplicity</strong>: prefer a deterministic script over a prompt, a single source of truth over duplicated copies, and an explicit gate over a hopeful convention.</p>
-    <div class="info"><span class="wi">ℹ</span><span>Design decisions live as append-only ADRs under <code>docs/adr/</code>. When you make a non-trivial architectural call, add one.</span></div>
+    <p>The plugin accreted from a real problem: LLM coding assistants are fast but unaccountable. Each layer here solves a failure the last one exposed — the ICEA gate stops unspecced code; the critic catches spec/scope drift before it reaches disk; the Write Gate keeps a human in the loop on every file; scoped rules keep generated code idiomatic per stack; the RBAC layer ensures only authorised roles can approve elevated actions; the governance audit trail makes every approval tamper-evident; and the Dream memory keeps decisions from evaporating between sessions. The guiding constraint is <strong>simplicity</strong>: prefer a deterministic script over a prompt, a single source of truth over duplicated copies, and an explicit gate over a hopeful convention.</p>
+    <div class="info"><span class="wi">ℹ</span><span>Design decisions live as append-only ADRs under <code>docs/adrs/</code>. When you make a non-trivial architectural call, add one. ADRs 0060–0068 cover the governance audit trail, RBAC, ICEA quality signals, project-knowledge, onboarding, dep-scan CI, cost governance, the designated Dream runner convention, and the DATA-HANDLING document.</span></div>
   </section>
 
   <section id="fits">
@@ -446,7 +448,7 @@
       <div class="feature-card"><div class="fc-name">43 rules</div><div class="fc-desc">Frontmatter-scoped coding rules that auto-load per file type from a layered set.</div></div>
       <div class="feature-card"><div class="fc-name">47 shared specs</div><div class="fc-desc">Cross-skill primitives under <code>skills/shared/</code> — the contracts skills reuse.</div></div>
       <div class="feature-card"><div class="fc-name">2 subagents</div><div class="fc-desc"><code>bc-searcher</code> · <code>bc-synthesizer</code> (business-context grounding).</div></div>
-      <div class="feature-card"><div class="fc-name">Runtime hooks + CI</div><div class="fc-desc">Deterministic gates that enforce the floor even when a client bypasses a prompt.</div></div>
+      <div class="feature-card"><div class="fc-name">Runtime hooks + CI + governance scripts</div><div class="fc-desc">Deterministic gates, RBAC checks, audit writers, signal writers, and dep-scan CI templates that enforce the floor even when a client bypasses a prompt.</div></div>
     </div>
     <div class="warning"><span class="wi">⚠</span><span>Counts are authoritative from <code>plugin.json</code> — never hand-type them into docs. <code>tests/validate.js</code> checks that on-disk components match the manifest.</span></div>
   </section>
@@ -461,12 +463,20 @@
 │   └── <span class="var">shared/</span>        cross-skill specs + migration-knowledge/refs
 ├── <span class="var">agents/</span>           subagents — bc-searcher · bc-synthesizer
 ├── <span class="var">_project-deploy/</span>  what ships into a target project: CLAUDE.md · commands/ · rules/
-├── <span class="var">scripts/</span>          deterministic helpers (bump-version.js, graph-*.js, *.cjs)
-├── <span class="var">docs/</span>             adr/ · migrations/ · architecture/ · plans/
+│   └── <span class="var">ci/</span>            dep-scan CI templates (dotnet · node · python · java)
+│   └── <span class="var">hooks/</span>         pre-commit governance gate hook
+├── <span class="var">scripts/</span>          deterministic helpers:
+│                   bump-version.js · graph-*.js · *.cjs
+│                   audit-write.cjs · rbac-check.cjs
+│                   signal-write.cjs · governance-report.cjs
+│                   validate-governance.cjs · release.cjs
+├── <span class="var">docs/</span>             adrs/ · migrations/ · architecture/ · plans/
+│                   enterprise-tracker.md · DATA-HANDLING.md
+├── <span class="var">governance/</span>       sprint governance reports (generated, committed)
 ├── <span class="var">guides/</span>           these HTML guides
-├── <span class="var">tests/</span>            validate.js · runner.js · skill-scenarios/
-└── CHANGELOG.md · README.md · WHITEPAPER.md · CLAUDE.md</pre></div></div>
-    <div class="info"><span class="wi">ℹ</span><span>Note the split: <code>commands/</code> are the plugin's own dev-session commands; <code>_project-deploy/commands/</code> are the canonical stubs shipped into target projects. They are not interchangeable.</span></div>
+├── <span class="var">tests/</span>            validate.js · runner.js · jest.suite.test.cjs · skill-scenarios/
+└── CHANGELOG.md · README.md · WHITEPAPER.md · CLAUDE.md · LICENSE</pre></div></div>
+    <div class="info"><span class="wi">ℹ</span><span>Note the split: <code>commands/</code> are the plugin's own dev-session commands; <code>_project-deploy/commands/</code> are the canonical stubs shipped into target projects. They are not interchangeable. The <code>_project-deploy/ci/</code> folder contains four dep-scan CI pipeline templates (dotnet / node / python / java) seeded into target projects by <code>setup-init</code>.</span></div>
   </section>
 
   <section id="commands">
@@ -488,26 +498,27 @@
       </tbody>
     </table>
     <p>The authoritative table is <code>skills/shared/source-file-consent.md</code>; <code>validate.py</code> errors if a SKILL.md's token disagrees with it. Skills route to models by task type (see Model routing) and reason through named expert personas kept consistent across the suite.</p>
+    <p>Key skill changes in v3.25.0: <strong>icea-feature</strong> reads <code>.claude/project-knowledge.md</code> and injects applicable patterns at Step 3b, and tracks <code>clarification_count</code> through Steps 2–3 to write a <code>story-quality</code> signal at <code>SAVE PLAN</code>. <strong>icea-revise</strong> writes a <code>REVISE_ADO</code> audit event and a <code>revision</code> signal. <strong>icea-implement</strong> writes a <code>gap</code> signal when an Example cannot produce a real assertion. <strong>governance-report</strong> and <strong>onboarding-guide</strong> are new skills.</p>
   </section>
 
   <section id="rules">
     <div class="section-eyebrow">Component model</div>
     <h2><em class="accent">Rules</em></h2>
     <p class="section-intro">Rules are stack-scoped coding standards in <code>_project-deploy/rules/</code> (43 files), organised as a layered set — base backend/frontend layers plus per-stack and per-ecosystem overrides. Each carries frontmatter that scopes it to file globs so Claude Code auto-loads only the relevant ones when editing a matching file.</p>
-    <p>Deployment is driven by <strong>scored stack-key detection</strong> (<a href="../docs/adr/0059-scored-stack-key-detection-and-rule-deployment.md">ADR 0059</a>) so a .NET 10 API never draws legacy framework rules; the frontmatter/layering model is <a href="../docs/adr/0042-frontmatter-based-rule-deployment.md">ADR 0042</a> / <a href="../docs/adr/0043-ecosystem-and-layered-rule-organisation.md">ADR 0043</a>. The data-access rule is a hard one: parameterised queries only, never string-built SQL.</p>
+    <p>Deployment is driven by <strong>scored stack-key detection</strong> (<a href="../docs/adrs/0059-scored-stack-key-detection-and-rule-deployment.md">ADR 0059</a>) so a .NET 10 API never draws legacy framework rules; the frontmatter/layering model is <a href="../docs/adrs/0042-frontmatter-based-rule-deployment.md">ADR 0042</a> / <a href="../docs/adrs/0043-ecosystem-and-layered-rule-organisation.md">ADR 0043</a>. The data-access rule is a hard one: parameterised queries only, never string-built SQL.</p>
   </section>
 
   <section id="shared">
     <div class="section-eyebrow">Component model</div>
     <h2><em class="accent">Shared</em> specs</h2>
     <p class="section-intro">47 cross-skill primitives live under <code>skills/shared/</code> and are registered in <code>plugin.json → components.shared</code>. They are the contracts multiple skills reuse — e.g. <code>write-gate-spec.md</code>, <code>model-routing-spec.md</code>, <code>source-file-consent.md</code>, <code>multi-root-scan.md</code>, <code>scope-flags-spec.md</code>, <code>flag-prompt-spec.md</code>, the migration ledger schema, and the offline <code>migration-knowledge/refs/</code> tier.</p>
-    <div class="warning"><span class="wi">⚠</span><span>A shared spec is a single source of truth. When you add one, register it in <code>components.shared</code> — <code>validate.js</code> fails on a spec that is on disk but unregistered, and the README's shared-specs table is generated from the manifest (<a href="../docs/adr/0063-bundled-substrate-manifest-truth.md">ADR 0063</a>).</span></div>
+    <div class="warning"><span class="wi">⚠</span><span>A shared spec is a single source of truth. When you add one, register it in <code>components.shared</code> — <code>validate.js</code> fails on a spec that is on disk but unregistered, and the README's shared-specs table is generated from the manifest (<a href="../docs/adrs/0063-bundled-substrate-manifest-truth.md">ADR 0063</a>).</span></div>
   </section>
 
   <section id="hooks">
     <div class="section-eyebrow">Component model</div>
     <h2>Hooks &amp; <em class="accent">subagents</em></h2>
-    <p class="section-intro">Prompt-level gates are backed by <strong>deterministic hooks</strong> so the floor holds even if a client ignores an instruction: a write-blocker (<code>icea-floor</code>) when no approved ICEA exists, a git pre-commit hook that blocks commits with open Critical/High findings, and a CI script that fails the pipeline on ledger-integrity violations. <code>validate-pr-compliance.py</code> runs as a required branch-policy check server-side — unbypassable from any client. Hooks install by default during <code>setup-init</code>, their integrity is monitored by <code>setup-status</code>, and they re-sync on every version bump.</p>
+    <p class="section-intro">Prompt-level gates are backed by <strong>deterministic hooks</strong> so the floor holds even if a client ignores an instruction: a write-blocker (<code>icea-floor</code>) when no approved ICEA exists, a git pre-commit hook (<code>_project-deploy/hooks/governance-gate-precommit.cjs</code>) that blocks commits with open Critical/High findings or pending governance violations, and a CI script that fails the pipeline on ledger-integrity violations. <code>validate-pr-compliance.py</code> runs as a required branch-policy check server-side — unbypassable from any client. Hooks install by default during <code>setup-init</code>, their integrity is monitored by <code>setup-status</code>, and they re-sync on every version bump.</p>
     <p>Two <strong>subagents</strong> ship under <code>agents/</code>: <code>bc-searcher</code> (regulatory-grounding web search, no project-file access) and <code>bc-synthesizer</code> (combines cited categories with local architecture, no network) — the split keeps project data off the network during business-context generation.</p>
   </section>
 
@@ -535,7 +546,7 @@
   <section id="model-routing">
     <div class="section-eyebrow">Extending</div>
     <h2>Model <em class="accent">routing</em></h2>
-    <p class="section-intro">Skills route by task type via env vars — override per project in <code>.claude/settings.json → env</code>. The full table is <code>skills/shared/model-routing-spec.md</code>.</p>
+    <p class="section-intro">Skills route by task type via env vars — override per project in <code>.claude/settings.json → env</code>. The full table is <code>skills/shared/model-routing-spec.md</code>. Cost governance for per-model pricing and budgets is configured in <code>.claude/cost-governance.json</code> (seeded by <code>setup-init</code>); <code>setup-status</code> check 1x validates that all three env vars are explicit and the pricing config is present.</p>
     <table class="cmd-table">
       <thead><tr><th>Env var</th><th>Default</th><th>Used by</th></tr></thead>
       <tbody>
@@ -545,19 +556,85 @@
         <tr><td><code>INFRA_MODEL</code></td><td>claude-sonnet-4-6</td><td>Infrastructure — dream, architect, metrics, graph-sync, IaC authoring.</td></tr>
       </tbody>
     </table>
+    <p>The <code>audit-write.cjs</code> script records the <code>--model</code> field in every governance event so per-invocation model usage is tracked in the audit trail alongside approvals and dismissals.</p>
   </section>
 
   <section id="governance">
     <div class="section-eyebrow">Governance &amp; graph</div>
     <h2>Gates &amp; <em class="accent">governance</em></h2>
-    <p class="section-intro">The governance rails are defined in <code>CLAUDE.md</code> and enforced by hooks + CI. As a maintainer, know the three orthogonal gates:</p>
+    <p class="section-intro">The governance rails are defined in <code>CLAUDE.md</code> and enforced by hooks + CI + deterministic scripts. As a maintainer, know the four orthogonal gates:</p>
     <div class="feature-grid">
       <div class="feature-card"><div class="fc-name">Feature Gate (ICEA)</div><div class="fc-desc">No implementation code for a new capability without an approved ICEA on disk. Output-gated; overridable only via the loud, audited <code>/skip-icea</code> / <code>SKIP_ICEA_FLOOR</code>.</div></div>
-      <div class="feature-card"><div class="fc-name">Write Gate</div><div class="fc-desc">Source/config is never written until <code>APPROVE ADO-{ID}</code>. Boundary-crossing writes (outside the repo root) always confirm and are not blanketed by <code>APPROVE ALL</code>.</div></div>
-      <div class="feature-card"><div class="fc-name">Findings gate</div><div class="fc-desc">Open Critical/High findings block <code>checkin</code> and PR creation; never blanket-skippable.</div></div>
-      <div class="feature-card"><div class="fc-name">Critic planning gates</div><div class="fc-desc">The critic fires at the ICEA draft, the Tech Spec draft, and generated code — before each is written (<a href="../docs/adr/0052-critic-planning-gates.md">ADR 0052</a>).</div></div>
+      <div class="feature-card"><div class="fc-name">Write Gate</div><div class="fc-desc">Source/config is never written until <code>APPROVE ADO-{ID}</code>. Boundary-crossing writes (outside the repo root) always confirm and are not blanketed by <code>APPROVE ALL</code>. <code>APPROVE ALL</code> requires the <code>tech_lead</code> role (RBAC-checked at runtime).</div></div>
+      <div class="feature-card"><div class="fc-name">Findings gate</div><div class="fc-desc">Open Critical/High findings block <code>checkin</code> and PR creation; never blanket-skippable. Dismissing a Critical/High finding requires the <code>security_officer</code> role.</div></div>
+      <div class="feature-card"><div class="fc-name">Critic planning gates</div><div class="fc-desc">The critic fires at the ICEA draft, the Tech Spec draft, and generated code — before each is written (<a href="../docs/adrs/0052-critic-planning-gates.md">ADR 0052</a>).</div></div>
     </div>
-    <p>Every gate block, bypass, approval, and dismissal is recorded in a tamper-evident audit trail under <code>.claude/audit/</code>.</p>
+    <p>Every gate block, bypass, approval, and dismissal is recorded in a tamper-evident audit trail under <code>.claude/audit/</code> (see Audit trail &amp; RBAC below). Sprint-level governance reports aggregate the audit trail, token data, and ledger metrics — generated by <code>scripts/governance-report.cjs</code> and written to <code>governance/</code>.</p>
+  </section>
+
+  <section id="audit">
+    <div class="section-eyebrow">Governance &amp; graph</div>
+    <h2>Audit trail &amp; <em class="accent">RBAC</em></h2>
+    <p class="section-intro">The governance audit trail is an immutable, per-event JSON record set under <code>.claude/audit/</code>. Each event is committed to git, so immutability is derived from git history. RBAC is enforced at runtime by <code>scripts/rbac-check.cjs</code> against <code>.claude/ApprovalRoles.json</code>.</p>
+
+    <h3>Audit event types</h3>
+    <table class="cmd-table">
+      <thead><tr><th>Event type</th><th>When it fires</th></tr></thead>
+      <tbody>
+        <tr><td><code>APPROVE_ADO</code></td><td>Developer replies <code>APPROVE ADO-{ID}</code> — ICEA + Tech Spec approved.</td></tr>
+        <tr><td><code>APPROVE_CONFIG</code></td><td>CI/CD or IaC config approved (requires <code>tech_lead</code> role).</td></tr>
+        <tr><td><code>APPROVE_ALL</code></td><td>Standing Write-Gate batch approval granted (requires <code>tech_lead</code> role).</td></tr>
+        <tr><td><code>DISMISS</code></td><td>A finding dismissed via <code>/dismiss</code>. Critical/High dismissals require <code>security_officer</code>.</td></tr>
+        <tr><td><code>BYPASS_TEST_GATE</code></td><td><code>APPROVE ADO-{ID} --skip-test-gate</code> used (spike / prototype bypass).</td></tr>
+        <tr><td><code>BYPASS_HOTFIX</code></td><td>Hotfix path invoked — ICEA gate bypassed under emergency protocol.</td></tr>
+        <tr><td><code>RBAC_BLOCK</code></td><td>A gated action was attempted by a user without the required role.</td></tr>
+        <tr><td><code>REVISE_ADO</code></td><td><code>REVISE ADO-{ID}</code> invoked — ICEA/Tech Spec revision started.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Event schema</h3>
+    <p>Each event includes: <code>timestamp</code>, <code>actor</code> (git email), <code>role</code> (from ApprovalRoles.json lookup), <code>event</code> (type above), <code>model</code> (per-invocation model ID), <code>ado_id</code>, <code>finding_id</code> (for DISMISS), <code>path</code>, <code>verdict</code>, and <code>context</code>.</p>
+
+    <h3>RBAC gates</h3>
+    <p>Three actions require an elevated role checked at runtime via <code>scripts/rbac-check.cjs</code> against <code>.claude/ApprovalRoles.json</code>:</p>
+    <table class="cmd-table">
+      <thead><tr><th>Action</th><th>Required role</th></tr></thead>
+      <tbody>
+        <tr><td><code>APPROVE ALL ADO-{ID}</code></td><td><code>tech_lead</code></td></tr>
+        <tr><td><code>APPROVE CONFIG</code> for CI/CD or IaC</td><td><code>tech_lead</code></td></tr>
+        <tr><td><code>/dismiss</code> of a Critical or High finding</td><td><code>security_officer</code></td></tr>
+      </tbody>
+    </table>
+    <p>All blocked actions write a <code>RBAC_BLOCK</code> event. <code>ApprovalRoles.json</code> is seeded by <code>setup-init</code> Step 2d (prompts for tech leads + security officers) and its structure is <code>{ "tech_leads": [...], "security_officers": [...] }</code>.</p>
+
+    <div class="info"><span class="wi">ℹ</span><span><code>setup-status</code> check 1w validates <code>ApprovalRoles.json</code> presence and entry counts, and reports the total audit event count in <code>.claude/audit/</code>.</span></div>
+  </section>
+
+  <section id="signals">
+    <div class="section-eyebrow">Governance &amp; graph</div>
+    <h2>ICEA quality <em class="accent">signals</em></h2>
+    <p class="section-intro">Quality signals are lightweight JSON files written automatically by skills to <code>.claude/signals/</code>. Dream's Phase 3.6 processes them — updating <code>memory/topic-signals.md</code> and proposing project-knowledge promotions — then deletes the signal files. The signal inbox is committed but cleared each Dream run.</p>
+
+    <h3>Signal types</h3>
+    <table class="cmd-table">
+      <thead><tr><th>Type</th><th>Written by</th><th>When</th></tr></thead>
+      <tbody>
+        <tr><td><code>gap</code></td><td>icea-implement</td><td>An Example in the ICEA cannot produce a real assertion — a coverage gap exists.</td></tr>
+        <tr><td><code>revision</code></td><td>icea-revise</td><td>A section of the ICEA/Tech Spec was revised; the signal records section diff and inferred category.</td></tr>
+        <tr><td><code>story-quality</code></td><td>icea-feature</td><td>At <code>SAVE PLAN</code>: records the <code>clarification_count</code> — how many questions were needed to scope the feature.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Dream processing (Phases 3.5 and 3.6)</h3>
+    <ul class="bullet-list">
+      <li><strong>Phase 3.5</strong> — staleness pass on <code>.claude/project-knowledge.md</code> entries: anchor check (does the referenced code still exist?) + age threshold (entries older than the configured age are flagged for review).</li>
+      <li><strong>Phase 3.6</strong> — processes all <code>.claude/signals/</code> files: updates <code>memory/topic-signals.md</code> tally, proposes a project-knowledge ADD when the count for a topic reaches <code>gap_promotion_threshold</code> (default: 2), then deletes the signal files.</li>
+    </ul>
+
+    <h3>Designated Dream runner</h3>
+    <p>One team member — typically the Tech Lead — is designated as the Dream runner per sprint. This convention avoids merge conflicts that arise when multiple developers run <code>/dream</code> independently against the same <code>memory/MEMORY.md</code>. The designated runner is recorded in <code>ApprovalRoles.json</code> and shown by <code>setup-status</code>.</p>
+
+    <div class="info"><span class="wi">ℹ</span><span>The signal scripts are <code>scripts/signal-write.cjs</code> (writes signals) and <code>scripts/governance-report.cjs</code> (aggregates audit + token + ledger data for sprint reports). Neither modifies source.</span></div>
   </section>
 
   <section id="tests">
@@ -570,7 +647,9 @@
         <tr><td><code>python tests/validate.py</code></td><td>Cross-checks: CHANGELOG has the current version, CLAUDE.md version line, consent-category agreement, no hardcoded org.</td></tr>
         <tr><td><code>node tests/runner.js</code></td><td>Behaviour tests against the skill scenarios (API key required).</td></tr>
         <tr><td><code>node scripts/check-version-consistency.js</code></td><td>Version-drift guard — hard on CLAUDE.md label + marketplace; warns on guide/README stamps.</td></tr>
-        <tr><td>*.test.cjs</td><td>Unit tests for deterministic scripts (intake-verify, graph-multiroot, knowledge-freshness, …).</td></tr>
+        <tr><td><code>node scripts/validate-governance.cjs</code></td><td>Governance integrity check — validates audit event schema, ApprovalRoles.json structure, and signal file format.</td></tr>
+        <tr><td><code>tests/jest.suite.test.cjs</code></td><td>Jest suite covering deterministic scripts (audit-write, rbac-check, signal-write, governance-report, and others).</td></tr>
+        <tr><td>*.test.cjs</td><td>Individual unit tests for deterministic scripts (intake-verify, graph-multiroot, knowledge-freshness, …).</td></tr>
       </tbody>
     </table>
   </section>
@@ -578,8 +657,8 @@
   <section id="graph">
     <div class="section-eyebrow">Governance &amp; graph</div>
     <h2>Knowledge <em class="accent">graph</em> internals</h2>
-    <p class="section-intro">The codebase knowledge graph in <code>.claude/graph/</code> is the single orientation layer. <code>graph.json</code> is the authoritative structure — typed nodes/edges with confidence, module-wide staleness fingerprints, and an absent-tolerant <code>sourceRoot</code> for multi-root repos — and the markdown index + per-module detail files are its projection (<a href="../docs/adr/0039-graph-json-sidecar.md">ADR 0039</a>).</p>
-    <p><code>EXTRACTED</code> dependency edges are derived <em>deterministically</em> from source imports by <code>scripts/graph-extract-edges.js</code> (not by the model), so they are parser-true and byte-stable and source never enters context (<a href="../docs/adr/0041-deterministic-edge-extraction.md">ADR 0041</a>); the model authors only <code>INFERRED</code>/<code>AMBIGUOUS</code> edges. <code>module-derive.cjs</code> derives the module skeleton (multi-root aware via <code>multi-root-scan.md</code>); <code>graph-create</code> builds the initial graph at setup and <code>graph-sync</code> refreshes it incrementally.</p>
+    <p class="section-intro">The codebase knowledge graph in <code>.claude/graph/</code> is the single orientation layer. <code>graph.json</code> is the authoritative structure — typed nodes/edges with confidence, module-wide staleness fingerprints, and an absent-tolerant <code>sourceRoot</code> for multi-root repos — and the markdown index + per-module detail files are its projection (<a href="../docs/adrs/0039-graph-json-sidecar.md">ADR 0039</a>).</p>
+    <p><code>EXTRACTED</code> dependency edges are derived <em>deterministically</em> from source imports by <code>scripts/graph-extract-edges.js</code> (not by the model), so they are parser-true and byte-stable and source never enters context (<a href="../docs/adrs/0041-deterministic-edge-extraction.md">ADR 0041</a>); the model authors only <code>INFERRED</code>/<code>AMBIGUOUS</code> edges. <code>module-derive.cjs</code> derives the module skeleton (multi-root aware via <code>multi-root-scan.md</code>); <code>graph-create</code> builds the initial graph at setup and <code>graph-sync</code> refreshes it incrementally.</p>
   </section>
 
   <section id="release">
@@ -591,6 +670,7 @@
       <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Fill the CHANGELOG</div><div class="tl-meta">CHANGELOG.md</div><div class="tl-desc">Describe what changed, which files, and why. <code>validate.py</code> requires an entry for the current version.</div></div>
       <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Write a migration note</div><div class="tl-meta">docs/migrations/NNN-X.Y.Z.md</div><div class="tl-desc">For version-sensitive changes, so <code>setup-sync</code> can apply exactly the deltas in range for existing projects.</div></div>
       <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Guard</div><div class="tl-meta">node scripts/check-version-consistency.js</div><div class="tl-desc">Must be green — re-stamp the guides' <code>documents-plugin-version</code> and the README header when you touch their content.</div></div>
+      <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Release script</div><div class="tl-meta">node scripts/release.cjs</div><div class="tl-desc">Packages the plugin artifact, stamps marketplace.json, and verifies all validators pass before tagging.</div></div>
     </div>
   </section>
 
@@ -599,10 +679,12 @@
     <h2>ADRs &amp; <em class="accent">architecture</em></h2>
     <p class="section-intro">This guide points at the deep docs rather than duplicating them:</p>
     <div class="feature-grid">
-      <div class="feature-card"><div class="fc-name">docs/adr/</div><div class="fc-desc">Append-only Architecture Decision Records — the rationale for every non-trivial call. Add one when you make a decision.</div></div>
+      <div class="feature-card"><div class="fc-name">docs/adrs/</div><div class="fc-desc">Append-only Architecture Decision Records — the rationale for every non-trivial call. ADRs 0060–0068 cover governance audit, RBAC, ICEA quality signals, project-knowledge, onboarding, dep-scan CI, cost governance, designated Dream runner, and DATA-HANDLING. Add one when you make a decision.</div></div>
       <div class="feature-card"><div class="fc-name">docs/architecture/</div><div class="fc-desc">Explainers for complex subsystems (e.g. the migration family — upgrade / rewrite / replatform — and the shared glossary).</div></div>
       <div class="feature-card"><div class="fc-name">docs/migrations/</div><div class="fc-desc">Per-version upgrade notes consumed by <code>setup-sync</code>.</div></div>
       <div class="feature-card"><div class="fc-name">CHANGELOG.md</div><div class="fc-desc">The release-by-release history — the one place version-added history belongs.</div></div>
+      <div class="feature-card"><div class="fc-name">LICENSE</div><div class="fc-desc">MIT license, copyright Vivek Rawat 2026.</div></div>
+      <div class="feature-card"><div class="fc-name">DATA-HANDLING.md</div><div class="fc-desc">Dual-audience document covering developer data handling conventions and GDPR compliance obligations.</div></div>
     </div>
   </section>
 

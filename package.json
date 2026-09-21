@@ -1,5 +1,18 @@
 {
+  "scripts": {
+    "test": "jest --ci",
+    "test:watch": "jest --watch",
+    "test:coverage": "c8 --reporter=text --reporter=cobertura --reporter=lcov --include='scripts/**/*.cjs' jest --ci",
+    "bump:patch": "node scripts/release.cjs patch",
+    "bump:minor": "node scripts/release.cjs minor",
+    "bump:major": "node scripts/release.cjs major",
+    "release": "node scripts/release.cjs --commit",
+    "audit": "npm audit --audit-level=high"
+  },
   "devDependencies": {
+    "c8": "^10.1.2",
+    "jest": "^29.7.0",
+    "jest-junit": "^16.0.0",
     "pptxgenjs": "^4.0.1"
   }
 }
