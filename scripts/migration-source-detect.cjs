@@ -28,7 +28,7 @@ const { execFileSync } = require('child_process');
 const PRUNE = new Set(['.git', 'node_modules', 'bin', 'obj', 'dist', 'out', '.angular', 'coverage', '.cache', 'tmp']);
 const SRC_EXTS = ['.cs', '.java', '.ts', '.tsx', '.js', '.jsx', '.py'];
 const CODE_SCAN_EXTS = new Set(['.cs', '.java', '.ts', '.js']);
-const ROOT_SIGNAL_FILES = ['package.json', 'pom.xml', 'requirements.txt', 'pyproject.toml', 'angular.json', 'nx.json', 'Web.config', 'app.config', 'packages.config'];
+const ROOT_SIGNAL_FILES = ['package.json', 'pom.xml', 'requirements.txt', 'pyproject.toml', 'angular.json', 'nx.json', 'web.config', 'app.config', 'packages.config'];
 const MAX_DEPTH = 6;
 const MAX_CONTENT_READS = 5000;
 const MAX_FILE_BYTES = 512 * 1024;
@@ -102,7 +102,7 @@ function uniqueScanRoots(roots) {
 
 function isSignalFileName(name) {
   const lower = String(name || '').toLowerCase();
-  return ROOT_SIGNAL_FILES.includes(name) ||
+  return ROOT_SIGNAL_FILES.includes(lower) ||
     lower.endsWith('.config') ||
     lower.endsWith('.edmx') ||
     lower.endsWith('dbcontext.cs');

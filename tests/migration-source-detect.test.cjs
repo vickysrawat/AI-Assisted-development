@@ -151,7 +151,7 @@ const nested = mk({
   'Api/Controllers/HomeController.cs': 'class HomeController { void X() { AddAuthentication(); } }',
   'apps/web/package.json': '{"name":"web","dependencies":{"prisma":"^5.0.0"}}',
   'services/java/pom.xml': '<project><dependencies><dependency><artifactId>spring-data-jpa</artifactId></dependency></dependencies></project>',
-  'legacy/nested/Web.config': '<configuration><system.serviceModel><client><endpoint address="http://svc/x" binding="basicHttpBinding" /></client></system.serviceModel><connectionStrings><add name="Db" connectionString="Server=." /></connectionStrings></configuration>',
+  'legacy/nested/web.config': '<configuration><system.serviceModel><client><endpoint address="http://svc/x" binding="basicHttpBinding" /></client></system.serviceModel><connectionStrings><add name="Db" connectionString="Server=." /></connectionStrings></configuration>',
   'legacy/nested/extra.config': '<configuration><connectionStrings><add name="Other" connectionString="Server=." /></connectionStrings></configuration>',
 });
 const nestedMeta = detectMeta(nested);
