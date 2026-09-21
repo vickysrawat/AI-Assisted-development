@@ -17,6 +17,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const lib = require('../scripts/migration-source-detect.cjs');
 
 const DETECT = path.join(__dirname, '..', 'scripts', 'migration-source-detect.cjs');
 let pass = 0, fail = 0;
@@ -38,6 +39,11 @@ function run(roots) {
   return { descriptor, code: r.status };
 }
 
+function runMode(root) {
+  const detect = lib.detectStack(root);
+  return lib.scanRootWithGraphFastPath(root, detect.meta, lib.tokensFromDetect(detect));
+}
+
 function ok(name) { pass++; console.log('  ✓ ' + name); }
 function bad(name, detail) { fail++; console.log('  ✗ ' + name + (detail ? ' — ' + detail : '')); }
 
@@ -49,6 +55,46 @@ function check(name, roots, assertFn) {
 }
 
 function assert(cond, msg) { if (!cond) throw new Error(msg); }
+function sortJson(value) {
+  if (Array.isArray(value)) return value.map(sortJson).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+  if (value && typeof value === 'object') {
+    const out = {};
+    for (const key of Object.keys(value).sort()) out[key] = sortJson(value[key]);
+    return out;
+  }
+  return value;
+}
+function comparableDescriptor(d) {
+  return sortJson({
+    primary: d.primary,
+    stacks: d.stacks,
+    dataLayer: d.dataLayer,
+    auth: d.auth,
+    integrations: d.integrations,
+    sizeEstimate: d.sizeEstimate,
+    archDocsPresent: d.archDocsPresent,
+  });
+}
+function writeGraph(root, nodes) {
+  const graphDir = path.join(root, '.claude', 'graph');
+  fs.mkdirSync(graphDir, { recursive: true });
+  fs.writeFileSync(path.join(graphDir, 'graph.json'),
+    JSON.stringify({ meta: { schemaVersion: '1.0', generatedAt: '2026-09-19', generator: 'graph-sync', structure: 'flat', moduleCount: nodes.length }, nodes, edges: [] }, null, 2) + '\n');
+}
+function writeStateFingerprint(root) {
+  const detect = lib.detectStack(root);
+  const statePath = path.join(root, '.claude', 'dream-init-state.json');
+  fs.mkdirSync(path.dirname(statePath), { recursive: true });
+  fs.writeFileSync(statePath, JSON.stringify({
+    generations_meta: {
+      buildfile_fingerprint: detect.meta.buildfile_fingerprint,
+      detected_at: '2026-09-19T00:00:00.000Z',
+    },
+  }, null, 2));
+}
+function graphNode(id, ownedPath, extra) {
+  return { id, module: id, domain: id, type: 'service', detailFile: `graph/${id}.md`, entryPoint: `${ownedPath.replace('/**', '')}/x`, paths: [ownedPath], fingerprint: id, hub: false, ...(extra || {}) };
+}
 
 // ── Fixtures (minimal, per stack) ───────────────────────────────────────────────
 const dotnet = mk({
@@ -119,6 +165,117 @@ check('external-source-only: an arbitrary path is scanned as the source root', [
 check('source_version is a plain comparable string when present (Q1b/Stage-2)', [dotnet], d => {
   assert(typeof d.primary.version === 'string' && d.primary.version.length > 0, 'version=' + JSON.stringify(d.primary.version));
 });
+
+// Fresh graph → graph-backed scan preserves detection output.
+{
+  const plain = mk({
+    'package.json': '{"name":"api","main":"index.js","dependencies":{"express":"^4","passport":"^0.6","prisma":"^5"}}',
+    'src/server.js': 'const passport = require("passport");',
+  });
+  const graphed = mk({
+    'package.json': '{"name":"api","main":"index.js","dependencies":{"express":"^4","passport":"^0.6","prisma":"^5"}}',
+    'src/server.js': 'const passport = require("passport");',
+  });
+  try {
+    writeGraph(graphed, [graphNode('app', 'src/**')]);
+    writeStateFingerprint(graphed);
+    const mode = runMode(graphed);
+    assert(mode.mode === 'graph', 'expected graph fast path, got ' + mode.mode);
+    const a = run([plain]);
+    const b = run([graphed]);
+    assert(a.code === b.code, 'exit codes differ: ' + a.code + ' vs ' + b.code);
+    assert(JSON.stringify(comparableDescriptor(a.descriptor)) === JSON.stringify(comparableDescriptor(b.descriptor)),
+      'descriptor changed under fresh graph fast path');
+    ok('fresh graph fast path preserves existing detection output');
+  } catch (e) {
+    bad('fresh graph fast path preserves existing detection output', e.message);
+  } finally {
+    fs.rmSync(plain, { recursive: true, force: true });
+    fs.rmSync(graphed, { recursive: true, force: true });
+  }
+}
+
+// Stale / malformed / missing graphs must fall back cleanly.
+for (const [name, prepare] of [
+  ['missing graph falls back', root => root],
+  ['stale flag falls back', root => {
+    writeGraph(root, [graphNode('app', 'src/**')]);
+    writeStateFingerprint(root);
+    fs.writeFileSync(path.join(root, '.claude', 'graph', '.stale'), 'modules: app\n');
+  }],
+  ['malformed graph falls back', root => {
+    fs.mkdirSync(path.join(root, '.claude', 'graph'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.claude', 'graph', 'graph.json'), '{not-json');
+  }],
+  ['fingerprint mismatch falls back', root => {
+    writeGraph(root, [graphNode('app', 'src/**')]);
+    const statePath = path.join(root, '.claude', 'dream-init-state.json');
+    fs.mkdirSync(path.dirname(statePath), { recursive: true });
+    fs.writeFileSync(statePath, JSON.stringify({ generations_meta: { buildfile_fingerprint: 'mismatch' } }, null, 2));
+  }],
+]) {
+  const root = mk({
+    'package.json': '{"name":"api","main":"index.js","dependencies":{"express":"^4"}}',
+    'src/server.js': 'console.log("ok")',
+  });
+  try {
+    prepare(root);
+    const result = runMode(root);
+    assert(result.mode === 'fallback', 'expected fallback, got ' + result.mode);
+    ok(name);
+  } catch (e) {
+    bad(name, e.message);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+}
+
+// Graph present but insufficient coverage should also fall back.
+{
+  const root = mk({
+    'package.json': '{"name":"api","main":"index.js","dependencies":{"express":"^4","passport":"^0.6"}}',
+    'src/server.js': 'const passport = require("passport");',
+    'docs/readme.txt': 'not source',
+  });
+  try {
+    writeGraph(root, [graphNode('docs', 'docs/**')]);
+    writeStateFingerprint(root);
+    const result = runMode(root);
+    assert(result.mode === 'fallback', 'expected fallback for insufficient graph coverage, got ' + result.mode);
+    ok('insufficient graph coverage falls back');
+  } catch (e) {
+    bad('insufficient graph coverage falls back', e.message);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+}
+
+// Graph with partial source coverage (non-zero srcCount) must also fall back.
+{
+  const root = mk({
+    'package.json': '{"name":"api","main":"index.js","dependencies":{"express":"^4"}}',
+    'src/main/server.js': 'console.log("ok");',
+    'src/hidden/auth.js': 'const passport = require("passport");',
+  });
+  try {
+    writeGraph(root, [graphNode('main', 'src/main/**')]);
+    writeStateFingerprint(root);
+    const result = runMode(root);
+    assert(result.mode === 'fallback', 'expected fallback for partial source coverage, got ' + result.mode);
+    ok('partial source coverage falls back');
+  } catch (e) {
+    bad('partial source coverage falls back', e.message);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+}
+
+// Foreign/no-graph root continues to behave like a normal external source root.
+{
+  const result = runMode(node);
+  if (result.mode === 'fallback') ok('foreign root without graph uses fallback scan');
+  else bad('foreign root without graph uses fallback scan', 'mode=' + result.mode);
+}
 
 // Unrecognised source → exit 3, primary.token null, never a crash.
 {
