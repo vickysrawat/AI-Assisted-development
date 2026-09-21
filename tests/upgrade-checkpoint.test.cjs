@@ -24,7 +24,8 @@ let pass = 0, fail = 0;
 
 function reset() { fs.rmSync(DIR, { recursive: true, force: true }); }
 function run(args) {
-  const r = spawnSync('node', [CP, ...args, `--file=${FILE}`, '--json'], { encoding: 'utf8' });
+  fs.mkdirSync(DIR, { recursive: true });
+  const r = spawnSync('node', [CP, ...args, `--file=${FILE}`, '--json'], { cwd: DIR, encoding: 'utf8' });
   let json = {};
   try { json = JSON.parse(r.stdout || '{}'); } catch (_) { /* leave empty → assertion fails */ }
   return { json, code: r.status };
@@ -52,10 +53,42 @@ const sp = run(['set-payload', '--ado=9000', '--baseline-tag=pre-upgrade/dotnet-
 assert('SET-PAYLOAD baseline tag merged', sp.json.payload?.baseline_tag === 'pre-upgrade/dotnet-6', JSON.stringify(sp.json.payload));
 assert('SET-PAYLOAD hops merged', JSON.stringify(sp.json.payload?.hops) === JSON.stringify(['7', '8']), JSON.stringify(sp.json.payload?.hops));
 
-// set-gate — records verdict + appends phase_history
+// report gate fail-closed: report=PASS before intake_context PASS must fail and not persist report gate
+const sgBlocked = run(['set-gate', '--ado=9000', '--gate=report', '--verdict=PASS', '--now=2026-09-08']);
+assert('SET-GATE report PASS blocked before intake verification (non-zero exit)', sgBlocked.code !== 0, `code=${sgBlocked.code}`);
+const blockedState = JSON.parse(fs.readFileSync(FILE, 'utf8'));
+assert('SET-GATE blocked attempt did not persist report=PASS',
+  blockedState.stage_gates?.report !== 'PASS' && !(blockedState.phase_history || []).some(p => p.phase === 'report' && p.verdict === 'PASS'),
+  JSON.stringify({ stage_gates: blockedState.stage_gates, phase_history: blockedState.phase_history }));
+
+// build a minimal intake_context PASS fixture that satisfies current check-gate for upgrade
+fs.mkdirSync(path.join(DIR, 'src'), { recursive: true });
+fs.writeFileSync(path.join(DIR, 'src', 'app.js'), 'line1\nline2\n');
+fs.writeFileSync(path.join(DIR, 'manifest-upgrade.md'), `# Source Context Manifest
+Root: ${DIR}
+
+## Source coverage
+| Source module | Disposition | Reason | PROV |
+| sample | mapped | representative citation | src/app.js#L1 |
+
+## Cross-cutting concern scan
+none — no delta for this upgrade.
+`);
+const seeded = JSON.parse(fs.readFileSync(FILE, 'utf8'));
+seeded.stage_gates = { ...(seeded.stage_gates || {}), intake_context: 'PASS' };
+seeded.source_context = {
+  manifest_path: path.join(DIR, 'manifest-upgrade.md'),
+  roots_expected: [DIR],
+  modules_mapped: 0,
+  modules_out_of_scope: 0,
+  skill: 'upgrade',
+};
+fs.writeFileSync(FILE, JSON.stringify(seeded, null, 2));
+
+// set-gate succeeds after valid intake_context setup and keeps phase_history behavior
 const sg = run(['set-gate', '--ado=9000', '--gate=report', '--verdict=PASS', '--now=2026-09-08']);
-assert('SET-GATE verdict recorded', sg.json.checkpoint?.stage_gates?.report === 'PASS', JSON.stringify(sg.json.checkpoint?.stage_gates));
-assert('SET-GATE phase_history appended', (sg.json.checkpoint?.phase_history || []).some(p => p.phase === 'report' && p.verdict === 'PASS'),
+assert('SET-GATE verdict recorded after intake PASS', sg.code === 0 && sg.json.checkpoint?.stage_gates?.report === 'PASS', `code=${sg.code} ${JSON.stringify(sg.json.checkpoint?.stage_gates)}`);
+assert('SET-GATE phase_history appended after intake PASS', (sg.json.checkpoint?.phase_history || []).some(p => p.phase === 'report' && p.verdict === 'PASS'),
   JSON.stringify(sg.json.checkpoint?.phase_history));
 
 // MERGE-WRITE — a foreign field injected by another writer must survive a later set-gate

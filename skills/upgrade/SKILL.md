@@ -176,6 +176,14 @@ node "$PLUGIN_DIR/scripts/intake-verify.cjs" verify --manifest=docs/migrations/{
 ```
 Exit 0 → record `stage_gates.intake_context=PASS` + `core.source_context`. Exit 2–9 → **STOP** and
 resolve. The gap/risk report (Step 4) cannot be gated PASS until this is done — see Step 8.
+**Authoritative fail-closed check before Step 4 readiness/prompt.** After recording
+`intake_context=PASS` and before presenting the report as ready (or showing the APPROVE REPORT gate),
+re-validate from the ledger:
+```bash
+node "$PLUGIN_DIR/scripts/intake-verify.cjs" check-gate --ado={ADO} --json
+```
+If this exits non-zero, **STOP** and do not present the report-ready/approval prompt. Intake must pass
+first with a re-validatable manifest-backed `source_context`.
 2. **Ground on miss/stale.** Use WebSearch to find the change from an **authoritative** source
    (official migration guide / release notes / deprecation list). Never source a breaking-change
    claim from model memory.
@@ -300,11 +308,12 @@ node "$PLUGIN_DIR/scripts/upgrade-checkpoint.cjs" init --ado=<ID> --stack=<token
 node "$PLUGIN_DIR/scripts/upgrade-checkpoint.cjs" set-gate --ado=<ID> --gate=<report|verify> --verdict=<PASS|REVISE|BLOCK>
 ```
 
-**Intake gate precondition on the report gate (fail-closed — upgrade's chain point).** Because the
-Gap+Risk report is LLM-authored (no downstream script like rewrite's `decompose` to hard-refuse),
-the `report` gate is where intake is enforced: BEFORE recording `--gate=report --verdict=PASS`, run
-`intake-verify.cjs check-gate --ado=<ID>` — if it exits non-zero, the report gate **cannot** be
-recorded PASS. This makes the headline deliverable impossible to produce on unread source.
+**Intake gate precondition on the report gate (fail-closed — upgrade's chain point).** The
+authoritative normal-path check runs in Step 3 (before Step 4 readiness/prompt). Keep this Step 8
+guard as belt-and-suspenders and as checkpoint-level protection for direct/manual gate calls:
+BEFORE recording `--gate=report --verdict=PASS`, run `intake-verify.cjs check-gate --ado=<ID>` — if
+it exits non-zero, the report gate **cannot** be recorded PASS. This blocks bypasses outside the
+normal workflow.
 
 The ledger is a single-writer, **merge-write** contract (never clobbers fields it does not own), so
 the run is resumable and safe to hand off. As of Story 2 the judge and checkpoint are the **shared
@@ -333,9 +342,11 @@ upgrade is not gated on test plan generation.
 
 ## Hard Rules
 
-- NEVER record the `report` gate PASS before the **source-context intake gate** is PASS — the report
-  gate calls `intake-verify.cjs check-gate` (upgrade's fail-closed chain point, since the report is
-  LLM-authored). The Source Context Manifest must fully account for every `graph.json` module.
+- NEVER present Step 4 report-ready/approval prompts until `intake-verify.cjs check-gate --ado=<ID>`
+  passes in Step 3 (authoritative normal-path fail-closed check).
+- NEVER record the `report` gate PASS before the **source-context intake gate** is PASS — Step 8 keeps
+  a checkpoint-level `check-gate` guard so direct/manual calls cannot bypass intake. The Source Context
+  Manifest must fully account for every `graph.json` module.
 - NEVER accept `PARTIAL`/`unknown` when the resolving source is reachable in a configured root —
   resolve it at intake (exit 5), never defer.
 - NEVER hand-author the bulk transform of working code — drive the deterministic tool.

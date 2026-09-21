@@ -1,7 +1,7 @@
 # Migration Family Audit — Findings Tracker
 
-**Status: Open**
-_Change to **In-Progress** when the first item below moves to In Progress. Change to **Implemented** when all items are Done._
+**Status: In-Progress**
+_Change to **Implemented** when all items are Done._
 
 _Second-pass technical review incorporated 2026-09-21. Items A12–A22, B5–B10, and Category C are from this review; A1–A11 and B1–B4 are from the original audit._
 
@@ -43,7 +43,7 @@ Once approved, create the required ICEA where applicable, implement the change, 
 
 | ID | Severity | Status | Short description | First action | Effort |
 |---|---|---|---|---|---:|
-| A1 | P0 | Open | Upgrade intake gate is checked too late; manual report gate can bypass it | ICEA for Upgrade Step 3 hardening | ~2 SP |
+| A1 | P0 | Done | Upgrade intake gate is checked too late; manual report gate can bypass it | ICEA for Upgrade Step 3 hardening | ~2 SP |
 | A2 | P0 | Open | Missing/corrupt checkpoint JSON is not surfaced clearly at resume | Add resume preflight and gate script calls until init | ~2 SP |
 | A3 | P0 | Open | Rewrite allows concurrent checkpoint writes under multi-session access | Add exclusive checkpoint lock; superseded by stronger A21 design if adopted | ~3 SP |
 | A4 | P1 | Open | Tracker updates are advisory and not verified before phase advance | Validate tracker Next action at phase start | ~1 SP |
@@ -70,11 +70,30 @@ Once approved, create the required ICEA where applicable, implement the change, 
 
 **Skill:** `upgrade/SKILL.md`
 
-**What fails:** The intake verification check fires at Step 8, not at Step 3 output. A developer who manually calls `set-gate --gate=report --verdict=PASS` can bypass the check before the report is produced.
+**Status:** Done
 
-**Fix:** Add a hard block at the end of Step 3 output. The Step 8 check remains a belt-and-suspenders confirmation.
+**What failed:** The intake verification check was described at Step 8, so the normal report-ready path in Step 3/Step 4 was not explicitly fail-closed before presenting report approval/ready prompts.
 
-**First action:** `/icea-feature` for Upgrade Step 3 hardening.
+**Approved solution implemented:**
+- Add an explicit Step 3 authoritative fail-closed check before Step 4 readiness/approval prompt:
+  - `node "$PLUGIN_DIR/scripts/intake-verify.cjs" check-gate --ado={ADO} --json`
+  - If non-zero: stop and do not present report-ready / APPROVE REPORT prompt.
+- Keep Step 8 guard and hard rule as checkpoint-level belt-and-suspenders enforcement for direct/manual calls (`upgrade-checkpoint.cjs set-gate/set-payload` report PASS path).
+
+**Residual risks (explicit):**
+- Broader shared state-machine enforcement remains deferred to **C2/C3**.
+- `check-gate` implementation divergence remains subject to **A15** until verify/check-gate unification.
+- Unknown CLI flag handling remains **A13**.
+
+**Verification evidence:**
+- Focused test updated to assert fail-closed behavior before intake PASS and success after valid intake setup:
+  - `tests/upgrade-checkpoint.test.cjs`
+- Executed: `node tests/upgrade-checkpoint.test.cjs`
+  - Result: `15 passed · 0 failed`.
+- Implementation files:
+  - `skills/upgrade/SKILL.md`
+  - `tests/upgrade-checkpoint.test.cjs`
+- Implementation commit reference: _pending (working tree changes on branch `MigrationFamilyIssues`)_.
 
 ### A2 — Checkpoint JSON corruption not surfaced at resume
 
@@ -329,6 +348,18 @@ Validate gate names against per-skill registries and verdicts against `PASS | RE
 ### C4 — Test-plan generation failure is non-blocking
 
 Completion should say `PASS WITH TEST-PLAN GAP` when absent. For B-series, regulated, financial, healthcare, and production migrations, missing test plans should block completion.
+
+### Follow-up (deferred) — C2/C3 shared state-machine enforcement
+
+**Status:** Deferred (not implemented in A1 scope)
+
+**Deferred scope to generalize centrally across migration family:**
+- Gate preconditions (e.g., intake PASS required before report PASS).
+- Per-skill gate registries (allowed gate names).
+- Verdict validation (`PASS | REVISE | BLOCK | NOT_STARTED` and skill-specific constraints).
+- Legal state transitions for resume/advance paths.
+
+**Reason deferred now:** A1 is scoped to fail-closed hardening for Upgrade Step 3 and checkpoint-level report PASS protection only; shared ledger/state-machine design work remains tracked under C2/C3.
 
 ---
 
