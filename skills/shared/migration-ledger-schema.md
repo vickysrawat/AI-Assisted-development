@@ -85,10 +85,11 @@ Library API (`require`): `coreEnvelope`, `load`, `save`, `normalize`, `ensurePay
 
 | Op | Effect |
 |---|---|
-| `init --skill --ado` | create the ledger if absent (idempotent) |
+| `init --skill --ado` | create the ledger if absent (idempotent); never overwrites or silently repairs an invalid file |
 | `get --skill --ado` | read it (exit 7 if absent) |
+| `validate --skill --ado` | fail-closed resume preflight — confirms the file exists, parses, matches the shared top-level shape, and belongs to the requested ADO/skill |
 | `set-gate --skill --gate --verdict` | record a stage-gate verdict + append `phase_history` (merge-write) |
-| `set-payload --skill --key/--value \| --payload-json` | merge into `payload.<skill>` (merge-write) |
+| `set-payload --skill --key/--value \| --payload-json` | merge into `payload.<skill>` (merge-write); rejects missing/invalid ledgers instead of auto-initializing |
 
 A skill MAY wrap the generic CLI with a skill-specific adapter that seeds its payload skeleton and maps
 its own flags — e.g. `scripts/upgrade-checkpoint.cjs` (preserves the Story-1 upgrade CLI + on-disk
@@ -150,12 +151,16 @@ skill reads ONLY its own `payload.<skill>` (other payloads opaque). Always end w
 
 ### Resume (`UPGRADE|REWRITE|REPLATFORM RESUME ADO-{ID}`)
 Resume = orient, then continue — uniform for all three skills:
-1. Run **Status** (above) first — load the ledger, identify the first unfinished stage/gate.
-2. Hand to the invoking skill, which continues at that stage per its own stage flow.
-3. Any state change is written via `checkpoint-ledger.cjs set-gate / set-payload` (skew-safe merge-write).
-Read-only orientation first; only the continuation writes. Missing ledger → tell the user to start
-(`UPGRADE|REWRITE|REPLATFORM ADO-{ID}`). A skill continues from ONLY its own `payload.<skill>`.
-If the tracker file exists but the checkpoint JSON is missing (e.g. git-ignored file was lost after context overflow): the tracker file is sufficient to resume — read it, orient from its "Next action", and continue without the checkpoint JSON. Recreate the checkpoint JSON via `checkpoint-ledger.cjs init` before running any scripts that require it.
+1. Run `checkpoint-ledger.cjs validate --skill=<skill> --ado=<ADO>` first. Missing, empty, malformed,
+   wrong-ADO, wrong-skill, or invalid-shape ledgers are a **hard stop**: surface the validator's
+   remediation message, make no writes, and never auto-reinitialize the file.
+2. Run **Status** (above) — load the validated ledger, identify the first unfinished stage/gate.
+3. Hand to the invoking skill, which continues at that stage per its own stage flow.
+4. Any state change is written via `checkpoint-ledger.cjs set-gate / set-payload` (skew-safe merge-write).
+Read-only orientation first; only the continuation writes. Missing or invalid ledger → stop with the
+validator output and require an explicit recovery decision. A skill continues from ONLY its own
+`payload.<skill>`. The tracker may help the developer recover context, but it is **not** authority to
+silently recreate or repair the checkpoint ledger.
 
 ## Governance (bundled standalone)
 

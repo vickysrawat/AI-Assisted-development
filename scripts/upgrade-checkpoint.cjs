@@ -6,7 +6,7 @@
 //                      (--baseline-tag, --hops, --gate/--verdict) onto the shared core + the
 //                      `payload.upgrade` namespace, preserving the EXACT on-disk shape + CLI that
 //                      Story 1 shipped (the unchanged upgrade-checkpoint.test.cjs is the
-//                      behavior-preservation proof). Ops: init | get | set-gate | set-payload.
+//                      behavior-preservation proof). Ops: init | get | validate | set-gate | set-payload.
 // What it touches:     Reads/writes ONE JSON checkpoint (default
 //                      .claude/migration/<ado>.checkpoint.json, override with --file) via the shared
 //                      ledger library. Nothing else.
@@ -17,6 +17,7 @@
 // How to verify:       node tests/upgrade-checkpoint.test.cjs  -> "N passed · 0 failed" (unchanged).
 
 'use strict';
+const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const ledger = require('./checkpoint-ledger.cjs');
@@ -73,23 +74,29 @@ if (require.main === module) {
   try {
     let result, exit = 0;
     if (OP === 'init') {
-      const existing = ledger.load(FILE);
-      if (existing) result = { op: 'init', status: 'exists', file: FILE, checkpoint: existing };
-      else { const cp = freshWithPayload(); ledger.save(FILE, cp); result = { op: 'init', status: 'created', file: FILE, checkpoint: cp }; }
+      if (fs.existsSync(FILE)) {
+        const existing = ledger.loadValidated(FILE, { expectedAdo: ADO || undefined });
+        result = { op: 'init', status: 'exists', file: FILE, checkpoint: existing };
+      } else { const cp = freshWithPayload(); ledger.save(FILE, cp); result = { op: 'init', status: 'created', file: FILE, checkpoint: cp }; }
     } else if (OP === 'get') {
-      const cp = ledger.load(FILE);
-      if (!cp) { result = { op: 'get', status: 'absent', file: FILE }; exit = 7; }
-      else result = { op: 'get', status: 'ok', file: FILE, checkpoint: cp };
+      if (!fs.existsSync(FILE)) { result = { op: 'get', status: 'absent', file: FILE }; exit = 7; }
+      else {
+        const cp = ledger.loadValidated(FILE, { expectedSkill: SKILL, expectedAdo: ADO || undefined });
+        result = { op: 'get', status: 'ok', file: FILE, checkpoint: cp };
+      }
+    } else if (OP === 'validate') {
+      const cp = ledger.loadValidated(FILE, { expectedSkill: SKILL, expectedAdo: ADO || undefined });
+      result = { op: 'validate', status: 'ok', file: FILE, checkpoint: cp };
     } else if (OP === 'set-gate') {
       const gate = arg('gate'), verdict = arg('verdict');
       if (!gate || !verdict) throw new Error('set-gate requires --gate=<name> and --verdict=<PASS|REVISE|BLOCK|approved>');
       if (gate === 'report' && verdict === 'PASS') requireIntakeForReportPass(FILE, ADO);
-      const cp = ledger.setGate(ledger.load(FILE) || freshWithPayload(), SKILL, gate, verdict, NOW);
+      const cp = ledger.setGate(ledger.loadValidated(FILE, { expectedSkill: SKILL, expectedAdo: ADO || undefined }), SKILL, gate, verdict, NOW);
       ledger.ensurePayload(cp, SKILL, SKELETON());
       ledger.save(FILE, cp);
       result = { op: 'set-gate', status: 'ok', file: FILE, gate, verdict, checkpoint: cp };
     } else if (OP === 'set-payload') {
-      const cp = ledger.load(FILE) || freshWithPayload();
+      const cp = ledger.loadValidated(FILE, { expectedSkill: SKILL, expectedAdo: ADO || undefined });
       ledger.ensurePayload(cp, SKILL, SKELETON());
       const patch = {};
       if (arg('baseline-tag') !== undefined) patch.baseline_tag = arg('baseline-tag');
@@ -100,7 +107,7 @@ if (require.main === module) {
       else ledger.save(FILE, cp);
       result = { op: 'set-payload', status: 'ok', file: FILE, payload: cp.payload.upgrade, checkpoint: cp };
     } else {
-      process.stderr.write('usage: upgrade-checkpoint.cjs <init|get|set-gate|set-payload> --ado=<id> [--stack --from --to] [--gate --verdict] [--baseline-tag --hops] [--file --now]\n');
+      process.stderr.write('usage: upgrade-checkpoint.cjs <init|get|validate|set-gate|set-payload> --ado=<id> [--stack --from --to] [--gate --verdict] [--baseline-tag --hops] [--file --now]\n');
       process.exit(1);
     }
     if (JSON_OUT) process.stdout.write(JSON.stringify(result, null, 2) + '\n');
@@ -110,5 +117,9 @@ if (require.main === module) {
       process.stdout.write(lines.join('\n') + '\n');
     }
     process.exit(exit);
-  } catch (e) { process.stderr.write(`error: ${e.message}\n`); process.exit(1); }
+  } catch (e) {
+    if (e.validation && JSON_OUT) process.stdout.write(JSON.stringify({ op: OP || null, ...e.validation }, null, 2) + '\n');
+    else process.stderr.write(`${e.validation ? '' : 'error: '}${e.message}\n`);
+    process.exit(1);
+  }
 }

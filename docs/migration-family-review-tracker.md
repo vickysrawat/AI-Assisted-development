@@ -44,7 +44,7 @@ Once approved, create the required ICEA where applicable, implement the change, 
 | ID | Severity | Status | Short description | First action | Effort |
 |---|---|---|---|---|---:|
 | A1 | P0 | Open | Upgrade intake gate is checked too late; manual report gate can bypass it | ICEA for Upgrade Step 3 hardening | ~2 SP |
-| A2 | P0 | Open | Missing/corrupt checkpoint JSON is not surfaced clearly at resume | Add resume preflight and gate script calls until init | ~2 SP |
+| A2 | P0 | Done | Missing/corrupt checkpoint JSON is not surfaced clearly at resume | Add resume preflight and gate script calls until init | ~2 SP |
 | A3 | P0 | Open | Rewrite allows concurrent checkpoint writes under multi-session access | Add exclusive checkpoint lock; superseded by stronger A21 design if adopted | ~3 SP |
 | A4 | P1 | Open | Tracker updates are advisory and not verified before phase advance | Validate tracker Next action at phase start | ~1 SP |
 | A5 | P1 | Open | Migration log initialization is not read-back verified before append | Verify expected file/header immediately after write | ~1 SP |
@@ -417,3 +417,20 @@ Use this template for the active item:
 - **Implementation PR/commit:**
 - **Verification evidence:**
 - **Date completed:**
+
+### Review record — A2
+
+- **Status:** Done
+- **Issue:** Resume-capable migration scripts accepted missing, empty, malformed, or structurally invalid ledgers too late; some write paths also silently recreated a ledger instead of failing closed.
+- **Impact if unresolved:** Resume could proceed with false confidence, later scripts could crash generically, and a missing/broken ledger could be silently replaced with a new file that lost recoverable history.
+- **Tradeoffs:** Fail-closed validation adds an explicit recovery step, but it prevents hidden state drift and preserves the distinction between fresh start and recovery.
+- **Solution options:** Prompt-only warnings were rejected because direct script calls could still bypass them. Automatic re-init was rejected because it can discard gate history. A deterministic shared validator with explicit remediation was chosen.
+- **Agreed solution:** Add `checkpoint-ledger.cjs validate` plus shared fail-closed shape/ADO/skill checks, surface reason-driven JSON + human-readable remediation, and make shared/upgrade mutation entry points reject missing or invalid ledgers instead of auto-initializing.
+- **Residual issue after resolution:** A2 now blocks bad resume state deterministically, but it does not address concurrent writers or atomic revision safety from A3/A21.
+- **Verification plan:** Cover missing, empty, malformed, invalid-shape, wrong-ADO, wrong-skill, valid-ledger, and no-auto-reinit write attempts in focused ledger tests.
+- **Discussion notes:** The validator uses a single reason-driven remediation table so JSON and human-readable outputs stay consistent across Upgrade, Rewrite, and Replatform entry points.
+- **Approval:** Approved in chat before implementation; deterministic validator requested over prompt-only guidance.
+- **ICEA:** Not created in this branch context.
+- **Implementation PR/commit:** MigrationFamilyIssues branch — shared ledger validator + fail-closed checkpoint writes.
+- **Verification evidence:** `node tests/checkpoint-ledger.test.cjs` → `17 passed · 0 failed`; `node tests/upgrade-checkpoint.test.cjs` → `16 passed · 0 failed`.
+- **Date completed:** 2026-09-21
