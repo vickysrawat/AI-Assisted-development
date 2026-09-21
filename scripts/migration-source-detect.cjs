@@ -216,41 +216,26 @@ function scanRoot(root) {
   return scanPaths([root], []);
 }
 
-function hasSourceOutsideScanRoots(root, scanRoots) {
+function inspectScanRootCoverage(root, scanRoots) {
   const coveredAbs = uniqueScanRoots(scanRoots || []).map(r => path.resolve(r));
-  let outside = false;
-  walk(path.resolve(root), full => {
-    if (outside) return;
-    const ext = path.extname(full).toLowerCase();
-    if (!SRC_EXTS.includes(ext)) return;
-    const abs = path.resolve(full);
-    if (!coveredAbs.some(base => isWithin(base, abs))) outside = true;
-  });
-  return outside;
-}
-
-function hasSignalOutsideScanRoots(root, scanRoots) {
-  const coveredAbs = uniqueScanRoots(scanRoots || []).map(r => path.resolve(r));
-  let outside = false;
+  let hasOutsideSource = false;
+  let hasOutsideSignal = false;
+  const extraFiles = [];
   walk(path.resolve(root), (full, name) => {
-    if (outside) return;
-    if (!isSignalFileName(name)) return;
     const abs = path.resolve(full);
-    if (!coveredAbs.some(base => isWithin(base, abs))) outside = true;
+    const covered = coveredAbs.some(base => isWithin(base, abs));
+    const ext = path.extname(abs).toLowerCase();
+    if (!covered && SRC_EXTS.includes(ext)) hasOutsideSource = true;
+    if (!covered && isSignalFileName(name)) {
+      hasOutsideSignal = true;
+      extraFiles.push(abs);
+    }
   });
-  return outside;
-}
-
-function collectNestedSignalFiles(root, scanRoots) {
-  const coveredAbs = uniqueScanRoots(scanRoots || []).map(r => path.resolve(r));
-  const files = [];
-  walk(path.resolve(root), (full, name) => {
-    if (!isSignalFileName(name)) return;
-    const abs = path.resolve(full);
-    if (coveredAbs.some(base => isWithin(base, abs))) return;
-    files.push(abs);
-  });
-  return [...new Set(files)];
+  return {
+    hasOutsideSource,
+    hasOutsideSignal,
+    extraFiles: [...new Set(extraFiles)],
+  };
 }
 
 function readStoredBuildfileFingerprint(root) {
@@ -291,9 +276,10 @@ function graphScanContext(root, detectMeta) {
   if (localRoots.length === 0) return null;
 
   const scanRoots = uniqueScanRoots(localRoots);
+  const coverage = inspectScanRootCoverage(rootAbs, scanRoots);
   return {
     scanRoots,
-    extraFiles: collectNestedSignalFiles(rootAbs, scanRoots),
+    coverage,
   };
 }
 
@@ -303,14 +289,14 @@ function scanRootWithGraphFastPath(root, detectMeta, tokens) {
 
   const rootAbs = path.resolve(root);
   const alreadyFullRoot = graph.scanRoots.some(r => path.resolve(r) === rootAbs);
-  if (!alreadyFullRoot && hasSourceOutsideScanRoots(rootAbs, graph.scanRoots)) {
+  if (!alreadyFullRoot && graph.coverage.hasOutsideSource) {
     return { mode: 'fallback', scan: scanRoot(root) };
   }
-  if (!alreadyFullRoot && hasSignalOutsideScanRoots(rootAbs, graph.scanRoots)) {
+  if (!alreadyFullRoot && graph.coverage.hasOutsideSignal) {
     return { mode: 'fallback', scan: scanRoot(root) };
   }
 
-  const scan = scanPaths(graph.scanRoots, graph.extraFiles);
+  const scan = scanPaths(graph.scanRoots, graph.coverage.extraFiles);
   if ((tokens || []).length > 0 && scan.srcCount === 0) {
     return { mode: 'fallback', scan: alreadyFullRoot ? scan : scanRoot(root) };
   }
@@ -416,8 +402,7 @@ module.exports = {
   createDescriptor,
   detectStack,
   graphScanContext,
-  hasSignalOutsideScanRoots,
-  hasSourceOutsideScanRoots,
+  inspectScanRootCoverage,
   main,
   parseArgs,
   scanPaths,
