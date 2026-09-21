@@ -147,11 +147,12 @@ existing consumers that do not read it are unaffected and `meta.schemaVersion` s
 
 **`EXTRACTED` edges are produced deterministically by `scripts/graph-extract-edges.js`**
 (ADR 0041) —
-it parses imports/usings/requires/ProjectReferences locally (Node stdlib, offline), resolves
-each to the owning module, and rewrites only the `EXTRACTED` edges (preserving model-authored
-`INFERRED`/`AMBIGUOUS`, upgrading a matching pair when source confirms it, dropping stale/
-dangling). It never touches `nodes` or `fingerprint`s. `architect`/`graph-sync` run it after
-writing nodes; the model authors only `INFERRED`/`AMBIGUOUS` edges. Never hand-write `EXTRACTED`.
+it parses a supported, best-effort subset of imports/usings/requires/ProjectReferences locally
+(Node stdlib, offline), resolves parser-confirmed matches to the owning module, and rewrites only
+the `EXTRACTED` edges (preserving model-authored `INFERRED`/`AMBIGUOUS`, upgrading a matching
+pair when source confirms it, dropping stale/dangling). It never touches `nodes` or
+`fingerprint`s. `architect`/`graph-sync` run it after writing nodes; the model authors only
+`INFERRED`/`AMBIGUOUS` edges. Never hand-write `EXTRACTED`.
 
 ---
 
