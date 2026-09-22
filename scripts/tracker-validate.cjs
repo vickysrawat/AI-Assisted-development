@@ -168,8 +168,11 @@ function trackerRepoRoot(trackerFile, repoRoot) {
   if (relativeParts[0]?.toLowerCase() !== 'docs' || relativeParts[1]?.toLowerCase() !== 'migrations') {
     return null;
   }
+  if (!/^ado-/i.test(relativeParts[2] || '') || relativeParts.length !== 4) {
+    return null;
+  }
 
-  for (let index = 2; index < relativeParts.length - 1; index += 1) {
+  for (let index = 3; index < relativeParts.length - 1; index += 1) {
     if (relativeParts[index].toLowerCase() === 'docs' && relativeParts[index + 1]?.toLowerCase() === 'migrations') {
       return null;
     }

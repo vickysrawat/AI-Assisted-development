@@ -346,6 +346,14 @@ if (trackerRepoRoot(scratchAnchoredTracker, repo) !== null) {
 }
 console.log('✓ tracker anchors must start at the repository docs/migrations root');
 
+const nestedSubdirTracker = path.join(repo, 'docs', 'migrations', 'ADO-9000', 'subdir', 'migration-tracker.md');
+if (trackerRepoRoot(nestedSubdirTracker, repo) !== null) {
+  console.log('✗ tracker files nested below the ADO directory should be rejected');
+  console.log(trackerRepoRoot(nestedSubdirTracker, repo));
+  process.exit(1);
+}
+console.log('✓ tracker files nested below the ADO directory are rejected');
+
 const nestedTracker = path.join(repo, 'docs', 'migrations', 'ADO-9000', 'docs', 'migrations', 'migration-tracker.md');
 if (trackerRepoRoot(nestedTracker, repo) !== null) {
   console.log('✗ nested docs/migrations tracker paths should be rejected');
