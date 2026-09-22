@@ -165,7 +165,7 @@ function parseTracker(filePath) {
 function trackerRepoRoot(trackerFile) {
   const absolute = path.resolve(trackerFile);
   const parsed = path.parse(absolute);
-  const relativeParts = absolute.slice(parsed.root.length).split(path.sep).filter(Boolean);
+  const relativeParts = absolute.slice(parsed.root.length).replace(/[\\/]+/g, '/').split('/').filter(Boolean);
   for (let index = 0; index < relativeParts.length - 1; index += 1) {
     if (relativeParts[index] === 'docs' && relativeParts[index + 1] === 'migrations') {
       return path.join(parsed.root, ...relativeParts.slice(0, index));
@@ -178,7 +178,12 @@ function resolveArtifactPath(trackerFile, ref, options = {}) {
   const rawRef = String(ref || '');
   const normalizedRef = rawRef.replace(/[\\/]+/g, path.sep);
   if (path.isAbsolute(normalizedRef) || /^[A-Za-z]:[\\/]/.test(rawRef)) return normalizedRef;
-  if (options.repoRootRelative || /[\\/]/.test(rawRef)) {
+  if (options.repoRootRelative) {
+    return /[\\/]/.test(rawRef)
+      ? path.resolve(trackerRepoRoot(trackerFile), normalizedRef)
+      : path.resolve(path.dirname(trackerFile), normalizedRef);
+  }
+  if (/[\\/]/.test(rawRef)) {
     return path.resolve(trackerRepoRoot(trackerFile), normalizedRef);
   }
   return path.resolve(path.dirname(trackerFile), normalizedRef);
