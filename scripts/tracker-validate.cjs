@@ -43,24 +43,34 @@ function splitMarkdownRow(line) {
   return line.split('|').slice(1, -1).map(cell => cell.trim());
 }
 
-function parseMarkdownTable(section) {
-  if (!section) return [];
-  return section
+function parseMarkdownTable(section, expectedHeaders) {
+  if (!section) return { ok: false, rows: [] };
+
+  const rows = section
     .split(/\r?\n/)
     .map(line => line.trim())
     .filter(line => line.startsWith('|'))
     .map(splitMarkdownRow)
-    .filter(cells => cells.length > 0)
-    .filter(cells => !cells.every(cell => /^:?-{2,}:?$/.test(cell)));
+    .filter(cells => cells.length > 0);
+
+  if (rows.length < 2) return { ok: false, rows: [] };
+
+  const header = rows[0].map(normalizeText);
+  const normalizedExpected = (expectedHeaders || []).map(normalizeText);
+  if (normalizedExpected.length && normalizedExpected.join('|') != header.join('|')) {
+    return { ok: false, rows: [] };
+  }
+
+  const dataStart = rows[1].every(cell => /^:?-{2,}:?$/.test(cell)) ? 2 : 1;
+  return { ok: true, rows: rows.slice(dataStart) };
 }
 
-function extractRefs(text) {
+function extractDelimitedRefs(text) {
   const refs = new Set();
-  const pattern = /(?:\.\.?[\\/]|[\\/])?(?:[A-Za-z0-9_.-]+[\\/])+[A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)?/g;
-  for (const match of String(text || '').matchAll(pattern)) {
-    const value = match[0];
-    if (/^https?:\/\//i.test(value)) continue;
-    refs.add(value.replace(/^[`'"]|[`'"]$/g, ''));
+  for (const match of String(text || '').matchAll(/`([^`\r\n]+)`/g)) {
+    const value = match[1].trim();
+    if (!value || /^https?:\/\//i.test(value)) continue;
+    if (/[\\/]/.test(value) || /\.[A-Za-z0-9_.-]+$/.test(value)) refs.add(value);
   }
   return [...refs];
 }
@@ -71,8 +81,11 @@ function parseMarkdownTracker(text) {
   if (!header || !nextActionSection) return null;
   const nextAction = nextActionSection.split(/\r?\n\s*\r?\n/)[0].replace(/\s+/g, ' ').trim();
 
-  const phaseRows = parseMarkdownTable(extractSection(text, 'Phase and step status'))
-    .slice(1)
+  const phaseTable = parseMarkdownTable(extractSection(text, 'Phase and step status'), ['Phase', 'Step', 'Status', 'Artifact(s)']);
+  const artifactTable = parseMarkdownTable(extractSection(text, 'Committed artifacts'), ['Artifact', 'Path', 'Status']);
+  if (!phaseTable.ok || !artifactTable.ok) return null;
+
+  const phaseRows = phaseTable.rows
     .map(cells => ({
       phase: cells[0] || null,
       step: cells[1] || null,
@@ -80,8 +93,7 @@ function parseMarkdownTracker(text) {
       artifacts: cells[3] || null,
     }));
 
-  const artifacts = parseMarkdownTable(extractSection(text, 'Committed artifacts'))
-    .slice(1)
+  const artifacts = artifactTable.rows
     .map(cells => ({
       artifact: cells[0] || null,
       path: cells[1] || null,
@@ -96,7 +108,7 @@ function parseMarkdownTracker(text) {
     nextAction,
     phaseRows,
     artifacts,
-    refs: extractRefs(text),
+    refs: extractDelimitedRefs(text),
   };
 }
 
@@ -111,7 +123,7 @@ function parseLegacyTracker(text) {
     nextAction,
     phaseRows: [],
     artifacts: [],
-    refs: extractRefs(text),
+    refs: extractDelimitedRefs(text),
   };
 }
 
@@ -152,11 +164,11 @@ function trackerRepoRoot(trackerFile) {
   return path.dirname(path.resolve(trackerFile));
 }
 
-function resolveArtifactPath(trackerFile, ref) {
+function resolveArtifactPath(trackerFile, ref, options = {}) {
   const rawRef = String(ref || '');
   const normalizedRef = rawRef.replace(/[\\/]+/g, path.sep);
   if (path.isAbsolute(normalizedRef) || /^[A-Za-z]:[\\/]/.test(rawRef)) return normalizedRef;
-  if (/^(?:docs|memory|scripts|skills|tests|\.claude)(?:\\|\/)/.test(rawRef)) {
+  if (options.repoRootRelative || /[\\/]/.test(rawRef)) {
     return path.resolve(trackerRepoRoot(trackerFile), normalizedRef);
   }
   return path.resolve(path.dirname(trackerFile), normalizedRef);
@@ -168,11 +180,14 @@ function isWithinRepoRoot(root, target) {
 }
 
 function artifactRefs(tracker) {
-  const refs = new Set(tracker.refs || []);
+  const refs = [];
   for (const artifact of tracker.artifacts || []) {
-    if (artifact.path) refs.add(artifact.path);
+    if (artifact.path) refs.push({ value: artifact.path, repoRootRelative: true });
   }
-  return [...refs];
+  for (const ref of tracker.refs || []) {
+    refs.push({ value: ref, repoRootRelative: false });
+  }
+  return refs;
 }
 
 function getLatestLedgerPhase(ledger) {
@@ -286,13 +301,13 @@ function assertTrackerMatchesLedger(tracker, ledgerValidation, expectations = {}
 
   const repoRoot = trackerRepoRoot(tracker.file);
   for (const ref of artifactRefs(tracker)) {
-    const target = resolveArtifactPath(tracker.file, ref);
+    const target = resolveArtifactPath(tracker.file, ref.value, { repoRootRelative: ref.repoRootRelative });
     if (!isWithinRepoRoot(repoRoot, target)) {
       return {
         ok: false,
         exit: EXIT.MISSING_ARTIFACT,
         status: 'tracker-artifact-outside-repo',
-        reason: `Tracker references artifact outside the repository root '${ref}'.`,
+        reason: `Tracker references artifact outside the repository root '${ref.value}'.`,
       };
     }
     if (!fs.existsSync(target)) {
@@ -300,7 +315,7 @@ function assertTrackerMatchesLedger(tracker, ledgerValidation, expectations = {}
         ok: false,
         exit: EXIT.MISSING_ARTIFACT,
         status: 'tracker-artifact-missing',
-        reason: `Tracker references missing artifact '${ref}'.`,
+        reason: `Tracker references missing artifact '${ref.value}'.`,
       };
     }
   }
