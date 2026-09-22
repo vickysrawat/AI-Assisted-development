@@ -206,6 +206,23 @@ function humanizePhase(value) {
   return String(value || '').replace(/[_-]+/g, ' ');
 }
 
+const MACHINE_PHASE_STALE_HINTS = {
+  intake_context: ['0 — initialize', '1 — source analysis', 'source analysis'],
+  report: ['0 — initialize', '1 — source analysis', '1.5 — integration + oracle', 'integration + oracle', '2 — options', 'options', '2.5 — target design', 'target design'],
+  design_approved: ['0 — initialize', '1 — source analysis', '1.5 — integration + oracle', 'integration + oracle', '2 — options', 'options', '2.5 — target design', 'target design'],
+  verify: ['0 — initialize', '1 — source analysis', '1.5 — integration + oracle', 'integration + oracle', '2 — options', 'options', '2.5 — target design', 'target design', '3 — generation', 'generation', '4 — bal + erl', 'bal + erl', '5 — gates', 'gates'],
+};
+
+function machinePhaseKey(value) {
+  return normalizeText(humanizePhase(value)).replace(/\s+/g, '_');
+}
+
+function phaseLooksStaleForLedger(tracker, latestPhase) {
+  const hints = MACHINE_PHASE_STALE_HINTS[machinePhaseKey(latestPhase)] || [];
+  const currentPhase = normalizeText(`${tracker.phase || ''} ${tracker.step || ''}`);
+  return hints.some(hint => currentPhase.includes(normalizeText(hint)));
+}
+
 function shouldCheckLatestPhase(tracker, latestPhase) {
   const value = String(latestPhase || '');
   if (!value) return false;
@@ -284,19 +301,23 @@ function assertTrackerMatchesLedger(tracker, ledgerValidation, expectations = {}
   }
 
   const latestPhase = getLatestLedgerPhase(ledger);
-  if (
-    latestPhase &&
-    phaseText &&
-    shouldCheckLatestPhase(tracker, latestPhase) &&
-    !trackerMatchesLatestPhase(tracker, latestPhase) &&
-    !/resume|continue|next step/.test(phaseText)
-  ) {
-    return {
-      ok: false,
-      exit: EXIT.PHASE_MISMATCH,
-      status: 'tracker-phase-mismatch',
-      reason: `Tracker phase '${tracker.phase}' does not match latest ledger phase '${latestPhase}'.`,
-    };
+  if (latestPhase && phaseText && !/resume|continue|next step/.test(phaseText)) {
+    if (phaseLooksStaleForLedger(tracker, latestPhase)) {
+      return {
+        ok: false,
+        exit: EXIT.PHASE_MISMATCH,
+        status: 'tracker-phase-mismatch',
+        reason: `Tracker phase '${tracker.phase}' is stale for latest ledger phase '${latestPhase}'.`,
+      };
+    }
+    if (shouldCheckLatestPhase(tracker, latestPhase) && !trackerMatchesLatestPhase(tracker, latestPhase)) {
+      return {
+        ok: false,
+        exit: EXIT.PHASE_MISMATCH,
+        status: 'tracker-phase-mismatch',
+        reason: `Tracker phase '${tracker.phase}' does not match latest ledger phase '${latestPhase}'.`,
+      };
+    }
   }
 
   const repoRoot = trackerRepoRoot(tracker.file);

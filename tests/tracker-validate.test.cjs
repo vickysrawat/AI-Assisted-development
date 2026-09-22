@@ -152,6 +152,24 @@ console.log('✓ stale markdown phase is rejected');
 
 reset();
 writeLedger({
+  gates: { report: 'PASS' },
+  history: [{ phase: 'report', verdict: 'PASS', at: '2026-09-22' }],
+});
+writeTracker({
+  phase: '2 — Options',
+  step: 'Options file written — awaiting APPROVE OPTIONS',
+  nextAction: 'Run Step 2.5 target design documents.',
+});
+let staleMappedPhase = run(['--tracker=' + tracker, '--ledger=' + ledger]);
+if (staleMappedPhase.code !== 15) {
+  console.log('✗ machine-to-markdown phase drift was not rejected');
+  console.log(staleMappedPhase.stdout || staleMappedPhase.stderr);
+  process.exit(1);
+}
+console.log('✓ machine-to-markdown phase drift is rejected');
+
+reset();
+writeLedger({
   gates: { intake_context: 'PASS' },
   history: [{ phase: 'intake_context', verdict: 'PASS', at: '2026-09-22' }],
 });
