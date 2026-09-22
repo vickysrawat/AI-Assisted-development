@@ -206,33 +206,36 @@ function humanizePhase(value) {
   return String(value || '').replace(/[_-]+/g, ' ');
 }
 
-const MACHINE_PHASE_STALE_HINTS = {
-  intake_context: ['0 — initialize', '1 — source analysis', 'source analysis'],
-  report: ['0 — initialize', '1 — source analysis', '1.5 — integration + oracle', 'integration + oracle', '2 — options', 'options', '2.5 — target design', 'target design'],
-  design_approved: ['0 — initialize', '1 — source analysis', '1.5 — integration + oracle', 'integration + oracle', '2 — options', 'options', '2.5 — target design', 'target design'],
-  verify: ['0 — initialize', '1 — source analysis', '1.5 — integration + oracle', 'integration + oracle', '2 — options', 'options', '2.5 — target design', 'target design', '3 — generation', 'generation', '4 — bal + erl', 'bal + erl', '5 — gates', 'gates'],
+const LEDGER_PHASE_ORDER = {
+  intake_context: 1.5,
+  report: 4,
+  design_approved: 2.5,
+  verify: 6,
 };
 
 function machinePhaseKey(value) {
   return normalizeText(humanizePhase(value)).replace(/\s+/g, '_');
 }
 
-function phaseLooksStaleForLedger(tracker, latestPhase) {
-  const hints = MACHINE_PHASE_STALE_HINTS[machinePhaseKey(latestPhase)] || [];
-  const currentPhase = normalizeText(`${tracker.phase || ''} ${tracker.step || ''}`);
-  return hints.some(hint => currentPhase.includes(normalizeText(hint)));
+function trackerPhaseOrder(phase) {
+  const value = normalizeText(phase);
+  if (!value) return null;
+  if (value.includes('5a') || value.includes('test plans')) return 5.5;
+  if (value.includes('5') && value.includes('gates')) return 5;
+  if (value.includes('4') && (value.includes('bal') || value.includes('erl'))) return 4;
+  if (value.includes('3') && value.includes('generation')) return 3;
+  if (value.includes('2.5') || value.includes('2 5') || value.includes('target design')) return 2.5;
+  if (value.includes('2') && value.includes('options')) return 2;
+  if (value.includes('1.5') || value.includes('1 5') || value.includes('integration') || value.includes('oracle')) return 1.5;
+  if (value.includes('1') && value.includes('source analysis')) return 1;
+  if (value.includes('0') && value.includes('initialize')) return 0;
+  return null;
 }
 
-function shouldCheckLatestPhase(tracker, latestPhase) {
-  const value = String(latestPhase || '');
-  if (!value) return false;
-  if (tracker.format === 'legacy') return true;
-  if (/^\d/.test(value) || /—/.test(value)) return true;
-  const tokens = [normalizeText(value), normalizeText(humanizePhase(value))].filter(Boolean);
-  const fields = [tracker.phase, tracker.step, ...(tracker.phaseRows || []).flatMap(row => [row.phase, row.step])]
-    .map(normalizeText)
-    .filter(Boolean);
-  return fields.some(field => tokens.some(token => field.includes(token)));
+function ledgerPhaseOrder(value) {
+  const key = machinePhaseKey(value);
+  if (Object.prototype.hasOwnProperty.call(LEDGER_PHASE_ORDER, key)) return LEDGER_PHASE_ORDER[key];
+  return trackerPhaseOrder(value);
 }
 
 function trackerMatchesLatestPhase(tracker, latestPhase) {
@@ -308,7 +311,9 @@ function assertTrackerMatchesLedger(tracker, ledgerValidation, expectations = {}
 
   const latestPhase = getLatestLedgerPhase(ledger);
   if (latestPhase && phaseText && !/resume|continue|next step/.test(phaseText)) {
-    if (phaseLooksStaleForLedger(tracker, latestPhase)) {
+    const trackerOrder = trackerPhaseOrder(tracker.phase);
+    const latestOrder = ledgerPhaseOrder(latestPhase);
+    if (trackerOrder !== null && latestOrder !== null && trackerOrder < latestOrder) {
       return {
         ok: false,
         exit: EXIT.PHASE_MISMATCH,
@@ -316,7 +321,7 @@ function assertTrackerMatchesLedger(tracker, ledgerValidation, expectations = {}
         reason: `Tracker phase '${tracker.phase}' is stale for latest ledger phase '${latestPhase}'.`,
       };
     }
-    if (shouldCheckLatestPhase(tracker, latestPhase) && !trackerMatchesLatestPhase(tracker, latestPhase)) {
+    if (!trackerMatchesLatestPhase(tracker, latestPhase) && (trackerOrder === null || latestOrder === null)) {
       return {
         ok: false,
         exit: EXIT.PHASE_MISMATCH,
