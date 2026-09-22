@@ -34,7 +34,7 @@ function extractSection(text, heading) {
   if (!headerMatch) return null;
   const start = headerMatch.index + headerMatch[0].length;
   const rest = text.slice(start).replace(/^\r?\n/, '');
-  const terminatorMatch = rest.match(/\n##\s+|\n---\s*(?:\n|$)/);
+  const terminatorMatch = rest.match(/\r?\n##\s+|\r?\n---\s*(?:\r?\n|$)/);
   const section = terminatorMatch ? rest.slice(0, terminatorMatch.index) : rest;
   return section.trim() || null;
 }
@@ -56,7 +56,7 @@ function parseMarkdownTable(section) {
 
 function extractRefs(text) {
   const refs = new Set();
-  const pattern = /(?:\.\.?\/|\/?)(?:[A-Za-z0-9_.-]+\/)+[A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)?/g;
+  const pattern = /(?:\.\.?[\\/]|[\\/])?(?:[A-Za-z0-9_.-]+[\\/])+[A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)?/g;
   for (const match of String(text || '').matchAll(pattern)) {
     const value = match[0];
     if (/^https?:\/\//i.test(value)) continue;
@@ -152,10 +152,11 @@ function trackerRepoRoot(trackerFile) {
 }
 
 function resolveArtifactPath(trackerFile, ref) {
-  if (/^(?:docs|memory|scripts|skills|tests|\.claude)\//.test(ref)) {
-    return path.resolve(trackerRepoRoot(trackerFile), ref);
+  const normalizedRef = String(ref || '').replace(/[\\/]+/g, path.sep);
+  if (/^(?:docs|memory|scripts|skills|tests|\.claude)(?:\\|\/)/.test(ref)) {
+    return path.resolve(trackerRepoRoot(trackerFile), normalizedRef);
   }
-  return path.resolve(path.dirname(trackerFile), ref);
+  return path.resolve(path.dirname(trackerFile), normalizedRef);
 }
 
 function isWithinRepoRoot(root, target) {

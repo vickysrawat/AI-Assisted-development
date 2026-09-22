@@ -51,7 +51,7 @@ function writeLedger({ gates, history, skill = 'rewrite', ado = '9000' }) {
   }, null, 2));
 }
 
-function writeTracker({ phase, step, nextAction, optionStatus = '🔄 Awaiting approval', optionsPath = 'docs/migrations/ADO-9000/ADO-9000-options.md' }) {
+function writeTracker({ phase, step, nextAction, optionStatus = '🔄 Awaiting approval', optionsPath = 'docs/migrations/ADO-9000/ADO-9000-options.md', eol = '\n' }) {
   write(log, '# Migration log\n');
   write(options, '# Options\n');
   write(tracker, [
@@ -86,7 +86,7 @@ function writeTracker({ phase, step, nextAction, optionStatus = '🔄 Awaiting a
     nextAction,
     '',
     'To resume in a new session: type `REWRITE RESUME ADO-9000`.',
-  ].join('\n'));
+  ].join(eol));
 }
 
 reset();
@@ -197,6 +197,26 @@ if (outsideRepo.code !== 18) {
   process.exit(1);
 }
 console.log('✓ outside-repo artifact is rejected');
+
+reset();
+writeLedger({
+  gates: { intake_context: 'PASS' },
+  history: [{ phase: 'intake_context', verdict: 'PASS', at: '2026-09-22' }],
+});
+writeTracker({
+  phase: '2 — Options',
+  step: 'Options file written — awaiting APPROVE OPTIONS',
+  nextAction: 'Review docs\\migrations\\ADO-9000\\ADO-9000-options.md before resuming.',
+  optionsPath: 'docs\\migrations\\ADO-9000\\ADO-9000-options.md',
+  eol: '\r\n',
+});
+let windowsStyle = run(['--tracker=' + tracker, '--ledger=' + ledger]);
+if (windowsStyle.code !== 0) {
+  console.log('✗ CRLF tracker with Windows-style paths should pass');
+  console.log(windowsStyle.stdout || windowsStyle.stderr);
+  process.exit(1);
+}
+console.log('✓ CRLF tracker with Windows-style paths passes');
 
 reset();
 writeLedger({
