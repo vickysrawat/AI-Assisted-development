@@ -153,8 +153,10 @@ function trackerRepoRoot(trackerFile) {
 }
 
 function resolveArtifactPath(trackerFile, ref) {
-  const normalizedRef = String(ref || '').replace(/[\\/]+/g, path.sep);
-  if (/^(?:docs|memory|scripts|skills|tests|\.claude)(?:\\|\/)/.test(ref)) {
+  const rawRef = String(ref || '');
+  const normalizedRef = rawRef.replace(/[\\/]+/g, path.sep);
+  if (path.isAbsolute(normalizedRef) || /^[A-Za-z]:[\\/]/.test(rawRef)) return normalizedRef;
+  if (/^(?:docs|memory|scripts|skills|tests|\.claude)(?:\\|\/)/.test(rawRef)) {
     return path.resolve(trackerRepoRoot(trackerFile), normalizedRef);
   }
   return path.resolve(path.dirname(trackerFile), normalizedRef);
