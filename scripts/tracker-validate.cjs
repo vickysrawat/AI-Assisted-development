@@ -14,174 +14,89 @@ const EXIT = {
 };
 
 function arg(name) {
-  return process.argv.find(a => a.startsWith(`--${name}=`))?.split('=').slice(1).join('=') || null;
+  const value = process.argv.find(a => a.startsWith(`--${name}=`));
+  return value ? value.slice(`--${name}=`.length) : null;
 }
 
 function normalizeText(value) {
   return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ');
 }
 
-function readTracker(filePath) {
+function parseTracker(filePath) {
   if (!filePath || !fs.existsSync(filePath)) {
     return { status: 'missing', file: filePath || null, phase: null, nextAction: null, refs: [] };
   }
-
   const text = fs.readFileSync(filePath, 'utf8');
-  const lines = text.split(/\r?\n/);
-
-  const phase = (() => {
-    for (const line of lines) {
-      const m = line.match(/^(?:Phase|Current phase|Current Phase|State|Status)\s*:\s*(.+)$/i);
-      if (m) return m[1].trim();
-    }
-    return null;
-  })();
-
-  const nextAction = (() => {
-    for (const line of lines) {
-      const m = line.match(/^(?:Next action|Next Action|▶ Next|Next)\s*:\s*(.+)$/i);
-      if (m) return m[1].trim();
-    }
-    return null;
-  })();
-
+  const phase = text.match(/^(?:Phase|Current phase|State)\s*:\s*(.+)$/im)?.[1]?.trim() || null;
+  const nextAction = text.match(/^(?:Next action|Next)\s*:\s*(.+)$/im)?.[1]?.trim() || null;
   const refs = [];
-  for (const line of lines) {
-    const found = [...line.matchAll(/(?:\b(?:\.\.?\/|\/)?[A-Za-z0-9_./\\-]+\.[A-Za-z0-9_./\\-]+|\.\.\/|\.\/|(?:\.claude|docs|scripts|skills|tests|memory|contest|guides|commands|_project-deploy)[A-Za-z0-9_./\\-]*)/g)].map(m => m[0]);
-    if (found.length) refs.push(...found);
+  for (const line of text.split(/\r?\n/)) {
+    for (const match of line.matchAll(/(?:\.\.?\/|\/)?(?:[A-Za-z0-9_.-]+\/)*[A-Za-z0-9_.-]+\.[A-Za-z0-9_.-]+/g)) {
+      refs.push(match[0]);
+    }
   }
-
   return { status: 'ok', file: filePath, phase, nextAction, refs, text };
 }
 
-function readLedger(filePath) {
+function parseLedger(filePath) {
   if (!filePath || !fs.existsSync(filePath)) {
-    return { status: 'missing', file: filePath || null, stage_gates: {}, phase_history: [], skill: null };
+    return { status: 'missing', file: filePath || null, stage_gates: {}, phase_history: [] };
   }
-
   try {
     const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
     return {
-      status: 'ok',
-      file: filePath,
+      status: 'ok', file: filePath,
       stage_gates: parsed.stage_gates || {},
       phase_history: Array.isArray(parsed.phase_history) ? parsed.phase_history : [],
-      skill: parsed.skill || null,
-      ado_id: parsed.ado_id || null,
-      source: parsed.source || {},
-      payload: parsed.payload || {},
-      raw: parsed,
     };
   } catch (error) {
     return { status: 'invalid', file: filePath, error: error.message };
   }
 }
 
-function latestLedgerPhase(ledger) {
+function getLatestLedgerPhase(ledger) {
   const history = Array.isArray(ledger.phase_history) ? ledger.phase_history : [];
-  if (!history.length) return null;
-  const last = history[history.length - 1];
-  return last.phase || null;
+  return history.length ? history[history.length - 1]?.phase || null : null;
 }
 
-function findUnresolvedGate(ledger) {
-  const gates = ledger.stage_gates || {};
-  for (const [name, verdict] of Object.entries(gates)) {
-    if (verdict === 'REVISE' || verdict === 'BLOCK') return name;
+function getUnresolvedGate(ledger) {
+  for (const [name, verdict] of Object.entries(ledger.stage_gates || {})) {
+    if (['REVISE', 'BLOCK', 'PENDING', 'NOT_STARTED'].includes(String(verdict))) return name;
   }
   return null;
 }
 
-function isPhaseCompleteLabel(label) {
-  if (!label) return false;
-  const norm = normalizeText(label);
-  return /complete|done|finished|closed/.test(norm);
-}
+function assertTrackerMatchesLedger(tracker, ledger) {
+  if (tracker.status === 'missing') return { exit: EXIT.MISSING_TRACKER, ok: false, reason: 'Tracker file not found.' };
+  if (!tracker.phase && !tracker.nextAction) return { exit: EXIT.INVALID_TRACKER, ok: false, reason: 'Tracker is missing required Phase or Next action fields.' };
+  if (ledger.status === 'missing') return { exit: EXIT.INVALID_LEDGER, ok: false, reason: 'Ledger file is missing.' };
+  if (ledger.status === 'invalid') return { exit: EXIT.INVALID_LEDGER, ok: false, reason: `Ledger parse failed: ${ledger.error}` };
 
-function hasIncompleteGate(ledger) {
-  const gates = ledger.stage_gates || {};
-  return Object.values(gates).some(v => v === 'REVISE' || v === 'BLOCK' || v === 'PENDING' || v === 'NOT_STARTED');
-}
+  const unresolvedGate = getUnresolvedGate(ledger);
+  const latestPhase = getLatestLedgerPhase(ledger);
+  const phase = normalizeText(tracker.phase);
+  const next = normalizeText(tracker.nextAction);
 
-function checkTrackerAgainstLedger(tracker, ledger) {
-  if (tracker.status === 'missing') {
-    return { exit: EXIT.MISSING_TRACKER, ok: false, reason: 'Tracker file not found.' };
+  if (unresolvedGate && /complete|done|finished|closed/.test(phase)) {
+    return { exit: EXIT.STALE_TRACKER, ok: false, reason: `Tracker declares completion but ledger gate '${unresolvedGate}' is unresolved.` };
   }
-
-  if (tracker.phase === null && tracker.nextAction === null) {
-    return { exit: EXIT.INVALID_TRACKER, ok: false, reason: 'Tracker is missing required Phase or Next action fields.' };
+  if (unresolvedGate && phase && !phase.includes(normalizeText(unresolvedGate)) && !/resolve|review|resume|continue/.test(phase)) {
+    return { exit: EXIT.STALE_TRACKER, ok: false, reason: `Tracker phase '${tracker.phase}' does not reflect unresolved gate '${unresolvedGate}'.` };
   }
-
-  if (ledger.status === 'missing') {
-    return { exit: EXIT.INVALID_LEDGER, ok: false, reason: 'Ledger file missing or unreadable.' };
+  if (unresolvedGate && next && !next.includes(normalizeText(unresolvedGate)) && !/resolve|review|resume|re run|continue/.test(next)) {
+    return { exit: EXIT.STALE_TRACKER, ok: false, reason: `Tracker next action '${tracker.nextAction}' does not reflect unresolved gate '${unresolvedGate}'.` };
   }
-
-  if (ledger.status === 'invalid') {
-    return { exit: EXIT.INVALID_LEDGER, ok: false, reason: `Ledger parse failed: ${ledger.error}` };
-  }
-
-  const unresolvedGate = findUnresolvedGate(ledger);
-  const latestPhase = latestLedgerPhase(ledger);
-  const phaseLabel = (tracker.phase || '').trim();
-  const nextLabel = (tracker.nextAction || '').trim();
-
-  if (phaseLabel && isPhaseCompleteLabel(phaseLabel) && hasIncompleteGate(ledger)) {
-    return {
-      exit: EXIT.STALE_TRACKER,
-      ok: false,
-      reason: `Tracker says the phase is complete, but ledger still has unresolved gates: ${Object.entries(ledger.stage_gates).filter(([, v]) => ['REVISE', 'BLOCK', 'PENDING', 'NOT_STARTED'].includes(v)).map(([n]) => n).join(', ')}`,
-    };
-  }
-
-  if (unresolvedGate) {
-    const gateNorm = normalizeText(unresolvedGate);
-    const phaseNorm = normalizeText(phaseLabel);
-    const nextNorm = normalizeText(nextLabel);
-
-    if (phaseNorm && !phaseNorm.includes(gateNorm) && !phaseNorm.includes('resolve') && !phaseNorm.includes('review')) {
-      return {
-        exit: EXIT.STALE_TRACKER,
-        ok: false,
-        reason: `Tracker phase '${phaseLabel}' does not reflect unresolved ledger gate '${unresolvedGate}'.`,
-      };
-    }
-
-    if (nextNorm && !nextNorm.includes(gateNorm) && !nextNorm.includes('resolve') && !nextNorm.includes('re-run') && !nextNorm.includes('review')) {
-      return {
-        exit: EXIT.STALE_TRACKER,
-        ok: false,
-        reason: `Tracker next action '${nextLabel}' does not reflect unresolved ledger gate '${unresolvedGate}'.`,
-      };
-    }
-  }
-
-  if (latestPhase && phaseLabel) {
-    const phaseNorm = normalizeText(phaseLabel);
-    const latestPhaseNorm = normalizeText(latestPhase);
-    if (phaseNorm && latestPhaseNorm && !phaseNorm.includes(latestPhaseNorm) && !phaseNorm.includes('resume') && !phaseNorm.includes('next step')) {
-      return {
-        exit: EXIT.STALE_TRACKER,
-        ok: false,
-        reason: `Tracker phase '${phaseLabel}' does not match the latest ledger phase '${latestPhase}'.`,
-      };
-    }
+  if (latestPhase && phase && !phase.includes(normalizeText(latestPhase)) && !/resume|next step|continue/.test(phase)) {
+    return { exit: EXIT.STALE_TRACKER, ok: false, reason: `Tracker phase '${tracker.phase}' does not match latest ledger phase '${latestPhase}'.` };
   }
 
   for (const ref of tracker.refs) {
-    const candidate = ref.trim();
-    if (!candidate || /^https?:\/\//.test(candidate)) continue;
-    const resolved = path.resolve(path.dirname(tracker.file), candidate);
-    if (candidate.includes('..') || candidate.startsWith('.') || candidate.includes('/') || candidate.includes('\\')) {
-      if (!fs.existsSync(resolved)) {
-        return {
-          exit: EXIT.MISSING_ARTIFACT,
-          ok: false,
-          reason: `Tracker references missing artifact '${candidate}'.`,
-        };
-      }
+    if (/^https?:\/\//.test(ref)) continue;
+    const target = path.resolve(path.dirname(tracker.file), ref);
+    if ((ref.includes('/') || ref.includes('\\') || ref.startsWith('.')) && !fs.existsSync(target)) {
+      return { exit: EXIT.MISSING_ARTIFACT, ok: false, reason: `Tracker references missing artifact '${ref}'.` };
     }
   }
-
   return { exit: EXIT.OK, ok: true, reason: 'Tracker is aligned with the ledger.' };
 }
 
@@ -189,66 +104,26 @@ function main() {
   const trackerPath = arg('tracker');
   const ledgerPath = arg('ledger');
   const jsonOut = process.argv.includes('--json');
-
   if (!trackerPath || !ledgerPath) {
-    const usage = 'usage: node scripts/tracker-validate.cjs --tracker=<path> --ledger=<path> [--json]';
-    if (jsonOut) {
-      process.stdout.write(JSON.stringify({ ok: false, exit: 1, error: usage }, null, 2) + '\n');
-    } else {
-      process.stderr.write(`${usage}\n`);
-    }
+    const reason = 'usage: node scripts/tracker-validate.cjs --tracker=<path> --ledger=<path> [--json]';
+    if (jsonOut) console.log(JSON.stringify({ ok: false, exit: 1, reason }, null, 2));
+    else process.stderr.write(`${reason}\n`);
     process.exit(1);
   }
-
-  const tracker = readTracker(trackerPath);
-  const ledger = readLedger(ledgerPath);
-  const result = checkTrackerAgainstLedger(tracker, ledger);
-
-  if (jsonOut) {
-    process.stdout.write(JSON.stringify({
-      ok: result.ok,
-      exit: result.exit,
-      reason: result.reason,
-      tracker: tracker.file,
-      ledger: ledger.file,
-      phase: tracker.phase,
-      next_action: tracker.nextAction,
-      resolved_gate: findUnresolvedGate(ledger),
-      latest_ledger_phase: latestLedgerPhase(ledger),
-    }, null, 2) + '\n');
-  } else {
-    const status = result.ok ? 'OK' : 'FAIL';
-    process.stdout.write(`status: ${status}\n`);
-    process.stdout.write(`exit: ${result.exit}\n`);
-    process.stdout.write(`reason: ${result.reason}\n`);
-    if (tracker.phase) process.stdout.write(`phase: ${tracker.phase}\n`);
-    if (tracker.nextAction) process.stdout.write(`next_action: ${tracker.nextAction}\n`);
-    if (findUnresolvedGate(ledger)) process.stdout.write(`ledger_unresolved_gate: ${findUnresolvedGate(ledger)}\n`);
-    if (latestLedgerPhase(ledger)) process.stdout.write(`ledger_latest_phase: ${latestLedgerPhase(ledger)}\n`);
-  }
-
+  const result = assertTrackerMatchesLedger(parseTracker(trackerPath), parseLedger(ledgerPath));
+  if (jsonOut) console.log(JSON.stringify(result, null, 2));
+  else console.log(`status: ${result.ok ? 'OK' : 'FAIL'}\nexit: ${result.exit}\nreason: ${result.reason}`);
   process.exit(result.exit);
 }
 
 if (require.main === module) {
-  try {
-    main();
-  } catch (error) {
-    if (process.argv.includes('--json')) {
-      process.stdout.write(JSON.stringify({ ok: false, exit: EXIT.INVALID_TRACKER, reason: error.message }, null, 2) + '\n');
-    } else {
-      process.stderr.write(`error: ${error.message}\n`);
-    }
-    process.exit(EXIT.INVALID_TRACKER);
+  try { main(); }
+  catch (error) {
+    const result = { ok: false, exit: EXIT.INVALID_TRACKER, reason: error.message };
+    if (process.argv.includes('--json')) console.log(JSON.stringify(result, null, 2));
+    else process.stderr.write(`error: ${error.message}\n`);
+    process.exit(result.exit);
   }
 }
 
-module.exports = {
-  EXIT,
-  readTracker,
-  readLedger,
-  checkTrackerAgainstLedger,
-  findUnresolvedGate,
-  latestLedgerPhase,
-  normalizeText,
-};
+module.exports = { EXIT, parseTracker, parseLedger, assertTrackerMatchesLedger, getUnresolvedGate, getLatestLedgerPhase, normalizeText };
