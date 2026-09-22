@@ -152,11 +152,15 @@ function trackerRepoRoot(trackerFile) {
 }
 
 function resolveArtifactPath(trackerFile, ref) {
-  if (path.isAbsolute(ref)) return ref;
   if (/^(?:docs|memory|scripts|skills|tests|\.claude)\//.test(ref)) {
     return path.resolve(trackerRepoRoot(trackerFile), ref);
   }
   return path.resolve(path.dirname(trackerFile), ref);
+}
+
+function isWithinRepoRoot(root, target) {
+  const relative = path.relative(root, target);
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
 }
 
 function artifactRefs(tracker) {
@@ -254,8 +258,17 @@ function assertTrackerMatchesLedger(tracker, ledgerValidation, expectations = {}
     };
   }
 
+  const repoRoot = trackerRepoRoot(tracker.file);
   for (const ref of artifactRefs(tracker)) {
     const target = resolveArtifactPath(tracker.file, ref);
+    if (!isWithinRepoRoot(repoRoot, target)) {
+      return {
+        ok: false,
+        exit: EXIT.MISSING_ARTIFACT,
+        status: 'tracker-artifact-outside-repo',
+        reason: `Tracker references artifact outside the repository root '${ref}'.`,
+      };
+    }
     if (!fs.existsSync(target)) {
       return {
         ok: false,
@@ -312,4 +325,5 @@ module.exports = {
   getUnresolvedGate,
   normalizeText,
   resolveArtifactPath,
+  trackerRepoRoot,
 };

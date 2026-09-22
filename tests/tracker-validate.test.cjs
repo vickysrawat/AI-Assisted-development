@@ -181,6 +181,25 @@ console.log('✓ malformed ledger is rejected');
 
 reset();
 writeLedger({
+  gates: { intake_context: 'PASS' },
+  history: [{ phase: 'intake_context', verdict: 'PASS', at: '2026-09-22' }],
+});
+writeTracker({
+  phase: '2 — Options',
+  step: 'Options file written — awaiting APPROVE OPTIONS',
+  nextAction: 'Review ../../../../outside.md before resuming.',
+  optionsPath: '../../../../outside.md',
+});
+let outsideRepo = run(['--tracker=' + tracker, '--ledger=' + ledger]);
+if (outsideRepo.code !== 18) {
+  console.log('✗ outside-repo artifact was not rejected');
+  console.log(outsideRepo.stdout || outsideRepo.stderr);
+  process.exit(1);
+}
+console.log('✓ outside-repo artifact is rejected');
+
+reset();
+writeLedger({
   gates: { report: 'PASS' },
   history: [{ phase: 'report', verdict: 'PASS', at: '2026-09-22' }],
   skill: 'upgrade',
