@@ -184,6 +184,28 @@ function getUnresolvedGate(ledger) {
   return null;
 }
 
+function humanizePhase(value) {
+  return String(value || '').replace(/[_-]+/g, ' ');
+}
+
+function shouldCheckLatestPhase(tracker, latestPhase) {
+  const value = String(latestPhase || '');
+  if (!value) return false;
+  if (tracker.format === 'legacy') return true;
+  if (/^\d/.test(value) || /—/.test(value)) return true;
+  const tokens = [normalizeText(value), normalizeText(humanizePhase(value))].filter(Boolean);
+  const fields = [tracker.phase, tracker.step, ...(tracker.phaseRows || []).flatMap(row => [row.phase, row.step])]
+    .map(normalizeText)
+    .filter(Boolean);
+  return fields.some(field => tokens.some(token => field.includes(token)));
+}
+
+function trackerMatchesLatestPhase(tracker, latestPhase) {
+  const tokens = [normalizeText(latestPhase), normalizeText(humanizePhase(latestPhase))].filter(Boolean);
+  const current = [tracker.phase, tracker.step].map(normalizeText).filter(Boolean);
+  return current.some(field => tokens.some(token => field === token || field.includes(token)));
+}
+
 function assertTrackerMatchesLedger(tracker, ledgerValidation, expectations = {}) {
   if (!tracker.ok) {
     return { ok: false, exit: tracker.code, status: tracker.status, reason: tracker.reason || 'Tracker file not found.' };
@@ -246,9 +268,9 @@ function assertTrackerMatchesLedger(tracker, ledgerValidation, expectations = {}
   const latestPhase = getLatestLedgerPhase(ledger);
   if (
     latestPhase &&
-    tracker.format === 'legacy' &&
     phaseText &&
-    normalizeText(latestPhase) !== phaseText &&
+    shouldCheckLatestPhase(tracker, latestPhase) &&
+    !trackerMatchesLatestPhase(tracker, latestPhase) &&
     !/resume|continue|next step/.test(phaseText)
   ) {
     return {

@@ -133,6 +133,24 @@ console.log('✓ stale next action is rejected');
 
 reset();
 writeLedger({
+  gates: { options: 'PASS' },
+  history: [{ phase: '2 — Options', verdict: 'PASS', at: '2026-09-22' }],
+});
+writeTracker({
+  phase: '1 — Source analysis',
+  step: 'Stack detect + posture',
+  nextAction: 'Run Step 1.5 integration verification.',
+});
+let staleMarkdownPhase = run(['--tracker=' + tracker, '--ledger=' + ledger]);
+if (staleMarkdownPhase.code !== 15) {
+  console.log('✗ stale markdown phase was not rejected');
+  console.log(staleMarkdownPhase.stdout || staleMarkdownPhase.stderr);
+  process.exit(1);
+}
+console.log('✓ stale markdown phase is rejected');
+
+reset();
+writeLedger({
   gates: { intake_context: 'PASS' },
   history: [{ phase: 'intake_context', verdict: 'PASS', at: '2026-09-22' }],
 });
