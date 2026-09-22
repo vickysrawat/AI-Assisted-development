@@ -213,6 +213,13 @@ const LEDGER_PHASE_ORDER = {
   verify: 6,
 };
 
+const LEDGER_PHASE_ALLOWED_TRACKER_ORDERS = {
+  intake_context: [1.5, 2],
+  report: [4, 5, 6],
+  design_approved: [2.5, 3],
+  verify: [5.5, 6],
+};
+
 function machinePhaseKey(value) {
   return normalizeText(humanizePhase(value)).replace(/\s+/g, '_');
 }
@@ -236,6 +243,11 @@ function ledgerPhaseOrder(value) {
   const key = machinePhaseKey(value);
   if (Object.prototype.hasOwnProperty.call(LEDGER_PHASE_ORDER, key)) return LEDGER_PHASE_ORDER[key];
   return trackerPhaseOrder(value);
+}
+
+function allowedTrackerOrdersForLedgerPhase(value) {
+  const key = machinePhaseKey(value);
+  return LEDGER_PHASE_ALLOWED_TRACKER_ORDERS[key] || null;
 }
 
 function trackerMatchesLatestPhase(tracker, latestPhase) {
@@ -313,15 +325,20 @@ function assertTrackerMatchesLedger(tracker, ledgerValidation, expectations = {}
   if (latestPhase && phaseText && !/resume|continue|next step/.test(phaseText)) {
     const trackerOrder = trackerPhaseOrder(tracker.phase);
     const latestOrder = ledgerPhaseOrder(latestPhase);
-    if (trackerOrder !== null && latestOrder !== null && trackerOrder < latestOrder) {
-      return {
-        ok: false,
-        exit: EXIT.PHASE_MISMATCH,
-        status: 'tracker-phase-mismatch',
-        reason: `Tracker phase '${tracker.phase}' is stale for latest ledger phase '${latestPhase}'.`,
-      };
-    }
-    if (!trackerMatchesLatestPhase(tracker, latestPhase) && (trackerOrder === null || latestOrder === null)) {
+    const allowedOrders = allowedTrackerOrdersForLedgerPhase(latestPhase);
+    if (trackerOrder !== null && latestOrder !== null) {
+      const orderedMismatch = allowedOrders
+        ? !allowedOrders.includes(trackerOrder)
+        : trackerOrder !== latestOrder;
+      if (orderedMismatch) {
+        return {
+          ok: false,
+          exit: EXIT.PHASE_MISMATCH,
+          status: 'tracker-phase-mismatch',
+          reason: `Tracker phase '${tracker.phase}' does not align with latest ledger phase '${latestPhase}'.`,
+        };
+      }
+    } else if (!trackerMatchesLatestPhase(tracker, latestPhase)) {
       return {
         ok: false,
         exit: EXIT.PHASE_MISMATCH,

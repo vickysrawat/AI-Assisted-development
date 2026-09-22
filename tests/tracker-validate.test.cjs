@@ -170,6 +170,24 @@ console.log('✓ machine-to-markdown phase drift is rejected');
 
 reset();
 writeLedger({
+  gates: { options: 'PASS' },
+  history: [{ phase: '2 — Options', verdict: 'PASS', at: '2026-09-22' }],
+});
+writeTracker({
+  phase: '3 — Generation',
+  step: 'Per-cluster code + design-quality gate',
+  nextAction: 'Run Step 3 generation for cluster 1.',
+});
+let aheadMarkdownPhase = run(['--tracker=' + tracker, '--ledger=' + ledger]);
+if (aheadMarkdownPhase.code !== 15) {
+  console.log('✗ ahead-of-ledger markdown phase was not rejected');
+  console.log(aheadMarkdownPhase.stdout || aheadMarkdownPhase.stderr);
+  process.exit(1);
+}
+console.log('✓ ahead-of-ledger markdown phase is rejected');
+
+reset();
+writeLedger({
   gates: { report: 'REVISE' },
   history: [{ phase: 'report', verdict: 'REVISE', at: '2026-09-22' }],
   skill: 'upgrade',
