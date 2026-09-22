@@ -166,12 +166,18 @@ function trackerRepoRoot(trackerFile) {
   const absolute = path.resolve(trackerFile);
   const parsed = path.parse(absolute);
   const relativeParts = absolute.slice(parsed.root.length).replace(/[\\/]+/g, '/').split('/').filter(Boolean);
-  for (let index = 0; index < relativeParts.length - 1; index += 1) {
-    if (relativeParts[index].toLowerCase() === 'docs' && relativeParts[index + 1].toLowerCase() === 'migrations') {
-      return path.join(parsed.root, ...relativeParts.slice(0, index));
+  const anchorIndex = relativeParts.findIndex((part, index) => (
+    part.toLowerCase() === 'docs' && relativeParts[index + 1]?.toLowerCase() === 'migrations'
+  ));
+  if (anchorIndex < 0) return null;
+
+  for (let index = anchorIndex + 2; index < relativeParts.length - 1; index += 1) {
+    if (relativeParts[index].toLowerCase() === 'docs' && relativeParts[index + 1]?.toLowerCase() === 'migrations') {
+      return null;
     }
   }
-  return null;
+
+  return path.join(parsed.root, ...relativeParts.slice(0, anchorIndex));
 }
 
 function resolveArtifactPath(trackerFile, ref, options = {}) {
@@ -274,7 +280,7 @@ function trackerMatchesLatestPhase(tracker, latestPhase) {
 function declaresCompletion(tracker) {
   const current = normalizeText(`${tracker.phase || ''} ${tracker.step || ''}`);
   const nextAction = normalizeText(tracker.nextAction);
-  return /\bmigration complete\b|\btracker complete\b|\bworkflow complete\b|\bcomplete the migration\b|\bclose the ado work item\b|\bclose the work item\b|\bclosed\b/.test(current) || /\bmigration complete\b|\bclose the ado work item\b|\bclose the work item\b/.test(nextAction);
+  return /\bmigration complete\b|\btracker complete\b|\bworkflow complete\b|\bcomplete the migration\b|\bclose the ado work item\b|\bclose the work item\b/.test(current) || /\bmigration complete\b|\bclose the ado work item\b|\bclose the work item\b/.test(nextAction);
 }
 
 function assertTrackerMatchesLedger(tracker, ledgerValidation, expectations = {}) {

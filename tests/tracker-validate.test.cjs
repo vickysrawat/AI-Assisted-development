@@ -358,12 +358,12 @@ if (nonAnchored.code !== 14) {
 console.log('✓ tracker outside docs/migrations is rejected');
 
 const nestedTracker = path.join(repo, 'docs', 'migrations', 'ADO-9000', 'docs', 'migrations', 'migration-tracker.md');
-if (trackerRepoRoot(nestedTracker) !== repo) {
-  console.log('✗ tracker repo root should use the first docs/migrations segment');
+if (trackerRepoRoot(nestedTracker) !== null) {
+  console.log('✗ nested docs/migrations tracker paths should be rejected');
   console.log(trackerRepoRoot(nestedTracker));
   process.exit(1);
 }
-console.log('✓ tracker repo root uses the first docs/migrations segment');
+console.log('✓ nested docs/migrations tracker paths are rejected');
 
 console.log('\nAll tracker validation tests passed.');
 process.exit(0);
