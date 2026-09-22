@@ -5,6 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const { trackerRepoRoot } = require('../scripts/tracker-validate.cjs');
 
 const SCRIPT = path.join(__dirname, '..', 'scripts', 'tracker-validate.cjs');
 
@@ -253,6 +254,14 @@ if (legacy.code !== 15) {
   process.exit(1);
 }
 console.log('✓ legacy tracker mismatch is rejected');
+
+const nestedTracker = path.join(repo, 'docs', 'migrations', 'ADO-9000', 'docs', 'migrations', 'migration-tracker.md');
+if (trackerRepoRoot(nestedTracker) !== repo) {
+  console.log('✗ tracker repo root should use the first docs/migrations segment');
+  console.log(trackerRepoRoot(nestedTracker));
+  process.exit(1);
+}
+console.log('✓ tracker repo root uses the first docs/migrations segment');
 
 console.log('\nAll tracker validation tests passed.');
 process.exit(0);

@@ -143,10 +143,11 @@ function parseTracker(filePath) {
 
 function trackerRepoRoot(trackerFile) {
   const parts = path.resolve(trackerFile).split(path.sep);
-  const docsIndex = parts.lastIndexOf('docs');
-  if (docsIndex >= 0 && parts[docsIndex + 1] === 'migrations') {
-    const prefix = parts.slice(0, docsIndex).join(path.sep);
-    return prefix || path.sep;
+  for (let index = 0; index < parts.length - 1; index += 1) {
+    if (parts[index] === 'docs' && parts[index + 1] === 'migrations') {
+      const prefix = parts.slice(0, index).join(path.sep);
+      return prefix || path.sep;
+    }
   }
   return path.dirname(path.resolve(trackerFile));
 }
