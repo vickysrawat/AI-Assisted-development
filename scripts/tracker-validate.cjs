@@ -3,14 +3,16 @@
 
 const fs = require('fs');
 const path = require('path');
+const { validateLedgerFile } = require('./checkpoint-ledger.cjs');
 
 const EXIT = {
   OK: 0,
-  MISSING_TRACKER: 2,
-  INVALID_TRACKER: 3,
-  STALE_TRACKER: 4,
-  MISSING_ARTIFACT: 5,
-  INVALID_LEDGER: 6,
+  TRACKER_MISSING: 13,
+  TRACKER_INVALID: 14,
+  PHASE_MISMATCH: 15,
+  NEXT_ACTION_MISMATCH: 16,
+  GATE_MISMATCH: 17,
+  MISSING_ARTIFACT: 18,
 };
 
 function arg(name) {
@@ -19,39 +21,150 @@ function arg(name) {
 }
 
 function normalizeText(value) {
-  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ');
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function normalizeStatus(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ');
+}
+
+function extractSection(text, heading) {
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const headerMatch = text.match(new RegExp(`^##\\s+${escaped}\\s*$`, 'mi'));
+  if (!headerMatch) return null;
+  const start = headerMatch.index + headerMatch[0].length;
+  const rest = text.slice(start).replace(/^\r?\n/, '');
+  const terminatorMatch = rest.match(/\n##\s+|\n---\s*(?:\n|$)/);
+  const section = terminatorMatch ? rest.slice(0, terminatorMatch.index) : rest;
+  return section.trim() || null;
+}
+
+function splitMarkdownRow(line) {
+  return line.split('|').slice(1, -1).map(cell => cell.trim());
+}
+
+function parseMarkdownTable(section) {
+  if (!section) return [];
+  return section
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line.startsWith('|'))
+    .map(splitMarkdownRow)
+    .filter(cells => cells.length > 0)
+    .filter(cells => !cells.every(cell => /^:?-{2,}:?$/.test(cell)));
+}
+
+function extractRefs(text) {
+  const refs = new Set();
+  const pattern = /(?:\.\.?\/|\/?)(?:[A-Za-z0-9_.-]+\/)+[A-Za-z0-9_.-]+(?:\.[A-Za-z0-9_.-]+)?/g;
+  for (const match of String(text || '').matchAll(pattern)) {
+    const value = match[0];
+    if (/^https?:\/\//i.test(value)) continue;
+    refs.add(value.replace(/^[`'"]|[`'"]$/g, ''));
+  }
+  return [...refs];
+}
+
+function parseMarkdownTracker(text) {
+  const header = text.match(/^_Last updated:.*?·\s*Phase:\s*([^·\n]+?)\s*·\s*Step:\s*([^\n_]+?)\s*_?$/mi);
+  const nextActionSection = extractSection(text, 'Next action');
+  if (!header || !nextActionSection) return null;
+  const nextAction = nextActionSection.split(/\r?\n\s*\r?\n/)[0].replace(/\s+/g, ' ').trim();
+
+  const phaseRows = parseMarkdownTable(extractSection(text, 'Phase and step status'))
+    .slice(1)
+    .map(cells => ({
+      phase: cells[0] || null,
+      step: cells[1] || null,
+      status: cells[2] || null,
+      artifacts: cells[3] || null,
+    }));
+
+  const artifacts = parseMarkdownTable(extractSection(text, 'Committed artifacts'))
+    .slice(1)
+    .map(cells => ({
+      artifact: cells[0] || null,
+      path: cells[1] || null,
+      status: cells[2] || null,
+    }))
+    .filter(entry => entry.path && entry.path !== '—');
+
+  return {
+    format: 'markdown',
+    phase: header[1].trim(),
+    step: header[2].trim(),
+    nextAction,
+    phaseRows,
+    artifacts,
+    refs: extractRefs(text),
+  };
+}
+
+function parseLegacyTracker(text) {
+  const phase = text.match(/^(?:Phase|Current phase|State)\s*:\s*(.+)$/im)?.[1]?.trim() || null;
+  const nextAction = text.match(/^(?:Next action|Next)\s*:\s*(.+)$/im)?.[1]?.trim() || null;
+  if (!phase && !nextAction) return null;
+  return {
+    format: 'legacy',
+    phase,
+    step: null,
+    nextAction,
+    phaseRows: [],
+    artifacts: [],
+    refs: extractRefs(text),
+  };
 }
 
 function parseTracker(filePath) {
   if (!filePath || !fs.existsSync(filePath)) {
-    return { status: 'missing', file: filePath || null, phase: null, nextAction: null, refs: [] };
+    return { ok: false, status: 'missing', file: filePath || null, code: EXIT.TRACKER_MISSING };
   }
+
   const text = fs.readFileSync(filePath, 'utf8');
-  const phase = text.match(/^(?:Phase|Current phase|State)\s*:\s*(.+)$/im)?.[1]?.trim() || null;
-  const nextAction = text.match(/^(?:Next action|Next)\s*:\s*(.+)$/im)?.[1]?.trim() || null;
-  const refs = [];
-  for (const line of text.split(/\r?\n/)) {
-    for (const match of line.matchAll(/(?:\.\.?\/|\/)?(?:[A-Za-z0-9_.-]+\/)*[A-Za-z0-9_.-]+\.[A-Za-z0-9_.-]+/g)) {
-      refs.push(match[0]);
-    }
+  const parsed = parseMarkdownTracker(text) || parseLegacyTracker(text);
+  if (!parsed || !parsed.phase || !parsed.nextAction) {
+    return {
+      ok: false,
+      status: 'invalid',
+      file: filePath,
+      code: EXIT.TRACKER_INVALID,
+      reason: 'Tracker is missing the current phase or next action.',
+    };
   }
-  return { status: 'ok', file: filePath, phase, nextAction, refs, text };
+
+  return {
+    ok: true,
+    status: 'ok',
+    file: filePath,
+    text,
+    ...parsed,
+  };
 }
 
-function parseLedger(filePath) {
-  if (!filePath || !fs.existsSync(filePath)) {
-    return { status: 'missing', file: filePath || null, stage_gates: {}, phase_history: [] };
+function trackerRepoRoot(trackerFile) {
+  const parts = path.resolve(trackerFile).split(path.sep);
+  const docsIndex = parts.lastIndexOf('docs');
+  if (docsIndex >= 0 && parts[docsIndex + 1] === 'migrations') {
+    const prefix = parts.slice(0, docsIndex).join(path.sep);
+    return prefix || path.sep;
   }
-  try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    return {
-      status: 'ok', file: filePath,
-      stage_gates: parsed.stage_gates || {},
-      phase_history: Array.isArray(parsed.phase_history) ? parsed.phase_history : [],
-    };
-  } catch (error) {
-    return { status: 'invalid', file: filePath, error: error.message };
+  return path.dirname(path.resolve(trackerFile));
+}
+
+function resolveArtifactPath(trackerFile, ref) {
+  if (path.isAbsolute(ref)) return ref;
+  if (/^(?:docs|memory|scripts|skills|tests|\.claude)\//.test(ref)) {
+    return path.resolve(trackerRepoRoot(trackerFile), ref);
   }
+  return path.resolve(path.dirname(trackerFile), ref);
+}
+
+function artifactRefs(tracker) {
+  const refs = new Set(tracker.refs || []);
+  for (const artifact of tracker.artifacts || []) {
+    if (artifact.path) refs.add(artifact.path);
+  }
+  return [...refs];
 }
 
 function getLatestLedgerPhase(ledger) {
@@ -61,43 +174,99 @@ function getLatestLedgerPhase(ledger) {
 
 function getUnresolvedGate(ledger) {
   for (const [name, verdict] of Object.entries(ledger.stage_gates || {})) {
-    if (['REVISE', 'BLOCK', 'PENDING', 'NOT_STARTED'].includes(String(verdict))) return name;
+    if (String(verdict).toUpperCase() !== 'PASS') return name;
   }
   return null;
 }
 
-function assertTrackerMatchesLedger(tracker, ledger) {
-  if (tracker.status === 'missing') return { exit: EXIT.MISSING_TRACKER, ok: false, reason: 'Tracker file not found.' };
-  if (!tracker.phase && !tracker.nextAction) return { exit: EXIT.INVALID_TRACKER, ok: false, reason: 'Tracker is missing required Phase or Next action fields.' };
-  if (ledger.status === 'missing') return { exit: EXIT.INVALID_LEDGER, ok: false, reason: 'Ledger file is missing.' };
-  if (ledger.status === 'invalid') return { exit: EXIT.INVALID_LEDGER, ok: false, reason: `Ledger parse failed: ${ledger.error}` };
-
-  const unresolvedGate = getUnresolvedGate(ledger);
-  const latestPhase = getLatestLedgerPhase(ledger);
-  const phase = normalizeText(tracker.phase);
-  const next = normalizeText(tracker.nextAction);
-
-  if (unresolvedGate && /complete|done|finished|closed/.test(phase)) {
-    return { exit: EXIT.STALE_TRACKER, ok: false, reason: `Tracker declares completion but ledger gate '${unresolvedGate}' is unresolved.` };
+function assertTrackerMatchesLedger(tracker, ledgerValidation, expectations = {}) {
+  if (!tracker.ok) {
+    return { ok: false, exit: tracker.code, status: tracker.status, reason: tracker.reason || 'Tracker file not found.' };
   }
-  if (unresolvedGate && phase && !phase.includes(normalizeText(unresolvedGate)) && !/resolve|review|resume|continue/.test(phase)) {
-    return { exit: EXIT.STALE_TRACKER, ok: false, reason: `Tracker phase '${tracker.phase}' does not reflect unresolved gate '${unresolvedGate}'.` };
-  }
-  if (unresolvedGate && next && !next.includes(normalizeText(unresolvedGate)) && !/resolve|review|resume|re run|continue/.test(next)) {
-    return { exit: EXIT.STALE_TRACKER, ok: false, reason: `Tracker next action '${tracker.nextAction}' does not reflect unresolved gate '${unresolvedGate}'.` };
-  }
-  if (latestPhase && phase && !phase.includes(normalizeText(latestPhase)) && !/resume|next step|continue/.test(phase)) {
-    return { exit: EXIT.STALE_TRACKER, ok: false, reason: `Tracker phase '${tracker.phase}' does not match latest ledger phase '${latestPhase}'.` };
+  if (!ledgerValidation.ok) {
+    return {
+      ok: false,
+      exit: ledgerValidation.code,
+      status: ledgerValidation.status,
+      reason: ledgerValidation.error || `Ledger validation failed: ${ledgerValidation.status}`,
+    };
   }
 
-  for (const ref of tracker.refs) {
-    if (/^https?:\/\//.test(ref)) continue;
-    const target = path.resolve(path.dirname(tracker.file), ref);
-    if ((ref.includes('/') || ref.includes('\\') || ref.startsWith('.')) && !fs.existsSync(target)) {
-      return { exit: EXIT.MISSING_ARTIFACT, ok: false, reason: `Tracker references missing artifact '${ref}'.` };
+  const ledger = ledgerValidation.checkpoint;
+  const phaseText = normalizeText(tracker.phase);
+  const nextText = normalizeText(tracker.nextAction);
+
+  if (expectations.phase && phaseText !== normalizeText(expectations.phase)) {
+    return {
+      ok: false,
+      exit: EXIT.PHASE_MISMATCH,
+      status: 'tracker-phase-mismatch',
+      reason: `Tracker phase '${tracker.phase}' does not match expected phase '${expectations.phase}'.`,
+    };
+  }
+
+  if (expectations.nextAction && nextText !== normalizeText(expectations.nextAction)) {
+    return {
+      ok: false,
+      exit: EXIT.NEXT_ACTION_MISMATCH,
+      status: 'tracker-next-action-mismatch',
+      reason: `Tracker next action '${tracker.nextAction}' does not match expected next action '${expectations.nextAction}'.`,
+    };
+  }
+
+  if (expectations.gate) {
+    const gate = (tracker.phaseRows || []).find(item => normalizeText(item.phase) === normalizeText(expectations.gate.phase));
+    const actualStatus = gate ? normalizeStatus(gate.status) : null;
+    const expectedStatus = normalizeStatus(expectations.gate.status);
+    if (!gate || actualStatus !== expectedStatus) {
+      return {
+        ok: false,
+        exit: EXIT.GATE_MISMATCH,
+        status: 'tracker-gate-mismatch',
+        reason: `Tracker gate '${expectations.gate.phase}' does not match expected status '${expectations.gate.status}'.`,
+      };
     }
   }
-  return { exit: EXIT.OK, ok: true, reason: 'Tracker is aligned with the ledger.' };
+
+  const unresolvedGate = getUnresolvedGate(ledger);
+  if (unresolvedGate && /migration complete|complete|completed|done|finished|closed/.test(`${phaseText} ${nextText}`)) {
+    return {
+      ok: false,
+      exit: EXIT.PHASE_MISMATCH,
+      status: 'tracker-phase-mismatch',
+      reason: `Tracker declares completion while ledger gate '${unresolvedGate}' is unresolved.`,
+    };
+  }
+
+  const latestPhase = getLatestLedgerPhase(ledger);
+  if (
+    latestPhase &&
+    tracker.format === 'legacy' &&
+    phaseText &&
+    normalizeText(latestPhase) !== phaseText &&
+    !/resume|continue|next step/.test(phaseText)
+  ) {
+    return {
+      ok: false,
+      exit: EXIT.PHASE_MISMATCH,
+      status: 'tracker-phase-mismatch',
+      reason: `Tracker phase '${tracker.phase}' does not match latest ledger phase '${latestPhase}'.`,
+    };
+  }
+
+  for (const ref of artifactRefs(tracker)) {
+    const target = resolveArtifactPath(tracker.file, ref);
+    if (!fs.existsSync(target)) {
+      return {
+        ok: false,
+        exit: EXIT.MISSING_ARTIFACT,
+        status: 'tracker-artifact-missing',
+        reason: `Tracker references missing artifact '${ref}'.`,
+      };
+    }
+  }
+
+  return { ok: true, exit: EXIT.OK, status: 'ok', reason: 'Tracker is aligned with the ledger.' };
 }
 
 function main() {
@@ -105,25 +274,42 @@ function main() {
   const ledgerPath = arg('ledger');
   const jsonOut = process.argv.includes('--json');
   if (!trackerPath || !ledgerPath) {
-    const reason = 'usage: node scripts/tracker-validate.cjs --tracker=<path> --ledger=<path> [--json]';
+    const reason = 'usage: node scripts/tracker-validate.cjs --tracker=<path> --ledger=<path> [--phase=<value>] [--next-action=<value>] [--gate=<phase>] [--gate-status=<status>] [--json]';
     if (jsonOut) console.log(JSON.stringify({ ok: false, exit: 1, reason }, null, 2));
     else process.stderr.write(`${reason}\n`);
     process.exit(1);
   }
-  const result = assertTrackerMatchesLedger(parseTracker(trackerPath), parseLedger(ledgerPath));
+
+  const tracker = parseTracker(trackerPath);
+  const ledgerValidation = validateLedgerFile(ledgerPath, { ado: arg('ado') || null, skill: arg('skill') || null });
+  const result = assertTrackerMatchesLedger(tracker, ledgerValidation, {
+    phase: arg('phase') || null,
+    nextAction: arg('next-action') || null,
+    gate: arg('gate') ? { phase: arg('gate'), status: arg('gate-status') || '' } : null,
+  });
+
   if (jsonOut) console.log(JSON.stringify(result, null, 2));
   else console.log(`status: ${result.ok ? 'OK' : 'FAIL'}\nexit: ${result.exit}\nreason: ${result.reason}`);
   process.exit(result.exit);
 }
 
 if (require.main === module) {
-  try { main(); }
-  catch (error) {
-    const result = { ok: false, exit: EXIT.INVALID_TRACKER, reason: error.message };
+  try {
+    main();
+  } catch (error) {
+    const result = { ok: false, exit: EXIT.TRACKER_INVALID, status: 'error', reason: error.message };
     if (process.argv.includes('--json')) console.log(JSON.stringify(result, null, 2));
     else process.stderr.write(`error: ${error.message}\n`);
     process.exit(result.exit);
   }
 }
 
-module.exports = { EXIT, parseTracker, parseLedger, assertTrackerMatchesLedger, getUnresolvedGate, getLatestLedgerPhase, normalizeText };
+module.exports = {
+  EXIT,
+  parseTracker,
+  assertTrackerMatchesLedger,
+  getLatestLedgerPhase,
+  getUnresolvedGate,
+  normalizeText,
+  resolveArtifactPath,
+};

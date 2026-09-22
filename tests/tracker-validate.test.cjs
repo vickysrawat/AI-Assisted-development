@@ -22,91 +22,180 @@ function run(args) {
   };
 }
 
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tracker-validate-'));
-const tracker = path.join(dir, 'migration-tracker.md');
-const ledger = path.join(dir, '.claude', 'migration', '9000.checkpoint.json');
+const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'tracker-validate-'));
+const trackerDir = path.join(repo, 'docs', 'migrations', 'ADO-9000');
+const tracker = path.join(trackerDir, 'migration-tracker.md');
+const ledger = path.join(repo, '.claude', 'migration', '9000.checkpoint.json');
+const log = path.join(trackerDir, 'migration-log.md');
+const options = path.join(trackerDir, 'ADO-9000-options.md');
 
 function reset() {
-  fs.rmSync(dir, { recursive: true, force: true });
+  fs.rmSync(repo, { recursive: true, force: true });
+  fs.mkdirSync(trackerDir, { recursive: true });
   fs.mkdirSync(path.dirname(ledger), { recursive: true });
+}
+
+function writeLedger({ gates, history, skill = 'rewrite', ado = '9000' }) {
+  write(ledger, JSON.stringify({
+    schema_version: '1.0',
+    skill,
+    ado_id: ado,
+    created_at: '2026-09-22',
+    updated_at: '2026-09-22',
+    source: { stack: 'nodejs', from: '18', to: '20' },
+    stage_gates: gates || {},
+    phase_history: history || [],
+    decision_log: [],
+    judge_verdicts: [],
+    payload: {},
+  }, null, 2));
+}
+
+function writeTracker({ phase, step, nextAction, optionStatus = '🔄 Awaiting approval', optionsPath = 'docs/migrations/ADO-9000/ADO-9000-options.md' }) {
+  write(log, '# Migration log\n');
+  write(options, '# Options\n');
+  write(tracker, [
+    '# Migration Tracker — Example Rewrite (ADO-9000)',
+    '',
+    `_Last updated: 2026-09-22 · Phase: ${phase} · Step: ${step}_`,
+    '',
+    '> **Resume instruction:** open this file + `migration-log.md` + `ADO-9000-options.md` in VS Code.',
+    '',
+    '---',
+    '',
+    '## Phase and step status',
+    '',
+    '| Phase | Step | Status | Artifact(s) |',
+    '|---|---|---|---|',
+    '| 0 — Initialize | Log + tracker + ledger | ✅ Complete | migration-log.md · migration-tracker.md |',
+    `| 2 — Options | Options file + APPROVE OPTIONS | ${optionStatus} | ADO-9000-options.md |`,
+    '',
+    '---',
+    '',
+    '## Committed artifacts',
+    '',
+    '| Artifact | Path | Status |',
+    '|---|---|---|',
+    '| Migration log | docs/migrations/ADO-9000/migration-log.md | ✅ Created |',
+    `| Options file | ${optionsPath} | ✅ Created |`,
+    '',
+    '---',
+    '',
+    '## Next action',
+    '',
+    nextAction,
+    '',
+    'To resume in a new session: type `REWRITE RESUME ADO-9000`.',
+  ].join('\n'));
 }
 
 reset();
 
-// Happy path: tracker matches ledger
-write(ledger, JSON.stringify({
-  skill: 'upgrade',
-  ado_id: '9000',
-  stage_gates: { intake_context: 'PASS', report: 'PASS' },
-  phase_history: [{ phase: 'report', verdict: 'PASS', at: '2026-09-08' }],
-}, null, 2));
-write(tracker, [
-  'Phase: report',
-  'Next action: Resume verification step',
-].join('\n'));
-let ok = run(['--tracker=' + tracker, '--ledger=' + ledger]);
+writeLedger({
+  gates: { intake_context: 'PASS' },
+  history: [{ phase: 'intake_context', verdict: 'PASS', at: '2026-09-22' }],
+});
+writeTracker({
+  phase: '2 — Options',
+  step: 'Options file written — awaiting APPROVE OPTIONS',
+  nextAction: 'Reply `APPROVE OPTIONS ADO-9000 [A | B | C]` with answers to the three pre-design questions in ADO-9000-options.md to proceed to target design documents (Step 2.5).',
+});
+let ok = run([
+  '--tracker=' + tracker,
+  '--ledger=' + ledger,
+  '--ado=9000',
+  '--skill=rewrite',
+  '--phase=2 — Options',
+  '--next-action=Reply `APPROVE OPTIONS ADO-9000 [A | B | C]` with answers to the three pre-design questions in ADO-9000-options.md to proceed to target design documents (Step 2.5).',
+  '--gate=2 — Options',
+  '--gate-status=🔄 Awaiting approval',
+]);
 if (ok.code !== 0) {
   console.log('✗ valid tracker should pass');
   console.log(ok.stdout || ok.stderr);
   process.exit(1);
 }
-console.log('✓ valid tracker passes');
+console.log('✓ valid markdown tracker passes');
 
-// Stale tracker: unresolved gate ignored
-reset();
-write(ledger, JSON.stringify({
-  skill: 'upgrade',
-  ado_id: '9000',
-  stage_gates: { intake_context: 'PASS', report: 'REVISE' },
-  phase_history: [{ phase: 'report', verdict: 'REVISE', at: '2026-09-08' }],
-}, null, 2));
-write(tracker, [
-  'Phase: intake_context',
-  'Next action: Run source detection',
-].join('\n'));
-let stale = run(['--tracker=' + tracker, '--ledger=' + ledger]);
-if (stale.code !== 4) {
-  console.log('✗ stale tracker was not rejected');
+let stale = run([
+  '--tracker=' + tracker,
+  '--ledger=' + ledger,
+  '--ado=9000',
+  '--skill=rewrite',
+  '--next-action=Run Step 2.5 target design documents',
+]);
+if (stale.code !== 16) {
+  console.log('✗ stale next action was not rejected');
   console.log(stale.stdout || stale.stderr);
   process.exit(1);
 }
-console.log('✓ stale tracker is rejected');
+console.log('✓ stale next action is rejected');
 
-// Missing artifact reference in tracker is blocked
 reset();
-write(ledger, JSON.stringify({
-  skill: 'rewrite',
-  ado_id: '9000',
-  stage_gates: { intake_context: 'PASS' },
-  phase_history: [{ phase: 'intake_context', verdict: 'PASS', at: '2026-09-08' }],
-}, null, 2));
-write(tracker, [
-  'Phase: intake_context',
-  'Next action: Review docs/does-not-exist.md',
-].join('\n'));
+writeLedger({
+  gates: { intake_context: 'PASS' },
+  history: [{ phase: 'intake_context', verdict: 'PASS', at: '2026-09-22' }],
+});
+writeTracker({
+  phase: '2 — Options',
+  step: 'Options file written — awaiting APPROVE OPTIONS',
+  nextAction: 'Review docs/migrations/ADO-9000/does-not-exist.md before resuming.',
+  optionsPath: 'docs/migrations/ADO-9000/does-not-exist.md',
+});
 let missingArtifact = run(['--tracker=' + tracker, '--ledger=' + ledger]);
-if (missingArtifact.code !== 5) {
+if (missingArtifact.code !== 18) {
   console.log('✗ missing artifact was not rejected');
   console.log(missingArtifact.stdout || missingArtifact.stderr);
   process.exit(1);
 }
 console.log('✓ missing artifact is rejected');
 
-// Missing tracker file is blocked
 reset();
-write(ledger, JSON.stringify({
-  skill: 'replatform',
-  ado_id: '9000',
-  stage_gates: { intake_context: 'PASS' },
-  phase_history: [{ phase: 'intake_context', verdict: 'PASS', at: '2026-09-08' }],
-}, null, 2));
-let missingTracker = run(['--tracker=' + path.join(dir, 'missing-tracker.md'), '--ledger=' + ledger]);
-if (missingTracker.code !== 2) {
-  console.log('✗ missing tracker was not rejected');
-  console.log(missingTracker.stdout || missingTracker.stderr);
+writeTracker({
+  phase: '2 — Options',
+  step: 'Options file written — awaiting APPROVE OPTIONS',
+  nextAction: 'Reply `APPROVE OPTIONS ADO-9000 [A | B | C]` to continue.',
+});
+let missingLedger = run(['--tracker=' + tracker, '--ledger=' + ledger]);
+if (missingLedger.code !== 7) {
+  console.log('✗ missing ledger was not rejected via shared validator');
+  console.log(missingLedger.stdout || missingLedger.stderr);
   process.exit(1);
 }
-console.log('✓ missing tracker is rejected');
+console.log('✓ missing ledger is rejected');
+
+reset();
+write(ledger, '{not json\n');
+writeTracker({
+  phase: '2 — Options',
+  step: 'Options file written — awaiting APPROVE OPTIONS',
+  nextAction: 'Reply `APPROVE OPTIONS ADO-9000 [A | B | C]` to continue.',
+});
+let invalidLedger = run(['--tracker=' + tracker, '--ledger=' + ledger]);
+if (invalidLedger.code !== 9) {
+  console.log('✗ malformed ledger was not rejected via shared validator');
+  console.log(invalidLedger.stdout || invalidLedger.stderr);
+  process.exit(1);
+}
+console.log('✓ malformed ledger is rejected');
+
+reset();
+writeLedger({
+  gates: { report: 'PASS' },
+  history: [{ phase: 'report', verdict: 'PASS', at: '2026-09-22' }],
+  skill: 'upgrade',
+});
+write(path.join(trackerDir, 'legacy-tracker.md'), [
+  'Phase: intake_context',
+  'Next action: Run source detection',
+].join('\n'));
+let legacy = run(['--tracker=' + path.join(trackerDir, 'legacy-tracker.md'), '--ledger=' + ledger]);
+if (legacy.code !== 15) {
+  console.log('✗ legacy tracker phase mismatch was not rejected');
+  console.log(legacy.stdout || legacy.stderr);
+  process.exit(1);
+}
+console.log('✓ legacy tracker mismatch is rejected');
 
 console.log('\nAll tracker validation tests passed.');
 process.exit(0);
