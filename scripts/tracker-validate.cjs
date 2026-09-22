@@ -186,7 +186,7 @@ function resolveArtifactPath(trackerFile, ref, options = {}) {
   if (options.repoRootRelative) {
     return path.resolve(repoRoot, normalizedRef);
   }
-  if (/[\\/]/.test(rawRef)) {
+  if (/^(?:docs|memory|scripts|skills|tests|\.claude)(?:[\\/]|$)/i.test(rawRef)) {
     return path.resolve(repoRoot, normalizedRef);
   }
   return path.resolve(path.dirname(trackerFile), normalizedRef);
