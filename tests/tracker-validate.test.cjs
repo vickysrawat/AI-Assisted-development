@@ -357,10 +357,18 @@ if (nonAnchored.code !== 14) {
 }
 console.log('✓ tracker outside docs/migrations is rejected');
 
+const scratchAnchoredTracker = path.join(repo, 'scratch', 'docs', 'migrations', 'ADO-9000', 'migration-tracker.md');
+if (trackerRepoRoot(scratchAnchoredTracker, repo) !== null) {
+  console.log('✗ tracker anchors must start at the repository docs/migrations root');
+  console.log(trackerRepoRoot(scratchAnchoredTracker, repo));
+  process.exit(1);
+}
+console.log('✓ tracker anchors must start at the repository docs/migrations root');
+
 const nestedTracker = path.join(repo, 'docs', 'migrations', 'ADO-9000', 'docs', 'migrations', 'migration-tracker.md');
-if (trackerRepoRoot(nestedTracker) !== null) {
+if (trackerRepoRoot(nestedTracker, repo) !== null) {
   console.log('✗ nested docs/migrations tracker paths should be rejected');
-  console.log(trackerRepoRoot(nestedTracker));
+  console.log(trackerRepoRoot(nestedTracker, repo));
   process.exit(1);
 }
 console.log('✓ nested docs/migrations tracker paths are rejected');

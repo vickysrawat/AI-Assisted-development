@@ -15,6 +15,7 @@ const EXIT = {
   MISSING_ARTIFACT: 18,
 };
 
+
 function arg(name) {
   const value = process.argv.find(a => a.startsWith(`--${name}=`));
   return value ? value.slice(`--${name}=`.length) : null;
@@ -26,6 +27,10 @@ function normalizeText(value) {
 
 function normalizeStatus(value) {
   return String(value || '').trim().replace(/\s+/g, ' ');
+}
+
+function ledgerRepoRoot(ledgerFile) {
+  return path.resolve(path.dirname(path.resolve(ledgerFile)), '..', '..');
 }
 
 function extractSection(text, heading) {
@@ -134,15 +139,6 @@ function parseTracker(filePath) {
 
   const text = fs.readFileSync(filePath, 'utf8');
   const parsed = parseMarkdownTracker(text) || parseLegacyTracker(text);
-  if (!trackerRepoRoot(filePath)) {
-    return {
-      ok: false,
-      status: 'invalid',
-      file: filePath,
-      code: EXIT.TRACKER_INVALID,
-      reason: 'Tracker must live under docs/migrations/.',
-    };
-  }
   if (!parsed || !parsed.phase || !parsed.nextAction) {
     return {
       ok: false,
@@ -162,35 +158,38 @@ function parseTracker(filePath) {
   };
 }
 
-function trackerRepoRoot(trackerFile) {
+function trackerRepoRoot(trackerFile, repoRoot) {
+  const candidateRoot = repoRoot ? path.resolve(repoRoot) : path.resolve(__dirname, '..');
   const absolute = path.resolve(trackerFile);
-  const parsed = path.parse(absolute);
-  const relativeParts = absolute.slice(parsed.root.length).replace(/[\\/]+/g, '/').split('/').filter(Boolean);
-  const anchorIndex = relativeParts.findIndex((part, index) => (
-    part.toLowerCase() === 'docs' && relativeParts[index + 1]?.toLowerCase() === 'migrations'
-  ));
-  if (anchorIndex < 0) return null;
+  const relative = path.relative(candidateRoot, absolute);
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return null;
 
-  for (let index = anchorIndex + 2; index < relativeParts.length - 1; index += 1) {
+  const relativeParts = relative.replace(/[\\/]+/g, '/').split('/').filter(Boolean);
+  if (relativeParts[0]?.toLowerCase() !== 'docs' || relativeParts[1]?.toLowerCase() !== 'migrations') {
+    return null;
+  }
+
+  for (let index = 2; index < relativeParts.length - 1; index += 1) {
     if (relativeParts[index].toLowerCase() === 'docs' && relativeParts[index + 1]?.toLowerCase() === 'migrations') {
       return null;
     }
   }
 
-  return path.join(parsed.root, ...relativeParts.slice(0, anchorIndex));
+  return candidateRoot;
 }
 
 function resolveArtifactPath(trackerFile, ref, options = {}) {
   const rawRef = String(ref || '');
   const normalizedRef = rawRef.replace(/[\\/]+/g, path.sep);
+  const repoRoot = options.repoRoot || trackerRepoRoot(trackerFile);
   if (path.isAbsolute(normalizedRef) || /^[A-Za-z]:[\\/]/.test(rawRef)) return normalizedRef;
   if (options.repoRootRelative) {
     return /[\\/]/.test(rawRef)
-      ? path.resolve(trackerRepoRoot(trackerFile), normalizedRef)
+      ? path.resolve(repoRoot, normalizedRef)
       : path.resolve(path.dirname(trackerFile), normalizedRef);
   }
   if (/[\\/]/.test(rawRef)) {
-    return path.resolve(trackerRepoRoot(trackerFile), normalizedRef);
+    return path.resolve(repoRoot, normalizedRef);
   }
   return path.resolve(path.dirname(trackerFile), normalizedRef);
 }
@@ -296,6 +295,16 @@ function assertTrackerMatchesLedger(tracker, ledgerValidation, expectations = {}
     };
   }
 
+  const repoRoot = trackerRepoRoot(tracker.file, expectations.repoRoot || ledgerRepoRoot(ledgerValidation.file));
+  if (!repoRoot) {
+    return {
+      ok: false,
+      exit: EXIT.TRACKER_INVALID,
+      status: 'invalid',
+      reason: 'Tracker must live under docs/migrations/.',
+    };
+  }
+
   const ledger = ledgerValidation.checkpoint;
   const phaseText = normalizeText(tracker.phase);
   const nextText = normalizeText(tracker.nextAction);
@@ -369,9 +378,8 @@ function assertTrackerMatchesLedger(tracker, ledgerValidation, expectations = {}
     }
   }
 
-  const repoRoot = trackerRepoRoot(tracker.file);
   for (const ref of artifactRefs(tracker)) {
-    const target = resolveArtifactPath(tracker.file, ref.value, { repoRootRelative: ref.repoRootRelative });
+    const target = resolveArtifactPath(tracker.file, ref.value, { repoRootRelative: ref.repoRootRelative, repoRoot });
     if (!isWithinRepoRoot(repoRoot, target)) {
       return {
         ok: false,
@@ -410,6 +418,7 @@ function main() {
     phase: arg('phase') || null,
     nextAction: arg('next-action') || null,
     gate: arg('gate') ? { phase: arg('gate'), status: arg('gate-status') || '' } : null,
+    repoRoot: ledgerRepoRoot(ledgerPath),
   });
 
   if (jsonOut) console.log(JSON.stringify(result, null, 2));
@@ -437,4 +446,5 @@ module.exports = {
   normalizeText,
   resolveArtifactPath,
   trackerRepoRoot,
+  ledgerRepoRoot,
 };
