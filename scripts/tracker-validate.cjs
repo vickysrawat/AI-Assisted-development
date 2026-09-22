@@ -184,9 +184,7 @@ function resolveArtifactPath(trackerFile, ref, options = {}) {
   const repoRoot = options.repoRoot || trackerRepoRoot(trackerFile);
   if (path.isAbsolute(normalizedRef) || /^[A-Za-z]:[\\/]/.test(rawRef)) return normalizedRef;
   if (options.repoRootRelative) {
-    return /[\\/]/.test(rawRef)
-      ? path.resolve(repoRoot, normalizedRef)
-      : path.resolve(path.dirname(trackerFile), normalizedRef);
+    return path.resolve(repoRoot, normalizedRef);
   }
   if (/[\\/]/.test(rawRef)) {
     return path.resolve(repoRoot, normalizedRef);

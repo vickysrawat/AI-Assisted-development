@@ -118,25 +118,6 @@ if (ok.code !== 0) {
 }
 console.log('✓ valid markdown tracker passes');
 
-reset();
-writeLedger({
-  gates: { intake_context: 'PASS' },
-  history: [{ phase: 'intake_context', verdict: 'PASS', at: '2026-09-22' }],
-});
-writeTracker({
-  phase: '2 — Options',
-  step: 'Options file written — awaiting APPROVE OPTIONS',
-  nextAction: 'Reply `APPROVE OPTIONS ADO-9000 [A | B | C]` to continue.',
-  optionsPath: 'ADO-9000-options.md',
-});
-let bareArtifactPath = run(['--tracker=' + tracker, '--ledger=' + ledger]);
-if (bareArtifactPath.code !== 0) {
-  console.log('✗ bare artifact-table filenames should resolve from the tracker directory');
-  console.log(bareArtifactPath.stdout || bareArtifactPath.stderr);
-  process.exit(1);
-}
-console.log('✓ bare artifact-table filenames resolve from the tracker directory');
-
 let stale = run([
   '--tracker=' + tracker,
   '--ledger=' + ledger,
