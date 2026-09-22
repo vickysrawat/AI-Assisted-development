@@ -382,9 +382,9 @@ function assertTrackerMatchesLedger(tracker, ledgerValidation, expectations = {}
     if (!target) {
       return {
         ok: false,
-        exit: EXIT.TRACKER_INVALID,
-        status: 'invalid',
-        reason: 'Tracker must live under docs/migrations/.',
+        exit: EXIT.MISSING_ARTIFACT,
+        status: 'tracker-artifact-invalid',
+        reason: `Tracker references invalid artifact path '${ref.value}'.`,
       };
     }
     if (!isWithinRepoRoot(repoRoot, target)) {
