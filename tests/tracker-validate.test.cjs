@@ -108,7 +108,7 @@ let ok = run([
   '--skill=rewrite',
   '--phase=2 — Options',
   '--next-action=Reply `APPROVE OPTIONS ADO-9000 [A | B | C]` with answers to the three pre-design questions in ADO-9000-options.md to proceed to target design documents (Step 2.5).',
-  '--gate=2 — Options',
+  '--gate=options',
   '--gate-status=🔄 Awaiting approval',
 ]);
 if (ok.code !== 0) {

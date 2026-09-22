@@ -247,14 +247,14 @@ function trackerPhaseOrder(phase) {
   const value = normalizeText(phase);
   if (!value) return null;
   if (value.includes('5a') || value.includes('test plans')) return 5.5;
-  if (value.includes('5') && value.includes('gates')) return 5;
-  if (value.includes('4') && (value.includes('bal') || value.includes('erl'))) return 4;
-  if (value.includes('3') && value.includes('generation')) return 3;
-  if (value.includes('2.5') || value.includes('2 5') || value.includes('target design')) return 2.5;
-  if (value.includes('2') && value.includes('options')) return 2;
-  if (value.includes('1.5') || value.includes('1 5') || value.includes('integration') || value.includes('oracle')) return 1.5;
-  if (value.includes('1') && value.includes('source analysis')) return 1;
-  if (value.includes('0') && value.includes('initialize')) return 0;
+  if (value.includes('gates')) return 5;
+  if (value.includes('bal') || value.includes('erl')) return 4;
+  if (value.includes('generation')) return 3;
+  if (value.includes('2.5') || value.includes('2 5') || value.includes('target design') || value.includes('design approved')) return 2.5;
+  if (value.includes('options')) return 2;
+  if (value.includes('1.5') || value.includes('1 5') || value.includes('integration') || value.includes('oracle') || value.includes('intake context')) return 1.5;
+  if (value.includes('source analysis')) return 1;
+  if (value.includes('initialize')) return 0;
   return null;
 }
 
@@ -273,6 +273,22 @@ function trackerMatchesLatestPhase(tracker, latestPhase) {
   const tokens = [normalizeText(latestPhase), normalizeText(humanizePhase(latestPhase))].filter(Boolean);
   const current = [tracker.phase, tracker.step].map(normalizeText).filter(Boolean);
   return current.some(field => tokens.some(token => field === token || field.includes(token)));
+}
+
+function phasesMatch(left, right) {
+  const leftText = normalizeText(left);
+  const rightText = normalizeText(right);
+  if (!leftText || !rightText) return false;
+  if (leftText === rightText) return true;
+
+  const leftTrackerOrder = trackerPhaseOrder(left);
+  const rightTrackerOrder = trackerPhaseOrder(right);
+  const leftLedgerOrder = ledgerPhaseOrder(left);
+  const rightLedgerOrder = ledgerPhaseOrder(right);
+  if (leftTrackerOrder !== null && rightLedgerOrder !== null && leftTrackerOrder === rightLedgerOrder) return true;
+  if (rightTrackerOrder !== null && leftLedgerOrder !== null && rightTrackerOrder === leftLedgerOrder) return true;
+
+  return normalizeText(humanizePhase(left)) === normalizeText(humanizePhase(right));
 }
 
 function declaresCompletion(tracker) {
@@ -327,7 +343,7 @@ function assertTrackerMatchesLedger(tracker, ledgerValidation, expectations = {}
   }
 
   if (expectations.gate) {
-    const gate = (tracker.phaseRows || []).find(item => normalizeText(item.phase) === normalizeText(expectations.gate.phase));
+    const gate = (tracker.phaseRows || []).find(item => phasesMatch(item.phase, expectations.gate.phase));
     const actualStatus = gate ? normalizeStatus(gate.status) : null;
     const expectedStatus = normalizeStatus(expectations.gate.status);
     if (!gate || actualStatus !== expectedStatus) {
