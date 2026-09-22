@@ -167,7 +167,7 @@ function trackerRepoRoot(trackerFile) {
   const parsed = path.parse(absolute);
   const relativeParts = absolute.slice(parsed.root.length).replace(/[\\/]+/g, '/').split('/').filter(Boolean);
   for (let index = 0; index < relativeParts.length - 1; index += 1) {
-    if (relativeParts[index] === 'docs' && relativeParts[index + 1] === 'migrations') {
+    if (relativeParts[index].toLowerCase() === 'docs' && relativeParts[index + 1].toLowerCase() === 'migrations') {
       return path.join(parsed.root, ...relativeParts.slice(0, index));
     }
   }
