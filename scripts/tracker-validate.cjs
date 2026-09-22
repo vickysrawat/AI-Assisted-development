@@ -241,6 +241,12 @@ function trackerMatchesLatestPhase(tracker, latestPhase) {
   return current.some(field => tokens.some(token => field === token || field.includes(token)));
 }
 
+function declaresCompletion(tracker) {
+  const current = normalizeText(`${tracker.phase || ''} ${tracker.step || ''}`);
+  const nextAction = normalizeText(tracker.nextAction);
+  return /\bmigration complete\b|\btracker complete\b|\bworkflow complete\b|\bcomplete the migration\b|\bclose the ado work item\b|\bclose the work item\b|\bclosed\b/.test(current) || /\bmigration complete\b|\bclose the ado work item\b|\bclose the work item\b/.test(nextAction);
+}
+
 function assertTrackerMatchesLedger(tracker, ledgerValidation, expectations = {}) {
   if (!tracker.ok) {
     return { ok: false, exit: tracker.code, status: tracker.status, reason: tracker.reason || 'Tracker file not found.' };
@@ -291,7 +297,7 @@ function assertTrackerMatchesLedger(tracker, ledgerValidation, expectations = {}
   }
 
   const unresolvedGate = getUnresolvedGate(ledger);
-  if (unresolvedGate && /migration complete|complete|completed|done|finished|closed/.test(`${phaseText} ${nextText}`)) {
+  if (unresolvedGate && declaresCompletion(tracker)) {
     return {
       ok: false,
       exit: EXIT.PHASE_MISMATCH,

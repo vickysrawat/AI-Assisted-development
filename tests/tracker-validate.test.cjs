@@ -170,6 +170,24 @@ console.log('✓ machine-to-markdown phase drift is rejected');
 
 reset();
 writeLedger({
+  gates: { report: 'REVISE' },
+  history: [{ phase: 'report', verdict: 'REVISE', at: '2026-09-22' }],
+  skill: 'upgrade',
+});
+write(path.join(trackerDir, 'legacy-tracker.md'), [
+  'Phase: report',
+  'Next action: Review completed artifacts before continuing',
+].join('\n'));
+let reviewAction = run(['--tracker=' + path.join(trackerDir, 'legacy-tracker.md'), '--ledger=' + ledger]);
+if (reviewAction.code !== 0) {
+  console.log('✗ review/continue wording should not be treated as completion');
+  console.log(reviewAction.stdout || reviewAction.stderr);
+  process.exit(1);
+}
+console.log('✓ review/continue wording is not treated as completion');
+
+reset();
+writeLedger({
   gates: { intake_context: 'PASS' },
   history: [{ phase: 'intake_context', verdict: 'PASS', at: '2026-09-22' }],
 });
