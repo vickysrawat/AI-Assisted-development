@@ -182,6 +182,7 @@ function resolveArtifactPath(trackerFile, ref, options = {}) {
   const rawRef = String(ref || '');
   const normalizedRef = rawRef.replace(/[\\/]+/g, path.sep);
   const repoRoot = options.repoRoot || trackerRepoRoot(trackerFile);
+  if (!repoRoot && !path.isAbsolute(normalizedRef) && !/^[A-Za-z]:[\\/]/.test(rawRef)) return null;
   if (path.isAbsolute(normalizedRef) || /^[A-Za-z]:[\\/]/.test(rawRef)) return normalizedRef;
   if (options.repoRootRelative) {
     return path.resolve(repoRoot, normalizedRef);
@@ -378,6 +379,14 @@ function assertTrackerMatchesLedger(tracker, ledgerValidation, expectations = {}
 
   for (const ref of artifactRefs(tracker)) {
     const target = resolveArtifactPath(tracker.file, ref.value, { repoRootRelative: ref.repoRootRelative, repoRoot });
+    if (!target) {
+      return {
+        ok: false,
+        exit: EXIT.TRACKER_INVALID,
+        status: 'invalid',
+        reason: 'Tracker must live under docs/migrations/.',
+      };
+    }
     if (!isWithinRepoRoot(repoRoot, target)) {
       return {
         ok: false,
