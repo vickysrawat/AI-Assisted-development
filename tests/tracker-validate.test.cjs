@@ -192,11 +192,11 @@ writeLedger({
   history: [{ phase: 'report', verdict: 'REVISE', at: '2026-09-22' }],
   skill: 'upgrade',
 });
-write(path.join(trackerDir, 'legacy-tracker.md'), [
+write(tracker, [
   'Phase: report',
   'Next action: Review completed artifacts before continuing',
 ].join('\n'));
-let reviewAction = run(['--tracker=' + path.join(trackerDir, 'legacy-tracker.md'), '--ledger=' + ledger]);
+let reviewAction = run(['--tracker=' + tracker, '--ledger=' + ledger]);
 if (reviewAction.code !== 0) {
   console.log('✗ review/continue wording should not be treated as completion');
   console.log(reviewAction.stdout || reviewAction.stderr);
@@ -335,11 +335,11 @@ writeLedger({
   history: [{ phase: 'report', verdict: 'PASS', at: '2026-09-22' }],
   skill: 'upgrade',
 });
-write(path.join(trackerDir, 'legacy-tracker.md'), [
+write(tracker, [
   'Phase: intake_context',
   'Next action: Run source detection',
 ].join('\n'));
-let legacy = run(['--tracker=' + path.join(trackerDir, 'legacy-tracker.md'), '--ledger=' + ledger]);
+let legacy = run(['--tracker=' + tracker, '--ledger=' + ledger]);
 if (legacy.code !== 15) {
   console.log('✗ legacy tracker phase mismatch was not rejected');
   console.log(legacy.stdout || legacy.stderr);

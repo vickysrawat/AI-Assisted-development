@@ -168,7 +168,7 @@ function trackerRepoRoot(trackerFile, repoRoot) {
   if (relativeParts[0]?.toLowerCase() !== 'docs' || relativeParts[1]?.toLowerCase() !== 'migrations') {
     return null;
   }
-  if (!/^ado-/i.test(relativeParts[2] || '') || relativeParts.length !== 4) {
+  if (!/^ado-/i.test(relativeParts[2] || '') || relativeParts.length !== 4 || relativeParts[3].toLowerCase() !== 'migration-tracker.md') {
     return null;
   }
 
