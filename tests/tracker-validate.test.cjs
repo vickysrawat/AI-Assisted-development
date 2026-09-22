@@ -328,6 +328,16 @@ if (legacy.code !== 15) {
 }
 console.log('✓ legacy tracker mismatch is rejected');
 
+const nonAnchoredTracker = path.join(repo, 'scratch', 'migration-tracker.md');
+write(nonAnchoredTracker, ['Phase: report', 'Next action: Continue review'].join('\n'));
+let nonAnchored = run(['--tracker=' + nonAnchoredTracker, '--ledger=' + ledger]);
+if (nonAnchored.code !== 14) {
+  console.log('✗ tracker outside docs/migrations should be rejected');
+  console.log(nonAnchored.stdout || nonAnchored.stderr);
+  process.exit(1);
+}
+console.log('✓ tracker outside docs/migrations is rejected');
+
 const nestedTracker = path.join(repo, 'docs', 'migrations', 'ADO-9000', 'docs', 'migrations', 'migration-tracker.md');
 if (trackerRepoRoot(nestedTracker) !== repo) {
   console.log('✗ tracker repo root should use the first docs/migrations segment');

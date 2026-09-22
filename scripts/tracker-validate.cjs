@@ -134,6 +134,15 @@ function parseTracker(filePath) {
 
   const text = fs.readFileSync(filePath, 'utf8');
   const parsed = parseMarkdownTracker(text) || parseLegacyTracker(text);
+  if (!trackerRepoRoot(filePath)) {
+    return {
+      ok: false,
+      status: 'invalid',
+      file: filePath,
+      code: EXIT.TRACKER_INVALID,
+      reason: 'Tracker must live under docs/migrations/.',
+    };
+  }
   if (!parsed || !parsed.phase || !parsed.nextAction) {
     return {
       ok: false,
@@ -162,7 +171,7 @@ function trackerRepoRoot(trackerFile) {
       return path.join(parsed.root, ...relativeParts.slice(0, index));
     }
   }
-  return path.dirname(absolute);
+  return null;
 }
 
 function resolveArtifactPath(trackerFile, ref, options = {}) {
@@ -323,7 +332,7 @@ function assertTrackerMatchesLedger(tracker, ledgerValidation, expectations = {}
   }
 
   const latestPhase = getLatestLedgerPhase(ledger);
-  if (latestPhase && phaseText && !/resume|continue|next step/.test(phaseText)) {
+  if (latestPhase && phaseText) {
     const trackerOrder = trackerPhaseOrder(tracker.phase);
     const latestOrder = ledgerPhaseOrder(latestPhase);
     const allowedOrders = allowedTrackerOrdersForLedgerPhase(latestPhase);
