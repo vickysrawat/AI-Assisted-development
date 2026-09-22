@@ -188,6 +188,7 @@ function resolveArtifactPath(trackerFile, ref, options = {}) {
   if (!repoRoot && !path.isAbsolute(normalizedRef) && !/^[A-Za-z]:[\\/]/.test(rawRef)) return null;
   if (path.isAbsolute(normalizedRef) || /^[A-Za-z]:[\\/]/.test(rawRef)) return normalizedRef;
   if (options.repoRootRelative) {
+    if (normalizedRef.split(path.sep).includes('..')) return null;
     return path.resolve(repoRoot, normalizedRef);
   }
   if (/^(?:docs|memory|scripts|skills|tests|\.claude)(?:[\\/]|$)/i.test(rawRef)) {

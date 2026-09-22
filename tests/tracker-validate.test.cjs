@@ -279,6 +279,25 @@ writeLedger({
 writeTracker({
   phase: '2 — Options',
   step: 'Options file written — awaiting APPROVE OPTIONS',
+  nextAction: 'Review the options file before resuming.',
+  optionsPath: '..\outside.md',
+});
+let traversingArtifact = run(['--tracker=' + tracker, '--ledger=' + ledger]);
+if (traversingArtifact.code !== 18) {
+  console.log('✗ parent-directory artifact traversal was not rejected');
+  console.log(traversingArtifact.stdout || traversingArtifact.stderr);
+  process.exit(1);
+}
+console.log('✓ parent-directory artifact traversal is rejected');
+
+reset();
+writeLedger({
+  gates: { intake_context: 'PASS' },
+  history: [{ phase: 'intake_context', verdict: 'PASS', at: '2026-09-22' }],
+});
+writeTracker({
+  phase: '2 — Options',
+  step: 'Options file written — awaiting APPROVE OPTIONS',
   nextAction: 'Review docs\\migrations\\ADO-9000\\ADO-9000-options.md before resuming.',
   optionsPath: 'docs\\migrations\\ADO-9000\\ADO-9000-options.md',
   eol: '\r\n',
