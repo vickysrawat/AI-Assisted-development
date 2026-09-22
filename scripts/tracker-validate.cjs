@@ -154,14 +154,15 @@ function parseTracker(filePath) {
 }
 
 function trackerRepoRoot(trackerFile) {
-  const parts = path.resolve(trackerFile).split(path.sep);
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    if (parts[index] === 'docs' && parts[index + 1] === 'migrations') {
-      const prefix = parts.slice(0, index).join(path.sep);
-      return prefix || path.sep;
+  const absolute = path.resolve(trackerFile);
+  const parsed = path.parse(absolute);
+  const relativeParts = absolute.slice(parsed.root.length).split(path.sep).filter(Boolean);
+  for (let index = 0; index < relativeParts.length - 1; index += 1) {
+    if (relativeParts[index] === 'docs' && relativeParts[index + 1] === 'migrations') {
+      return path.join(parsed.root, ...relativeParts.slice(0, index));
     }
   }
-  return path.dirname(path.resolve(trackerFile));
+  return path.dirname(absolute);
 }
 
 function resolveArtifactPath(trackerFile, ref, options = {}) {
