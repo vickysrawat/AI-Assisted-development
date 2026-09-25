@@ -375,7 +375,8 @@
     <p class="sub">
       ICEA-driven development for teams on Azure DevOps — language-agnostic across
       .NET, Java/Spring, Python, and Node.js backends and Angular / React frontends.
-      Every feature starts with a spec; every PR is compliance-checked before it opens.
+      Every feature starts with a spec; every PR is compliance-checked before it opens;
+      every governance action is audited and role-gated.
     </p>
     <div class="hero-badges">
       <span class="badge badge-gold">v3.25.0</span>
@@ -412,6 +413,7 @@
   <div class="sidebar-section">
     <div class="sidebar-label">Quality &amp; delivery</div>
     <a href="#quality" class="optional"><span class="nav-icon">🛡</span> Quality &amp; security</a>
+    <a href="#governance" class="optional"><span class="nav-icon">⚖</span> Governance &amp; RBAC</a>
     <a href="#pr" class="optional"><span class="nav-icon">⤴</span> Pull requests</a>
   </div>
   <div class="sidebar-section">
@@ -438,12 +440,14 @@
   <section id="overview">
     <div class="section-eyebrow">For developers using the plugin</div>
     <h2>What this <em class="accent">plugin</em> is</h2>
-    <p class="section-intro">A spec-first development workflow for teams on Azure DevOps. Every feature starts from an approved <strong>ICEA</strong> (Intent · Context · Examples · Acceptance); code generation is gated on it, every PR is compliance-checked before it opens, and the plugin keeps a memory of your project's decisions between sessions — all inside Claude Code.</p>
+    <p class="section-intro">A spec-first development workflow for teams on Azure DevOps. Every feature starts from an approved <strong>ICEA</strong> (Intent · Context · Examples · Acceptance); code generation is gated on it, every PR is compliance-checked before it opens, governance actions are role-gated and audited, and the plugin keeps a memory of your project's decisions between sessions — all inside Claude Code.</p>
     <div class="feature-grid">
       <div class="feature-card"><div class="fc-icon">◻</div><div class="fc-name">Spec-first</div><div class="fc-desc">No feature code is written until an ICEA is approved on disk. The gate is enforced mechanically, not by convention.</div></div>
       <div class="feature-card"><div class="fc-icon">⚖</div><div class="fc-name">Quality-gated</div><div class="fc-desc">A critic reviews each artefact as it is produced; code-review, security, and a pre-commit check guard what lands.</div></div>
-      <div class="feature-card"><div class="fc-icon">◌</div><div class="fc-name">Remembers</div><div class="fc-desc">The Dream memory system consolidates decisions and gotchas so the next session starts with context, not a blank slate.</div></div>
-      <div class="feature-card"><div class="fc-icon">◈</div><div class="fc-name">Stack-aware</div><div class="fc-desc">Detects your stack per repo — .NET (Framework 4.x → .NET 10), Java/Spring, Python, Node.js, Angular, React — and loads matching rules.</div></div>
+      <div class="feature-card"><div class="fc-icon">◌</div><div class="fc-name">Remembers</div><div class="fc-desc">The Dream memory system consolidates decisions and gotchas so the next session starts with context, not a blank slate. Project-knowledge patterns improve ICEA quality over time.</div></div>
+      <div class="feature-card"><div class="fc-icon">◈</div><div class="fc-name">Stack-aware</div><div class="fc-desc">Detects your stack per repo — .NET (Framework 4.x → .NET 10), Java/Spring, Python, Node.js, Angular, React — and loads matching rules and dep-scan CI templates.</div></div>
+      <div class="feature-card"><div class="fc-icon">🔐</div><div class="fc-name">Role-gated governance</div><div class="fc-desc">RBAC gates on elevated actions (batch approvals, config approvals, Critical/High dismissals). Every governance event is written to an immutable audit trail committed to git.</div></div>
+      <div class="feature-card"><div class="fc-icon">📊</div><div class="fc-name">Sprint governance reports</div><div class="fc-desc">The <code>governance-report</code> command aggregates audit events, token usage, and ledger metrics into a per-sprint report under <code>governance/</code>.</div></div>
     </div>
     <div class="info"><span class="wi">ℹ</span><span><strong>Core principle:</strong> do not over-complicate. The plugin stops and asks when something is ambiguous rather than guessing, and it documents non-trivial choices as it goes.</span></div>
     <div class="warning"><span class="wi">⚠</span><span>Maintaining or extending the plugin itself (adding skills/commands, releasing a version)? That lives in the <strong>Plugin Developer Guide</strong>, not here.</span></div>
@@ -481,19 +485,32 @@
     <h2>First-time <em class="accent">setup</em></h2>
     <p class="section-intro">Open your project in Claude Code and run <span class="cmd-pill">setup-init</span>. It is idempotent and safe to re-run; it seeds infrastructure in order:</p>
     <div class="timeline">
-      <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Memory files</div><div class="tl-desc"><code>memory/MEMORY.md</code> and <code>memory/dream-log.md</code>.</div></div>
+      <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Memory files</div><div class="tl-desc"><code>memory/MEMORY.md</code>, <code>memory/dream-log.md</code>, and <code>memory/topic-signals.md</code> (Dream's running tally of ICEA quality signal counts).</div></div>
+      <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">ApprovalRoles.json (Step 2d)</div><div class="tl-desc">Prompts for tech leads and security officers. Stored at <code>.claude/ApprovalRoles.json</code>. These roles gate elevated actions: batch approvals require <code>tech_lead</code>; Critical/High dismissals require <code>security_officer</code>.</div></div>
+      <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Config files</div><div class="tl-desc">Seeds <code>.claude/cost-governance.json</code> (per-model pricing + optional budget) and <code>.claude/project-knowledge.md</code> (team-shared ICEA pattern library, Dream-managed). Creates <code>.claude/signals/.gitkeep</code> (ICEA quality signal inbox).</div></div>
       <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Command stubs</div><div class="tl-desc">46 stubs to <code>.claude/commands/</code> — makes every command visible in the VS Code picker.</div></div>
       <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Scoped rules</div><div class="tl-desc">Only the rule files matching your detected stack (from a 43-file layered set) — they activate automatically when Claude edits a matching file type.</div></div>
+      <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Dep-scan CI templates</div><div class="tl-desc">Stack-matching CI pipeline templates for dependency scanning (<code>dep-scan-dotnet.yml</code>, <code>dep-scan-node.yml</code>, <code>dep-scan-python.yml</code>, <code>dep-scan-java.yml</code>) under <code>_project-deploy/ci/</code>.</div></div>
       <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">CLAUDE.md</div><div class="tl-desc">Appends the plugin sections to an existing <code>CLAUDE.md</code>, or creates one.</div></div>
       <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Architecture + knowledge graph</div><div class="tl-desc">Runs the deployment questionnaire, populates <code>.claude/architecture/</code>, and builds the codebase knowledge graph under <code>.claude/graph/</code>.</div></div>
-      <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">.gitignore</div><div class="tl-desc">Adds the plugin-required entries and offers to ignore detected build artifacts.</div></div>
+      <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Onboarding guide (Step 4)</div><div class="tl-desc">Auto-generates <code>docs/ONBOARDING.md</code> on first run. On subsequent <span class="cmd-pill">setup-sync</span> runs, you are offered a refresh.</div></div>
+      <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">.gitignore</div><div class="tl-desc">Adds the plugin-required entries and offers to ignore detected build artifacts. Note: <code>.claude/audit/</code> and <code>.claude/signals/</code> are NOT gitignored — they are committed for governance immutability.</div></div>
     </div>
   </section>
 
   <section id="health">
     <div class="section-eyebrow">Getting started · step 4</div>
     <h2>Health <em class="accent">check</em></h2>
-    <p class="section-intro">Run <span class="cmd-pill">setup-status</span> any time to confirm the plugin is wired up. It reports 🟢/🟡/🔴 across <strong>23 infrastructure checks</strong> — CLAUDE.md, memory, rules, stubs, architecture docs, the knowledge graph (index + freshness + stale flag), the deployment doc, caches, ignore-file coverage, open findings across all ledgers, model-version hygiene, and plugin-version drift — and prints a prioritised action list. After a plugin upgrade it flags <code>UPGRADE PENDING</code>; run <span class="cmd-pill">setup-sync</span> to re-provision.</p>
+    <p class="section-intro">Run <span class="cmd-pill">setup-status</span> any time to confirm the plugin is wired up. It reports across <strong>26+ infrastructure checks</strong> in groups — CLAUDE.md, memory, rules, stubs, architecture docs, the knowledge graph (index + freshness + stale flag), the deployment doc, caches, ignore-file coverage, open findings across all ledgers, and model-version hygiene. Three new check groups were added in v3.25.0:</p>
+    <table class="cmd-table">
+      <thead><tr><th>Check group</th><th>What it validates</th></tr></thead>
+      <tbody>
+        <tr><td><code>1w</code></td><td>ApprovalRoles.json presence + entry counts (tech leads and security officers populated?); total audit event count in <code>.claude/audit/</code>.</td></tr>
+        <tr><td><code>1x</code></td><td>cost-governance.json presence; model tier discipline — all three env vars (<code>ICEA_MODEL</code>, <code>REVIEW_MODEL</code>, <code>INFRA_MODEL</code>) explicitly set.</td></tr>
+        <tr><td><code>1y</code></td><td>Dep-scan CI coverage — detects the stack and checks whether a matching dep-scan template is referenced in <code>azure-pipelines.yml</code>.</td></tr>
+      </tbody>
+    </table>
+    <p>After a plugin upgrade, <code>setup-status</code> flags <code>UPGRADE PENDING</code>; run <span class="cmd-pill">setup-sync</span> to re-provision. <code>setup-sync</code> now also offers to generate or refresh <code>docs/ONBOARDING.md</code> (Step 7b).</p>
   </section>
 
   <section id="icea">
@@ -512,11 +529,11 @@
       <div class="flow-step"><span class="fs-label">5 · build</span><span class="fs-name">IMPLEMENT ADO-{ID}</span></div>
     </div>
     <div class="feature-grid" style="margin-top:20px;">
-      <div class="feature-card"><div class="fc-name">1 · Start</div><div class="fc-desc">Run <span class="cmd-pill">icea-feature</span> (or describe a feature / paste an ADO #). Claude asks clarifying questions and drafts the plan. It will not generate code yet.</div></div>
-      <div class="feature-card"><div class="fc-name">2 · ICEA</div><div class="fc-desc">Reply <code>SAVE PLAN ADO-{ID}</code> to persist the plan and draft the ICEA (Intent · Context · Examples · Acceptance). The critic checks it before it is written for your review.</div></div>
+      <div class="feature-card"><div class="fc-name">1 · Start</div><div class="fc-desc">Run <span class="cmd-pill">icea-feature</span> (or describe a feature / paste an ADO #). Claude asks clarifying questions and drafts the plan. At Step 3b it reads <code>.claude/project-knowledge.md</code> and injects applicable patterns from the team's shared library. It will not generate code yet.</div></div>
+      <div class="feature-card"><div class="fc-name">2 · ICEA</div><div class="fc-desc">Reply <code>SAVE PLAN ADO-{ID}</code> to persist the plan and draft the ICEA (Intent · Context · Examples · Acceptance). If clarifying questions were needed, a <code>story-quality</code> signal is written automatically for Dream to process. The critic checks the ICEA before it is written for your review.</div></div>
       <div class="feature-card"><div class="fc-name">3 · Tech Spec</div><div class="fc-desc"><code>SAVE ICEA ADO-{ID}</code> runs the critic gate and drafts the Tech Spec; <code>SAVE TECH ADO-{ID}</code> writes it (blocks on unresolved open questions).</div></div>
-      <div class="feature-card"><div class="fc-name">4 · Approve</div><div class="fc-desc">Your tech lead reviews the docs on disk and you reply <code>APPROVE ADO-{ID}</code>. Only this exact word unblocks code generation.</div></div>
-      <div class="feature-card"><div class="fc-name">5 · Implement</div><div class="fc-desc"><code>IMPLEMENT ADO-{ID}</code> generates code for the approved ICEA (Epics go story by story). Every write still passes the Write Gate.</div></div>
+      <div class="feature-card"><div class="fc-name">4 · Approve</div><div class="fc-desc">Your tech lead reviews the docs on disk and you reply <code>APPROVE ADO-{ID}</code>. Only this exact word unblocks code generation. The approval is recorded in the audit trail.</div></div>
+      <div class="feature-card"><div class="fc-name">5 · Implement</div><div class="fc-desc"><code>IMPLEMENT ADO-{ID}</code> generates code for the approved ICEA (Epics go story by story). Every write still passes the Write Gate. If an Example cannot produce a real assertion, a <code>gap</code> signal is written for Dream to track.</div></div>
       <div class="feature-card"><div class="fc-name">Any time · Status</div><div class="fc-desc"><code>STATUS ADO-{ID}</code> shows exactly where a work item is and the next action — the perfect re-entry point after a break.</div></div>
     </div>
 
@@ -551,7 +568,7 @@
   <section id="quality">
     <div class="section-eyebrow">Quality &amp; delivery</div>
     <h2>Quality &amp; <em class="accent">security</em></h2>
-    <p class="section-intro">Findings from every scanner are fingerprinted (<code>FP-xxxxxxxx</code>) into per-tool ledgers, so a finding is tracked across runs — fix it with <span class="cmd-pill">fix</span> or suppress it with <span class="cmd-pill">dismiss</span> (with a required justification).</p>
+    <p class="section-intro">Findings from every scanner are fingerprinted (<code>FP-xxxxxxxx</code>) into per-tool ledgers, so a finding is tracked across runs — fix it with <span class="cmd-pill">fix</span> or suppress it with <span class="cmd-pill">dismiss</span> (with a required justification). Dismissing a Critical or High finding requires the <code>security_officer</code> role.</p>
     <div class="feature-grid">
       <div class="feature-card"><div class="fc-name">code-review</div><div class="fc-desc">Static-analysis-style review with cross-run tracking — new defects flagged, fixed ones marked with git attribution. Scope flags: <code>--changed</code> <code>--pr</code> <code>--full</code> <code>--ci</code> <code>--area</code>.</div></div>
       <div class="feature-card"><div class="fc-name">security-review</div><div class="fc-desc">OWASP/CVSS/CWE review; a static asset audit runs first (flags real data in <code>public/</code>). Business-context severity can escalate findings. Same scope flags.</div></div>
@@ -559,6 +576,22 @@
       <div class="feature-card"><div class="fc-name">checkin</div><div class="fc-desc">Pre-commit gate: code-review + ICEA compliance + secrets scan + open Critical/High findings, in one pass. Emits a pre-filled commit command when green.</div></div>
     </div>
     <div class="info"><span class="wi">ℹ</span><span>Run a flag-taking scanner with no flag and it shows a short menu with the sensible default pre-selected. In CI / non-interactive runs there is no prompt — the documented default is used.</span></div>
+  </section>
+
+  <section id="governance">
+    <div class="section-eyebrow">Quality &amp; delivery</div>
+    <h2>Governance &amp; <em class="accent">RBAC</em></h2>
+    <p class="section-intro">Every governance action — approvals, dismissals, bypasses, and blocks — is written to an immutable audit trail under <code>.claude/audit/</code> (per-event JSON committed to git). Three actions require an elevated role checked at runtime against <code>.claude/ApprovalRoles.json</code>.</p>
+    <table class="cmd-table">
+      <thead><tr><th>Action</th><th>Required role</th><th>Blocked by</th></tr></thead>
+      <tbody>
+        <tr><td><code>APPROVE ALL ADO-{ID}</code> (batch Write-Gate)</td><td><code>tech_lead</code></td><td><code>RBAC_BLOCK</code> audit event</td></tr>
+        <tr><td><code>APPROVE CONFIG</code> for CI/CD or IaC</td><td><code>tech_lead</code></td><td><code>RBAC_BLOCK</code> audit event</td></tr>
+        <tr><td><code>/dismiss</code> a Critical or High finding</td><td><code>security_officer</code></td><td><code>RBAC_BLOCK</code> audit event</td></tr>
+      </tbody>
+    </table>
+    <p>Sprint-level governance reports are generated by <code>GOVERNANCE REPORT</code> (or <span class="cmd-pill">governance-report</span>) and written to <code>governance/</code>. They aggregate audit events, token usage, and ledger metrics. Flags: <code>--since &lt;date&gt;</code>, <code>--days &lt;N&gt;</code>, <code>--sprint &lt;N&gt;</code>.</p>
+    <div class="info"><span class="wi">ℹ</span><span>The roles are seeded during <code>setup-init</code> Step 2d and stored in <code>.claude/ApprovalRoles.json</code>. The Tech Lead is also typically the designated Dream runner — see the Dream section.</span></div>
   </section>
 
   <section id="pr">
@@ -590,7 +623,7 @@
     <div class="feature-grid">
       <div class="feature-card"><div class="fc-name">app-readiness</div><div class="fc-desc">Enterprise/Solution Architect production-readiness assessment across 8 domains (pipeline, resilience, observability, security, scalability, data integrity, runbook, tests). Flags <code>--quick</code>/<code>--full</code>.</div></div>
       <div class="feature-card"><div class="fc-name">plugin-readiness</div><div class="fc-desc">AI Architect readiness of the plugin itself across 6 domains — reads plugin state only, never your source.</div></div>
-      <div class="feature-card"><div class="fc-name">operations</div><div class="fc-desc">Generates a master Operational Runbook (Markdown + offline HTML) — the doc a support engineer opens during an incident. Unknowns render as ⚠ TODO, never fabricated.</div></div>
+      <div class="feature-card"><div class="fc-name">operations</div><div class="fc-desc">Generates a master Operational Runbook (Markdown + offline HTML) — the doc a support engineer opens during an incident. Unknowns render as &#9888; TODO, never fabricated.</div></div>
       <div class="feature-card"><div class="fc-name">go-live</div><div class="fc-desc">Generates a Support-Transition Acceptance Checklist — the one-time go/no-go gate an incoming support team uses to accept the app.</div></div>
     </div>
   </section>
@@ -618,12 +651,18 @@
       <div class="flow-step"><span class="fs-label">Phase 4</span><span class="fs-name">Tiered approval</span></div><span class="flow-arrow">→</span>
       <div class="flow-step"><span class="fs-label">Phase 5</span><span class="fs-name">Write memory</span></div>
     </div>
+    <p style="margin-top:14px;">Phase 3 now includes two additional sub-passes added in v3.25.0:</p>
+    <ul class="bullet-list">
+      <li><strong>Phase 3.5 — Staleness pass:</strong> checks each entry in <code>.claude/project-knowledge.md</code> against its anchor (does the referenced code still exist?) and age threshold. Flags stale entries for review.</li>
+      <li><strong>Phase 3.6 — ICEA quality signals:</strong> processes all files in <code>.claude/signals/</code> (gap, revision, story-quality signals written automatically by skills), updates the <code>memory/topic-signals.md</code> tally, proposes a <code>project-knowledge</code> ADD when a topic reaches the promotion threshold (default: 2), then deletes the signal files.</li>
+    </ul>
     <div class="feature-grid" style="margin-top:20px;">
       <div class="feature-card"><div class="fc-name">dream</div><div class="fc-desc">Run a consolidation pass every 5–8 sessions. Proposes operations with justification; you approve by tier.</div></div>
       <div class="feature-card"><div class="fc-name">dream-health</div><div class="fc-desc">A browser dashboard (<code>memory/health.html</code>) of confidence scores, the decay curve, and promote candidates.</div></div>
       <div class="feature-card"><div class="fc-name">dream-audit</div><div class="fc-desc">Quarterly quality audit — flags uncited facts and contradicted promotions, feeding rollback history into scoring.</div></div>
       <div class="feature-card"><div class="fc-name">dream-rollback</div><div class="fc-desc">Reverts a specific /dream run from the audit trail. Auditable and itself reversible.</div></div>
     </div>
+    <div class="warning"><span class="wi">⚠</span><span><strong>Designated Dream runner:</strong> to avoid merge conflicts on <code>memory/MEMORY.md</code>, agree on one team member (typically the Tech Lead) who runs <code>/dream</code> per sprint. This is recorded in <code>.claude/ApprovalRoles.json</code> and shown by <code>setup-status</code>.</span></div>
   </section>
 
   <section id="more">
@@ -632,6 +671,8 @@
     <div class="feature-grid">
       <div class="feature-card"><div class="fc-name">ado-tasks</div><div class="fc-desc">Breaks an approved ICEA into one Azure DevOps task per Acceptance Criterion per active layer.</div></div>
       <div class="feature-card"><div class="fc-name">sprint-metrics</div><div class="fc-desc">Post-sprint KPIs — ICEA compliance, PR rejection, rework — via the ADO REST API.</div></div>
+      <div class="feature-card"><div class="fc-name">governance-report</div><div class="fc-desc">Sprint governance and quality report aggregating audit events, token usage, and ledger metrics. Written to <code>governance/</code>. Flags: <code>--since</code> · <code>--days</code> · <code>--sprint</code>.</div></div>
+      <div class="feature-card"><div class="fc-name">onboarding-guide</div><div class="fc-desc">Generates <code>docs/ONBOARDING.md</code> — a developer onboarding document for the project. Auto-generated at first <code>setup-init</code>; refresh with <code>ONBOARDING GUIDE --refresh</code>.</div></div>
       <div class="feature-card"><div class="fc-name">token-analysis</div><div class="fc-desc">Analyses token consumption across recent sessions and flags expensive prompts. Persistent cache — only the delta is processed.</div></div>
       <div class="feature-card"><div class="fc-name">product-docs</div><div class="fc-desc">Generates a Product Detail Document and/or User Guide as self-contained HTML.</div></div>
       <div class="feature-card"><div class="fc-name">articulate-as-human</div><div class="fc-desc">Scans a generated document for AI-sounding writing and reports by tier with file:line; rewrites only flagged spans, only on request.</div></div>
@@ -642,13 +683,13 @@
     <div class="section-eyebrow">Reference</div>
     <h2>All <em class="accent">commands</em></h2>
     <p class="section-intro">All 46 commands, grouped by the phase of work where you reach for them. Type <code>/&lt;name&gt;</code> in Claude Code, or use the keyword shown.</p>
-      <h3>Setup & session</h3>
+      <h3>Setup &amp; session</h3>
       <table class="cmd-table">
         <thead><tr><th>Command</th><th>What it does</th></tr></thead>
         <tbody>
-          <tr><td><code>/setup-init</code></td><td>One-time per-project setup — seeds all infrastructure incl. the deployment questionnaire, deploys the 46 command stubs + detected-stack rules, runs the architect skill and builds the knowledge graph. Safe to re-run.</td></tr>
-          <tr><td><code>/setup-status</code></td><td>Read-only infrastructure health check across 23 items with a prioritised action list.</td></tr>
-          <tr><td><code>/setup-sync</code></td><td>Re-provisions an existing project after a plugin upgrade — applies only version-sensitive changes and re-stamps the version. Run when setup-status reports UPGRADE PENDING. Idempotent.</td></tr>
+          <tr><td><code>/setup-init</code></td><td>One-time per-project setup — seeds all infrastructure incl. ApprovalRoles.json, cost-governance.json, project-knowledge.md, signal inbox, dep-scan CI templates, the deployment questionnaire, deploys the 46 command stubs + detected-stack rules, runs the architect skill, builds the knowledge graph, and auto-generates docs/ONBOARDING.md. Safe to re-run.</td></tr>
+          <tr><td><code>/setup-status</code></td><td>Read-only infrastructure health check across 26+ items (incl. new 1w/1x/1y checks for RBAC roles, cost governance, and dep-scan CI coverage) with a prioritised action list.</td></tr>
+          <tr><td><code>/setup-sync</code></td><td>Re-provisions an existing project after a plugin upgrade — applies only version-sensitive changes and re-stamps the version. Offers to refresh docs/ONBOARDING.md (Step 7b). Run when setup-status reports UPGRADE PENDING. Idempotent.</td></tr>
           <tr><td><code>/setup-teardown</code></td><td>Removes plugin-managed content by scope (--full/--skills/--hooks/--rules/--commands/--state). Dry-runs first and requires CONFIRM. memory/ and .claude/architecture/ are never removed.</td></tr>
           <tr><td><code>/session-start</code></td><td>Zero-cost session warm-up — stack, last decision, last fix, sessions since /dream, and any Red infrastructure items.</td></tr>
           <tr><td><code>/gitignore-sync</code></td><td>Ensures the ignore file carries the plugin's managed block (Git .gitignore / TFVC .tfignore) — never touches your own lines. Arg: --with-artifacts.</td></tr>
@@ -660,10 +701,10 @@
       <table class="cmd-table">
         <thead><tr><th>Command</th><th>What it does</th></tr></thead>
         <tbody>
-          <tr><td><code>/icea-feature</code></td><td>Invoke the ICEA planning gate. Blocks feature code until an approved ICEA exists. Arg: ADO-&lt;id&gt; or a feature description.</td></tr>
-          <tr><td><code>/icea-approve</code></td><td>Marks an ICEA + Tech Spec approved by ADO ID (reads state from disk). Unblocks code generation. Keyword: APPROVE ADO-&lt;id&gt;.</td></tr>
-          <tr><td><code>/icea-implement</code></td><td>Generates and writes implementation code for an approved ICEA. Epics implement story by story. Keyword: IMPLEMENT ADO-&lt;id&gt;.</td></tr>
-          <tr><td><code>/icea-revise</code></td><td>Revises an existing ICEA + Tech Spec and re-gates code generation until re-approved. Keyword: REVISE ADO-&lt;id&gt;.</td></tr>
+          <tr><td><code>/icea-feature</code></td><td>Invoke the ICEA planning gate. Reads project-knowledge.md at Step 3b and injects applicable patterns. Tracks clarification_count; writes a story-quality signal at SAVE PLAN. Blocks feature code until an approved ICEA exists.</td></tr>
+          <tr><td><code>/icea-approve</code></td><td>Marks an ICEA + Tech Spec approved by ADO ID (reads state from disk). Writes an APPROVE_ADO audit event. Unblocks code generation. Keyword: APPROVE ADO-&lt;id&gt;.</td></tr>
+          <tr><td><code>/icea-implement</code></td><td>Generates and writes implementation code for an approved ICEA. Writes a gap signal when an Example cannot produce a real assertion. Epics implement story by story. Keyword: IMPLEMENT ADO-&lt;id&gt;.</td></tr>
+          <tr><td><code>/icea-revise</code></td><td>Revises an existing ICEA + Tech Spec and re-gates code generation until re-approved. Writes a REVISE_ADO audit event and a revision signal (section diff + inferred category). Keyword: REVISE ADO-&lt;id&gt;.</td></tr>
           <tr><td><code>/icea-status</code></td><td>Shows the current state of all ICEA files for a work item plus the exact next action. Keyword: STATUS ADO-&lt;id&gt;.</td></tr>
           <tr><td><code>/icea-review</code></td><td>Checks a PR or diff against its ICEA and reports pass/fail compliance.</td></tr>
           <tr><td><code>/ado-tasks</code></td><td>One Azure DevOps task per Acceptance Criterion per active layer, from an approved ICEA. Arg: ADO-&lt;id&gt;.</td></tr>
@@ -673,14 +714,14 @@
         </tbody>
       </table>
 
-      <h3>Quality & security</h3>
+      <h3>Quality &amp; security</h3>
       <table class="cmd-table">
         <thead><tr><th>Command</th><th>What it does</th></tr></thead>
         <tbody>
           <tr><td><code>/code-review</code></td><td>Cache-aware static-analysis review with persistent cross-run tracking. Flags: --changed --pr --full --ci --area.</td></tr>
           <tr><td><code>/security-review</code></td><td>OWASP/CVSS/CWE review with a static asset audit first. Same scope flags as code-review. (Auto-invoke skill: <code>security</code>.)</td></tr>
           <tr><td><code>/dynamic-scan</code></td><td>Runtime DAST via OWASP ZAP/Docker against a running app/API. Safe passive default; --full/--scope for gated active scans.</td></tr>
-          <tr><td><code>/dismiss</code></td><td>Marks a ledger finding dismissed with a required justification (false-positive / wont-fix / accepted-risk / by-design). Args: FP-xxxxxxxx &lt;reason&gt; "&lt;justification&gt;" [--undo].</td></tr>
+          <tr><td><code>/dismiss</code></td><td>Marks a ledger finding dismissed with a required justification (false-positive / wont-fix / accepted-risk / by-design). Dismissing Critical/High requires the <code>security_officer</code> role. Args: FP-xxxxxxxx &lt;reason&gt; "&lt;justification&gt;" [--undo].</td></tr>
           <tr><td><code>/fix</code></td><td>Applies a fingerprinted remediation from any ledger (code-review / security / dynamic-scan). Arg: FP-xxxxxxxx.</td></tr>
           <tr><td><code>/checkin</code></td><td>Pre-commit gate — code-review + ICEA compliance + secrets scan + open findings (Check D) in one pass. Pass/fail verdict + a pre-filled commit command.</td></tr>
         </tbody>
@@ -707,7 +748,7 @@
         </tbody>
       </table>
 
-      <h3>Readiness & operations</h3>
+      <h3>Readiness &amp; operations</h3>
       <table class="cmd-table">
         <thead><tr><th>Command</th><th>What it does</th></tr></thead>
         <tbody>
@@ -733,26 +774,28 @@
       <table class="cmd-table">
         <thead><tr><th>Command</th><th>What it does</th></tr></thead>
         <tbody>
-          <tr><td><code>/dream</code></td><td>6-phase session-to-memory consolidation with tiered approval.</td></tr>
+          <tr><td><code>/dream</code></td><td>6-phase session-to-memory consolidation with tiered approval. Now includes Phase 3.5 (project-knowledge staleness) and Phase 3.6 (ICEA quality signal processing).</td></tr>
           <tr><td><code>/dream-health</code></td><td>Generates memory/health.html with confidence and decay visualisations.</td></tr>
           <tr><td><code>/dream-audit</code></td><td>Quarterly memory quality audit — flags uncited facts, surfaces contradicted promotions, feeds rollback history into confidence scoring.</td></tr>
           <tr><td><code>/dream-rollback</code></td><td>Reverts a specific /dream run using the audit trail. Auditable and itself reversible.</td></tr>
         </tbody>
       </table>
 
-      <h3>Metrics & analysis</h3>
+      <h3>Governance &amp; metrics</h3>
       <table class="cmd-table">
         <thead><tr><th>Command</th><th>What it does</th></tr></thead>
         <tbody>
+          <tr><td><code>/governance-report</code></td><td>Sprint governance and quality report — aggregates audit events, token usage, and ledger metrics. Written to <code>governance/</code>. Flags: --since &lt;date&gt; --days &lt;N&gt; --sprint &lt;N&gt;. Keyword: GOVERNANCE REPORT.</td></tr>
           <tr><td><code>/sprint-metrics</code></td><td>Post-sprint KPIs — ICEA compliance, PR rejection, and rework — via the ADO REST API.</td></tr>
           <tr><td><code>/token-analysis</code></td><td>Token-consumption analysis across recent sessions with a persistent cache; flags expensive prompts.</td></tr>
         </tbody>
       </table>
 
-      <h3>Docs & writing</h3>
+      <h3>Docs &amp; writing</h3>
       <table class="cmd-table">
         <thead><tr><th>Command</th><th>What it does</th></tr></thead>
         <tbody>
+          <tr><td><code>/onboarding-guide</code></td><td>Generates <code>docs/ONBOARDING.md</code> — a developer onboarding document. Auto-generated at setup-init; refresh with <code>ONBOARDING GUIDE --refresh</code>. Keyword: ONBOARDING GUIDE [--refresh].</td></tr>
           <tr><td><code>/product-docs</code></td><td>Generates a Product Detail Document and/or User Guide as self-contained HTML.</td></tr>
           <tr><td><code>/articulate-as-human</code></td><td>Scans a generated document for AI-sounding writing patterns and reports by tier with file:line; rewrites only flagged spans, only on request. Args: &lt;path&gt; [--json].</td></tr>
         </tbody>
@@ -767,16 +810,22 @@
     <table class="cmd-table">
       <thead><tr><th>Keyword</th><th>What it does</th></tr></thead>
       <tbody>
-        <tr><td><code>SAVE PLAN ADO-{ID}</code></td><td>Persist the plan and draft the ICEA.</td></tr>
+        <tr><td><code>SAVE PLAN ADO-{ID}</code></td><td>Persist the plan and draft the ICEA. Writes a story-quality signal if clarifying questions were needed.</td></tr>
         <tr><td><code>SAVE ICEA ADO-{ID}</code></td><td>Run the critic gate, save the ICEA, and draft the Tech Spec.</td></tr>
         <tr><td><code>SAVE TECH ADO-{ID}</code></td><td>Write the Tech Spec (blocks on open questions).</td></tr>
-        <tr><td><code>APPROVE ADO-{ID}</code></td><td>Approve the ICEA + Tech Spec and unblock code generation. <code>APPROVE ADO-{ID} Story-{N}</code> for one story.</td></tr>
-        <tr><td><code>APPROVE ALL ADO-{ID}</code></td><td>Standing Write-Gate approval for the current plan — still shows each diff, just no per-file pause. <code>REVOKE ALL ADO-{ID}</code> cancels it.</td></tr>
+        <tr><td><code>APPROVE ADO-{ID}</code></td><td>Approve the ICEA + Tech Spec and unblock code generation. Writes APPROVE_ADO audit event. <code>APPROVE ADO-{ID} Story-{N}</code> for one story.</td></tr>
+        <tr><td><code>APPROVE ALL ADO-{ID}</code></td><td>Standing Write-Gate batch approval for the current plan — still shows each diff, just no per-file pause. Requires <code>tech_lead</code> role. Writes APPROVE_ALL audit event. <code>REVOKE ALL ADO-{ID}</code> cancels it.</td></tr>
         <tr><td><code>IMPLEMENT ADO-{ID}</code></td><td>Generate code for the approved ICEA (optionally <code>Story-{N}</code>).</td></tr>
-        <tr><td><code>REVISE ADO-{ID}</code></td><td>Revise the ICEA/Tech Spec and re-gate code generation.</td></tr>
+        <tr><td><code>REVISE ADO-{ID}</code></td><td>Revise the ICEA/Tech Spec and re-gate code generation. Writes REVISE_ADO audit event and a revision signal.</td></tr>
         <tr><td><code>STATUS ADO-{ID}</code></td><td>Show current state and the exact next action.</td></tr>
         <tr><td><code>BUG ADO-{ID} — {description}</code></td><td>Log a bug entry for that work item.</td></tr>
         <tr><td><code>UPGRADE / REWRITE / REPLATFORM ADO-{ID}</code></td><td>Start a migration; each also has <code>… RESUME</code> and <code>… STATUS</code>.</td></tr>
+        <tr><td><code>GOVERNANCE REPORT [--since / --days / --sprint]</code></td><td>Generate a sprint governance report aggregating audit events, token usage, and ledger metrics.</td></tr>
+        <tr><td><code>ONBOARDING GUIDE</code></td><td>Generate <code>docs/ONBOARDING.md</code>. Add <code>--refresh</code> to regenerate an existing file.</td></tr>
+        <tr><td><code>KNOWLEDGE ADD</code></td><td>Add a pattern to <code>.claude/project-knowledge.md</code> (team ICEA pattern library).</td></tr>
+        <tr><td><code>KNOWLEDGE REMOVE {N}</code></td><td>Remove pattern number N from project-knowledge.md.</td></tr>
+        <tr><td><code>KNOWLEDGE UPDATE {N}</code></td><td>Update pattern number N in project-knowledge.md.</td></tr>
+        <tr><td><code>LESSONS ADO-{ID}</code></td><td>Re-generate the lessons learned section for a single ADO — also offers to promote a recurring pattern to project-knowledge.</td></tr>
         <tr><td><code>SET DOMAIN</code></td><td>Infer/confirm the business domain so business-context severity is tuned to your domain.</td></tr>
       </tbody>
     </table>
@@ -785,7 +834,7 @@
   <section id="model-routing">
     <div class="section-eyebrow">Reference</div>
     <h2>Model <em class="accent">routing</em></h2>
-    <p class="section-intro">Skills route to different models by task type. Override any of these in <code>.claude/settings.json</code> → <code>env</code>.</p>
+    <p class="section-intro">Skills route to different models by task type. Override any of these in <code>.claude/settings.json</code> → <code>env</code>. Per-model pricing rates and an optional monthly budget are configured in <code>.claude/cost-governance.json</code>. The <code>setup-status</code> check 1x validates that all three vars are explicitly set.</p>
     <table class="cmd-table">
       <thead><tr><th>Tier</th><th>Env var · default</th><th>Used for</th></tr></thead>
       <tbody>
@@ -804,7 +853,7 @@
 <span class="cmd">.install.ps1 -Uninstall</span></pre></div></div>
     <div class="code-block"><div class="code-header"><span class="code-lang">bash</span></div><div class="code-body"><pre><span class="cmd">bash install.sh --update</span>
 <span class="cmd">bash install.sh --uninstall</span></pre></div></div>
-    <p>After upgrading, run <span class="cmd-pill">setup-sync</span> in each project to apply version-sensitive changes. Uninstalling never touches your project's <code>.claude/</code>, <code>memory/</code>, or <code>CLAUDE.md</code>.</p>
+    <p>After upgrading, run <span class="cmd-pill">setup-sync</span> in each project to apply version-sensitive changes (including ApprovalRoles.json seeding, new config files, and dep-scan CI templates). Uninstalling never touches your project's <code>.claude/</code>, <code>memory/</code>, or <code>CLAUDE.md</code>.</p>
   </section>
 
   </main>

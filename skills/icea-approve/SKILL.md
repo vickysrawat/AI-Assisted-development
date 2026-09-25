@@ -70,6 +70,67 @@ Read the `Status:` line from the ICEA file.
 
 ---
 
+## Step 3a — Test plan gate
+
+Check whether a QA test plan has been generated for this ADO:
+
+```bash
+find docs -path "*UserStory${ADO_ID}*" -name "ADO-${ADO_ID}-*.test-plan.md" 2>/dev/null
+```
+
+**If found:** record `TEST_PLAN_EXISTS=true`. Continue to Step 3b.
+
+**If not found and no `--skip-test-gate` flag:** hard-block —
+
+```
+⛔ TEST PLAN REQUIRED — no test plan found for ADO #{ADO_ID}.
+
+   The test plan is part of the approval artefact set (ICEA + Tech Spec + test plan)
+   and must exist on disk before APPROVE.
+
+   Run SAVE TEST ADO-{ADO_ID} to generate the QA test plan first.
+
+   To bypass (spike or prototype only):
+     APPROVE ADO-{ADO_ID} --skip-test-gate
+   ⚠ Bypass writes an audit entry visible in tech lead review.
+```
+
+Stop here.
+
+**If `--skip-test-gate` flag present:** write audit entries immediately (best-effort, never blocks) —
+
+```bash
+node .claude/hooks/audit-append.cjs "{\"event\":\"gate.test-plan-skip\",\"action\":\"SKIP\",\"ado\":\"${ADO_ID}\",\"result\":\"bypassed\",\"source\":\"icea-approve\",\"justification\":\"--skip-test-gate flag\"}" 2>/dev/null || true
+PLUGIN_DIR=$(cat .claude/plugin-path.txt 2>/dev/null || echo "")
+AUDIT_MODEL=$(node -e "try{const e=(JSON.parse(require('fs').readFileSync('.claude/settings.json','utf8')).env||{});console.log(e.ICEA_MODEL||'claude-opus-4-8');}catch(_){console.log('claude-opus-4-8');}" 2>/dev/null || echo "claude-opus-4-8")
+[ -n "$PLUGIN_DIR" ] && node "$PLUGIN_DIR/scripts/audit-write.cjs" --event BYPASS_TEST_GATE --ado-id "${ADO_ID}" --model "$AUDIT_MODEL" --verdict "bypassed" --context "--skip-test-gate flag" 2>/dev/null || true
+```
+
+Record `TEST_PLAN_EXISTS=bypass`. Continue to Step 3b.
+
+---
+
+## Step 3b — Light ICEA gap check
+
+Perform a heuristic scan of the ICEA `## Examples` section to detect test-generation
+blockers before implementation starts. This is an early-warning check — the full
+authoritative gap analysis runs at IMPLEMENT time.
+
+For each Example in the ICEA `## Examples` section, check:
+1. If the Example references a dependency by name (e.g. "calls `IUserRepository.GetById`",
+   "uses `IEmailService.Send`"), check whether that dependency's contract appears in `## Context`
+   (interface definition, return type, or behaviour description).
+2. If the Example specifies a result, check that the result is concrete (a specific value, an
+   object shape, a state change) — not just "returns success", "completes", or "works correctly".
+
+**If all Examples pass:** record `ICEA_GAP=clean` — show nothing in Step 4 summary.
+
+**If any Example fails the check:** record the specific failures as `ICEA_GAP_WARNINGS[]`.
+These are shown in the Step 4 summary as a non-blocking warning — full gap enforcement
+(with ICEA annotation and implementation block) happens at IMPLEMENT time.
+
+---
+
 ## Step 4 — Present lightweight summary for approval
 
 The files already exist on disk and have been reviewed by the Tech Lead
@@ -80,14 +141,22 @@ is needed to confirm the right document is being approved:
 📋 ICEA APPROVAL — ADO #{ADO_ID} · Release {R} · Sprint {S}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-ICEA:     {path} — Status: {current Status line}
-TechSpec: {path}
+ICEA:      {path} — Status: {current Status line}
+TechSpec:  {path}
+Test plan: {path}  ← or "⚠ SKIPPED (--skip-test-gate — audit entry written)" if bypass
 
 Intent:   {one line summary from ICEA Intent section}
 Type:     {STORY / EPIC}
 Total SP: {total from `## Sizing and Story Breakdown` section of Tech Spec}
 Open questions remaining: {count — 0 if none}
   ❓ [{N}] {topic}  ← list only if count > 0
+
+{Include the following block only if ICEA_GAP_WARNINGS[] is non-empty:}
+⚠ ICEA gap warning — {N} Example(s) may not generate complete unit tests at IMPLEMENT time:
+  • Example {N}: {gap description — e.g. "IUserRepository contract missing from Context"}
+  • Example {N}: {gap description — e.g. "expected result not concrete: 'returns success'"}
+  Run REVISE ADO-{ADO_ID} to fix before implementation, or proceed and resolve at IMPLEMENT time.
+  (These are ICEA defects — IMPLEMENT will hard-block if unresolved.)
 
 Reply APPROVE ADO-{ADO_ID} to approve.
 ⛔ If any ICEA Open Question is unresolved (not answered, not deferred-with-justification),
@@ -110,14 +179,17 @@ On receiving `APPROVE ADO-{ADO_ID}`:
    ```
    {date} — Approved
    ```
-2b. Record the approval outcome in the governance audit trail (best-effort — never blocks):
+2b. Record the approval outcome in both audit systems (best-effort — never blocks):
    ```bash
    node .claude/hooks/audit-append.cjs "{\"event\":\"gate.approve\",\"action\":\"APPROVE\",\"ado\":\"${ADO_ID}\",\"result\":\"granted\",\"source\":\"icea-approve\"}" 2>/dev/null || true
+   AUDIT_MODEL=$(node -e "try{const e=(JSON.parse(require('fs').readFileSync('.claude/settings.json','utf8')).env||{});console.log(e.ICEA_MODEL||'claude-opus-4-8');}catch(_){console.log('claude-opus-4-8');}" 2>/dev/null || echo "claude-opus-4-8")
+   node "$PLUGIN_DIR/scripts/audit-write.cjs" --event APPROVE_ADO --ado-id "${ADO_ID}" --model "$AUDIT_MODEL" --verdict "approved" --context "ICEA approved" 2>/dev/null || true
    ```
-   Note: this records the *developer's local approval assertion*. The authoritative lead/product
-   approval is captured separately from the ADO PR by the reconcile step (source `ado-pr`).
-   If the feature's `.ai-audit.md` exists, also append an `Approved` row with the resolved
-   `$ACTOR` in the User cell (resolve via `require('.claude/hooks/audit-append.cjs').resolveIdentity()`).
+   Note: `audit-write.cjs` records actor identity and role (from `.claude/ApprovalRoles.json`)
+   in a per-event JSON file under `.claude/audit/`. The `audit-append.cjs` call is the existing
+   shard-based trail; both coexist. If the feature's `.ai-audit.md` exists, also append an
+   `Approved` row with the resolved `$ACTOR` in the User cell (resolve via
+   `require('.claude/hooks/audit-append.cjs').resolveIdentity()`).
 3. Write immediately once the Open Questions gate (Step 0) passes — no other gate applies
 4. Output the ADO work item description block (ready to paste into ADO):
    Read `.claude/plugin-path.txt` to get `PLUGIN_DIR` (if absent, use the Node.js resolver from

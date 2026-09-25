@@ -59,6 +59,7 @@
       "session-start",
       "sprint-metrics",
       "sync-dirs",
+      "test-plan",
       "token-analysis",
       "update-arch",
       "upgrade"
@@ -110,6 +111,7 @@
       "rewrite",
       "security",
       "sprint-metrics",
+      "test-plan",
       "token-analysis",
       "upgrade"
     ],

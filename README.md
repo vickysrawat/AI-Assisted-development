@@ -102,6 +102,160 @@ ICEA-driven development workflow for distributed teams using **Azure DevOps**. L
 
 ---
 
+## Developer Workflow Guide — Commit & Governance
+
+The plugin installs a pre-commit hook (`governance-gate-precommit.cjs`) that runs on every
+commit regardless of tool — CLI, VS Code Source Control, Visual Studio, or any Git GUI. It
+enforces two gates:
+
+- **ICEA gate** — source code changes require an approved ICEA for the ADO ID on the branch.
+- **Security gate** — config file changes are scanned for secrets; env files are blocked if not gitignored.
+
+The CI pipeline (`_project-deploy/ci/icea-gate.yml`) runs the same checks server-side on PRs.
+Teams without CI access get enforcement via the pre-commit hook alone.
+
+---
+
+### Feature development
+
+**Branch naming:** `feature/ADO-{ID}-short-description`
+
+1. Create the branch with the ADO ID in the name.
+2. Run the ICEA flow: `SAVE PLAN ADO-{ID}` → `SAVE ICEA ADO-{ID}` → `APPROVE ADO-{ID}`.
+3. Implement: `IMPLEMENT ADO-{ID}` (gated by Write Gate — each file requires `APPROVE ADO-{ID}`).
+4. Commit — the pre-commit hook verifies the approved ICEA exists on disk. ✅
+
+If you commit without an approved ICEA the hook blocks with:
+```
+🔴 NO APPROVED ICEA: ADO-1234
+   Run: SAVE PLAN ADO-1234 → SAVE ICEA → APPROVE ADO-1234
+```
+
+---
+
+### Bug fixes
+
+There are two bug tiers depending on urgency:
+
+**Normal bug — `bugfix/ADO-{ID}-short-description`**
+
+A lightweight bug ICEA is required — faster than a feature ICEA (no Tech Spec, simplified Examples, single critic round). Use `/bug ADO-{ID}` to generate the lightweight spec. The pre-commit hook checks for an approved bug ICEA before allowing the commit.
+
+**Hot-fix (production incident) — `hotfix/ADO-{ID}-short-description`**
+
+The ICEA gate is skipped entirely — production fixes must not be blocked by process. The bypass is automatically logged to `.claude/audit/` with the branch name, ADO ID, and timestamp. The PR description must contain `[HOT-FIX ADO-{ID}]`.
+
+```
+⚠  HOT-FIX: ICEA gate skipped for src/MyService.cs (bypass logged)
+```
+
+The CI pipeline still runs the secret scan and security gate on hotfix branches.
+
+---
+
+### Config file changes
+
+Config files have a different gate than source code — no ADO or ICEA required, but a secret scan is always enforced.
+
+**When Claude makes the config change:**
+
+The Write Gate shows a config-specific prompt before writing:
+```
+📁 WRITE PENDING — config change
+   Path: src/MyApp/appsettings.json
+   Secret scan: ✅ clean
+
+   Reply APPROVE CONFIG to write, or SKIP to discard.
+```
+
+Reply `APPROVE CONFIG` to write. An audit entry is written automatically. No ADO ID needed.
+
+For high-risk config files (CI/CD pipelines like `azure-pipelines.yml`, IaC like `*.tf`, `*.bicep`), an escalation acknowledgment is required first:
+```
+⚠ HIGH-RISK CONFIG — this file affects infrastructure/pipeline configuration.
+  Confirm you have peer-reviewed this change: reply ACKNOWLEDGE then APPROVE CONFIG.
+```
+
+**When you edit config manually (outside Claude):**
+
+The pre-commit hook runs the same secret scan automatically on commit. If secrets are found the commit is blocked:
+```
+🔴 SECRET DETECTED in appsettings.json: hardcoded password
+   Remove credentials before committing.
+```
+
+High-risk config changes (CI/CD, IaC) are allowed through but emit a warning and write an audit entry for traceability.
+
+---
+
+### Environment files
+
+`.env`, `.env.local`, `.env.production`, and any `.env.*` file are hard-blocked if they appear in a commit and are not in `.gitignore`. There is no bypass for this — env files must never be committed.
+
+```
+🔴 ENV FILE COMMITTED: .env.local
+   Add to .gitignore immediately — env files must never be committed.
+   Add to .gitignore: echo ".env.local" >> .gitignore
+```
+
+Run `/gitignore-sync` to ensure all env files are covered in `.gitignore`. The `setup-init` command does this automatically on first setup.
+
+---
+
+### CI gate (teams with pipeline access)
+
+Copy the task template from `_project-deploy/ci/icea-gate.yml` into your project's `azure-pipelines.yml`. It runs `validate-governance.cjs` on every PR — the same script as the pre-commit hook.
+
+If a developer bypassed the pre-commit hook with `--no-verify`, the CI gate catches it server-side before the PR can merge. The `.env` block and secret scan have no bypass path at either layer.
+
+---
+
+### Quick reference
+
+| Scenario | Branch prefix | Gate | Bypass? |
+|---|---|---|---|
+| New feature | `feature/ADO-{ID}-*` | Full ICEA required | No |
+| Bug fix | `bugfix/ADO-{ID}-*` | Lightweight bug ICEA required | No |
+| Production hot-fix | `hotfix/ADO-{ID}-*` | ICEA gate skipped | Yes — audited automatically |
+| Config change via Claude | any | `APPROVE CONFIG` + secret scan | No (secret scan has no bypass) |
+| Config change manual | any | Pre-commit secret scan | No (secret scan has no bypass) |
+| Env file committed | any | Hard blocked | No |
+
+---
+
+### Keeping the plugin up to date
+
+`setup-status` checks whether a new released version of the plugin is available in your local
+plugin repo and always reminds you to pull:
+
+```
+  plugin release    ⚠️  v3.26.0 (2026-09-20) available — run /setup-sync to apply
+                        ℹ git pull in /path/to/plugin to check for remote updates
+```
+
+**To update the plugin in a project:**
+
+1. Pull the plugin repo:
+   ```bash
+   # In your local plugin repo directory:
+   git pull
+   ```
+2. Run `setup-sync` in the target project to apply the update.
+3. Run `setup-status` to confirm the version is current.
+
+**For plugin maintainers — releasing a new version:**
+
+```bash
+npm run bump:patch    # or bump:minor / bump:major
+# Fill in CHANGELOG.md stub
+npm run release
+git push origin main && git push origin v{N}
+```
+
+CI validates tests and version consistency on the tag push. Full release guide: [DEVELOPER-GUIDE.md — Releasing a new version](DEVELOPER-GUIDE.md#releasing-a-new-version).
+
+---
+
 ## How this plugin evolved
 
 The current feature set reflects continuous iteration driven by three architectural lessons:

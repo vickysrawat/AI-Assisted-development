@@ -143,8 +143,16 @@ insight block. Attributes with `requires:{who}` basis are the developer's action
   `APPROVE OPTIONS` until resolved or signed off by the right authority.
 - `requires:` on soft attributes (TCO at peak, effort refinement) is advisory — acknowledged and
   logged, does not block.
-- Write `[OPTION]` and `[DECISION]` (APPROVE OPTIONS) entries per `migration-log-spec.md`, including
-  the basis of each deciding attribute and any judge verdict.
+- Write `[OPTION]` and `[DECISION]` (APPROVE OPTIONS) entries per `migration-log-spec.md`. The
+  `[OPTION]` entry MUST include:
+  - The **full options table** with all attributes and their inline basis values — exactly as
+    shown to the developer, not condensed.
+  - The **full comparative insight block** for each decision-critical attribute (source-derived
+    reasoning, web-grounded facts with URL + date, synthesis conclusion) — verbatim from what
+    was shown in chat. The insight block is the decision evidence; summarising it removes the
+    audit value.
+  - When a triggered judge pass ran: its full analysis in the `[DECISION]` entry's
+    `**Judge analysis:**` field.
 
 ---
 
@@ -158,4 +166,5 @@ insight block. Attributes with `requires:{who}` basis are the developer's action
 - ALWAYS suggest the web search before running it — awareness + consent, never a silent stall.
 - Judge pass is TRIGGERED (close call or developer asks) — not mandatory on every option decision.
 - `requires:` on compliance / NFR-floor / security routes to a named human — never self-accepted.
-- ALWAYS record option basis + judge verdict in the migration log.
+- ALWAYS capture the full options table (with basis) AND full comparative insight verbatim in
+  the [OPTION] migration log entry — never condense or summarise the insight block.

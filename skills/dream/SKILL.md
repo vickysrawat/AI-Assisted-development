@@ -281,6 +281,161 @@ self-learning cache in the offline-knowledge `stacks/{stack}.md` LEARNED block
 A human moving a `learned` row above the markers (→ `curated`) is the trust upgrade — `/dream` never
 writes `curated`.
 
+## Phase 3.5 — Project Knowledge Pass
+
+After proposing MEMORY.md operations (Phase 3) and before the review tier (Phase 4),
+run a staleness check on `.claude/project-knowledge.md`.
+
+```bash
+cat .claude/project-knowledge.md 2>/dev/null || echo "NOT_FOUND"
+```
+
+If `NOT_FOUND` or no entries → skip this phase silently.
+
+For each numbered entry `### [{N}] {title}`:
+
+**Check 1 — Code anchor (if present):**
+```bash
+grep -r "{AnchorName}" src/ 2>/dev/null | head -1 || echo "ANCHOR_MISSING"
+```
+If `ANCHOR_MISSING` → propose `REMOVE-{N}` with reason "Code anchor `{AnchorName}` not found in codebase."
+
+**Check 2 — Age threshold:**
+Parse the `Added` date from the entry. If older than 180 days → propose `REVALIDATE-{N}`.
+
+**Check 3 — No staleness signal:**
+Propose `KEEP-{N}`.
+
+**Present the project-knowledge section** (only if ≥1 entry is flagged — skip the section header if all are KEEP):
+
+```
+§ Project Knowledge — .claude/project-knowledge.md
+  {N} entries · {X} ⚠ flagged
+
+  Entry [{N}] — {title}  ({Added date}, {ageDays} days old)
+    ⚠ {ANCHOR MISSING | AGE THRESHOLD reached}
+    Proposed: {REMOVE | REVALIDATE}
+    Code anchor: {AnchorName} (if applicable)
+    → Reply KEEP-{N} / REMOVE-{N} / UPDATE-{N}
+
+  Entry [{N}] — {title}
+    ✅ No staleness signal
+    Proposed: KEEP (no action needed)
+```
+
+**Wait for developer replies** (e.g. `KEEP-3 REMOVE-1 UPDATE-2`).
+
+`UPDATE-{N}` opens a follow-up prompt for the replacement pattern text.
+
+Apply project-knowledge changes in Phase 5 alongside MEMORY.md changes.
+Log project-knowledge operations in the Phase 6 dream-log entry under "### Operations applied".
+
+---
+
+## Phase 3.6 — ICEA Quality Signals
+
+Read the signals inbox. If empty, skip this phase entirely.
+
+```bash
+node -e "
+const fs = require('fs'), path = require('path');
+const d = path.join('.claude', 'signals');
+if (!fs.existsSync(d)) { console.log('NO_DIR'); process.exit(0); }
+const files = fs.readdirSync(d).filter(f => f.endsWith('.json'));
+if (!files.length) { console.log('EMPTY'); process.exit(0); }
+console.log('COUNT=' + files.length);
+files.forEach(f => {
+  try { process.stdout.write(fs.readFileSync(path.join(d, f), 'utf8') + '\n'); } catch(_) {}
+});
+"
+```
+
+If `NO_DIR` or `EMPTY` → skip phase. Otherwise proceed.
+
+**Read threshold:**
+
+```bash
+node -e "
+try {
+  const s = JSON.parse(require('fs').readFileSync('.claude/dream-init-state.json','utf8'));
+  console.log(s.gap_promotion_threshold || 2);
+} catch(_) { console.log(2); }
+"
+```
+
+**Load `memory/topic-signals.md`** — the running tally. If missing, start with empty tally.
+
+**For each signal file read:**
+
+1. Locate the matching `## {category}` section in the tally (or create it)
+2. Append the signal's ADO + detail + date as a bullet
+3. Increment the count
+
+**Rewrite `memory/topic-signals.md`** with all updated counts:
+
+```markdown
+# Signal Registry — auto-managed by Dream
+
+> Do not edit manually.
+
+## {category}  (count: {N} / threshold: {threshold})
+- ADO-{ID} · {type} · {date} · {detail}
+- ADO-{ID} · {type} · {date} · {detail}
+```
+
+**Threshold check — for each category with count ≥ threshold:**
+
+Present to developer before Phase 4:
+
+```
+§ ICEA Quality — promotion candidate
+
+  Category : {category}
+  Pattern  : {human-readable description — infer from accumulated signal details}
+  Seen in  : ADO-{ID}, ADO-{ID} ({N} occurrences across {span})
+  Types    : {gap | revision | story-quality | mixed}
+
+  Proposed entry for project-knowledge.md:
+  ─────────────────────────────────────────
+  ### [{next-N}] {suggested short title}
+  Source ADO  : ADO-{IDs}
+  Added       : {today}  Release {R}
+  ---
+  {1–3 sentence pattern description derived from the signal details}
+
+  Reply PROMOTE-{category} to add to project-knowledge.md, or SKIP-{category} to defer.
+```
+
+On `PROMOTE-{category}`:
+- Write the entry to `project-knowledge.md`
+- Remove the `## {category}` section from `memory/topic-signals.md` (promoted — count resets)
+
+On `SKIP-{category}`:
+- Keep the entry in `memory/topic-signals.md` (will re-check next Dream run)
+
+**After all signals are processed — delete signal files from `.claude/signals/`:**
+
+```bash
+node -e "
+const fs = require('fs'), path = require('path');
+const d = path.join('.claude', 'signals');
+let deleted = 0;
+fs.readdirSync(d).filter(f => f.endsWith('.json')).forEach(f => {
+  try { fs.unlinkSync(path.join(d, f)); deleted++; } catch(_) {}
+});
+console.log('Signal files cleared: ' + deleted);
+"
+```
+
+Signal files are deleted even for categories that did not reach threshold — they are already tallied in `topic-signals.md`. The tally persists; the raw files are ephemeral.
+
+Include signal processing in the Phase 6 dream-log under "### Operations applied":
+```
+Signal files processed: {N}  ·  Categories updated: {list}  ·  Promotions: {N}  ·  Files cleared: {N}
+```
+
+---
+
 ## Phase 4 — Semi-Auto Review
 
 Operations are split into three tiers based on blast radius.

@@ -259,26 +259,19 @@ fs.writeFileSync(p, JSON.stringify(m, null, 2));
 "
 ```
 
-**2a — `init_claude_md`** (if pending):
-Run `/init` NOW. Do not describe what you are about to do — execute immediately.
-Do not read or summarise the other pending items first. `/init` analyses the codebase
-and populates `./CLAUDE.md` with project-specific content (Common Commands, build, test,
-lint). Wait for `/init` to fully complete, then mark `init_claude_md` done in the manifest
-before reading order 2.
-
-**2b — `resolve_git_bash_paths`** (if pending):
+**2a — `resolve_git_bash_paths`** (if pending):
 Bootstrap attempted auto-detection. Check manifest `operations.gitBashPaths`
 for `gitPath`/`bashPath` values. If either is null, ask the developer to run
 `where.exe git` / `where.exe bash` and substitute the `⚠ NOT DETECTED` placeholder
 in CLAUDE.md §0b manually. Mark done when both placeholders are resolved.
 
-**2c — `verify_external_dirs`** (if pending):
+**2b — `verify_external_dirs`** (if pending):
 Check manifest `operations.externalDirScan.externalPaths`. If non-empty,
 show the paths and ask the developer to confirm they match their local checkout.
 Correct any wrong paths in `.claude/settings.local.json`. Mark done when confirmed.
 If `externalPathsFound` is 0, mark done immediately.
 
-**2d — External Repository Discovery** (always run — guarded by `external_stacks_prompted` flag):
+**2c — External Repository Discovery** (always run — guarded by `external_stacks_prompted` flag):
 
 ```bash
 node -e "
@@ -328,6 +321,59 @@ If output is `ASK`:
 
 ---
 
+**2d — Approval Roles (governance)** (guarded by flag):
+
+Check whether roles have already been configured (guard against re-prompting on re-runs):
+
+```bash
+node -e "
+const fs=require('fs');
+try {
+  const r=JSON.parse(fs.readFileSync('.claude/ApprovalRoles.json','utf8'));
+  const hasData=(r.tech_leads||[]).length>0||(r.security_officers||[]).length>0;
+  console.log(hasData?'SKIP':'ASK');
+} catch(e) { console.log('ASK'); }
+"
+```
+
+If output is `SKIP` → roles already configured, skip this step entirely.
+
+If output is `ASK`, prompt the developer:
+
+```
+Setting up governance roles for this project...
+
+  Who are the Tech Leads? (authorised to use APPROVE ALL, approve CI/CD and IaC config changes)
+  Enter comma-separated email addresses, or press Enter to skip:
+  >
+
+  Who are the Security Officers? (authorised to dismiss Critical/High security findings)
+  Enter comma-separated email addresses, or press Enter to skip:
+  >
+```
+
+Parse the responses:
+- Split on commas, trim whitespace
+- Keep only values that contain `@` (basic email shape check — no strict validation)
+- If both lists are empty, write the skeleton unchanged (team opted out of enforcement)
+
+Write to `.claude/ApprovalRoles.json`:
+```json
+{
+  "tech_leads": ["email1@company.com", "email2@company.com"],
+  "security_officers": ["email@company.com"]
+}
+```
+
+Tell the developer:
+```
+✓ ApprovalRoles.json configured (tech_leads: N, security_officers: N).
+  Edit .claude/ApprovalRoles.json directly or re-run /setup-init to update.
+  Empty = all role checks pass silently (opt-out mode).
+```
+
+---
+
 ### Step 3 — Analysis LLM work (manifest items order 4–7)
 
 **3a — `generate_architecture`** (if pending):
@@ -347,13 +393,28 @@ the CLAUDE.md `Domain:` line + dream-init-state.json `domain`).
 ```
 Wait for architect to complete. Mark `generate_architecture` done in manifest.
 
-**3b — `cleanup_claude_md`** (if pending):
+**3b — `init_claude_md`** (if pending):
+Run `/init` NOW. Do not describe what you are about to do — execute immediately.
+Do not read or summarise the other pending items first. `/init` analyses the codebase
+and populates `./CLAUDE.md` with project-specific content (Common Commands, build, test,
+lint). Wait for `/init` to fully complete, then mark `init_claude_md` done in the manifest
+before moving to step 3c.
+
+> **Why after architect:** The architect skill populates `.claude/architecture/` from empty
+> templates and will not overwrite files that already contain content. Running architect
+> first guarantees it always gets blank templates. `/init` then writes its output to
+> CLAUDE.md, which the cleanup step (3c) immediately redistributes.
+
+---
+
+**3c — `cleanup_claude_md`** (if pending):
 
 Run the CLAUDE.md cleanup pass. This step routes the project-specific sections that
 `/init` wrote into CLAUDE.md to the correct rule files now that Bootstrap Phase 2 has
-deployed them. Execute the following sub-steps in order:
+deployed them and `.claude/architecture/` is populated. Execute the following sub-steps
+in order:
 
-**3b-i — Read and classify**
+**3c-i — Read and classify**
 
 Read `./CLAUDE.md`. Identify every section that was added by `/init` (i.e. sections
 whose headings are NOT in the plugin-managed list below). Classify each `/init` section
@@ -368,15 +429,16 @@ by its content into one of these routing targets:
 | Java / Spring coding conventions | `.claude/rules/java-rules.md` |
 | Python / FastAPI / Django / Flask conventions | `.claude/rules/python-rules.md` |
 | Data access, SQL, ORM, repository patterns | `.claude/rules/data-access-rules.md` |
-| General design, project conventions, testing, cross-cutting | `.claude/rules/project-rules.md` |
-| Architecture overview, key files, project structure | **DISCARD** — architect owns these |
+| Design philosophy, decision transparency, testing principles | `.claude/rules/project-rules.md` |
+| General project conventions, cross-cutting rules | `.claude/rules/project-rules.md` |
+| Architecture overview, project structure, request pipeline, solution layout, authentication flows, configuration patterns, health checks | **DISCARD** — architect already populated `.claude/architecture/`; this content is now there |
 
-Plugin-managed sections (never route, never remove):
-`## 0. WRITE GATE`, `## 0a.`, `## 0b.`, `## 1. PROJECT OVERVIEW`,
-`## 2. AZURE DEVOPS`, `## 3. DESIGN PHILOSOPHY`, `## 4. MODEL ROUTING`,
-`## Data Access Convention`, `## Feature Gate`, `## Common Commands` (keep in CLAUDE.md).
+Plugin-managed sections (never route, never remove — these are in the deployed template):
+`## Dream`, `## 0. WRITE GATE`, `## 0a.`, `## 0b.`, `## 1. PROJECT OVERVIEW`,
+`## 2. AZURE DEVOPS`, `## 4. MODEL ROUTING`, `## Web Search Policy`,
+`## Feature Gate`, `## Common Commands` (keep in CLAUDE.md).
 
-**3b-ii — Show routing table and confirm**
+**3c-ii — Show routing table and confirm**
 
 Print a routing summary before writing anything:
 
@@ -384,7 +446,7 @@ Print a routing summary before writing anything:
 📋 CLAUDE.md cleanup — proposed routing:
   "Section Title"  →  .claude/rules/csharp-dotnet-rules.md
   "Section Title"  →  .claude/rules/project-rules.md
-  "Section Title"  →  DISCARD (architecture content)
+  "Section Title"  →  DISCARD (architecture content — now in .claude/architecture/)
   ...
 
 Reply YES to apply, or SKIP to leave CLAUDE.md unchanged.
@@ -392,7 +454,7 @@ Reply YES to apply, or SKIP to leave CLAUDE.md unchanged.
 
 Wait for the developer to reply. If `SKIP`, mark `cleanup_claude_md` done and move on.
 
-**3b-iii — Write to rule files**
+**3c-iii — Write to rule files**
 
 For each routed section:
 1. Check the target rule file exists in `.claude/rules/` (deployed by Bootstrap Phase 2).
@@ -413,7 +475,7 @@ For each routed section:
 If the `## Project-Specific Conventions` marker already exists in the file, append the
 content inside it — do not add a second marker.
 
-**3b-iv — Strip from CLAUDE.md**
+**3c-iv — Strip from CLAUDE.md**
 
 Remove all routed (and discarded) `/init` sections from `./CLAUDE.md`. The result must
 contain only: plugin-managed sections + `## Common Commands`.
@@ -422,12 +484,12 @@ Mark `cleanup_claude_md` done in manifest.
 
 ---
 
-**3c — `build_knowledge_graph`** (if pending):
+**3d — `build_knowledge_graph`** (if pending):
 
 > **ADR 0056 (v3.14+):** graph generation is now split into two sequential steps:
 > graph-create (initial build from the module skeleton) then graph-sync (LLM refinement).
 
-**Step 3c-i — graph-create (initial graph generation):**
+**Step 3d-i — graph-create (initial graph generation):**
 ```
 Read .claude/plugin-path.txt to get PLUGIN_DIR (if absent, use §1a resolver), then
 Read $PLUGIN_DIR/skills/graph-create/SKILL.md and execute it in full.
@@ -438,7 +500,7 @@ graph-index.md + per-module detail files.
 Wait for graph-create to complete. Confirm `.claude/graph/graph.json` and
 `.claude/graph/graph-index.md` exist.
 
-**Step 3c-ii — graph-sync (LLM refinement, authoritative final pass):**
+**Step 3d-ii — graph-sync (LLM refinement, authoritative final pass):**
 ```
 Read .claude/plugin-path.txt to get PLUGIN_DIR (if absent, use §1a resolver), then
 Read $PLUGIN_DIR/skills/graph-sync/SKILL.md and execute it in full.
@@ -473,6 +535,17 @@ If MISSING or unanswered count > 0:
   Run: /update-arch --deployment
   Both /app-readiness and /plugin-readiness require this file.
 ```
+
+**Generate onboarding guide (first-time only):**
+
+```bash
+ls docs/ONBOARDING.md 2>/dev/null && echo "EXISTS" || echo "MISSING"
+```
+
+- `MISSING` → run the onboarding-guide skill now (no prompt — first-time setup benefit).
+  Read `$PLUGIN_DIR/skills/onboarding-guide/SKILL.md` and execute it.
+  The guide reads the architecture docs and ApprovalRoles.json that setup-init just created.
+- `EXISTS` → skip silently (developer may have customised it).
 
 Print final summary:
 ```

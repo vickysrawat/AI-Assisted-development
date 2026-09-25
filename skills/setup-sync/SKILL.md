@@ -551,3 +551,28 @@ Skip it for pure-modern / pure-framework / non-.NET repos (no effect there).
 
 > Issue 6: the graph-sync reminder is intentionally a prominent `⚠` line in the summary box,
 > not a trailing note, because a stale graph silently degrades downstream skills.
+
+---
+
+## Step 7b — Onboarding guide refresh
+
+After the summary, check the onboarding guide state:
+
+```bash
+ls docs/ONBOARDING.md 2>/dev/null && echo "EXISTS" || echo "MISSING"
+```
+
+**If `MISSING`:**
+```
+ℹ No onboarding guide found.
+  Generate docs/ONBOARDING.md for developers and tech leads? (yes / skip)
+```
+On `yes` → run the onboarding-guide skill (read `$PLUGIN_DIR/skills/onboarding-guide/SKILL.md`).
+On `skip` → print: `Run ONBOARDING GUIDE any time to generate it.`
+
+**If `EXISTS`:**
+```
+ℹ docs/ONBOARDING.md exists. Refresh it? Roles or stack may have changed since it was generated. (yes / skip)
+```
+On `yes` → run the onboarding-guide skill with `--refresh`.
+On `skip` → print: `Run ONBOARDING GUIDE --refresh any time to regenerate.`

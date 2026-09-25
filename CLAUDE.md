@@ -42,6 +42,13 @@ Entry format, consolidation cadence (`/dream` every 5–8 sessions), the 20-entr
 cap, topic-file demotion, and `/dream-health` are documented in
 `skills/shared/dream-reference.md`.
 
+**Designated Dream runner (team projects):** Dream writes to `memory/topic-*.md`,
+`memory/MEMORY.md`, `memory/topic-signals.md`, and `.claude/project-knowledge.md`.
+To avoid merge conflicts, **designate one team member (typically the Tech Lead) to run
+`/dream` each sprint.** Other developers write signal files to `.claude/signals/` and
+memory entries to `memory/MEMORY.md` freely — both are committed and team-shared.
+The Dream runner consolidates them, clears processed signal files, and commits the result.
+
 ---
 
 ## 0. WRITE GATE — Applies to source code and config files only
@@ -97,11 +104,20 @@ Recognised globally, no /command needed. ADO ID is case-insensitive (`ADO-1847`,
 | `SAVE ICEA ADO-{ID} ACCEPT` | Override critic REVISE verdict and save ICEA anyway (with audit note) |
 | `SAVE TECH ADO-{ID}` | Write Tech Spec to disk — hard blocks if open questions remain (no bypass) |
 | `SAVE TECH ADO-{ID} ACCEPT` | Save Tech Spec despite critic REVISE verdict (override with audit note) |
+| `SAVE TEST ADO-{ID}` | Run test-plan skill — generate or refresh the QA test plan for any ADO (icea/upgrade/rewrite/replatform source auto-detected) |
+| `SAVE TEST ADO-{ID} --source {type}` | Run test-plan skill with explicit source override (icea · upgrade · rewrite · replatform) |
+| `SAVE TEST ADO-{ID} --subagent` | Run test-plan skill in subagent mode — parallel suite generation, no prompts, no budget warning |
+| `EXPAND TEST ADO-{ID}` | Expand all stub suites in the test plan that have an approved source artifact on disk |
+| `EXPAND TEST ADO-{ID} Suite-N` | Expand a single named stub suite |
+| `EXPAND TEST ADO-{ID} TC-{ID}` | Expand a single TC stub to full steps |
+| `REFRESH TEST ADO-{ID}` | Re-generate cross-cutting suites (Regression, Security, NFR) from current source artifact |
+| `REFRESH TEST ADO-{ID} --combine` | Re-assemble the rewrite combined test plan doc from current cluster files (no cluster files modified) |
 | `PLAN ADO-{ID}` | Invoke icea-feature skill — cross-session recovery entry at Step 5 (draft ICEA from saved plan on disk; reads icea-feature SKILL.md before proceeding) |
 | `ICEA ADO-{ID}` | Invoke icea-feature skill — cross-session recovery entry at Step 8 (draft Tech Spec from saved ICEA on disk; skip context budget check; reads icea-feature SKILL.md including EPIC branch before proceeding) |
 | `TECH ADO-{ID}` | Invoke icea-feature skill — cross-session recovery entry at Step 8 (draft Tech Spec from saved ICEA on disk; skip context budget check; reads icea-feature SKILL.md including EPIC branch before proceeding) |
 | `APPROVE ADO-{ID}` | Run icea-approve skill for that ADO ID |
 | `APPROVE ADO-{ID} Story-{N}` | Run icea-approve skill for that story |
+| `APPROVE ADO-{ID} --skip-test-gate` | Run icea-approve — bypass the test plan existence gate (spike or prototype only). Writes an audit entry automatically. |
 | `APPROVE ALL ADO-{ID}` | Grant standing Write-Gate approval for the current plan/ADO — subsequent source/config writes proceed without a per-file pause, but each diff + path is still shown. Does NOT skip Feature/secrets/findings gates. Scope: this session + this ADO only. |
 | `REVOKE ALL ADO-{ID}` | Cancel a standing `APPROVE ALL` — return to per-file `APPROVE ADO-{ID}` |
 | `IMPLEMENT ADO-{ID}` | Run icea-implement skill for that ADO ID |
@@ -127,7 +143,16 @@ Recognised globally, no /command needed. ADO ID is case-insensitive (`ADO-1847`,
 | `METRICS RELEASE-{N} SPRINT-{S}` | Same as above but scoped to a single sprint |
 | `METRICS RELEASE-{N} VS RELEASE-{M}` | Same as above with explicit trend comparison against Release {M} |
 | `LESSONS RELEASE-{N}` | Alias for `METRICS RELEASE-{N}` — produces the same dual-output report; the Lessons tab is the primary focus |
-| `LESSONS ADO-{ID}` | Re-generate the lessons learned section for a single ADO — reads its ai-audit.md and tracker.md, rewrites the `### Lessons learned` section in the tracker. Use when the auto-generated lessons were thin due to low context at story-complete time |
+| `LESSONS ADO-{ID}` | Re-generate the lessons learned section for a single ADO — reads its ai-audit.md and tracker.md, rewrites the `### Lessons learned` section in the tracker. Then asks: "Does any lesson here belong in project-knowledge.md? (yes / no)" — on yes, shows the candidate entry and writes to `.claude/project-knowledge.md` on confirmation. |
+| `KNOWLEDGE ADD` | Add a new entry to `.claude/project-knowledge.md` — prompt for title, source ADO(s), code anchor (optional), pattern text. Write after confirmation. See `skills/shared/project-knowledge-spec.md` for format. |
+| `KNOWLEDGE REMOVE {N}` | Show entry N from `.claude/project-knowledge.md` and remove after explicit confirmation. |
+| `KNOWLEDGE UPDATE {N}` | Show current entry N from `.claude/project-knowledge.md`, prompt for replacement text, write after confirmation. |
+| `ONBOARDING GUIDE` | Run onboarding-guide skill — generate `docs/ONBOARDING.md` if it does not exist. Reads architecture docs + ApprovalRoles.json + stack detection. Skips silently if file already exists. |
+| `ONBOARDING GUIDE --refresh` | Run onboarding-guide skill — regenerate `docs/ONBOARDING.md` unconditionally (overwrites). |
+| `GOVERNANCE REPORT` | Run governance-report skill — sprint governance & quality report for the tech lead. Reads `.claude/audit/` + ledgers + token-graph. Saves to `governance/`. |
+| `GOVERNANCE REPORT --since {date}` | Same, scoped from a specific date. |
+| `GOVERNANCE REPORT --days {N}` | Same, for the last N days. |
+| `GOVERNANCE REPORT --sprint {N}` | Same, scoped to Sprint N (reads sprint dates from docs/). |
 
 ---
 

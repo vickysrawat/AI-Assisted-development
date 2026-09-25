@@ -1,0 +1,72 @@
+# _project-deploy/ci/dep-scan-java.yml
+# ─────────────────────────────────────────────────────────────────────────────
+# Dependency vulnerability scan — Azure DevOps pipeline task template
+#
+# FOR JAVA PROJECTS (Maven or Gradle). Uses the OWASP Dependency-Check plugin,
+# which queries the NIST NVD database. No SaaS account required.
+#
+# TWO OPTIONS — choose the one matching your build tool:
+#   Option A: Maven (most Spring Boot / enterprise Java projects)
+#   Option B: Gradle (Gradle wrapper projects)
+#
+# Copy the relevant option into your project's azure-pipelines.yml.
+# Delete the option you are NOT using.
+#
+# Prerequisites for both options:
+#   - Java 11+ installed on the build agent
+#   - Internet access to download the OWASP NVD database (first run is slow;
+#     subsequent runs use the cached database — cache the $(Pipeline.Workspace)
+#     directory in ADO to speed up repeat runs)
+#   - CVSS threshold: failBuildOnCVSS=7 means HIGH (7.0) or CRITICAL (9.0+) fail.
+#     Lower to 4 for MEDIUM, raise to 10 to only fail on CRITICAL.
+#
+# Placement: add after compile/dependency download step, before test steps.
+# ─────────────────────────────────────────────────────────────────────────────
+
+steps:
+
+  # ── Option A: Maven ──────────────────────────────────────────────────────────
+  # Remove this block if using Gradle (Option B).
+
+  - script: |
+      mvn org.owasp:dependency-check-maven:check \
+        -DfailBuildOnCVSS=7 \
+        -Dformat=JSON \
+        -DoutputDirectory="$(Build.ArtifactStagingDirectory)"
+    displayName: 'Dependency vulnerability scan — Java Maven (OWASP, fail on HIGH+)'
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+    env:
+      NVD_API_KEY: $(NVD_API_KEY)   # optional — speeds up NVD DB download; set as pipeline secret
+    # To investigate locally:
+    #   mvn org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=0
+    # To suppress a false positive:
+    #   Add a suppression XML entry (OWASP docs) OR /dismiss FP-{fingerprint} in the
+    #   security ledger with written justification.
+    # NVD API key: register free at https://nvd.nist.gov/developers/request-an-api-key
+
+  # ── Option B: Gradle ─────────────────────────────────────────────────────────
+  # Remove this block if using Maven (Option A).
+  # Requires the OWASP Dependency-Check Gradle plugin in build.gradle:
+  #   plugins { id "org.owasp.dependencycheck" version "9.0.0" }
+  #   dependencyCheck {
+  #     failBuildOnCVSS = 7
+  #     formats = ["JSON"]
+  #     outputDirectory = System.getenv("BUILD_ARTIFACTSTAGINGDIRECTORY") ?: "build/reports"
+  #   }
+
+  # - script: |
+  #     ./gradlew dependencyCheckAnalyze
+  #   displayName: 'Dependency vulnerability scan — Java Gradle (OWASP, fail on HIGH+)'
+  #   condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+  #   env:
+  #     NVD_API_KEY: $(NVD_API_KEY)
+
+  # ── Publish report (works for both Maven and Gradle) ─────────────────────────
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Java dep-audit report'
+    condition: and(always(), eq(variables['Build.Reason'], 'PullRequest'))
+    inputs:
+      pathToPublish: $(Build.ArtifactStagingDirectory)
+      artifactName: dependency-audit-java
+    # Reports are named dependency-check-report.json by OWASP DC by default.

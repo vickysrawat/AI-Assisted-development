@@ -1,0 +1,49 @@
+# _project-deploy/ci/dep-scan-dotnet.yml
+# ─────────────────────────────────────────────────────────────────────────────
+# Dependency vulnerability scan — Azure DevOps pipeline task template
+#
+# FOR .NET PROJECTS (SDK-style, .NET 6+, PackageReference format).
+# Uses the built-in `dotnet list package --vulnerable` command, which queries
+# the NuGet.org advisory database. No external tool download required.
+#
+# Copy these steps into your project's azure-pipelines.yml to fail PRs on
+# any known CVE in a direct or transitive NuGet dependency.
+#
+# Limitations:
+#   - Requires outbound internet to NuGet.org advisory feed (firewall allowance
+#     may be needed in air-gapped environments)
+#   - PackageReference format only; packages.config is not supported
+#   - dotnet list package --vulnerable exits 0 even when CVEs are found;
+#     the grep wrapper below converts a hit to a non-zero exit
+#
+# Prerequisites:
+#   - .NET SDK 6+ installed on the build agent (add UseDotNet@2 if needed)
+#   - dotnet restore must have run before this step
+#
+# Placement: add after restore, before build/test steps.
+# ─────────────────────────────────────────────────────────────────────────────
+
+steps:
+
+  - script: |
+      set -euo pipefail
+      REPORT="$(Build.ArtifactStagingDirectory)/dep-audit-dotnet.txt"
+      dotnet list package --vulnerable --include-transitive 2>&1 | tee "$REPORT"
+      if grep -q "has the following vulnerable packages" "$REPORT"; then
+        echo "##[error]Vulnerable NuGet packages detected. Review dep-audit-dotnet.txt artifact."
+        exit 1
+      fi
+      echo "Dependency scan complete — no known vulnerabilities found."
+    displayName: 'Dependency vulnerability scan — .NET NuGet (fail on any CVE)'
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+    # To investigate locally:
+    #   dotnet list package --vulnerable --include-transitive
+    # To suppress a false positive:
+    #   Add /dismiss FP-{fingerprint} to the security ledger with written justification.
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish .NET dep-audit report'
+    condition: and(always(), eq(variables['Build.Reason'], 'PullRequest'))
+    inputs:
+      pathToPublish: $(Build.ArtifactStagingDirectory)/dep-audit-dotnet.txt
+      artifactName: dependency-audit-dotnet

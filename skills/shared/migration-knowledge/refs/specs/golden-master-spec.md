@@ -255,6 +255,50 @@ developer/QA to run later.
 Confirm whether the source builds and starts, whether seed/test data exists, and — if the tool cannot
 start it — whether the developer can point at an already-running instance.
 
+### Developer presentation (STOP — required before recording any mode)
+
+Before recording any oracle mode to the checkpoint, STOP and present all options with their
+consequences. Never auto-select silently.
+
+1. Probe whether the source is self-runnable (can the build/run tools start it locally?).
+2. Present the following and wait for the developer's explicit response:
+
+```
+🔍 ORACLE MODE — {ADO} · {migration name}
+
+The oracle mode sets the behavioral verification approach and directly caps the assurance ceiling.
+
+Auto-detected so far: {source self-runnable: yes/no} — {reason}
+
+| Mode             | What it requires                        | What you get                                    | Assurance ceiling                                     |
+|------------------|-----------------------------------------|-------------------------------------------------|-------------------------------------------------------|
+| self-run         | Source buildable + launchable locally   | Full capture from local instance                | BAL A (Rewrite) · NFR measurable (Replatform)        |
+| provided-url     | A running dev/test instance URL from you| Full capture from that instance                 | BAL A (Rewrite) · NFR measurable (Replatform)        |
+| deferred-capture | Nothing now                             | Capture plan authored; you or QA run it later   | NONE until the plan is executed against a live source |
+| skipped          | Nothing                                 | Inferred characterization tests only            | BAL capped at C (Rewrite) · NFR projected (Replatform)|
+
+⚠ If deferred or skipped:
+  · Rewrite: BAL caps at C — a B-series cluster below assurance floor is a HARD BLOCK at the
+    completion gate (named approver + written reason required).
+  · Replatform: NFR assurance degrades to 'projected' — a regulated NFR below the measured
+    floor is a HARD BLOCK (exit 16, named approver + written reason required).
+
+Do you have a running dev/test instance of the SOURCE application available at a URL?
+  YES — provide the URL below (dev/test only; never production)
+  NO  — we will use {self-run if available | deferred-capture if source is understandable | skip}
+```
+
+3. **Developer's explicit response determines the mode — never override it:**
+   - YES + URL provided AND source self-runnable → ask which the developer prefers (both give BAL A);
+     default to `provided-url` if the developer has real data there, `self-run` if they prefer the
+     controlled local instance. Record the choice and the reason.
+   - YES + URL provided AND source NOT self-runnable → `provided-url`.
+   - NO + self-run available → `self-run`.
+   - NO + not self-runnable + source understandable → `deferred-capture`.
+   - NO + none of the above apply → `skipped`; explain consequences once more before confirming.
+4. For `provided-url`: probe reachability (`curl -sf -k --max-time 5 {URL}/{health-endpoint}`) and
+   confirm the URL is not a production endpoint before proceeding.
+
 Decision (ordered strongest-first — take the first that applies):
 
 1. **Source self-runnable by the tool + has seed/test data** → full golden-master capture (Step 2).
@@ -500,6 +544,10 @@ verification-results note; never edit confidence or gap sections in place. Human
 
 ## Hard rules
 
+- NEVER auto-select or silently record an oracle mode — ALWAYS present all options with their
+  assurance-ceiling consequences and wait for the developer's explicit response before recording.
+- The developer's choice overrides the auto-detected recommendation — never infer YES for
+  `provided-url` from silence or from the fact that the source is self-runnable.
 - NEVER claim behavioral parity without a captured oracle — say "INFERRED" if none was captured.
 - The questions come from the SOURCE (code / contract / suite / UI); the answers come from the URL —
   NEVER infer the endpoint list from the base URL alone.

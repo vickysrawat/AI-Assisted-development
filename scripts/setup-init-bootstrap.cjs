@@ -135,6 +135,9 @@ const DIRS_TO_CREATE = [
   path.join('.claude', 'skills'),  // project-specific skills + .hashes; developers may add custom skills here
   path.join('.claude', 'architecture'),
   path.join('.claude', 'graph'),
+  path.join('.claude', 'audit'),   // append-only governance event trail (committed, not gitignored)
+  path.join('.claude', 'signals'), // ICEA quality signals (committed; Dream clears after each run)
+  'governance',                    // sprint governance & quality reports (regenerable, team-committed)
   'memory',
   'temp',
   'token-analysis',
@@ -152,6 +155,8 @@ const STUB_FILES = [
   'pr-describe.md',    'pr-spec-review.md','product-docs.md',   'security-review.md',
   'session-start.md',  'sprint-metrics.md','sync-dirs.md',      'token-analysis.md',
   'update-arch.md',
+  'governance-report.md',
+  'onboarding-guide.md',
 ];
 
 // Legacy stub names replaced in v3.8.0 — removed from target projects on next sync
@@ -1115,6 +1120,9 @@ function stepSeedStateFiles(manifest) {
     // Track-A per-project rule scoping — explicit default OFF (discoverable in-state; behaviorally
     // == absent for the reader). A developer sets true to opt in; setup never clobbers that.
     per_project_rules:         false,
+    // ICEA quality signal promotion threshold — number of occurrences before Dream proposes
+    // adding a pattern to project-knowledge.md. Default 2; increase for larger teams.
+    gap_promotion_threshold:   2,
   });
 
   // file-cache.json — verbatim seed from setup-init Step 6
@@ -1169,6 +1177,61 @@ function stepSeedStateFiles(manifest) {
     '> Auto-populated by /dream. Do not edit manually.',
     '',
   ].join('\n'));
+
+  // .claude/cost-governance.json — LLM cost configuration: pricing rates + optional monthly budget.
+  // Teams update pricing when Anthropic changes rates; plugin ships defaults as a starting point.
+  // Rates are per million tokens (MTok). Verify current pricing at https://www.anthropic.com/pricing
+  seedIfMissing(path.join('.claude', 'cost-governance.json'), {
+    _note:             'Update pricing when Anthropic changes rates. Verify at https://www.anthropic.com/pricing',
+    _pricing_updated:  today,
+    currency:          'USD',
+    monthly_token_budget: null,   // set to a number (in USD) to enable budget tracking; null = disabled
+    alert_at_percent:  80,        // warn in governance report when spend reaches this % of budget
+    pricing: {
+      'claude-opus-4-8':           { input_per_mtok: 15.0,  output_per_mtok: 75.0  },
+      'claude-sonnet-4-6':         { input_per_mtok: 3.0,   output_per_mtok: 15.0  },
+      'claude-haiku-4-5-20251001': { input_per_mtok: 0.80,  output_per_mtok: 4.0   },
+    },
+  });
+
+  // .claude/project-knowledge.md — per-project ICEA pattern library (managed by Dream + KNOWLEDGE commands)
+  seedIfMissing(path.join('.claude', 'project-knowledge.md'), [
+    '# project-knowledge.md — per-project ICEA pattern library',
+    '',
+    '> Managed by Dream. Edit via `KNOWLEDGE ADD / REMOVE {N} / UPDATE {N}` commands.',
+    '> Read by `icea-feature` at planning time. Format: `skills/shared/project-knowledge-spec.md`.',
+    '',
+    '_No entries yet. Patterns are added via LESSONS ADO-{ID} or KNOWLEDGE ADD._',
+  ].join('\n'));
+
+  // .claude/ApprovalRoles.json — governance role registry; populated interactively during setup-init Step 2d.
+  // Empty skeleton is correct here — setup-init prompts the developer for values and fills it in.
+  // Committed (team-shared, not gitignored). Empty = all role checks pass silently (team opted out).
+  seedIfMissing(path.join('.claude', 'ApprovalRoles.json'), {
+    tech_leads: [],
+    security_officers: [],
+  });
+
+  // .claude/signals/.gitkeep — ICEA quality signal inbox (committed; Dream clears after processing).
+  // Multiple developers write per-event files here; Dream runner clears and tallies in topic-signals.md.
+  seedIfMissing(path.join('.claude', 'signals', '.gitkeep'), '');
+
+  // memory/topic-signals.md — Dream's running tally of signal counts across Dream runs.
+  // Persists between Dream runs so patterns accumulate until the promotion threshold is met.
+  seedIfMissing(path.join('memory', 'topic-signals.md'), [
+    '# Signal Registry — auto-managed by Dream',
+    '',
+    '> Do not edit manually. Dream reads `.claude/signals/*.json`, updates this tally,',
+    '> and deletes processed signal files after each run.',
+    '> Entries with count ≥ gap_promotion_threshold are proposed for project-knowledge.md.',
+    '',
+    '_No signals recorded yet._',
+  ].join('\n'));
+
+  // .claude/audit/.gitkeep — governance event trail directory.
+  // Individual event files (.json) are written by audit-write.cjs and COMMITTED (not gitignored)
+  // so git history serves as the immutability mechanism for the append-only trail.
+  seedIfMissing(path.join('.claude', 'audit', '.gitkeep'), '');
 
   const created = items.filter(x => x.result === 'created').length;
   console.log('  ✓ state files  : ' + created + ' created, ' + (items.length - created) + ' already existed');

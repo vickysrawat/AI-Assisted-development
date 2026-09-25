@@ -117,6 +117,70 @@ If there are open bugs, ask:
 
 ---
 
+## Step 3c — Detect test framework
+
+Resolve the test framework before code generation — tests cannot be generated without it.
+
+**1. Check `dream-init-state.json` first** (fastest path — never ask again once stored):
+
+```bash
+node -e "
+try {
+  const s = JSON.parse(require('fs').readFileSync('.claude/dream-init-state.json','utf8'));
+  if (s.test_framework) { console.log(s.test_framework); process.exit(0); }
+} catch(_) {}
+console.log('NEEDS_DETECTION');
+"
+```
+
+If `test_framework` is present: use it, skip to Step 4.
+
+**2. Auto-detect from existing test files** (Option C):
+
+Scan the repo for the dominant test file pattern:
+
+| File pattern / config file | Inferred framework |
+|---|---|
+| `*.spec.ts` or `*.test.ts` + `jest.config.*` | Jest |
+| `*.spec.ts` or `*.test.ts` in Angular project (no jasmine config) | Jest |
+| `*.spec.ts` with `jasmine.json` present | Jasmine |
+| `*Tests.cs` containing `[Fact]` or `[Theory]` | xUnit |
+| `*Tests.cs` containing `[TestMethod]` | MSTest |
+| `*Tests.cs` containing `[TestFixture]` | NUnit |
+| `test_*.py` or `*_test.py` + `pytest.ini` / `pyproject.toml [tool.pytest]` | pytest |
+| `test_*.py` or `*_test.py` with no pytest config | unittest |
+| `*.test.java` with `org.junit.jupiter` import | JUnit 5 |
+| `*.test.java` with `org.testng` import | TestNG |
+
+Scan up to 20 test files for the dominant pattern. If ≥ 80% match one framework: infer it.
+
+**If ambiguous or no test files found:** prompt once —
+
+```
+❓ TEST FRAMEWORK — Could not auto-detect from existing test files.
+   Please confirm which framework this project uses:
+     A) xUnit    B) NUnit    C) MSTest
+     D) Jest     E) Jasmine  F) pytest
+     G) unittest H) JUnit 5  I) TestNG
+   Reply with the letter (e.g. A).
+```
+
+**3. Store in `dream-init-state.json`** — write once, never ask again:
+
+```bash
+node -e "
+const fs=require('fs'),p='.claude/dream-init-state.json';
+let s={};try{s=JSON.parse(fs.readFileSync(p,'utf8'));}catch(e){}
+s.test_framework='REPLACE_WITH_DETECTED_FRAMEWORK';
+fs.writeFileSync(p,JSON.stringify(s,null,2));
+console.log('Stored test_framework: ' + s.test_framework);
+"
+```
+
+Use the stored value for all test generation in Step 4.
+
+---
+
 ## Step 4 — Generate code
 
 Generate implementation code for each pending AC in order.
@@ -174,10 +238,106 @@ Generate in dependency order:
   FastAPI router / Django view / Flask blueprint · Express route
 - **UI layer** (if project has a frontend) — Angular component + service,
   or the framework actually present
-- **Tests for every AC** — one test per positive scenario, one per negative
-  scenario (from the `## Test Cases` section of the Tech Spec — positive
-  unit tests, negative unit tests, integration tests), using the stack's
-  test framework (xUnit · JUnit · pytest · Jest/Vitest)
+- **Unit tests — ICEA Examples as primary source (full gap analysis)**
+
+  For every Example in the ICEA `## Examples` section, attempt to generate a real
+  assertion using the framework detected in Step 3c. Map the Example's input/output
+  pair directly to the framework's assertion syntax:
+
+  | Framework | Assertion syntax |
+  |---|---|
+  | xUnit | `Assert.Equal(expected, actual)` · `Assert.True(condition)` |
+  | NUnit | `Assert.That(actual, Is.EqualTo(expected))` |
+  | MSTest | `Assert.AreEqual(expected, actual)` |
+  | Jest | `expect(actual).toBe(expected)` · `expect(actual).toEqual(expected)` |
+  | pytest | `assert actual == expected` |
+  | JUnit 5 | `assertEquals(expected, actual)` |
+
+  One positive test per Example (the happy path). One negative test per Exception
+  or error case described in the Examples section.
+
+  **Gap analysis — run BEFORE generating any assertion:**
+
+  For each Example, check all three conditions:
+  1. **Concrete input:** the Example's input is a specific value, object, or state —
+     not "some value", "valid data", or "a request".
+  2. **Concrete output:** the expected result is a specific value, object shape, or
+     side-effect — not "returns success", "completes correctly", or "works".
+  3. **Dependency contract:** if the Example references a dependency
+     (`IUserRepository.GetById`, `IEmailService.Send`, etc.), that dependency's
+     return type and contract (what it returns on success/failure) appears in
+     the ICEA `## Context` section.
+
+  If all three conditions pass: generate the assertion. No TODO.
+
+  If any condition fails: record a `GAP_FOUND` — do NOT emit a TODO, do NOT
+  generate a partial assertion. Collect all gaps across all Examples before acting.
+
+  **After processing all Examples — if any gaps were found:**
+
+  This is an ICEA defect, not a test gap. Stop code generation entirely. Annotate
+  the ICEA file (write immediately — tracking artefact, no Write Gate):
+
+  ```markdown
+  > ⚠ ICEA DEFECT — incomplete Examples flagged at IMPLEMENT time ({date}):
+  > • Example {N}: {precise gap — e.g. "IUserRepository.GetById return contract
+  >   not declared in Context; cannot assert repository interaction"}
+  > • Example {N}: {precise gap — e.g. "expected output not concrete: 'returns success'"}
+  > Run REVISE ADO-{ADO_ID} to resolve before implementation can proceed.
+  ```
+
+  Write one gap signal per gap found (best-effort — never blocks):
+
+  ```bash
+  PLUGIN_DIR=$(cat .claude/plugin-path.txt 2>/dev/null || echo "")
+  # Category mapping — use the most specific category for each gap:
+  #   Dependency referenced but contract not in Context → dependency-contract-missing
+  #   Result described as "success/failure/works" without object shape → return-shape-unspecified
+  #   No error/null/boundary Example despite method needing one → edge-case-missing
+  #   Example references data object without defining its shape → test-data-unspecified
+  #   Unit test needs a mock but interface not derivable from ICEA → mock-contract-missing
+  [ -n "$PLUGIN_DIR" ] && node "$PLUGIN_DIR/scripts/signal-write.cjs" \
+    --type gap \
+    --category "{most-specific category from the mapping above}" \
+    --ado-id "${ADO_ID}" \
+    --detail "{brief description of this specific gap}" 2>/dev/null || true
+  ```
+
+  Then surface to the developer:
+
+  ```
+  ⛔ ICEA DEFECT — {N} Example(s) cannot produce real assertions.
+
+  The ICEA's blast radius analysis is incomplete. Found gaps:
+  • Example {N}: {gap}
+  • Example {N}: {gap}
+
+  These are ICEA defects, not test gaps. A well-specified Example always
+  produces a real assertion — if it cannot, the feature was not fully modelled.
+
+  Action: REVISE ADO-{ADO_ID}
+
+  The ICEA has been annotated with the specific gaps above. After revision,
+  re-run IMPLEMENT ADO-{ADO_ID} — the annotation will be cleared automatically
+  once all gaps are resolved.
+  ```
+
+  Stop. Do not proceed to Step 4a until all gaps are resolved.
+
+  **If all Examples produce real assertions:** generate the tests. TODOs are
+  permitted ONLY when a dependency mock contract is genuinely absent from both the
+  ICEA Context AND the codebase (a verifiable gap — not a framing issue). In that
+  case emit one precisely-scoped TODO per gap:
+  ```
+  // TODO: mock contract for {Interface.Method} — not in ICEA Context and not
+  // found in codebase. Raise with story author before running tests:
+  // need: {what specific value/type it should return in this scenario}
+  ```
+
+- **Tech Spec test cases (supplementary)** — after the ICEA Example tests are
+  generated, add any further tests from the `## Test Cases` section of the Tech
+  Spec not already covered: integration tests, NFR tests, multi-AC scenario tests.
+  These supplement the ICEA Example tests — they do not replace them.
 - **PR description** — pre-filled with ICEA compliance checklist
 
 Follow the active rule files for the languages in play
@@ -542,4 +702,20 @@ For each checkin ❌ FAIL + fix cycle:
 - ALWAYS append `build-issue`, Follow-ups tracker row, and `build-fixed` audit rows for each checkin ❌ FAIL + fix cycle in Step 7
 - ALWAYS append `checkin-pass` audit row when checkin ✅ / ⚠ in Step 7
 - NEVER leave Follow-ups table empty after a REVISE cycle or build failure — every rework leaves a row
+- ALWAYS offer the test-plan skill after checkin passes — do not silently skip it (AC-F50)
+
+---
+
+## Step 8 — Offer test plan generation
+
+After checkin passes (Step 7 ✅ or ⚠), invoke the test-plan skill:
+
+```
+Read $PLUGIN_DIR/skills/test-plan/SKILL.md and execute Steps 1–2 for this ADO ID
+with --source icea. The developer prompt (Step 2) is shown — if the developer
+replies N, exit cleanly without blocking story closure.
+```
+
+This step is **non-blocking**: if the developer declines or the skill errors, log
+a warning and stop — story closure is not gated on test plan generation.
 - NEVER populate Delivered or Tests sections before the Write Gate — only write them after APPROVE and the code is on disk

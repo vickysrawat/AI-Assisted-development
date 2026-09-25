@@ -16,9 +16,62 @@ this when they need the full artefact-timing table or the edge-case list.
 | `*.epic.md` | On SAVE TECH ADO-{ID} — derived, no interaction |
 | `*.tracker.md` | On SAVE TECH ADO-{ID} — derived, no interaction |
 | `memory/` | Automatic on trigger — no gate (Dream pipeline) |
-| Source code, config files | Blocked until `APPROVE ADO-{ID}` |
+| Source code | Blocked until `APPROVE ADO-{ID}` |
+| Config files | Blocked until `APPROVE CONFIG` (no ADO required — see §Config write gate below) |
+| Env files (`.env`, `.env.*`) | Hard-blocked if not in `.gitignore` — no approval path |
 
-## The gate holds — no exceptions for source code and config files
+## Config write gate — `APPROVE CONFIG`
+
+Config file writes via Claude use a lighter approval path than source code — no ADO ID required,
+but the gate is still active. Sequence when a skill writes a config file:
+
+1. **Secret scan runs inline** — if credentials are detected, the write is hard-blocked with no
+   approval path. Fix the config, then re-request the change.
+2. **Prompt shown:**
+   ```
+   📁 WRITE PENDING — config change
+      Path: {full/file/path}
+      Secret scan: ✅ clean
+
+      Reply APPROVE CONFIG to write, or SKIP to discard.
+   ```
+3. **High-risk config** (`azure-pipelines.yml`, `*.tf`, `*.bicep`, IaC, CI/CD): run the RBAC
+   check before showing the escalation prompt. If the actor is not in `tech_leads`, block:
+   ```bash
+   PLUGIN_DIR=$(cat .claude/plugin-path.txt 2>/dev/null || echo "")
+   [ -n "$PLUGIN_DIR" ] && node "$PLUGIN_DIR/scripts/rbac-check.cjs" --action APPROVE_CONFIG_HIGH_RISK
+   ```
+   Read the JSON output:
+   - `allowed: false` → show `⛔ BLOCKED — {result.message}`, write RBAC_BLOCK audit event, stop:
+     ```bash
+     node "$PLUGIN_DIR/scripts/audit-write.cjs" --event RBAC_BLOCK --path "{file-path}" --verdict "blocked" --context "APPROVE_CONFIG_HIGH_RISK: insufficient role" 2>/dev/null || true
+     ```
+   - `allowed: true` → proceed to the escalation acknowledgment prompt:
+   ```
+   ⚠ HIGH-RISK CONFIG — this file affects infrastructure/pipeline configuration.
+     Confirm you have peer-reviewed this change: reply ACKNOWLEDGE then APPROVE CONFIG.
+   ```
+4. **Audit entry written** automatically on approval — run best-effort (never blocks):
+   ```bash
+   PLUGIN_DIR=$(cat .claude/plugin-path.txt 2>/dev/null || echo "")
+   AUDIT_MODEL=$(node -e "try{const e=(JSON.parse(require('fs').readFileSync('.claude/settings.json','utf8')).env||{});console.log(e.REVIEW_MODEL||'claude-sonnet-4-6');}catch(_){console.log('claude-sonnet-4-6');}" 2>/dev/null || echo "claude-sonnet-4-6")
+   [ -n "$PLUGIN_DIR" ] && node "$PLUGIN_DIR/scripts/audit-write.cjs" \
+     --event APPROVE_CONFIG \
+     --path "{file-path}" \
+     --model "$AUDIT_MODEL" \
+     --verdict "approved" \
+     --context "Config write approved" 2>/dev/null || true
+   ```
+5. **Env files** (`.env`, `.env.*`, `.env.local`, etc.): hard-blocked if the file is not in
+   `.gitignore`. No `APPROVE CONFIG` path exists — env files must never be committed.
+
+**`APPROVE CONFIG` vs `APPROVE ADO-{ID}`:**
+- `APPROVE ADO-{ID}` releases source code writes — requires an active ADO with approved ICEA.
+- `APPROVE CONFIG` releases config writes — no ADO required; security gate is the control.
+- Both show the diff + path before the prompt. Neither removes visibility.
+- `APPROVE ALL ADO-{ID}` covers source code writes only — does NOT blanket config writes.
+
+## The gate holds — no exceptions for source code
 
 The APPROVE requirement applies even when:
 - An ICEA has been approved
@@ -39,7 +92,22 @@ fire during planning, before any file is edited.
 ## Batch / session approval — `APPROVE ALL ADO-{ID}`
 
 Per-file approval is the default and the safest. For a large, already-reviewed multi-file
-plan, the developer may grant a **standing** Write-Gate approval for the current plan/ADO:
+plan, the developer may grant a **standing** Write-Gate approval for the current plan/ADO.
+
+**RBAC pre-check (runs before granting):** standing approval is a broad action — require
+`tech_lead` role. Run before processing `APPROVE ALL ADO-{ID}`:
+
+```bash
+PLUGIN_DIR=$(cat .claude/plugin-path.txt 2>/dev/null || echo "")
+[ -n "$PLUGIN_DIR" ] && node "$PLUGIN_DIR/scripts/rbac-check.cjs" --action APPROVE_ALL
+```
+
+Read the JSON output:
+- `allowed: false` → show `⛔ BLOCKED — {result.message}`, write RBAC_BLOCK audit event, stop:
+  ```bash
+  node "$PLUGIN_DIR/scripts/audit-write.cjs" --event RBAC_BLOCK --ado-id "{ADO_ID}" --verdict "blocked" --context "APPROVE_ALL: insufficient role" 2>/dev/null || true
+  ```
+- `allowed: true` (or `reason: opt-out-mode`) → proceed to grant the standing approval.
 
 `APPROVE ALL ADO-{ID}` — standing approval for every source/config write in this session's
 work on ADO-{ID}. The model still **streams the diff + path for each file before writing it**
@@ -49,7 +117,18 @@ work on ADO-{ID}. The model still **streams the diff + path for each file before
   session starts back at per-file approval.
 - **Revoke:** `REVOKE ALL ADO-{ID}` (or `STOP BATCH`) returns to per-file `APPROVE ADO-{ID}`.
 - **Still shown + auditable:** each write is preceded by its diff + path and a one-line
-  `✍ Writing under APPROVE ALL — {path}` marker.
+  `✍ Writing under APPROVE ALL — {path}` marker. When `APPROVE ALL ADO-{ID}` is granted,
+  write the standing approval audit event immediately (best-effort):
+  ```bash
+  PLUGIN_DIR=$(cat .claude/plugin-path.txt 2>/dev/null || echo "")
+  AUDIT_MODEL=$(node -e "try{const e=(JSON.parse(require('fs').readFileSync('.claude/settings.json','utf8')).env||{});console.log(e.REVIEW_MODEL||'claude-sonnet-4-6');}catch(_){console.log('claude-sonnet-4-6');}" 2>/dev/null || echo "claude-sonnet-4-6")
+  [ -n "$PLUGIN_DIR" ] && node "$PLUGIN_DIR/scripts/audit-write.cjs" \
+    --event APPROVE_ALL \
+    --ado-id "{ADO_ID}" \
+    --model "$AUDIT_MODEL" \
+    --verdict "standing-approval-granted" \
+    --context "APPROVE ALL granted for ADO-{ADO_ID}" 2>/dev/null || true
+  ```
 - **Does NOT widen scope:** covers only files within the approved plan's Change Manifest /
   stated file set; a write outside that set falls back to a per-file WRITE PENDING prompt.
 - **Does NOT blanket a repo-boundary crossing:** see below.

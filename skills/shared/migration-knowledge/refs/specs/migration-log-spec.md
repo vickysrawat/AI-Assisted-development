@@ -25,16 +25,93 @@ docs/migrations/{MIGRATION_ID}/migration-log.md
 One log per migration. Started at the first source analysis event; updated continuously through
 completion. Never truncated — the full history is the asset.
 
+The **migration tracker** (`migration-tracker.md` in the same folder) is the companion resume
+file — updated at every step transition, committed, and read by `REWRITE RESUME` to orient
+without re-analysis. The migration log is the full audit trail; the tracker is the current-state
+pointer.
+
+---
+
+## Initialization
+
+The migration log MUST be created with its full header **before** the first event entry is written.
+The creating skill is responsible for this — it is not created implicitly.
+
+Header template (copy verbatim, fill in bracketed values):
+
+```markdown
+# Migration Log — {AppName} {Skill} (ADO-{ID})
+Living document. Updated at every decision point. Never truncated — the full history is the asset.
+Source: {full/source/path} ({source stack} {source version}) · Target: {target stack + versions} · {architecture pattern} · {hosting} · Skill: {Rewrite | Replatform | Upgrade}
+Started: {date} · ADO: {ADO ID}
+
+Session continuation: share this file alongside the design documents and integration inventory.
+Future migrations of similar apps: read the ## Lessons section.
+
+---
+
+## Phase 1: Source Analysis
+
+## Phase 2: Options
+
+## Phase 3: Target Design
+
+## Phase 4: Generation
+
+## Phase 5: Verification
+
+---
+
+## Decisions summary
+
+| Decision | Chosen | Alternatives rejected | Date |
+|---|---|---|---|
+
+## Risks accepted
+
+| Risk | Level | Accepted because | Compensating control |
+|---|---|---|---|
+
+---
+
+## Lessons
+
+```
+
+Create `docs/migrations/{ADO}/` if the directory does not exist. Phase headings are pre-populated empty so events can be appended without a separate create step. The Decisions summary, Risks accepted, and Lessons sections are pre-populated so they are ready to receive rows as decisions are made — never pre-fill them with placeholder data.
+
+---
+
 ---
 
 ## Authorship model
 
 | Author | Writes |
 |---|---|
-| **Skill (auto)** | Structural facts: what was found, what changed, what was approved, which documents were affected, PROV citations, timestamps |
-| **Developer** | Reasoning, context, and lessons: why a decision was made, what was rejected and why, what would be done differently |
+| **Skill (auto)** | All fields in every event type — structural facts, inferred reasoning, context derived from source analysis and design decisions, lessons, and TP entries. No placeholders are left unfilled. |
+| **Developer** | Reviews entries for accuracy. For `[RISK-ACCEPTED]` entries: confirms the acceptance, provides the "Accepted by" name, and may augment the reasoning before the migration proceeds. |
 
-The skill writes the skeleton; the developer fills in the reasoning. An event with only skill-authored content is incomplete — the reasoning is what makes the log valuable.
+The skill writes the complete log entry at the moment the event occurs, using the evidence available from source analysis, integration verification, developer gate responses, and migration context. The developer's role is review and confirmation — not authoring.
+
+---
+
+## Required disk artifacts
+
+All decision-grade artifacts generated during a migration must have a disk file. The migration
+log is the human-readable index; standalone report files are the decision-grade records.
+
+| Skill | Artifact | Path |
+|---|---|---|
+| Upgrade | Gap + Risk Report | `docs/migrations/{ADO}/ADO-{ID}-gap-risk-report.md` |
+| Rewrite | Per-cluster BAL + ERL | `docs/migrations/{ADO}/ADO-{ID}-cluster-{N}-assurance.md` |
+| Rewrite | Combined assurance summary | `docs/migrations/{ADO}/ADO-{ID}-assurance-summary.md` |
+| Replatform | NFR assurance + WA + behavioral regression | `docs/migrations/{ADO}/ADO-{ID}-nfr-assurance-report.md` |
+| Replatform | Reconciliation gate results | `docs/migrations/{ADO}/ADO-{ID}-reconciliation-report.md` |
+| All | Full judge analysis | In migration log `[DECISION]` entry — `**Judge analysis:**` field |
+| Rewrite | Migration tracker | `docs/migrations/{ADO}/migration-tracker.md` — created at Step 0; updated at every step and gate transition; the committed, human-readable resume mechanism. |
+| Rewrite | Options file | `docs/migrations/{ADO}/{ADO}-options.md` — written to disk at Step 2 before APPROVE OPTIONS; status line updated to "Option X selected" after APPROVE OPTIONS. |
+
+---
 
 ---
 
@@ -43,15 +120,15 @@ The skill writes the skeleton; the developer fills in the reasoning. An event wi
 ### [FINDING]
 
 **When:** during source analysis, when something is discovered that meaningfully affects the migration.
-**Who writes:** skill writes the finding; developer adds "why this matters to us" and "action taken."
+**Who writes:** skill writes all fields at the time of discovery, based on source analysis evidence.
 
 ```markdown
 ### [FINDING] {title}
 
-**Discovered:** {what was found — factual, skill-authored}
-**Why it matters:** {impact on migration — developer adds context}
-**Wrong approach to avoid:** {what would have gone wrong without this finding — developer}
-**Action taken:** {what was done with this finding}
+**Discovered:** {what was found — factual, with PROV citations}
+**Why it matters:** {impact on migration — inferred from source evidence and architecture decisions}
+**Wrong approach to avoid:** {what the naive approach would have been without this finding}
+**Action taken:** {what decision or design change resulted from this finding}
 ```
 
 ---
@@ -59,7 +136,7 @@ The skill writes the skeleton; the developer fills in the reasoning. An event wi
 ### [INTEGRATION]
 
 **When:** once per external integration, during integration verification.
-**Who writes:** skill writes evidence, classification, options; developer confirms and adds choice reasoning.
+**Who writes:** skill writes all fields, including option reasoning, from the integration inventory and architecture constraints.
 
 ```markdown
 ### [INTEGRATION] {integration name}
@@ -70,31 +147,28 @@ The skill writes the skeleton; the developer fills in the reasoning. An event wi
 **Resolved to:** VERIFIED | PARTIAL | UNVERIFIED
 **Classification:** data-access-only | business-logic | mixed | unknown
 **Options derived:** A · {description} · B · {description} · C · {description}
-**Option chosen:** {A/B/C} — {developer's reasoning for the choice}
-**Wrong approach to avoid:** {what would have been chosen without this verification}
+**Option chosen:** {A/B/C} — {reasoning derived from integration classification and architecture constraints}
+**Wrong approach to avoid:** {what the naive approach would have been without this verification}
 ```
 
 ---
 
 ### [OPTION]
 
-**When:** when options are presented to the developer and a selection is made.
-**Who writes:** skill writes the options table and analysis; developer writes selection reasoning and rejections.
+**When:** when options are presented to the developer (before APPROVE OPTIONS) and again when a selection is made.
+**Who writes:** skill writes all fields. The full options content is written to the options disk file (`ADO-{ID}-options.md`) at Step 2 before presenting to the developer. The migration log `[OPTION]` entry is a brief pointer to that file — it does not duplicate the full table.
 
 ```markdown
 ### [OPTION] Options presented — {date}
 
-| Option | Stack / Approach | Clusters | Effort | TCO | Assurance ceiling |
-|---|---|---|---|---|---|
-| A | {description} | {N} | {S/M/L/XL} | {estimate} | {BAL/NFR level} |
-| B | {description} | {N} | {S/M/L/XL} | {estimate} | {BAL/NFR level} |
-
-**Selected:** Option {X}
-**Why chosen:** {developer's reasoning — what made this the right choice}
-**Option {Y} rejected:** {reason — what would have gone wrong}
-**Option {Z} rejected:** {reason}
-**Open questions raised:** {any questions the developer had before deciding}
-**How resolved:** {how each question was answered before APPROVE OPTIONS}
+**Options file:** docs/migrations/{ADO}/ADO-{ID}-options.md
+**Options presented:** A · {one-line description} · B · {one-line description} · C · {one-line description}
+**Assurance ceiling (all options):** {BAL level} — {oracle mode}
+**Selected:** Option {X} — {date of APPROVE OPTIONS}
+**Why chosen:** {reasoning inferred from the developer's selection, stated constraints, and options analysis}
+**Option {Y} rejected:** {reason derived from the comparative options analysis}
+**Option {Z} rejected:** {reason derived from the comparative options analysis}
+**Pre-design questions answered:** {keep-vs-redesign answer · hosting answer}
 ```
 
 ---
@@ -103,15 +177,19 @@ The skill writes the skeleton; the developer fills in the reasoning. An event wi
 
 **When:** at every formal approval (APPROVE OPTIONS, APPROVE DESIGN, APPROVE INTEGRATION,
 APPROVE DESIGN for a single document, or any explicit acceptance of a change).
-**Who writes:** skill writes what was approved and when; developer writes reasoning.
+**Who writes:** skill writes all fields at the time of gate approval, using the judge output verbatim and reasoning inferred from gate context, source analysis, and constraints stated during the migration.
 
 ```markdown
 ### [DECISION] {what was approved} — {date}
 
 **Approved:** {specific artifact or gate — e.g. "APPROVE OPTIONS — Option B selected"}
-**Reasoning:** {developer's explicit reasoning — not a summary, the actual rationale}
-**Alternatives rejected at this point:** {anything specifically considered and discarded}
-**Constraints that shaped this decision:** {technical, business, or compliance constraints}
+**Judge verdict:** {PASS | REVISE | BLOCK} — model: {model used} — {date}
+**Judge analysis:** {full text of the judge's output — every finding, every flagged item, every
+  reasoning chain. Verbatim from judge output; never summarised or paraphrased.
+  If no findings: "No findings — artifact met the rubric."}
+**Reasoning:** {reasoning inferred from gate context, source evidence, and constraints stated during the migration}
+**Alternatives rejected at this point:** {alternatives surfaced during this gate and why they were not chosen}
+**Constraints that shaped this decision:** {technical, business, or compliance constraints identified during the migration}
 ```
 
 For escalation decisions (iteration 5+ in the feedback loop):
@@ -119,8 +197,8 @@ For escalation decisions (iteration 5+ in the feedback loop):
 ```markdown
 ### [DECISION] Design revision — escalation override — iteration {N}
 
-**Change requested:** {what the developer wants to change after 5+ iterations}
-**Argue + reasoning:** {developer's explicit argument for why this change is necessary}
+**Change requested:** {what the developer asked to change after 5+ iterations}
+**Argue + reasoning:** {the argument for why this change is necessary, inferred from the developer's request and the design context}
 **Evidence of impact:** {what the skill showed — which decisions reversed, which conflicts emerged}
 **Decision:** proceed with change | return to APPROVE OPTIONS
 ```
@@ -130,7 +208,7 @@ For escalation decisions (iteration 5+ in the feedback loop):
 ### [REVISION]
 
 **When:** after every feedback loop revision wave completes.
-**Who writes:** skill writes all structural fields automatically; developer adds context if relevant.
+**Who writes:** skill writes all fields automatically at the time the revision wave completes.
 
 ```markdown
 ### [REVISION] {document name(s)} — iteration {N} — {date}
@@ -151,17 +229,20 @@ For escalation decisions (iteration 5+ in the feedback loop):
 ### [RISK-ACCEPTED]
 
 **When:** when a RED/YELLOW item is explicitly accepted, MEDIUM drift is accepted, or a compensating
-control is used instead of a stronger assurance. Developer MUST write this — not skill-authored.
-**Who writes:** developer writes all fields; skill records what item is being accepted.
+control is used instead of a stronger assurance.
+**Who writes:** skill drafts all fields from detected risk context and migration evidence, then
+presents the entry for developer confirmation. The developer MUST confirm "Accepted by" and may
+refine "Accepted because" before the migration proceeds. The skill cannot accept a risk on the
+developer's behalf — it proposes; the developer decides.
 
 ```markdown
 ### [RISK-ACCEPTED] {item description}
 
-**Risk:** {what the risk is}
+**Risk:** {what the risk is — inferred from source analysis and assurance grading}
 **Risk level:** RED | YELLOW | HIGH | MEDIUM
-**Accepted because:** {explicit developer reasoning — not "we ran out of time"}
-**Accepted by:** {developer/architect name}
-**Compensating control:** {what alternative protection is in place, if any}
+**Accepted because:** {reasoning inferred from the migration context — developer refines if incorrect}
+**Accepted by:** {developer/architect name — developer confirms this field}
+**Compensating control:** {compensating measure identified from the migration design, if any}
 **Review trigger:** {condition that would require re-evaluating this acceptance}
 ```
 
@@ -169,9 +250,9 @@ control is used instead of a stronger assurance. Developer MUST write this — n
 
 ### [LESSON]
 
-**When:** developer or skill identifies a pattern worth capturing for future migrations of similar apps.
-**Who writes:** developer (primarily); skill may suggest a lesson prompt based on decisions made.
-**Voice:** teaching voice — explain as if to a future developer who doesn't know this yet.
+**When:** a pattern worth capturing for future migrations is identified — triggered by the skill from significant findings, integration decisions, or BAL gate outcomes during the migration.
+**Who writes:** skill writes all fields in teaching voice, derived from the migration's findings, decisions, and lessons encountered. Developer reviews for accuracy.
+**Voice:** teaching voice — explain the wrong approach first, then the right one, as if to a future developer who doesn't know this yet.
 **Location:** consolidated in the `## Lessons` section at the bottom of the log.
 
 ```markdown
@@ -244,7 +325,13 @@ New phases are added as the migration progresses — never pre-populated.
 ## Lessons
 
 {[LESSON] entries — consolidated here regardless of which phase they occurred in}
-{These entries are the artifact that future migrations read}
+
+---
+
+## Transferable Patterns
+
+{TP-{N} entries — generated at the completion gate from ## Lessons; developer-validated}
+{Each entry is the generic, application-agnostic form of the corresponding lesson}
 ```
 
 ---
@@ -264,15 +351,67 @@ eliminating the need for future teams to learn them the hard way.
 
 ---
 
+## Transferable Patterns
+
+_Populated by the skill at the **completion gate** (Step 5), after all `[LESSON]` entries are
+written. Each entry is the application-agnostic distillation of a corresponding lesson —
+no app names, no internal URLs, no team-specific detail. Developer validates before closing._
+
+> **Two audiences.**
+> 1. **This migration** — a quick summary of what was learned, stripped of project noise.
+> 2. **Future similar migrations** — the section a future team reads FIRST. It captures the
+>    portable pattern without requiring any knowledge of this project.
+
+### Format
+
+Each entry maps 1-to-1 with a `[LESSON]` entry in `## Lessons`:
+
+```markdown
+### TP-{N}: {Pattern title — generic, no app names}
+
+**Applies to:** Stack: {stack tokens, e.g. dotnet-framework, wcf} · Migration type: {rewrite | replatform | upgrade}
+**When triggered by:** {condition stated generically — no app/service/team names}
+**The pattern:** {2–4 sentences. Fully generic. Describes the wrong approach first, then the right
+  one, and why it matters. No internal hostnames, NuGet package names specific to one firm,
+  directory paths, or role-code values.}
+**Source lesson:** [LESSON] {exact title from the ## Lessons section}
+```
+
+### Authorship
+
+| Author | Writes |
+|---|---|
+| **Skill (auto)** | Generates all TP entries at the completion gate from the `[LESSON]` entries — strips app-specific names, paths, URLs, and internal identifiers; states the pattern generically |
+| **Developer** | Reviews each entry: confirms the pattern is accurate and portable; adds or corrects the "When triggered by" condition; removes any residual project-specific detail |
+
+### Aggregation
+
+`TP-{N}` entries use the same `Applies to` vocabulary as `[LESSON]` entries so they can be
+aggregated across migration logs — e.g. "all patterns for `stack: wcf` + `migration type: rewrite`"
+forms the WCF rewrite playbook without requiring per-project context.
+
+---
+
 ## Hard rules
 
 - NEVER truncate the log — the full history is the asset.
+- ALWAYS initialize `docs/migrations/{ADO}/migration-log.md` with its full header BEFORE writing
+  the first event entry — the file must exist before any [INTEGRATION], [FINDING], or [OPTION]
+  entries are appended to it.
+- The `**Judge analysis:**` field in `[DECISION]` entries MUST be verbatim judge output — not a
+  paraphrase. The log is the only human-readable record of the analysis.
 - EVERY formal approval (`APPROVE OPTIONS`, `APPROVE DESIGN`, etc.) writes a `[DECISION]` entry.
 - EVERY feedback loop revision wave writes a `[REVISION]` entry — automatically.
-- EVERY `[RISK-ACCEPTED]` entry MUST be developer-authored — the skill cannot accept a risk on the
-  developer's behalf.
+- EVERY `[RISK-ACCEPTED]` entry is skill-drafted — the skill writes all fields from detected risk
+  context, then presents the entry for developer confirmation. The developer MUST confirm "Accepted by"
+  before the migration proceeds. The skill proposes; the developer accepts.
 - `[LESSON]` entries use teaching voice — explain the wrong approach first, then the right one.
 - `[LESSON]` entries live at the bottom regardless of which phase they occurred in.
-- The reasoning fields in every event type MUST be developer-authored. A log full of skill-written
-  facts with no developer reasoning is not a migration log — it is a timestamp audit.
+- NEVER leave placeholder text (`{developer to fill in}`, `{developer adds}`, `{TBD}`, etc.) in
+  any log entry — the skill writes all content at the moment the event occurs, using available
+  evidence. If a field cannot be inferred, state the gap explicitly (e.g. "Accepted by: to be
+  confirmed by developer") and flag it for review.
 - The log is shared at session start — it is not an end-of-migration artifact.
+
+- ALWAYS populate `## Transferable Patterns` at the completion gate before closing the migration — one TP entry per [LESSON]. If there are no [LESSON] entries, write "No lessons captured — add before closing." as a reminder.
+- NEVER carry project-specific names (app names, internal hostnames, firm-specific package names, internal directory paths) into TP entries — the pattern must be readable by a future team with no knowledge of this project.

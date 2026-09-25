@@ -82,6 +82,11 @@ judge/checkpoint substrate (AC-F9/F10) in Steps 5–8.
 
 ## Step 1 — Intake & classification (implemented — the highest-risk component)
 
+**Friction reduction (once per session).** Before the first Bash call, run the offer per
+`$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/friction-reduction-spec.md` — check
+whether `.claude/settings.local.json` already has the recommended patterns; if not, ask the
+developer once. YES → merge patterns + confirm; NO → continue without writing.
+
 1. **Detect** stack + current version with the shared detector (do NOT re-implement detection):
    ```bash
    node "$PLUGIN_DIR/scripts/migration-source-detect.cjs" --roots=. --json
@@ -121,12 +126,13 @@ node "$PLUGIN_DIR/scripts/upgrade-tool-preflight.cjs" --stack=<token> --json
 | Exit | status | Action |
 |---|---|---|
 | 0 | `available` | tool present at ≥ min version — proceed to gap/risk analysis |
-| 2 | `outdated` | present but too old — show the printed upgrade steps, **pause**, re-run preflight |
-| 3 | `needs-install` | not found — show the printed install + verify steps, **pause**, re-run after install |
+| 2 | `outdated` | present but too old — print the upgrade steps; stop and wait for the developer to run them; re-run preflight to continue (no developer decision required — prerequisite only) |
+| 3 | `needs-install` | not found — print the install + verify steps; stop and wait for the developer to run them; re-run preflight to continue (no developer decision required — prerequisite only) |
 | 4 | `unknown-stack` | no tool for this stack — **STOP** (Upgrade cannot serve it) |
 
 The skill only **prints** install/verify steps for the developer to run; it never installs anything
-and never bundles a tool. Tool absence is a graceful pause, not a failure.
+and never bundles a tool. Exits 2 and 3 are prerequisite waits, not decision gates — no developer
+response or confirmation is needed; the skill continues automatically when the developer re-invokes.
 
 ## Step 3 — Web-grounded gap/risk analysis (implemented — AC-F3)
 
@@ -148,6 +154,16 @@ scheme) are exactly what the gap/risk report must surface. Tier 2 via `additiona
 the service source is available. The Integration Inventory feeds the report's integration rows and
 `[INTEGRATION]` migration log entries. This is lighter than Rewrite/Replatform — it runs inside the
 gap/risk analysis, not as a separate pre-options step.
+
+**Initialize the migration log.** Before writing any `[INTEGRATION]` entries, create the log file
+with its required header (per `migration-log-spec.md` § Initialization):
+
+```
+docs/migrations/{ADO}/migration-log.md
+```
+
+Create `docs/migrations/{ADO}/` if absent. This is a documentation artifact — not subject to
+the Write Gate.
 
 **Source-context intake gate** — per `$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/source-context-intake-spec.md`.
 Author the **Source Context Manifest** (`docs/migrations/{ADO}/source-context-manifest.md`) from the
@@ -187,9 +203,33 @@ deliverable** — emit it whether or not the developer proceeds:
 **The gap/risk report IS Document 7 (feasibility).** Per `feasibility-spec.md`, this spec governs the
 report's format directly — no separate `migration-feasibility.md` is produced for upgrade.
 
+**Save to disk.** After emitting the report in chat, write the full content to:
+
+```
+docs/migrations/{ADO}/ADO-{ADO_ID}-gap-risk-report.md
+```
+
+Documentation artifact — not subject to the Write Gate. Create the directory if absent.
+Record the path: `upgrade-checkpoint.cjs set-payload --report-path=<path>`
+
+**APPROVE REPORT gate.** Present this prompt and stop:
+
+```
+📊 GAP + RISK REPORT SAVED → docs/migrations/{ADO}/ADO-{ADO_ID}-gap-risk-report.md
+
+The report is your value from this run — saved whether or not you proceed to execution.
+
+  APPROVE REPORT ADO-{ID}  — continue to delta design documents (Step 4.5)
+  NO                       — stop here; the report remains on disk for your review
+```
+
+Only `APPROVE REPORT ADO-{ID}` continues. Record the choice:
+  `upgrade-checkpoint.cjs set-payload --proceed-after-report=<true|false>`
+Write a `[DECISION]` migration log entry for this gate.
+
 The report is the point where value is delivered. Everything below runs **only if the developer
-chooses to proceed** — and every step that touches the working repo is authored here but executed by
-the developer (LLM authors + rehearses, human executes).
+chooses to proceed** (replies `APPROVE REPORT ADO-{ID}`) — and every step that touches the working
+repo is authored here but executed by the developer (LLM authors + rehearses, human executes).
 
 ## Step 4.5 — Delta design documents + APPROVE DESIGN (new)
 
@@ -273,6 +313,24 @@ substrate** (`skills/shared/judge.md`, `skills/shared/migration-ledger-schema.md
 `payload.upgrade` namespace. (The local `references/judge-inline.md` / `checkpoint-inline.md` are now
 redirects to the shared docs.)
 
+## Step 8a — Generate test plan (after verify passes)
+
+After Step 7 verification passes (`upgrade-orchestrate.cjs verify` exits 0), invoke
+the test-plan skill in subagent mode — no prompt, no budget warning:
+
+```
+Read $PLUGIN_DIR/skills/test-plan/SKILL.md and execute it with:
+  --source upgrade --subagent
+  ADO ID: {ADO_ID}
+Record the returned test plan path in the ledger:
+  payload.upgrade.testPlanPath = {path}
+```
+
+If the test-plan skill fails, log a warning in the migration log and continue — the
+upgrade is not gated on test plan generation.
+
+---
+
 ## Hard Rules
 
 - NEVER record the `report` gate PASS before the **source-context intake gate** is PASS — the report
@@ -292,6 +350,11 @@ redirects to the shared docs.)
 - ALWAYS one commit per version hop (bisectable); NEVER blend hops into one diff.
 - ALWAYS gate every residual fix behind the Write Gate; NEVER merge until verification passes.
 - ALWAYS invoke plugin scripts via the resolved `$PLUGIN_DIR` — never a bare relative path.
+- ALWAYS initialize `docs/migrations/{ADO}/migration-log.md` with its full header BEFORE writing
+  the first event entry — the file must exist before any [INTEGRATION] entries are appended to it.
+- ALWAYS save the full Gap + Risk report to `docs/migrations/{ADO}/ADO-{ADO_ID}-gap-risk-report.md`
+  BEFORE presenting the APPROVE REPORT gate — chat output is not durable.
+- ALWAYS present the explicit APPROVE REPORT gate; NEVER infer YES from silence.
 - ALWAYS ground breaking-change facts in an authoritative source; NEVER source them from model memory.
 - ALWAYS tag each report claim VERIFIED (dated authoritative source) or INFERRED; NEVER fabricate a
   source to reach VERIFIED, and NEVER present an INFERRED claim as settled fact.
