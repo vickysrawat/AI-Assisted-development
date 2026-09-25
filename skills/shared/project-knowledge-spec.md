@@ -94,10 +94,21 @@ Entries older than 180 days (or 2 releases if release cadence is known) are flag
 After generating lessons, Claude asks: "Does any lesson here belong in project-knowledge.md?"
 On `yes`, shows the candidate entry and writes on confirmation.
 
-### Auto-promotion from gap signals (deferred — requires gap history)
+### Auto-promotion from gap signals
 
-When the same ICEA gap appears across 2+ ADOs, Dream proposes an ADD with both source ADOs.
-This path is deferred until gap frequency tracking is in place (Item 9 follow-up).
+When the same ICEA gap topic appears across 2+ ADOs, Dream Phase 3.6 proposes an ADD with
+both source ADOs cited. This path is **fully implemented** as of v3.25.0.
+
+Pipeline:
+1. `icea-implement` writes a `gap` signal to `.claude/signals/` (via `scripts/signal-write.cjs`)
+   whenever an Example cannot produce a real assertion.
+2. Dream Phase 3.6 reads all signal files, tallies counts by topic in `memory/topic-signals.md`,
+   and deletes the signal files (they are ephemeral; the tally persists).
+3. When a topic's count reaches `gap_promotion_threshold` (default: 2), Dream proposes a
+   project-knowledge ADD — shows the candidate entry and waits for the developer to reply
+   `PROMOTE-{category}` (adds the entry) or `SKIP-{category}` (defers; count stays in tally).
+4. On PROMOTE, the entry is written to `project-knowledge.md` and the topic section is removed
+   from `memory/topic-signals.md` (count resets).
 
 ---
 

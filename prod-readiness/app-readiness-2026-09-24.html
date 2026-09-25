@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>App Production Readiness — ai-assisted-development plugin — 2026-09-24</title>
+<style>
+  :root {
+    --green: #22c55e; --green-bg: #f0fdf4; --green-border: #bbf7d0;
+    --amber: #f59e0b; --amber-bg: #fffbeb; --amber-border: #fde68a;
+    --red: #ef4444; --red-bg: #fef2f2; --red-border: #fecaca;
+    --blue: #3b82f6; --blue-bg: #eff6ff;
+    --gray: #6b7280; --gray-bg: #f9fafb; --gray-border: #e5e7eb;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: #f3f4f6; color: #111827; }
+  .header { background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%); color: white; padding: 2rem; }
+  .header h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.25rem; }
+  .header .meta { font-size: 0.875rem; opacity: 0.8; margin-top: 0.5rem; }
+  .verdict-banner { padding: 1.25rem 2rem; display: flex; align-items: center; gap: 1rem; font-size: 1.1rem; font-weight: 600; }
+  .verdict-not-ready { background: #fff7ed; border-bottom: 3px solid #f97316; color: #9a3412; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
+  .section { background: white; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .section h2 { font-size: 1.1rem; font-weight: 600; color: #1e3a5f; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #e5e7eb; }
+  .section h3 { font-size: 0.95rem; font-weight: 600; color: #374151; margin: 1rem 0 0.5rem; }
+  .score-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+  @media (max-width: 700px) { .score-grid { grid-template-columns: repeat(2, 1fr); } }
+  .score-card { border-radius: 8px; padding: 1rem; text-align: center; border: 1px solid; }
+  .score-card .label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+  .score-card .score { font-size: 2rem; font-weight: 700; line-height: 1; }
+  .score-card .name { font-size: 0.8rem; margin-top: 0.25rem; }
+  .score-card.green { background: var(--green-bg); border-color: var(--green-border); color: #15803d; }
+  .score-card.amber { background: var(--amber-bg); border-color: var(--amber-border); color: #b45309; }
+  .score-card.red { background: var(--red-bg); border-color: var(--red-border); color: #b91c1c; }
+  .blocker-list { list-style: none; }
+  .blocker-list li { display: flex; gap: 0.75rem; padding: 0.75rem; border-radius: 6px; margin-bottom: 0.5rem; background: var(--red-bg); border-left: 4px solid var(--red); font-size: 0.9rem; }
+  .blocker-list li .icon { flex-shrink: 0; }
+  .domain { border: 1px solid var(--gray-border); border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
+  .domain-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+  .domain-header .badge { font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 4px; }
+  .domain-header .badge.green { background: var(--green-bg); color: #15803d; border: 1px solid var(--green-border); }
+  .domain-header .badge.amber { background: var(--amber-bg); color: #b45309; border: 1px solid var(--amber-border); }
+  .domain-header .badge.red { background: var(--red-bg); color: #b91c1c; border: 1px solid var(--red-border); }
+  .domain-header h3 { font-size: 0.95rem; font-weight: 600; margin: 0; }
+  .domain-header .score-num { margin-left: auto; font-size: 1.2rem; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.875rem; margin-top: 0.5rem; }
+  th { background: var(--gray-bg); text-align: left; padding: 0.5rem 0.75rem; font-weight: 600; color: #374151; border-bottom: 1px solid var(--gray-border); }
+  td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .check-pass { color: #16a34a; }
+  .check-fail { color: #dc2626; }
+  .check-na { color: #6b7280; }
+  .check-unknown { color: #d97706; }
+  .finding { background: var(--red-bg); border-left: 3px solid var(--red); padding: 0.6rem 0.75rem; border-radius: 0 4px 4px 0; margin-top: 0.5rem; font-size: 0.875rem; }
+  .finding.amber { background: var(--amber-bg); border-color: var(--amber); }
+  .finding.green { background: var(--green-bg); border-color: var(--green); }
+  .finding strong { display: block; font-weight: 600; margin-bottom: 0.2rem; }
+  .roadmap-tier { border-radius: 6px; padding: 1rem; margin-bottom: 0.75rem; }
+  .roadmap-tier.critical { background: var(--red-bg); border-left: 4px solid var(--red); }
+  .roadmap-tier.soon { background: var(--amber-bg); border-left: 4px solid var(--amber); }
+  .roadmap-tier.next { background: var(--blue-bg); border-left: 4px solid var(--blue); }
+  .roadmap-tier h3 { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.5rem; }
+  .roadmap-tier ul { padding-left: 1.2rem; font-size: 0.875rem; line-height: 1.7; }
+  .strengths ul { padding-left: 1.2rem; font-size: 0.875rem; line-height: 1.8; }
+  .pipeline-table { font-size: 0.85rem; }
+  .note { font-size: 0.8rem; color: var(--gray); margin-top: 0.5rem; font-style: italic; }
+  .tag { display: inline-block; font-size: 0.7rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 3px; background: #e5e7eb; color: #374151; margin-left: 0.3rem; vertical-align: middle; }
+  .tag.critical { background: var(--red-bg); color: #b91c1c; border: 1px solid var(--red-border); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>App Production Readiness Assessment</h1>
+  <div style="opacity:0.9; margin-top:0.3rem;">ai-assisted-development plugin &nbsp;|&nbsp; v3.25.0 &nbsp;|&nbsp; Node.js 20+ &nbsp;|&nbsp; Developer-local CLI tool</div>
+  <div class="meta">Assessment date: 2026-09-24 &nbsp;|&nbsp; Mode: --full &nbsp;|&nbsp; Assessor: EA Grace Lin (Enterprise Architect)</div>
+</div>
+
+<div class="verdict-banner verdict-not-ready">
+  <span style="font-size:1.5rem;">&#128998;</span>
+  <span>NOT READY — 2 critical domains below threshold (EA-3 Observability, EA-4 Security). Resolve before release.</span>
+</div>
+
+<div class="container">
+
+  <!-- EXECUTIVE SUMMARY -->
+  <div class="section">
+    <h2>Executive Summary</h2>
+
+    <div class="score-grid" style="margin-bottom:1.5rem;">
+      <div class="score-card amber">
+        <div class="label">EA-1</div>
+        <div class="score">3</div>
+        <div class="name">Pipeline</div>
+      </div>
+      <div class="score-card amber">
+        <div class="label">EA-2</div>
+        <div class="score">3</div>
+        <div class="name">Resilience</div>
+      </div>
+      <div class="score-card red">
+        <div class="label">EA-3 *</div>
+        <div class="score">2</div>
+        <div class="name">Observability</div>
+      </div>
+      <div class="score-card red">
+        <div class="label">EA-4 *</div>
+        <div class="score">2</div>
+        <div class="name">Security</div>
+      </div>
+      <div class="score-card green">
+        <div class="label">EA-5</div>
+        <div class="score">4</div>
+        <div class="name">Scalability</div>
+      </div>
+      <div class="score-card green">
+        <div class="label">EA-6</div>
+        <div class="score">4</div>
+        <div class="name">Data Integrity</div>
+      </div>
+      <div class="score-card amber">
+        <div class="label">EA-7</div>
+        <div class="score">3</div>
+        <div class="name">Runbook</div>
+      </div>
+      <div class="score-card amber">
+        <div class="label">EA-8</div>
+        <div class="score">3</div>
+        <div class="name">Test Coverage</div>
+      </div>
+    </div>
+    <div class="note">* Critical domains. Scale: 1=Not started, 2=Ad hoc, 3=Defined, 4=Managed, 5=Optimised. Green=4-5, Amber=3, Red=1-2.</div>
+
+    <h3 style="margin-top:1.25rem;">Top Blockers</h3>
+    <ul class="blocker-list">
+      <li><span class="icon">&#128997;</span><span><strong>EA-4 BLOCKING — No security scan has ever been run.</strong> The <code>security/</code> folder is absent. For a plugin that reads developer codebases and executes scripts on developer machines, unknown security posture is unacceptable before a marketplace release. Run <code>/security-review --full</code> and resolve all Critical and High findings.</span></li>
+      <li><span class="icon">&#128997;</span><span><strong>EA-3 RED — No structured operational observability.</strong> Scripts emit no structured logs. There is no audit log for script failures, no crash reporting, and no way to diagnose errors after the fact without a fresh Claude Code session. Developers have no visibility into what failed when a skill script errors silently.</span></li>
+      <li><span class="icon">&#128998;</span><span><strong>EA-1 AMBER — ADO pipeline runtime state unverified.</strong> <code>AZURE_DEVOPS_PAT</code> is not set in this session; last build results, environment state, and service connections could not be verified via the ADO API. Pipeline YAML is well-structured but live state is unknown.</span></li>
+    </ul>
+  </div>
+
+  <!-- ADO PIPELINE STATUS -->
+  <div class="section">
+    <h2>ADO Pipeline Status</h2>
+
+    <table class="pipeline-table">
+      <tr><th>Item</th><th>Evidence</th><th>Status</th></tr>
+      <tr><td>Pipeline YAML present in repo</td><td><code>azure-pipelines.yml</code> found at repo root</td><td class="check-pass">&#10003; Present</td></tr>
+      <tr><td>Triggers on PR + branch push</td><td>branches: [main, dev]; pr: [main, dev]; tags: [v*]</td><td class="check-pass">&#10003; Configured</td></tr>
+      <tr><td>Tests run in pipeline</td><td><code>node tests/validate.js</code> + <code>npm run test:coverage</code> — <code>failTaskOnFailedTests: true</code></td><td class="check-pass">&#10003; Blocking</td></tr>
+      <tr><td>Coverage published</td><td>c8 cobertura → PublishCodeCoverageResults@2</td><td class="check-pass">&#10003; Configured</td></tr>
+      <tr><td>Dependency vulnerability scan</td><td><code>npm audit --audit-level=high</code> — fails on high/critical CVE</td><td class="check-pass">&#10003; Configured</td></tr>
+      <tr><td>Version consistency validation</td><td><code>node scripts/check-version-consistency.js</code> on tag push</td><td class="check-pass">&#10003; Present</td></tr>
+      <tr><td>Staging environment</td><td>N/A — developer-local tool, no hosted environment</td><td class="check-na">N/A</td></tr>
+      <tr><td>Manual approval gate</td><td>N/A — release is a tagged commit, no hosted deployment</td><td class="check-na">N/A</td></tr>
+      <tr><td>Last 3 build results</td><td>AZURE_DEVOPS_PAT not set — could not query ADO API</td><td class="check-unknown">&#63; Unknown</td></tr>
+      <tr><td>Service connections</td><td>AZURE_DEVOPS_PAT not set — could not query ADO API</td><td class="check-unknown">&#63; Unknown</td></tr>
+      <tr><td>Coverage threshold enforced</td><td>c8 command has no <code>--threshold</code> flag in pipeline</td><td class="check-fail">&#10007; Missing</td></tr>
+    </table>
+    <p class="note">Set <code>AZURE_DEVOPS_PAT</code> and re-run for full pipeline state verification including last build history.</p>
+  </div>
+
+  <!-- DOMAIN FINDINGS -->
+  <div class="section">
+    <h2>Domain Findings</h2>
+
+    <!-- EA-1 -->
+    <div class="domain">
+      <div class="domain-header">
+        <div class="badge amber">AMBER</div>
+        <h3>EA-1 — Deployment Pipeline (ADO)</h3>
+        <div class="score-num" style="color:#b45309;">3 / 5</div>
+      </div>
+      <table>
+        <tr><th>Check</th><th>Result</th></tr>
+        <tr><td>Pipeline YAML in repo</td><td class="check-pass">&#10003; <code>azure-pipelines.yml</code></td></tr>
+        <tr><td>Triggers on every PR / branch push</td><td class="check-pass">&#10003; main, dev branches + PRs + v* tags</td></tr>
+        <tr><td>Build + test in pipeline, blocks on failure</td><td class="check-pass">&#10003; <code>failTaskOnFailedTests: true</code></td></tr>
+        <tr><td>Dependency audit in pipeline</td><td class="check-pass">&#10003; <code>npm audit --audit-level=high</code></td></tr>
+        <tr><td>Version consistency check on release tag</td><td class="check-pass">&#10003; <code>check-version-consistency.js</code> + tag validation</td></tr>
+        <tr><td>Staging environment before release</td><td class="check-na">N/A — local tool; no hosted staging</td></tr>
+        <tr><td>Manual approval gate before publish</td><td class="check-fail">&#10007; No approval gate before marketplace publish</td></tr>
+        <tr><td>Coverage threshold enforced in pipeline</td><td class="check-fail">&#10007; c8 has no <code>--threshold</code> flag</td></tr>
+        <tr><td>Last 3 build results (ADO API)</td><td class="check-unknown">&#63; Unknown — PAT not set</td></tr>
+      </table>
+      <div class="finding amber">
+        <strong>Gap: No coverage threshold enforced</strong>
+        The pipeline publishes coverage but does not enforce a minimum threshold. A regression in test coverage would not fail the build. Add <code>--branches 70 --lines 70 --functions 70</code> (or agreed thresholds) to the c8 command.
+      </div>
+      <div class="finding amber">
+        <strong>Gap: No peer-review gate before marketplace tag</strong>
+        The release flow (developer bumps version → creates tag → pipeline validates) has no second pair of eyes. Consider requiring a PR review to <code>main</code> before cutting a release tag.
+      </div>
+    </div>
+
+    <!-- EA-2 -->
+    <div class="domain">
+      <div class="domain-header">
+        <div class="badge amber">AMBER</div>
+        <h3>EA-2 — Resilience and Fault Tolerance</h3>
+        <div class="score-num" style="color:#b45309;">3 / 5</div>
+      </div>
+      <p style="font-size:0.875rem; color:#374151; margin-bottom:0.75rem;">Standard server resilience patterns (Polly, health probes, HttpClientFactory, graceful shutdown) do not apply to a developer-local CLI tool. Assessment is adapted to CLI-appropriate concerns.</p>
+      <table>
+        <tr><th>Check</th><th>Result</th></tr>
+        <tr><td>Operations are idempotent / safe to re-run</td><td class="check-pass">&#10003; setup-init documented as safe to re-run; setup-sync is idempotent</td></tr>
+        <tr><td>Rollback procedure documented</td><td class="check-pass">&#10003; Re-install prior version via <code>node install.cjs</code> — in architecture-deployment.md</td></tr>
+        <tr><td>Script exit codes signal failure to caller</td><td class="check-pass">&#10003; Scripts use <code>process.exit(1)</code> on failure</td></tr>
+        <tr><td>ADO API calls handle network failure</td><td class="check-unknown">&#63; Skill YAML uses <code>curl</code> inline — no retry wrapper identified</td></tr>
+        <tr><td>Failure scenarios documented with recovery steps</td><td class="check-fail">&#10007; No failure mode playbook beyond rollback</td></tr>
+        <tr><td>Hooks bypass bypass explicitly acknowledged</td><td class="check-fail">&#10007; <code>--no-verify</code> bypass flagged in onboarding but no enforcement</td></tr>
+      </table>
+      <div class="finding amber">
+        <strong>Gap: No failure playbook for common error modes</strong>
+        What happens when <code>graph-sync</code> corrupts <code>graph.json</code>? When a hook blocks all writes? When the bootstrap partially applies? These scenarios exist but are not documented with recovery steps.
+      </div>
+    </div>
+
+    <!-- EA-3 -->
+    <div class="domain">
+      <div class="domain-header">
+        <div class="badge red">RED</div>
+        <h3>EA-3 — Observability <span class="tag critical">CRITICAL DOMAIN</span></h3>
+        <div class="score-num" style="color:#b91c1c;">2 / 5</div>
+      </div>
+      <table>
+        <tr><th>Check</th><th>Result</th></tr>
+        <tr><td>Structured logging framework (winston, pino, etc.)</td><td class="check-fail">&#10007; Not present — scripts emit <code>console.log</code> only</td></tr>
+        <tr><td>Persistent script execution log</td><td class="check-fail">&#10007; No log file written on script execution</td></tr>
+        <tr><td>Audit trail for plugin actions</td><td class="check-pass">&#10003; <code>.claude/audit/</code> via <code>audit-write.cjs</code> — governance audit, not operational</td></tr>
+        <tr><td>Error diagnostics (stack trace capture)</td><td class="check-fail">&#10007; Unhandled rejections go to Node.js stderr only — no capture</td></tr>
+        <tr><td>Health check endpoint</td><td class="check-na">N/A — local CLI tool</td></tr>
+        <tr><td>APM / Application Insights</td><td class="check-na">N/A — local CLI tool</td></tr>
+        <tr><td>Dream session visibility</td><td class="check-pass">&#10003; memory/MEMORY.md + dream-log.md provide session-level history</td></tr>
+      </table>
+      <div class="finding">
+        <strong>Finding: No structured operational logging</strong>
+        When a skill script fails — e.g. <code>graph-extract-edges.js</code> encounters a parse error — the only diagnostic is what was echoed to stdout in the Claude Code session. There is no persistent error log. Developers debugging installation failures or graph corruption have no artifact to inspect after the session ends.
+        <br><br>
+        <strong>Recommended fix:</strong> Add a lightweight log writer (append to <code>~/.claude/plugins/cache/ai-assisted-development/debug.log</code> or the project's <code>.claude/plugin-debug.log</code>) on script errors. Capture: timestamp, script name, exit code, and first 20 lines of stderr.
+      </div>
+    </div>
+
+    <!-- EA-4 -->
+    <div class="domain">
+      <div class="domain-header">
+        <div class="badge red">RED</div>
+        <h3>EA-4 — Security Posture <span class="tag critical">CRITICAL DOMAIN</span></h3>
+        <div class="score-num" style="color:#b91c1c;">2 / 5</div>
+      </div>
+      <table>
+        <tr><th>Check</th><th>Result</th></tr>
+        <tr><td>Security scan report exists (<code>security/</code>)</td><td class="check-fail">&#10007; MISSING — <code>security/</code> folder does not exist</td></tr>
+        <tr><td>npm audit in CI (high/critical CVE gate)</td><td class="check-pass">&#10003; <code>npm audit --audit-level=high</code> fails build on high/critical</td></tr>
+        <tr><td>No hardcoded secrets in plugin source</td><td class="check-pass">&#10003; Architecture confirms no credentials in source</td></tr>
+        <tr><td>Secret guard hook prevents PAT in committed settings</td><td class="check-pass">&#10003; <code>secret-guard.sh</code> blocks writes of PAT/keys to <code>settings.json</code></td></tr>
+        <tr><td>ICEA floor hook enforces feature gate</td><td class="check-pass">&#10003; <code>icea-floor.sh</code> on every file write (PreToolUse)</td></tr>
+        <tr><td>Script allow-list (script review gate)</td><td class="check-pass">&#10003; <code>script-review-gate.sh</code> blocks non-allow-listed scripts</td></tr>
+        <tr><td>Hook bypass acknowledged and mitigated</td><td class="check-fail">&#10007; <code>--no-verify</code> can bypass pre-commit hook; flagged in onboarding only</td></tr>
+        <tr><td>Codebase excerpt data residency</td><td class="check-fail">&#10007; No enforcement — Claude API path sends codebase content to Anthropic (noted in arch-security.md but no consent gate for the data path)</td></tr>
+        <tr><td>Unresolved Critical findings</td><td class="check-na">N/A — no scan run to produce findings</td></tr>
+      </table>
+      <div class="finding">
+        <strong>BLOCKING: No security scan ever run</strong>
+        This plugin executes Bash commands on developer machines, reads potentially sensitive codebase content, and is distributed via a marketplace. No SAST scan of the plugin scripts has ever been run. The security posture is unknown.
+        <br><br>
+        <strong>Required action before next release:</strong> Run <code>/security-review --full</code> targeting <code>scripts/</code>, <code>.claude/hooks/</code>, and <code>install.cjs</code>. Resolve all Critical and High findings. Publish the report to <code>security/</code>.
+      </div>
+      <div class="finding amber">
+        <strong>Gap: Data residency advisory not surfaced at install time</strong>
+        Category B source-file consent is per-session and per-file. However, the broader data handling advisory (codebase excerpts sent to Anthropic's API) is only in <code>architecture-security.md</code>. It is not surfaced to developers at install time. Consider adding a one-time acknowledgement to <code>install.cjs</code>.
+      </div>
+    </div>
+
+    <!-- EA-5 -->
+    <div class="domain">
+      <div class="domain-header">
+        <div class="badge green">GREEN</div>
+        <h3>EA-5 — Scalability</h3>
+        <div class="score-num" style="color:#15803d;">4 / 5</div>
+      </div>
+      <table>
+        <tr><th>Check</th><th>Result</th></tr>
+        <tr><td>Single-user by design — no concurrent state</td><td class="check-pass">&#10003; Interactive CLI, one session at a time</td></tr>
+        <tr><td>No static mutable state in scripts</td><td class="check-pass">&#10003; CJS modules are stateless per invocation</td></tr>
+        <tr><td>No blocking async patterns</td><td class="check-pass">&#10003; Scripts use <code>async/await</code> correctly; no <code>.result</code>/<code>.wait()</code></td></tr>
+        <tr><td>File I/O bounded (no unbounded reads)</td><td class="check-pass">&#10003; Graph operations are fingerprint-delta only; file-cache.json used for skip-unchanged</td></tr>
+        <tr><td>Token budget awareness</td><td class="check-pass">&#10003; context-budget-tech-write hook enforces session limits</td></tr>
+        <tr><td>Performance targets defined</td><td class="check-fail">&#10007; Not formally defined (noted as such in deployment docs)</td></tr>
+      </table>
+      <div class="finding green">
+        <strong>Strength: Well-designed for single-user interactive use</strong>
+        The plugin's architecture is appropriate for its target scale. Fingerprint-based delta processing (graph-sync, code-review, security) avoids redundant computation on unchanged files. The persistent token-graph.json cache reduces session cost on subsequent runs.
+      </div>
+    </div>
+
+    <!-- EA-6 -->
+    <div class="domain">
+      <div class="domain-header">
+        <div class="badge green">GREEN</div>
+        <h3>EA-6 — Data Integrity and Backup</h3>
+        <div class="score-num" style="color:#15803d;">4 / 5</div>
+      </div>
+      <table>
+        <tr><th>Check</th><th>Result</th></tr>
+        <tr><td>Database / migrations</td><td class="check-na">N/A — no database</td></tr>
+        <tr><td>All plugin state is file-based and git-tracked</td><td class="check-pass">&#10003; dream-init-state.json, graph.json, memory/MEMORY.md all in git</td></tr>
+        <tr><td>State mutation is append-only or versioned</td><td class="check-pass">&#10003; dream-log.md is append-only; graph.json has fingerprint versioning</td></tr>
+        <tr><td>Rollback documented and reachable</td><td class="check-pass">&#10003; Re-install prior version via marketplace — in architecture-deployment.md</td></tr>
+        <tr><td>Dream rollback for memory corruption</td><td class="check-pass">&#10003; <code>/dream-rollback</code> skill reverses a consolidation run from audit trail</td></tr>
+        <tr><td>RTO / RPO targets defined</td><td class="check-fail">&#10007; Not defined (N/A noted in deployment docs — acceptable for local tool)</td></tr>
+      </table>
+    </div>
+
+    <!-- EA-7 -->
+    <div class="domain">
+      <div class="domain-header">
+        <div class="badge amber">AMBER</div>
+        <h3>EA-7 — Operational Runbook</h3>
+        <div class="score-num" style="color:#b45309;">3 / 5</div>
+      </div>
+      <table>
+        <tr><th>Check</th><th>Result</th></tr>
+        <tr><td>Developer guide exists</td><td class="check-pass">&#10003; <code>DEVELOPER-GUIDE.md</code> found at repo root</td></tr>
+        <tr><td>README exists</td><td class="check-pass">&#10003; <code>README.md</code> found at repo root</td></tr>
+        <tr><td>Release procedure documented</td><td class="check-pass">&#10003; Release flow in architecture-deployment.md + azure-pipelines.yml comments</td></tr>
+        <tr><td>Rollback procedure documented</td><td class="check-pass">&#10003; Re-install prior version via <code>node install.cjs</code></td></tr>
+        <tr><td>Known failure modes with recovery steps</td><td class="check-fail">&#10007; Not documented as structured failure playbooks</td></tr>
+        <tr><td>On-call / escalation path</td><td class="check-fail">&#10007; Not defined (single developer tool — may be N/A)</td></tr>
+        <tr><td>Project-specific RUNBOOK.md</td><td class="check-fail">&#10007; No RUNBOOK.md — only skill templates found</td></tr>
+      </table>
+      <div class="finding amber">
+        <strong>Gap: No failure mode playbook</strong>
+        Common failure scenarios are undocumented: hook blocking all writes after an ICEA is deleted, graph.json becoming corrupted, bootstrap partial application, install.cjs failing mid-way. A section in DEVELOPER-GUIDE.md covering "what to do when X goes wrong" would close this gap without requiring a separate RUNBOOK.md.
+      </div>
+    </div>
+
+    <!-- EA-8 -->
+    <div class="domain">
+      <div class="domain-header">
+        <div class="badge amber">AMBER</div>
+        <h3>EA-8 — Test Coverage <span class="tag critical">CRITICAL DOMAIN</span></h3>
+        <div class="score-num" style="color:#b45309;">3 / 5</div>
+      </div>
+      <table>
+        <tr><th>Check</th><th>Result</th></tr>
+        <tr><td>Test files present</td><td class="check-pass">&#10003; 28 <code>.test.cjs</code> files covering all scripts</td></tr>
+        <tr><td>Structural validator</td><td class="check-pass">&#10003; <code>tests/validate.js</code> — enforced in pipeline</td></tr>
+        <tr><td>Migration validation suite</td><td class="check-pass">&#10003; <code>tests/migration-validation/</code> present</td></tr>
+        <tr><td>Skill scenario tests</td><td class="check-pass">&#10003; <code>tests/skill-scenarios/</code> present</td></tr>
+        <tr><td>Tests run in CI, block on failure</td><td class="check-pass">&#10003; <code>failTaskOnFailedTests: true</code> in pipeline</td></tr>
+        <tr><td>Coverage published to ADO</td><td class="check-pass">&#10003; <code>PublishCodeCoverageResults@2</code> in pipeline</td></tr>
+        <tr><td>Coverage threshold enforced</td><td class="check-fail">&#10007; No <code>--threshold</code> flag on c8 command</td></tr>
+        <tr><td>Coverage report in local checkout</td><td class="check-fail">&#10007; <code>coverage/</code> not present (likely gitignored — check CI artifacts)</td></tr>
+        <tr><td>E2E tests for critical skill flows</td><td class="check-fail">&#10007; No end-to-end test for full skill invocation (icea-feature → approve → implement)</td></tr>
+      </table>
+      <div class="finding amber">
+        <strong>Gap: No coverage threshold in pipeline</strong>
+        Coverage is published but not enforced. A developer could delete half the tests and the pipeline would still pass. Add: <code>c8 --branches 70 --lines 75 --functions 75 ... jest --ci</code> (calibrate thresholds from current coverage report).
+      </div>
+    </div>
+
+  </div>
+
+  <!-- REMEDIATION ROADMAP -->
+  <div class="section">
+    <h2>Remediation Roadmap</h2>
+
+    <div class="roadmap-tier critical">
+      <h3 style="color:#b91c1c;">Before next marketplace release</h3>
+      <ul>
+        <li><strong>Run <code>/security-review --full</code></strong> targeting <code>scripts/</code>, <code>.claude/hooks/</code>, <code>install.cjs</code>. Resolve all Critical + High findings. Publish report to <code>security/</code>. (EA-4)</li>
+        <li><strong>Set <code>AZURE_DEVOPS_PAT</code></strong> and re-run this assessment to verify live pipeline state — last build results, environments, service connections. (EA-1)</li>
+        <li><strong>Add coverage threshold to pipeline</strong>: update the <code>npm run test:coverage</code> script in <code>package.json</code> or the pipeline YAML to enforce minimum thresholds. (EA-8)</li>
+      </ul>
+    </div>
+
+    <div class="roadmap-tier soon">
+      <h3 style="color:#b45309;">Within 30 days</h3>
+      <ul>
+        <li><strong>Add script error logging</strong>: On <code>process.exit(1)</code> or unhandled rejection, append a timestamped entry (script name, error message, first 20 lines of stack) to <code>.claude/plugin-debug.log</code> in the target project. No new dependency needed — Node.js <code>fs.appendFileSync</code>. (EA-3)</li>
+        <li><strong>Document failure mode playbook in DEVELOPER-GUIDE.md</strong>: Add a "Troubleshooting" section with recovery steps for: hook blocking all writes, graph.json corruption, bootstrap partial failure, install.cjs failure. (EA-7)</li>
+        <li><strong>Add peer-review gate to release process</strong>: Require a PR review to <code>main</code> before cutting a release tag. Prevents accidental or untested releases. (EA-1)</li>
+      </ul>
+    </div>
+
+    <div class="roadmap-tier next">
+      <h3 style="color:#1d4ed8;">Next sprint</h3>
+      <ul>
+        <li><strong>Add install-time data handling acknowledgement</strong>: Surface the Anthropic API data handling advisory as a one-time prompt in <code>install.cjs</code> — developer types "ACCEPT" once; state is persisted to avoid re-prompting. (EA-4)</li>
+        <li><strong>Formalise performance baselines</strong>: Run a timing benchmark for the 3 most expensive operations (graph-sync on a 50-module repo, setup-init, code-review --full). Document in architecture-deployment.md. (EA-5)</li>
+        <li><strong>E2E skill scenario test for the ICEA happy path</strong>: Extend <code>tests/skill-scenarios/</code> with a fixture-driven test that validates the icea-feature → SAVE PLAN → SAVE ICEA → APPROVE → icea-implement flow produces the expected file artifacts. (EA-8)</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- STRENGTHS -->
+  <div class="section">
+    <h2>Strengths — What Is Already Well-Implemented</h2>
+    <ul class="strengths">
+      <li><strong>Well-structured ADO pipeline</strong> — Two-stage pipeline (CI for branches/PRs, ReleaseValidation for tags) with structural validation, Jest suite, c8 coverage, npm audit, and version consistency checks. JUnit results published. Pipeline comments explain the release flow clearly.</li>
+      <li><strong>Hook-based enforcement architecture</strong> — ICEA floor, secret guard, script review gate, and context budget hooks form a layered enforcement model that operates without relying on developer discipline. The hooks are the authorization model for a local tool.</li>
+      <li><strong>File-based state with git as the backup layer</strong> — No database means no migration risk, no backup schedule, and no data loss on rollback. All plugin state (graph.json, dream-init-state.json, memory/) is in git.</li>
+      <li><strong>28 test files mirroring scripts 1:1</strong> — Strong test discipline: every script in <code>scripts/</code> has a corresponding test in <code>tests/</code>. Migration validation and skill scenario fixtures extend coverage beyond unit level.</li>
+      <li><strong>Idempotent operations throughout</strong> — setup-init, setup-sync, graph-sync, and dream are all documented as safe to re-run. This is essential for a tool that operates in an unpredictable developer environment.</li>
+      <li><strong>Rollback is first-class</strong> — Re-install prior version is documented in architecture-deployment.md and the release flow (npm run bump + npm run release) creates a clean version history from which to roll back.</li>
+      <li><strong>Dependency vulnerability gate in CI</strong> — npm audit at --audit-level=high blocks releases with high or critical CVEs in dependencies. This closes the supply-chain attack surface for transitive dependencies.</li>
+    </ul>
+  </div>
+
+  <div style="text-align:center; padding:1.5rem; color:#9ca3af; font-size:0.8rem;">
+    Generated by ai-assisted-development plugin v3.25.0 &nbsp;|&nbsp; 2026-09-24 &nbsp;|&nbsp; --full mode<br>
+    Assessor: EA Grace Lin persona &nbsp;|&nbsp; Source reads: none required (all evidence from bash + docs)
+  </div>
+
+</div>
+</body>
+</html>

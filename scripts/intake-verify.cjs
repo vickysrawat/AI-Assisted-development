@@ -13,13 +13,14 @@
 // What it does NOT do: No LLM, no network, no git, no ledger writes (the skill records the gate on
 //                      exit 0), no inference beyond the documented heuristic.
 // APIs / commands:     Node fs, path. Reuses the multi-root scanRoots() contract (multi-root-scan.md).
-//   node scripts/intake-verify.cjs verify --manifest=<md> --skill=<rewrite|upgrade|replatform> [--graph=<json>] [--inventory=<md>] [--json]
+//   node scripts/intake-verify.cjs verify --manifest=<md> --skill=<rewrite|upgrade|replatform> [--settings=<path>] [--graph=<json>] [--inventory=<md>] [--json]
 //   node scripts/intake-verify.cjs check-gate --ado=<id> [--file=<ledger>] [--graph=<json>] [--json]
-// How to verify:       verify exits 0 ok · 2 manifest missing · 3 root uncovered · 4 dangling
-//                      citation · 5 PARTIAL w/ reachable source · 6 unwired dependency · 7 module
-//                      unaccounted · 8 behavior unit cited to a doc · 9 cross-cutting scan
-//                      missing/empty/uncited.  check-gate: 0 ok · 10 gate not
-//                      PASS/ledger absent · 11 re-validation failed.  node tests/intake-verify.test.cjs
+// How to verify:       verify exits 0 ok · 2 manifest missing/empty · 3 root problem
+//                      (reason: root-uncovered | root-missing | roots-not-initialized | settings-unreadable) ·
+//                      4 dangling citation (reason: unresolved | glob-citation | line-out-of-bounds) ·
+//                      7 module unaccounted · 8 behavior cited to doc · 9 cross-cutting
+//                      missing/empty/uncited.  check-gate: 0 ok · 10 gate not PASS/ledger absent ·
+//                      11 re-validation failed.  node tests/intake-verify.test.cjs
 
 'use strict';
 const fs   = require('fs');
@@ -32,22 +33,6 @@ const arg = (n) => process.argv.find(a => a.startsWith(`--${n}=`))?.split('=').s
 const normP = p => p ? path.resolve(p).replace(/[\\/]+$/, '').split('\\').join('/') : '';
 const DOC_EXT = /\.(md|markdown|txt|adoc|rst)$/i;
 
-// --- multi-root roots (contract: multi-root-scan.md; repo first, then additionalDirectories) ------
-function scanRoots(settingsPath) {
-  const repo = normP(process.cwd());
-  const roots = [repo];
-  try {
-    const s = JSON.parse(fs.readFileSync(settingsPath || '.claude/settings.local.json', 'utf8'));
-    const dirs = Array.isArray(s.additionalDirectories) ? s.additionalDirectories : [];
-    for (const d of dirs) {
-      const nd = normP(d);
-      if (!nd || !fs.existsSync(nd)) continue;                       // skip-missing
-      if (roots.some(r => nd === r || nd.startsWith(r + '/'))) continue; // dup / nested
-      roots.push(nd);
-    }
-  } catch (_) { /* no settings → repo only */ }
-  return [...new Set(roots)];
-}
 
 function emit(obj, humanLines, code) {
   if (JSON_OUT) console.log(JSON.stringify({ ...obj, exit: code }, null, 2));
@@ -63,7 +48,7 @@ function resolveCitation(token, roots) {
   const lm = anchor && anchor.match(/^L?(\d+)/);
   const line = lm ? parseInt(lm[1], 10) : null;
   if (!rel) return { ok: false, reason: 'no-path' };
-  if (rel.includes('*')) return { ok: true, file: rel, line, glob: true }; // globs not line-checked
+  if (rel.includes('*')) return { ok: false, file: rel, line, reason: 'glob-citation' }; // globs bypass disk check — concrete file#line required
   for (const root of roots) {
     const abs = path.resolve(root, rel);
     if (fs.existsSync(abs) && fs.statSync(abs).isFile()) {
@@ -116,19 +101,61 @@ function opVerify() {
   const skill = (arg('skill') || '').toLowerCase();
   if (!manifest || !skill) emit({}, ['Usage: intake-verify.cjs verify --manifest=<md> --skill=<rewrite|upgrade|replatform> [--graph] [--inventory] [--json]'], 1);
 
-  if (!fs.existsSync(manifest) || fs.readFileSync(manifest, 'utf8').trim() === '')
-    emit({ reason: 'manifest-missing' }, [`❌ Manifest missing/empty: ${manifest} — read the source first.`], 2);
+  if (!fs.existsSync(manifest))
+    emit({ reason: 'manifest-missing' }, [`❌ Manifest not found: ${manifest} — file does not exist. Author it from the manifest template and re-run.`], 2);
+  if (fs.readFileSync(manifest, 'utf8').trim() === '')
+    emit({ reason: 'manifest-empty' }, [`❌ Manifest exists but is empty: ${manifest} — file was created but not written. Check git history before re-authoring from scratch.`], 2);
 
   const text = fs.readFileSync(manifest, 'utf8');
-  const roots = scanRoots(arg('settings'));
+  // migrationRoots is the plugin-managed canonical source for migration scope (written by resolve-migration-roots.cjs).
+  // Reading from additionalDirectories (old scanRoots path) conflated the general workspace field with the migration-specific field.
+  const settingsPath = arg('settings') || '.claude/settings.local.json';
+  let settingsObj;
+  try {
+    settingsObj = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+  } catch (e) {
+    emit({ reason: 'settings-unreadable', path: settingsPath, parse_error: e.message },
+      [`❌ Cannot read ${settingsPath}: ${e.message}`,
+       `   Run resolve-migration-roots.cjs to create it:`,
+       `   node "$PLUGIN_DIR/scripts/resolve-migration-roots.cjs" --source-path=<source-path> --write-to=${settingsPath}`], 3);
+  }
+  if (!Array.isArray(settingsObj.migrationRoots) || settingsObj.migrationRoots.length === 0)
+    emit({ reason: 'roots-not-initialized', path: settingsPath },
+      [`❌ migrationRoots not set in ${settingsPath} — run resolve-migration-roots.cjs first:`,
+       `   node "$PLUGIN_DIR/scripts/resolve-migration-roots.cjs" --source-path=<source-path> --write-to=${settingsPath}`], 3);
+  const missingRoots = settingsObj.migrationRoots.filter(r => !fs.existsSync(normP(r)));
+  if (missingRoots.length)
+    emit({ reason: 'root-missing', missing: missingRoots },
+      [`❌ ${missingRoots.length} migrationRoots path(s) do not exist on disk — re-run resolve-migration-roots.cjs:`,
+       ...missingRoots.map(m => `   ${m}`)], 3);
+  const roots = settingsObj.migrationRoots.map(normP);
 
-  // (3) every expected root covered — matched by full path or last segment appearing in the manifest.
-  const hay = text.replace(/\\/g, '/').toLowerCase();
-  const uncovered = roots.filter(r => {
-    const seg = r.split('/').pop().toLowerCase();
-    return !(hay.includes(r.toLowerCase()) || hay.includes(seg));
+  // (3) every migrationRoots entry declared in the ## Migration roots table.
+  // A18 Option C: ALL roots require a structured table row — no substring fallback, no special-casing for the source app.
+  const migrRootsHead = text.match(/^#{1,6}[^\n]*migration[- ]roots[^\n]*$/im);
+  if (!migrRootsHead)
+    emit({ reason: 'root-uncovered', uncovered: roots, detail: 'no-migration-roots-section' },
+      [`❌ No "## Migration roots" section found — add one with one row per migrationRoots entry (source app first, then each dependency repo).`], 3);
+  const mrAfter = text.slice(migrRootsHead.index + migrRootsHead[0].length);
+  const mrNextIdx = mrAfter.search(/^#{1,6}\s/m);
+  const mrSection = mrNextIdx === -1 ? mrAfter : mrAfter.slice(0, mrNextIdx);
+  const mrRows = tableDataRows(mrSection);
+  const manifestDir = path.dirname(path.resolve(manifest));
+  const uncovered = roots.filter(root => {
+    return !mrRows.some(row => {
+      const cell = (row[0] || '').trim();
+      if (!cell) return false;
+      try {
+        const abs = path.isAbsolute(cell) ? normP(cell) : normP(path.resolve(manifestDir, cell));
+        if (abs === root) return true;
+      } catch (_) {}
+      return cell.toLowerCase() === path.basename(root).toLowerCase();
+    });
   });
-  if (uncovered.length) emit({ reason: 'root-uncovered', uncovered }, [`❌ Root(s) not covered by the manifest: ${uncovered.join(', ')}`], 3);
+  if (uncovered.length)
+    emit({ reason: 'root-uncovered', uncovered },
+      [`❌ migrationRoots not declared in ## Migration roots table: ${uncovered.join(', ')}`,
+       `   Add one row per root in the Root column (normalized path or exact directory name).`], 3);
 
   // (4) every citation resolves.
   const dangling = citations(text).map(t => resolveCitation(t, roots)).filter(r => !r.ok);
@@ -229,37 +256,64 @@ function opCheckGate() {
   if ((led.stage_gates || {}).intake_context !== 'PASS')
     emit({ reason: 'gate-not-pass', gate: (led.stage_gates || {}).intake_context || null }, [`❌ stage_gates.intake_context is not PASS — run intake-verify.cjs verify first. STOP.`], 10);
 
-  // Re-validate rather than trust the boolean (keystone).
-  const sc = led.source_context || {};
-  const problems = [];
-  if (!sc.manifest_path || !fs.existsSync(sc.manifest_path)) problems.push('manifest_path missing on disk');
-  else {
-    const cites = citations(fs.readFileSync(sc.manifest_path, 'utf8')).length;
-    const expected = (sc.roots_expected || []).length || 1;
-    if (cites < expected) problems.push(`citations (${cites}) < expected roots (${expected})`);
-  }
-  const graphPath = arg('graph') || '.claude/graph/graph.json';
-  if (fs.existsSync(graphPath)) {
-    const g = JSON.parse(fs.readFileSync(graphPath, 'utf8'));
-    const total = (g.nodes || g.modules || []).length;
-    const accounted = (sc.modules_mapped || 0) + (sc.modules_out_of_scope || 0);
-    if (total && accounted !== total) problems.push(`accounted ${accounted} ≠ graph modules ${total} (full accounting)`);
-  }
-  // keystone: re-validate the cross-cutting scan (verify's exit-9 rule) so a hand-set gate can't bypass it.
-  if (sc.manifest_path && fs.existsSync(sc.manifest_path)) {
-    const mtext = fs.readFileSync(sc.manifest_path, 'utf8');
-    const cc = mtext.match(/^#{1,6}[^\n]*cross[- ]cutting[^\n]*$/im);
-    if (!cc) problems.push('cross-cutting concern scan section missing');
-    else if (sc.skill === 'rewrite' || sc.skill === 'replatform') {
-      const after = mtext.slice(cc.index + cc[0].length);
-      const nh = after.search(/^#{1,6}\s/m);
-      if (!tableDataRows(nh === -1 ? after : after.slice(0, nh)).length)
-        problems.push('cross-cutting concern scan empty (no concern rows)');
+  // Re-validate using the same opVerify() code path — no parallel weaker implementation (A15).
+  // Use led.skill (top-level, always set by coreEnvelope) not sc.skill (never stored — A16).
+  const skill = led.skill || 'upgrade';
+  // source_context is written via set-payload into payload[skill], not the root envelope.
+  // Check the skill payload first; fall back to a root-level field for forward-compat.
+  const sc = (led.payload && led.payload[skill] && led.payload[skill].source_context)
+    || led.source_context
+    || {};
+  if (!sc.manifest_path || !fs.existsSync(sc.manifest_path))
+    emit({ reason: 're-validation-failed', problems: ['manifest_path missing on disk'] },
+      [`❌ intake_context=PASS but manifest is gone from disk: ${sc.manifest_path || '(none stored)'}`], 11);
+
+  // A12: Roots-mismatch assertion — absent-tolerant for pre-fix ledgers.
+  // Compares ledger.source.roots (written at migration init via set-source) against the
+  // migrationRoots field in settings.local.json (the BFS-resolved migration scope written
+  // by resolve-migration-roots.cjs). If migrationRoots is absent from settings the comparison
+  // is SKIPPED — comparing against additionalDirectories (scanRoots fallback) would be
+  // semantically wrong as that field may contain non-migration repos.
+  const ledgerRoots = (led.source || {}).roots;
+  if (Array.isArray(ledgerRoots)) {
+    let liveRoots = null;
+    try {
+      const settingsRaw = fs.readFileSync(arg('settings') || '.claude/settings.local.json', 'utf8');
+      const settingsObj = JSON.parse(settingsRaw);
+      if (Array.isArray(settingsObj.migrationRoots) && settingsObj.migrationRoots.length) {
+        liveRoots = settingsObj.migrationRoots.map(normP);
+      }
+      // migrationRoots absent → liveRoots stays null → skip comparison (pre-fix ledger)
+    } catch (_) {
+      // settings absent or unreadable → skip comparison
+    }
+    if (liveRoots !== null) {
+      const ledSet = new Set(ledgerRoots.map(normP));
+      const refSet = new Set(liveRoots);
+      const removed = [...ledSet].filter(r => !refSet.has(r));
+      const added   = [...refSet].filter(r => !ledSet.has(r));
+      if (removed.length || added.length)
+        emit({ reason: 'roots-mismatch', ledger_roots: [...ledSet], live_roots: [...refSet],
+               removed_since_intake: removed, added_since_intake: added },
+          ['❌ Roots have changed since intake was recorded — manifest no longer matches the live workspace.',
+           `   Removed since intake : ${removed.length ? removed.join(', ') : '(none)'}`,
+           `   Added since intake   : ${added.length   ? added.join(', ')   : '(none)'}`,
+           '   Next: restore additionalDirectories to the intake-time state, re-run verify, re-flush the ledger.'], 11);
     }
   }
-  if (problems.length) emit({ reason: 're-validation-failed', problems }, [`❌ intake_context=PASS but re-validation failed:`, ...problems.map(p => `   ${p}`)], 11);
 
-  emit({ ado, gate: 'PASS', source_context: sc }, [`✅ Intake gate PASS re-validated for ADO ${ado}.`], 0);
+  const { spawnSync } = require('child_process');
+  const verifyArgs = ['verify', `--manifest=${sc.manifest_path}`, `--skill=${skill}`, '--json'];
+  if (arg('graph'))    verifyArgs.push(`--graph=${arg('graph')}`);
+  if (arg('settings')) verifyArgs.push(`--settings=${arg('settings')}`);
+  const r = spawnSync(process.execPath, [__filename, ...verifyArgs], { encoding: 'utf8' });
+  if (r.status !== 0) {
+    const detail = (() => { try { return JSON.parse(r.stdout); } catch (_) { return { raw: (r.stderr || r.stdout || '').trim() }; } })();
+    emit({ reason: 're-validation-failed', verify_exit: r.status, detail },
+      [`❌ intake_context=PASS but re-validation (verify) failed — exit ${r.status}:`, r.stderr || r.stdout || '(no output)'], 11);
+  }
+
+  emit({ ado, gate: 'PASS', source_context: sc, skill }, [`✅ Intake gate PASS re-validated for ADO ${ado}.`], 0);
 }
 
 if (OP === 'verify') opVerify();

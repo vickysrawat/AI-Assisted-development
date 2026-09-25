@@ -17,9 +17,12 @@ const fs   = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
-const CP   = path.join(__dirname, '..', 'scripts', 'upgrade-checkpoint.cjs');
-const DIR  = path.join(os.tmpdir(), `upgrade-cp-test-${process.pid}`);
-const FILE = path.join(DIR, 'cp.json');
+const CP       = path.join(__dirname, '..', 'scripts', 'upgrade-checkpoint.cjs');
+const CLJ      = path.join(__dirname, '..', 'scripts', 'checkpoint-ledger.cjs');
+const IV       = path.join(__dirname, '..', 'scripts', 'intake-verify.cjs');
+const DIR      = path.join(os.tmpdir(), `upgrade-cp-test-${process.pid}`);
+const FILE     = path.join(DIR, '.claude', 'migration', 'cp.json');
+const MANIFEST = path.join(DIR, 'manifest.md');
 let pass = 0, fail = 0;
 
 function reset() { fs.rmSync(DIR, { recursive: true, force: true }); }
@@ -47,10 +50,58 @@ assert('INIT payload skeleton present', i.json.checkpoint?.payload?.upgrade && A
 // init again — idempotent (preserves existing)
 assert('INIT idempotent (exists)', run(['init', '--ado=9000', '--now=2026-09-09']).json.status === 'exists', 're-init did not report exists');
 
+// ATOMIC-WRITE — no .tmp residue after successful save (A21)
+const tmpFiles = fs.readdirSync(path.dirname(FILE)).filter(f => f.includes('.tmp.'));
+assert('ATOMIC-WRITE: no .tmp residue after save', tmpFiles.length === 0, `tmp files found: ${tmpFiles.join(', ')}`);
+
 // set-payload — merges baseline tag + hops
 const sp = run(['set-payload', '--ado=9000', '--baseline-tag=pre-upgrade/dotnet-6', '--hops=7,8', '--now=2026-09-08']);
 assert('SET-PAYLOAD baseline tag merged', sp.json.payload?.baseline_tag === 'pre-upgrade/dotnet-6', JSON.stringify(sp.json.payload));
 assert('SET-PAYLOAD hops merged', JSON.stringify(sp.json.payload?.hops) === JSON.stringify(['7', '8']), JSON.stringify(sp.json.payload?.hops));
+
+// set up intake context so the A1 guard (report=PASS → intake-verify check-gate) can pass.
+// The guard reads the SAME ledger FILE (fixed in A1 guard) and checks:
+//   (a) stage_gates.intake_context === 'PASS'
+//   (b) payload.upgrade.source_context.manifest_path exists and passes re-verify
+//   (c) migrationRoots in settings.local.json (A17: single source of truth for roots)
+// Create .claude/settings.local.json with migrationRoots — A1 guard derives settings path from FILE.
+const SETTINGS_DIR = path.join(DIR, '.claude');
+fs.mkdirSync(SETTINGS_DIR, { recursive: true });
+fs.writeFileSync(path.join(SETTINGS_DIR, 'settings.local.json'), JSON.stringify({ migrationRoots: [DIR] }, null, 2));
+// Extract dotted identifiers from CLAUDE.md using the same regex as intake-verify check 6
+// and include them in the manifest so they are "justified" — future-proof against CLAUDE.md changes.
+const dotted = new Set();
+const claudeMd = path.join(__dirname, '..', 'CLAUDE.md');
+if (fs.existsSync(claudeMd)) {
+  let m; const re6 = /\b([A-Z][A-Za-z0-9]+(?:\.[A-Z][A-Za-z0-9]+)+)\b/g;
+  while ((m = re6.exec(fs.readFileSync(claudeMd, 'utf8')))) dotted.add(m[1]);
+}
+// Manifest root coverage: migrationRoots=[DIR] → verifier looks for path.basename(DIR) as the segment.
+const dirSeg = path.basename(DIR);
+fs.writeFileSync(MANIFEST, [
+  '# Source Context Manifest — Test',
+  '', '## Migration roots',
+  '| Root | Purpose | Covered | PROV |',
+  '|---|---|---|---|',
+  `| ${dirSeg} | Primary source | yes | - |`,
+  '',
+  '## Stack references (justified tokens from CLAUDE.md)',
+  [...dotted].join(' ') || 'none', '',
+  '## Module Accounting', '',
+  '| Module | Disposition | Citations | Notes |',
+  '|---|---|---|---|', '',
+  '## Cross-cutting concern scan', '', 'none', '',
+].join('\n'));
+// Empty graph file — points opVerify at 0 modules so the module-accounting check passes trivially.
+// Without this, opVerify defaults to CWD/.claude/graph/graph.json which (in the plugin dev dir)
+// is the plugin's own knowledge graph, not a migration source graph.
+const EMPTY_GRAPH = path.join(DIR, 'empty-graph.json');
+fs.writeFileSync(EMPTY_GRAPH, JSON.stringify({ nodes: [] }, null, 2));
+spawnSync('node', [CLJ, 'set-gate', '--ado=9000', `--file=${FILE}`, '--skill=upgrade',
+  '--gate=intake_context', '--verdict=PASS'], { encoding: 'utf8' });
+spawnSync('node', [CLJ, 'set-payload', '--ado=9000', `--file=${FILE}`, '--skill=upgrade',
+  `--payload-json=${JSON.stringify({ source_context: { manifest_path: MANIFEST, graph_path: EMPTY_GRAPH, verified: true } })}`],
+  { encoding: 'utf8' });
 
 // set-gate — records verdict + appends phase_history
 const sg = run(['set-gate', '--ado=9000', '--gate=report', '--verdict=PASS', '--now=2026-09-08']);
@@ -71,7 +122,7 @@ assert('MERGE-WRITE also kept the new gate', after.stage_gates?.verify === 'PASS
 
 // TOLERANT READER — a ledger created by ANOTHER skill (no upgrade substructures) must not crash
 reset();
-fs.mkdirSync(DIR, { recursive: true });
+fs.mkdirSync(path.dirname(FILE), { recursive: true });
 fs.writeFileSync(FILE, JSON.stringify({ schema_version: '1.0', skill: 'rewrite', foreign: { keep: 'me' } }, null, 2));
 const tol = run(['set-payload', '--ado=9000', '--baseline-tag=pre-upgrade/x', '--now=2026-09-08']);
 assert('TOLERANT set-payload on foreign checkpoint succeeds', tol.code === 0 && tol.json.payload?.baseline_tag === 'pre-upgrade/x',

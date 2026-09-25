@@ -3,7 +3,7 @@
   Template for the source-context intake gate (source-context-intake-spec.md).
   Authored BEFORE options/analysis; verified by `scripts/intake-verify.cjs verify`.
   The verifier enforces (do NOT delete these sections):
-    - Every configured root (repo + each additionalDirectories entry) must appear ....... exit 3
+    - Every migrationRoots entry (set by resolve-migration-roots.cjs) must appear ....... exit 3
     - Every PROV citation must resolve to a real file#line .............................. exit 4
     - No PARTIAL/unknown row whose source is reachable in a root ........................ exit 5
     - Every graph.json module needs a `mapped`/`out-of-scope` disposition ............... exit 7
@@ -11,8 +11,8 @@
     - Cross-cutting scan present + EVERY row source-grounded ............................ exit 9
       (rewrite/replatform: each row cites implementation file#line — a doc or blank fails, and one
        grounded row does NOT cover a doc-cited/blank sibling. upgrade may state "none".)
-  Citation format: PROV as `relative/path#L<line>` — repo-relative, or relative to an
-  additionalDirectories root. Replace every {placeholder}; leftover {…#L} will not resolve (exit 4).
+  Citation format: PROV as `relative/path#L<line>` — repo-relative, or relative to any
+  migrationRoots entry. Replace every {placeholder}; leftover {…#L} will not resolve (exit 4).
 -->
 
 Verified: {date} · Skill: {rewrite|upgrade|replatform} · Source: {source app path}
@@ -25,11 +25,12 @@ _The source's own documented knowledge — read these before code._
 | architecture | .claude/architecture/architecture.md | yes | .claude/architecture/architecture.md#L1 |
 | local settings | .claude/settings.local.json | yes | .claude/settings.local.json#L1 |
 
-## Additional roots
-_One row per `additionalDirectories` entry (dependency source). Each root MUST appear here._
+## Migration roots
+_One row per `migrationRoots` entry — source application first, then each BFS-discovered dependency repo. Every root MUST appear here (verifier enforces, exit 3 if any root is absent)._
 | Root | Purpose | Covered | PROV |
 |---|---|---|---|
-| {../DealDataService} | WCF service source (Tier 2) | yes | {../DealDataService/Service.cs#L1} |
+| {source-app-name} | Primary source application | yes | CLAUDE.md#L1 |
+| {../DealDataService} | WCF service dependency (Tier 2) | yes | {../DealDataService/Service.cs#L1} |
 
 ## Cross-cutting concern scan
 _Impl, not declaration. Add a row for EVERY concern the source exhibits; cite the implementation

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // SCRIPT REVIEW
 // What it does:        Runs scripts/intake-verify.cjs against temp fixtures and asserts the
-//                      fail-closed exit contract: verify 0 (pass) · 2 (manifest missing) · 4
+//                      fail-closed exit contract: verify 0 (pass) · 2 (manifest-missing reason) ·
+//                      2 (manifest-empty reason) · 4
 //                      (dangling citation) · 7 (module unaccounted) · 8 (behavior cited to a doc) ·
 //                      9 (cross-cutting scan missing/empty/uncited); check-gate 10 (ledger absent) ·
 //                      11 (re-validation) · 0 (valid, re-validated). Exit 0 = all pass.
@@ -29,7 +30,7 @@ const ROOT = fs.mkdtempSync(path.join(os.tmpdir(), 'intake-test-'));
 const SEG  = path.basename(ROOT);
 const W = (rel, body) => { const p = path.join(ROOT, rel); fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, body); };
 
-W('.claude/settings.local.json', JSON.stringify({ additionalDirectories: [] }));
+W('.claude/settings.local.json', JSON.stringify({ additionalDirectories: [], migrationRoots: [ROOT] }));
 W('.claude/graph/graph.json', JSON.stringify({
   meta: { schemaVersion: '1.0', moduleCount: 2 },
   nodes: [{ id: 'orders', module: 'Orders' }, { id: 'shared', module: 'Shared' }],
@@ -42,7 +43,11 @@ W('src/shared.js', 'p\nq\n');
 // A manifest that satisfies every check: root covered (SEG), citations resolve (with #anchors),
 // both graph modules have a disposition, behavior-bearing row cited to source.
 const goodManifest = `# Source Context Manifest
-Roots expected: ${SEG}
+
+## Migration roots
+| Root | Purpose | Covered | PROV |
+|---|---|---|---|
+| ${SEG} | Primary source | yes | CLAUDE.md#L1 |
 
 ## Source context files
 | Doc | Path | Covered | PROV |
@@ -72,14 +77,32 @@ assert('verify pass -> exit 0 + verified', ok.code === 0 && ok.json.verified ===
 assert('verify pass -> modules_total 2, fully accounted',
   ok.json.modules_total === 2 && (ok.json.modules_mapped + ok.json.modules_out_of_scope) === 2, JSON.stringify(ok.json));
 
-// 2 — manifest missing
+// 2 — manifest missing (file does not exist)
 const miss = run(['verify', '--manifest=nope.md', '--skill=rewrite']);
 assert('missing manifest -> exit 2', miss.code === 2, `code=${miss.code}`);
+assert('missing manifest -> reason=manifest-missing', miss.json.reason === 'manifest-missing', `reason=${miss.json.reason}`);
+
+// 2 — manifest exists but is empty (file created, write failed or stub committed)
+W('empty.md', '');
+const emptyMan = run(['verify', '--manifest=empty.md', '--skill=rewrite']);
+assert('empty manifest -> exit 2', emptyMan.code === 2, `code=${emptyMan.code}`);
+assert('empty manifest -> reason=manifest-empty (distinct from manifest-missing)', emptyMan.json.reason === 'manifest-empty', `reason=${emptyMan.json.reason}`);
+
+// 2 — whitespace-only manifest is also treated as empty
+W('ws.md', '   \n\t  \n');
+const wsMan = run(['verify', '--manifest=ws.md', '--skill=rewrite']);
+assert('whitespace-only manifest -> exit 2 + reason=manifest-empty', wsMan.code === 2 && wsMan.json.reason === 'manifest-empty', `code=${wsMan.code} reason=${wsMan.json.reason}`);
 
 // 4 — dangling citation
 W('bad-cite.md', goodManifest + '\n| extra | mapped | x | src/ghost.js#L9 |\n');
 const dang = run(['verify', '--manifest=bad-cite.md', '--skill=rewrite']);
 assert('dangling citation -> exit 4', dang.code === 4, `code=${dang.code} ${JSON.stringify(dang.json)}`);
+
+// 4 — A19: glob citation rejected (was unconditionally ok, bypassing disk check)
+W('glob-cite.md', goodManifest + '| auth handler | mapped | all js | src/**/*.js#L1 |\n');
+const globCite = run(['verify', '--manifest=glob-cite.md', '--skill=upgrade']);
+assert('A19: glob citation -> exit 4', globCite.code === 4, `code=${globCite.code} ${JSON.stringify(globCite.json)}`);
+assert('A19: glob citation -> reason=glob-citation in dangling array', (globCite.json.dangling || []).some(d => d.reason === 'glob-citation'), `dangling=${JSON.stringify(globCite.json.dangling)}`);
 
 // 7 — a graph module with no disposition (drop the shared row)
 W('drop.md', goodManifest.replace(/\| shared .*\n/, ''));
@@ -144,13 +167,11 @@ W('.claude/migration/9000.checkpoint.json', JSON.stringify({
 const gate = run(['check-gate', '--ado=9000']);
 assert('check-gate valid -> exit 0', gate.code === 0 && gate.json.gate === 'PASS', `code=${gate.code} ${JSON.stringify(gate.json)}`);
 
-// 11 — check-gate accounting mismatch (mapped+oos != graph total)
-W('.claude/migration/9001.checkpoint.json', JSON.stringify({
-  stage_gates: { intake_context: 'PASS' },
-  source_context: { manifest_path: path.join(ROOT, 'manifest.md'), roots_expected: [ROOT], modules_mapped: 1, modules_out_of_scope: 0 },
-}));
-const mismatch = run(['check-gate', '--ado=9001']);
-assert('check-gate accounting mismatch -> exit 11', mismatch.code === 11, `code=${mismatch.code} ${JSON.stringify(mismatch.json)}`);
+// NOTE: The stored-counter accounting mismatch check (modules_mapped + modules_out_of_scope != graph
+// total) was intentionally removed by A15. check-gate now re-runs opVerify() directly against the
+// manifest and graph — live re-validation is more correct than comparing stale stored counters.
+// A manifest that disposes all modules correctly passes check-gate even if source_context counters
+// are wrong, because the live verify reads the manifest (the source of truth), not the summary.
 
 // 11 — check-gate re-validation catches a missing cross-cutting scan (keystone; hand-set gate can't bypass)
 W('.claude/migration/9002.checkpoint.json', JSON.stringify({
@@ -159,6 +180,42 @@ W('.claude/migration/9002.checkpoint.json', JSON.stringify({
 }));
 const noccGate = run(['check-gate', '--ado=9002']);
 assert('check-gate missing cross-cutting -> exit 11', noccGate.code === 11, `code=${noccGate.code} ${JSON.stringify(noccGate.json)}`);
+
+// 3 — A18: no ## Migration roots section at all
+W('no-mr-section.md', `# Source Context Manifest\n\n## Source context files\n| Doc | Path | Covered | PROV |\n| agent-instructions | CLAUDE.md | yes | CLAUDE.md#L1 |\n\n## Source coverage\n| Source module | Disposition | Reason | PROV |\n| orders (Orders) business-logic | mapped | cluster orders | src/orders.js#L1 |\n| shared (Shared) | out-of-scope | shared util, unchanged | src/shared.js#L1 |\n\n## Cross-cutting concern scan\n| Concern | Implementation | PROV |\n| logging | request logger | src/orders.js#L2 |\n| error-handling | global handler | src/shared.js#L1 |\n`);
+const noMrSection = run(['verify', '--manifest=no-mr-section.md', '--skill=upgrade']);
+assert('A18: no Migration roots section -> exit 3', noMrSection.code === 3, `code=${noMrSection.code} ${JSON.stringify(noMrSection.json)}`);
+assert('A18: no Migration roots section -> detail=no-migration-roots-section', noMrSection.json.detail === 'no-migration-roots-section', `detail=${noMrSection.json.detail}`);
+
+// 3 — A18: additional root missing from ## Migration roots table
+const extraRoot = path.join(ROOT, 'a18-extra-dep');
+fs.mkdirSync(extraRoot, { recursive: true });
+const extraSeg = path.basename(extraRoot);
+W('.claude/two-roots.settings.json', JSON.stringify({ migrationRoots: [ROOT, extraRoot] }));
+const noExtraRow = run(['verify', '--manifest=manifest.md', '--skill=upgrade', '--settings=.claude/two-roots.settings.json']);
+assert('A18: extra root not in table -> exit 3', noExtraRow.code === 3, `code=${noExtraRow.code} ${JSON.stringify(noExtraRow.json)}`);
+assert('A18: extra root not in table -> reason=root-uncovered', noExtraRow.json.reason === 'root-uncovered', `reason=${noExtraRow.json.reason}`);
+
+// 0 — A18: all roots declared in table -> exit 0
+W('two-roots-manifest.md', goodManifest.replace(
+  `| ${SEG} | Primary source | yes | CLAUDE.md#L1 |`,
+  `| ${SEG} | Primary source | yes | CLAUDE.md#L1 |\n| ${extraSeg} | Extra dep | yes | CLAUDE.md#L1 |`
+));
+const allRootsInTable = run(['verify', '--manifest=two-roots-manifest.md', '--skill=upgrade', '--settings=.claude/two-roots.settings.json']);
+assert('A18: all roots in table -> exit 0', allRootsInTable.code === 0, `code=${allRootsInTable.code} ${JSON.stringify(allRootsInTable.json)}`);
+
+// 3 — roots-not-initialized: migrationRoots absent from settings
+W('.claude/no-roots.settings.json', JSON.stringify({ additionalDirectories: [] }));
+const noRoots = run(['verify', '--manifest=manifest.md', '--skill=upgrade', '--settings=.claude/no-roots.settings.json']);
+assert('roots-not-initialized -> exit 3', noRoots.code === 3, `code=${noRoots.code} ${JSON.stringify(noRoots.json)}`);
+assert('roots-not-initialized -> reason field', noRoots.json.reason === 'roots-not-initialized', `reason=${noRoots.json.reason}`);
+
+// 3 — root-missing: a migrationRoots entry does not exist on disk
+const nonExistentRoot = path.join(ROOT, 'nonexistent-root-for-test');
+W('.claude/bad-root.settings.json', JSON.stringify({ migrationRoots: [ROOT, nonExistentRoot] }));
+const badRoot = run(['verify', '--manifest=manifest.md', '--skill=upgrade', '--settings=.claude/bad-root.settings.json']);
+assert('root-missing -> exit 3', badRoot.code === 3, `code=${badRoot.code} ${JSON.stringify(badRoot.json)}`);
+assert('root-missing -> reason field', badRoot.json.reason === 'root-missing', `reason=${badRoot.json.reason}`);
 
 // --- cleanup + summary ----------------------------------------------------------
 try { fs.rmSync(ROOT, { recursive: true, force: true }); } catch (_) {}

@@ -50,6 +50,15 @@ Rules:
 citations ≥ expected roots, `modules_mapped + out_of_scope == modules_total`) so a hand-set gate is
 not trusted. See the script's SCRIPT REVIEW header for the exit-code contract.
 
+On exit 0, the skill also writes `source_context.summary` into the ledger — a compact cached
+snapshot (`coverage_verdict`, `modules_total`, `modules_mapped`, `modules_out_of_scope`,
+`partial_row_count`) derived from the `verify --json` output. The `manifest-read-guard.cjs`
+PreToolUse hook blocks all subsequent `Read` tool calls to the manifest once this summary is
+present, redirecting to the ledger (~100 tokens) instead of the full manifest (~16,000 tokens).
+The summary is a **display snapshot only**; `check-gate` always re-validates from the live
+manifest. On manifest revision, re-run `verify` and overwrite `source_context.summary` via
+`set-payload` before retrying any downstream step.
+
 ## Two-layer detection
 - Script (deterministic, `intake-verify.cjs`): root coverage (exit 3), citation resolution (exit 4),
   PARTIAL contradiction (exit 5), unwired-dependency diff (exit 6), full module accounting (exit 7),
@@ -101,4 +110,4 @@ Checks:
 - EVERY cross-cutting concern row must cite source (`file#line`) — per-row, not section-wide: a single
   grounded row does NOT cover a doc-cited or blank sibling (exit 9). Cross-cutting is first-class.
 - `check-gate` re-validates — a `set-gate PASS` without a passing manifest is not honored.
-- Reuse `scanRoots()` from `multi-root-scan.md` for roots — never re-improvise root logic.
+- Use `migrationRoots` from `settings.local.json` (written by `resolve-migration-roots.cjs`) as the canonical root source — never read `additionalDirectories` directly or re-improvise root logic.

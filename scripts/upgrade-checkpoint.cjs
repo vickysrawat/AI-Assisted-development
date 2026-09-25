@@ -43,6 +43,24 @@ if (require.main === module) {
 
   try {
     let result, exit = 0;
+    // A13: Reject unknown flags per-operation — prevents silently discarded args that corrupt the ledger.
+    const ALLOWED_FLAGS = {
+      'init':        new Set(['ado', 'file', 'now', 'json', 'stack', 'from', 'to']),
+      'get':         new Set(['ado', 'file', 'json']),
+      'set-gate':    new Set(['ado', 'file', 'now', 'json', 'gate', 'verdict']),
+      'set-payload': new Set(['ado', 'file', 'now', 'json', 'baseline-tag', 'hops', 'gate', 'verdict']),
+    };
+    const allowedForOp = ALLOWED_FLAGS[OP];
+    if (allowedForOp) {
+      for (const a of process.argv.slice(3)) {
+        if (!a.startsWith('--')) continue;
+        const flag = a.split('=')[0].slice(2);
+        if (!allowedForOp.has(flag)) {
+          process.stderr.write(`error: unknown flag --${flag} for ${OP}.\nKnown flags: ${[...allowedForOp].map(f => '--' + f).join(', ')}\n`);
+          process.exit(1);
+        }
+      }
+    }
     if (OP === 'init') {
       const existing = ledger.load(FILE);
       if (existing) result = { op: 'init', status: 'exists', file: FILE, checkpoint: existing };
@@ -54,6 +72,25 @@ if (require.main === module) {
     } else if (OP === 'set-gate') {
       const gate = arg('gate'), verdict = arg('verdict');
       if (!gate || !verdict) throw new Error('set-gate requires --gate=<name> and --verdict=<PASS|REVISE|BLOCK|approved>');
+      // A1: report=PASS is blocked until intake-verify check-gate exits 0. Bypass-proof at the script level.
+      if (gate === 'report' && verdict === 'PASS') {
+        const { spawnSync } = require('child_process');
+        const intakeVerify = path.join(__dirname, 'intake-verify.cjs');
+        // Derive settings from FILE: FILE = <root>/.claude/migration/<ado>.json → settings = <root>/.claude/settings.local.json
+        const settingsPath = path.join(path.dirname(path.dirname(path.resolve(FILE))), 'settings.local.json');
+        // Read graph_path from source_context — passes it to opVerify so it uses the right graph,
+        // not the default CWD-relative .claude/graph/graph.json (which could be a different project's graph).
+        const ledForGuard = ledger.load(FILE) || {};
+        const scForGuard  = (ledForGuard.payload && ledForGuard.payload['upgrade'] && ledForGuard.payload['upgrade'].source_context) || {};
+        const guardArgs = [`--ado=${ADO}`, `--file=${FILE}`, `--settings=${settingsPath}`];
+        if (scForGuard.graph_path) guardArgs.push(`--graph=${scForGuard.graph_path}`);
+        const r = spawnSync(process.execPath, [intakeVerify, 'check-gate', ...guardArgs, '--json'], { encoding: 'utf8' });
+        if (r.status !== 0) {
+          const msg = (r.stdout || r.stderr || '').trim();
+          process.stderr.write(`❌ report gate blocked — intake gate not PASS.\n${msg}\n`);
+          process.exit(r.status || 10);
+        }
+      }
       const cp = ledger.setGate(ledger.load(FILE) || freshWithPayload(), SKILL, gate, verdict, NOW);
       ledger.ensurePayload(cp, SKILL, SKELETON());
       ledger.save(FILE, cp);

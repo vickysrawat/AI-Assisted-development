@@ -1,5 +1,74 @@
 # MEMORY.md — Project memory (dream-managed)
 
+### 2026-09-24 — Task completed — /app-readiness assessment for the plugin itself
+
+App-readiness --full run on the plugin repo (2026-09-24). Verdict: Not Ready. EA-3 (Observability) = 2 Red: no structured logging, scripts emit console.log only. EA-4 (Security) = 2 Red/Blocking: security/ folder absent, no /security-review ever run. EA-1 pipeline YAML is well-structured (CI + ReleaseValidation, npm audit, version consistency) but ADO live state unverified (PAT not set). EA-5 + EA-6 = 4 Green. Report at prod-readiness/app-readiness-2026-09-24.html.
+Trigger: Task completed  Confidence: 0.90  Source: auto-capture
+
+## 2026-09-24 — Task completed — B2: manifest-read-guard PreToolUse hook
+
+Pattern: when a fix needs to prevent re-reads of a large cached artifact, add a PreToolUse hook on `"Read"` that checks the ledger for the cached summary and blocks/redirects. Extra gate check (gate=PASS but summary absent) gives a diagnostic instead of silent allow — catches the SKILL.md-skipped-set-payload case. Replatform's old `--key=source_context --value=` was also a silent bug caught during this fix; always use `--payload-json` for object-valued fields. Hook armed only AFTER summary written — absent summary is always allow so Step 1.5 authoring is never blocked.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+## 2026-09-24 — Plan approved — B2: manifest-read-guard hook + source_context.summary
+
+B2 fix approved: Option A + D + mechanical enforcement. New PreToolUse hook `manifest-read-guard.cjs` intercepts `Read` calls to `source-context-manifest.md`; blocks when `source_context.summary.coverage_verdict` is present in the ledger; allows when ledger absent (Step 1.5 authoring in progress) or summary absent. Extra gate: if `stage_gates.intake_context === PASS` but summary absent → block with diagnostic ("summary write was skipped"). Six artifacts: hook (×2 files), settings.json wiring, ledger schema addition, source-context-intake-spec update, three SKILL.md set-payload expansions. Closes the prose-only bypass gap from the initial B2 analysis.
+Trigger: Plan approved  Confidence: 0.95  Source: auto-capture
+
+## 2026-09-23 — Error resolved — upgrade-checkpoint test fails after setup-init creates .claude/graph/graph.json
+
+Root cause: `setup-init` ran on the plugin dev repo and created `.claude/graph/graph.json` with 8 plugin modules. `opVerify()` defaults to `CWD/.claude/graph/graph.json` — so the A1 guard's re-validation picked up the plugin's own knowledge graph, fired exit 7 (module-unaccounted), and blocked the SET-GATE test. Fix: (1) A1 guard in `upgrade-checkpoint.cjs` now reads `source_context.graph_path` from the ledger and passes it as `--graph` to check-gate — uses the explicitly stored graph, not the default CWD path; (2) test creates an empty `{ nodes: [] }` graph in temp dir and stores its path in `source_context.graph_path`. Gotcha: if setup-init is run on the plugin dev dir, any test relying on the default CWD graph path will pick up the plugin's own 8-module graph — always store and pass graph_path explicitly.
+Trigger: Error resolved  Confidence: 0.95  Source: auto-capture
+
+## 2026-09-23 — Plan approved — B9: cluster results via --payload-file, not shell JSON string
+
+Approved: add `--payload-file=<path>` to checkpoint-ledger.cjs set-payload op (reads JSON from file, merges as patch — no shell interpolation). Subagent writes checkpoint payload to `.claude/migration/{ADO}/clusters/{N}/cluster-N-payload.json` via bash; returns short display fields (verdict, paths, bal_grade) as text. Orchestrator Step B2 uses `--payload-file` instead of `--payload-json='{...}'`. Eliminates all four failure modes: shell quoting, arg-length limits, LLM truncation, and LLM reformatting.
+Trigger: Plan approved  Confidence: 0.90  Source: auto-capture
+
+## 2026-09-23 — Task completed — B3 spec preflight in rewrite/SKILL.md Step 2.5
+
+Added bash preflight block (step "0") before graph-derive-documents.cjs that checks 6 required spec files exist and hard-stops with a clear message if any are missing. Enforcement-level (bash not prose). B8 updated with B3↔B1 connection: per-document spec routing (which spec each agent gets) belongs in B8's cluster execution contract schema.
+Trigger: Task completed  Confidence: 0.90  Source: auto-capture
+
+## 2026-09-23 — Plan approved — B3 spec preflight: bash existence check before Step 2.5 subagents spawn
+
+Approved: add bash preflight block at Step 2.5 start (before graph-derive-documents.cjs) checking all required spec files exist. Enforcement-level (bash, not prose) — fixes stated issue completely. The B3↔B1 connection (same spec files loaded redundantly by each of 7 agents = token amplification) is a separate concern that belongs in B8's per-document spec routing scope. B3 fix is Option A only: existence check, no routing changes.
+Trigger: Plan approved  Confidence: 0.90  Source: auto-capture
+
+## 2026-09-23 — Approach abandoned — B1 demand-model and prose-based inventory partitioning
+
+Any SKILL.md instruction to the LLM ("read only your domain slice", "don't load the full inventory") is prose advice, not enforcement — the LLM can bypass it. The demand model (pass file path, agent reads on demand) does NOT fix per-agent token load: the agent still reads the full file to filter. Pre-computed slices + text injection is the best achievable without enforcement infrastructure. The ONLY reliable fixes are: (1) inject slice TEXT (not path) so the agent has no route to the full file, or (2) a `PreToolUse` hook that blocks reads to the full inventory from non-integration subagents. B1 is deferred as ICEA-level requiring hook enforcement. B5 context guard mitigates the worst case by blocking Step 2.5 entry on insufficient headroom.
+Trigger: Approach abandoned  Confidence: 0.90  Source: auto-capture
+
+## 2026-09-23 — Architecture decision — LLM instructions are bypassable; enforcement requires hooks or structural access control
+
+Learned through B1 analysis: any instruction to an LLM to "read less" or "stop early" is prose advice that can be ignored — same failure mode as the hardcoded token thresholds B5 replaced. Reliable enforcement at the plugin level requires either: (1) structural access control (don't give the agent the path to content it shouldn't load), (2) content injection of pre-computed slices (inject TEXT not PATH — agent has no reference to find more), or (3) PreToolUse hook blocking specific file reads from specific subagent contexts. This principle applies to B1 (inventory loading), B3 (spec file loading), and any future "please read less" instruction in a skill.
+Trigger: Architecture decision  Confidence: 0.90  Source: auto-capture
+
+## 2026-09-23 — Task completed — setup-init run on plugin's own dev repo
+
+setup-init completed on the AI-Assisted-development plugin repo itself. Repo type detected: PYTHON_FASTAPI (false positive — actual stack is Node.js/.cjs). Bootstrap completed with OneDrive atomic rename workaround (EPERM on rename → use writeFileSync + unlinkSync instead of fs.rename). Architecture files populated for Node.js plugin (not FastAPI templates literally). Domain: generic, jurisdiction: US. Knowledge graph: 8 modules (scripts, skills, tests, docs, _project-deploy, guides, tools, contest). 1 EXTRACTED edge: tests→scripts. Rules deployed: 15 files. Key gotcha: .tmp rename fails on OneDrive-synced paths — must work around with copy+delete pattern.
+
+## 2026-09-23 — Task completed — B5: context guard hook infrastructure
+
+`_project-deploy/hooks/context-guard.cjs` (UserPromptSubmit, stdin→payload, stderr+exit 2 to block), `.claude-plugin/context-budgets.json` (per-skill/per-step headroom + model windows), `skills/shared/context-budget-spec.md` (protocol doc). Skills participate by writing `.claude/active-task.json` at each STEP BOUNDARY — skill-agnostic, zero hook changes needed for new skills. Rewrite/SKILL.md: Step 1 context check fixed (25–40K, no 80K threshold); Step 2.5 clarified (10–20K main session + 56–105K in isolated subagents). Token counting gotcha: must sum `input_tokens + cache_creation_input_tokens + cache_read_input_tokens` — `input_tokens` alone is near-zero under heavy caching. For 1M context, set `model_windows["claude-sonnet-4-6"]: 1000000` in context-budgets.json.
+Trigger: Task completed  Confidence: 0.90  Source: auto-capture
+
+## 2026-09-23 — Task completed — Transcript usage block format verified
+
+Claude Code JSONL transcript: every assistant entry has `message.usage` with `input_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens`, `output_tokens`. Current context = sum of all three input fields — `input_tokens` alone is near zero with heavy caching (e.g., 3 + 741 + 262495 = 263K). Model ID is in `message.model` as `"claude-sonnet-4-6"` without the `[1m]` suffix — window size must be explicit in config, not inferred from model ID alone. Hook reads the last assistant entry by scanning lines in reverse.
+Trigger: Task completed  Confidence: 0.90  Source: auto-capture
+
+## 2026-09-23 — Plan approved — Hook-based context guard: transcript measurement + per-skill declared needs
+
+Approved design: `UserPromptSubmit` hook reads last assistant `usage` block from transcript, computes `remaining = window - (input + cache_creation + cache_read)`, reads `.claude/active-task.json` for current `{skill, step}`, looks up declared headroom in `.claude-plugin/context-budgets.json`, blocks with a /compact instruction if `remaining < declared`. Hook is skill-agnostic — any skill participates by writing `active-task.json` at STEP BOUNDARYs and declaring needs in `context-budgets.json`. Window size is explicitly configured per model ID.
+Trigger: Plan approved  Confidence: 0.90  Source: auto-capture
+
+## 2026-09-23 — Architecture decision — Hook-based context management replaces hardcoded prose thresholds
+
+Hardcoded token thresholds in SKILL.md prose (e.g. "stop if < 80K remaining") are model-specific, contradict each other across sections, and rely on AI compliance — all three failure modes. Decision: replace with a `UserPromptSubmit` hook that measures real context usage from the transcript JSONL (last assistant entry's `input_tokens + cache_read_input_tokens + cache_creation_input_tokens`), compares against a per-skill/per-step declared headroom in a plugin config file (`.claude-plugin/skills-budget.json`), and blocks the message if remaining < declared need. The hook reads the active ADO/skill/step from a state file written by the STEP BOUNDARY flush. `PreCompact` saves checkpoint state; `SessionStart` re-injects it after compaction. Self-attestation (asking AI "do you have enough context?") was explicitly rejected — models can't reliably detect what they've forgotten.
+Trigger: Architecture decision  Confidence: 0.85  Source: auto-capture
+
 ## 2026-09-17 — Goal-loop (icea-implement Step 4b) completion = intent + approved scope of change
 
 **Decision + rationale.** The completeness gate scored code against the **ICEA ACs only** — so

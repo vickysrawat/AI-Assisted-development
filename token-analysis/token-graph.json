@@ -1,0 +1,180 @@
+{
+  "version": 1,
+  "generatedAt": "2026-09-24",
+  "projectRoot": "C:\\Users\\rawatv\\OneDrive\\Desktop\\Vivek\\Learning\\AI Learning\\Agentic Engineering\\Plugin\\AI-Assisted-development",
+  "files": {
+    "CLAUDE.md": {
+      "charCount": 21261,
+      "tokens": 5315,
+      "classification": "ALWAYS"
+    },
+    ".claude/graph/graph-index.md": {
+      "charCount": 1923,
+      "tokens": 481,
+      "classification": "ALWAYS"
+    },
+    ".claude/rules/project-rules.md": {
+      "charCount": 4123,
+      "tokens": 1031,
+      "classification": "ALWAYS"
+    },
+    ".claude/rules/nodejs-typescript-rules.md": {
+      "charCount": 5550,
+      "tokens": 1388,
+      "classification": "CONDITIONAL"
+    },
+    ".claude/rules/javascript-rules.md": {
+      "charCount": 4764,
+      "tokens": 1191,
+      "classification": "CONDITIONAL"
+    },
+    ".claude/rules/python-rules.md": {
+      "charCount": 4943,
+      "tokens": 1236,
+      "classification": "CONDITIONAL"
+    },
+    ".claude/architecture/architecture.md": {
+      "charCount": 6162,
+      "tokens": 1541,
+      "classification": "ON_DEMAND"
+    },
+    ".claude/architecture/architecture-flows.md": {
+      "charCount": 5973,
+      "tokens": 1493,
+      "classification": "ON_DEMAND"
+    }
+  },
+  "sessions": {
+    "cf58d028-5c0e-4f34-93d5-32c8e6f27fae": {
+      "date": "2026-09-24",
+      "humanTurns": 153,
+      "assistantTurns": 242,
+      "estimatedTokens": 154046,
+      "skills": [
+        "setup-init",
+        "graph-viz",
+        "token-analysis"
+      ]
+    },
+    "5d3f514c-b520-4793-bd64-45a6c043d686": {
+      "date": "2026-09-24",
+      "humanTurns": 310,
+      "assistantTurns": 529,
+      "estimatedTokens": 725654,
+      "skills": []
+    },
+    "f2af1c3b-396b-49b6-9b59-35596f8101e8": {
+      "date": "2026-09-23",
+      "humanTurns": 19,
+      "assistantTurns": 24,
+      "estimatedTokens": 11098,
+      "skills": []
+    },
+    "531e5d17-201c-4377-9e36-7aa7c085a8aa": {
+      "date": "2026-09-23",
+      "humanTurns": 193,
+      "assistantTurns": 330,
+      "estimatedTokens": 416965,
+      "skills": [
+        "icea-feature",
+        "migration"
+      ]
+    },
+    "001f6b30-799f-418c-8aa4-b4d24583fa65": {
+      "date": "2026-09-21",
+      "humanTurns": 21,
+      "assistantTurns": 34,
+      "estimatedTokens": 76765,
+      "skills": []
+    },
+    "7f581b66-f6aa-44a1-81dd-287e84e2b9f7": {
+      "date": "2026-09-21",
+      "humanTurns": 107,
+      "assistantTurns": 158,
+      "estimatedTokens": 257901,
+      "skills": []
+    },
+    "5eebede0-b6a3-46db-abfb-4f7516e97de5": {
+      "date": "2026-09-21",
+      "humanTurns": 117,
+      "assistantTurns": 204,
+      "estimatedTokens": 245800,
+      "skills": []
+    },
+    "74cb5b8c-5068-47b8-be42-1ff04f252ab6": {
+      "date": "2026-09-21",
+      "humanTurns": 234,
+      "assistantTurns": 375,
+      "estimatedTokens": 376174,
+      "skills": []
+    },
+    "94a7fb3a-bdd4-4aa2-8156-4f4b93bd14b7": {
+      "date": "2026-09-20",
+      "humanTurns": 50,
+      "assistantTurns": 82,
+      "estimatedTokens": 128916,
+      "skills": []
+    },
+    "38f96617-0056-46f6-916a-89cff47d9d26": {
+      "date": "2026-09-20",
+      "humanTurns": 287,
+      "assistantTurns": 473,
+      "estimatedTokens": 490987,
+      "skills": []
+    }
+  },
+  "aggregates": {
+    "avgTokens": 288431,
+    "avgTurns": 149,
+    "correctionRate": null,
+    "topSkills": [
+      {
+        "name": "setup-init",
+        "count": 1
+      },
+      {
+        "name": "graph-viz",
+        "count": 1
+      },
+      {
+        "name": "icea-feature",
+        "count": 1
+      }
+    ],
+    "topFiles": [],
+    "promptTypeDistribution": null,
+    "trend": {
+      "direction": "stable",
+      "firstHalfAvgTokens": 277106,
+      "secondHalfAvgTokens": 319956,
+      "firstHalfAvgTurns": 139,
+      "secondHalfAvgTurns": 159
+    }
+  },
+  "recommendations": {
+    "REC-S01": {
+      "status": "new",
+      "firstSeen": "2026-09-24",
+      "lastSeen": "2026-09-24",
+      "priority": "Critical"
+    },
+    "REC-P04": {
+      "status": "new",
+      "firstSeen": "2026-09-24",
+      "lastSeen": "2026-09-24",
+      "priority": "High"
+    },
+    "REC-S03": {
+      "status": "new",
+      "firstSeen": "2026-09-24",
+      "lastSeen": "2026-09-24",
+      "priority": "High"
+    }
+  },
+  "staticStatus": {
+    "alwaysTokens": 6827,
+    "typicalTokens": 11855,
+    "maxTokens": 29843,
+    "status": "RED"
+  }
+}

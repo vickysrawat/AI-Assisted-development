@@ -419,6 +419,7 @@
     <a href="#governance" class="optional"><span class="nav-icon">⚖</span> Gates &amp; governance</a>
     <a href="#audit" class="optional"><span class="step-dot">→</span> Audit trail &amp; RBAC</a>
     <a href="#signals" class="optional"><span class="step-dot">→</span> ICEA quality signals</a>
+    <a href="#project-knowledge" class="optional"><span class="step-dot">→</span> Project knowledge</a>
     <a href="#tests" class="optional"><span class="nav-icon">✓</span> Validators &amp; tests</a>
     <a href="#graph" class="optional"><span class="step-dot">→</span> Knowledge graph</a>
   </div>
@@ -635,6 +636,85 @@
     <p>One team member — typically the Tech Lead — is designated as the Dream runner per sprint. This convention avoids merge conflicts that arise when multiple developers run <code>/dream</code> independently against the same <code>memory/MEMORY.md</code>. The designated runner is recorded in <code>ApprovalRoles.json</code> and shown by <code>setup-status</code>.</p>
 
     <div class="info"><span class="wi">ℹ</span><span>The signal scripts are <code>scripts/signal-write.cjs</code> (writes signals) and <code>scripts/governance-report.cjs</code> (aggregates audit + token + ledger data for sprint reports). Neither modifies source.</span></div>
+  </section>
+
+  <section id="project-knowledge">
+    <div class="section-eyebrow">Governance &amp; graph</div>
+    <h2>Project <em class="accent">knowledge</em></h2>
+    <p class="section-intro"><code>.claude/project-knowledge.md</code> is a per-project pattern library that accumulates what the plugin learns about a specific target application across all ADOs and releases. Its sole purpose is to improve future ICEA writing and implementation quality — it is <strong>not</strong> <code>memory/MEMORY.md</code> (developer decisions, errors, architecture choices) and not <code>ai-audit.md</code> (per-ADO governance). The team multiplier: a pattern discovered by Developer A on ADO-1234 improves Developer B's ICEA six months later on ADO-5678, eliminating redundant discovery and repeated revision cycles.</p>
+
+    <h3>Entry format</h3>
+    <div class="code-block"><div class="code-header"><span class="code-lang">project-knowledge.md entry</span></div><div class="code-body"><pre><span class="cmt">### [{N}] {short title}</span>
+<span class="var">Source ADO</span>  : ADO-{ID} [, ADO-{ID}]
+<span class="var">Added</span>       : {YYYY-MM-DD}  Release {R}
+<span class="var">Code anchor</span> : {ClassName or InterfaceName}   <span class="cmt">← optional; used for auto-validation</span>
+---
+{Pattern — 1–3 sentences, concrete and actionable.}</pre></div></div>
+    <p>The <strong>Code anchor</strong> field is an optional class or interface name. Dream uses it for automated staleness checking — if the anchor disappears from <code>src/</code>, the entry is flagged for removal.</p>
+
+    <h3>What belongs</h3>
+    <ul class="bullet-list">
+      <li>Recurring dependency patterns — "service layer always needs <code>IUserRepository</code> — declare in ICEA Context"</li>
+      <li>Team naming conventions discovered from code — "test classes follow <code>{ClassName}Tests</code> pattern"</li>
+      <li>ICEA anti-patterns that caused revision cycles — "Examples must specify return object shape, not just method name"</li>
+      <li>Stack-specific patterns unique to this codebase — "Repository pattern throughout — unit tests need <code>IRepository&lt;T&gt;</code> mock"</li>
+      <li>AC conventions — "every endpoint AC must specify the HTTP status code for success and error cases"</li>
+    </ul>
+    <p>General language/framework best practices belong in rule files. Anything already in <code>architecture.md</code> does not belong here (duplication creates drift). Transient information (sprint goals, one-time setup steps, status updates) also does not belong.</p>
+
+    <h3>How skills interact with project-knowledge</h3>
+    <p>Two skills interact with this file but in opposite directions — one reads, one feeds a signal pipeline:</p>
+    <table class="cmd-table">
+      <thead><tr><th>Skill</th><th>Role</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>icea-feature</code></td><td><strong>Consumer (reads)</strong></td><td>Reads <code>project-knowledge.md</code> at Step 3b and injects matching patterns into the ICEA draft. Never writes to the file.</td></tr>
+        <tr><td><code>icea-implement</code></td><td><strong>Signal writer (indirect)</strong></td><td>Does NOT write to <code>project-knowledge.md</code>. Writes a <code>gap</code> signal file to <code>.claude/signals/</code> via <code>signal-write.cjs</code> when an Example cannot produce a real assertion. Dream processes those signals later.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>What writes to project-knowledge.md</h3>
+    <p>Only three paths write to this file — all require explicit developer confirmation:</p>
+    <table class="cmd-table">
+      <thead><tr><th>Path</th><th>Trigger</th><th>Gate</th></tr></thead>
+      <tbody>
+        <tr><td>Manual</td><td><code>KNOWLEDGE ADD</code> / <code>KNOWLEDGE UPDATE {N}</code> / <code>KNOWLEDGE REMOVE {N}</code></td><td>Immediate — Write Gate (no ADO required)</td></tr>
+        <tr><td>Semi-automatic</td><td><code>LESSONS ADO-{ID}</code> — after lessons are generated, Claude asks "does this belong in project-knowledge?" and writes on confirmation</td><td>Write Gate</td></tr>
+        <tr><td>Auto-promotion via Dream</td><td>Dream Phase 3.6 proposes an ADD when the gap signal count for a topic reaches <code>gap_promotion_threshold</code> (default: 2). Developer must reply <code>PROMOTE-{category}</code> to write or <code>SKIP-{category}</code> to defer.</td><td>Dream approval inline</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Auto-promotion pipeline (v3.25.0+)</h3>
+    <div class="flow">
+      <div class="flow-step"><span class="fs-label">icea-implement</span><span class="fs-name">gap signal written</span></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="fs-label">Dream Phase 3.6</span><span class="fs-name">tally updated</span></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="fs-label">threshold hit (≥2)</span><span class="fs-name">ADD proposed</span></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="fs-label">developer</span><span class="fs-name">PROMOTE / SKIP</span></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="fs-label">on PROMOTE</span><span class="fs-name">entry written</span></div>
+    </div>
+    <div class="warning"><span class="wi">⚠</span><span>Neither <code>icea-feature</code> nor <code>icea-implement</code> writes to <code>project-knowledge.md</code> directly. <code>icea-implement</code> only feeds the signal pipeline. Nothing is promoted without an explicit developer <code>PROMOTE-{category}</code> response during a Dream run.</span></div>
+
+    <h3>Three-layer staleness defence</h3>
+    <table class="cmd-table">
+      <thead><tr><th>Layer</th><th>Mechanism</th><th>Developer action</th></tr></thead>
+      <tbody>
+        <tr><td>1 — Code anchor check</td><td>At Dream time: grep for the anchor in <code>src/</code>. If missing → flag <code>⚠ ANCHOR MISSING</code> → propose REMOVE</td><td>Respond inline during <code>/dream</code>: <code>KEEP-{N}</code> / <code>REMOVE-{N}</code> / <code>UPDATE-{N}</code></td></tr>
+        <tr><td>2 — Age threshold</td><td>Entries older than 180 days (or 2 releases) are flagged <code>⚠ AGE THRESHOLD</code> → proposed for REVALIDATE regardless of anchor status</td><td>Same inline response during <code>/dream</code>. <code>UPDATE-{N}</code> opens a follow-up prompt for corrected text.</td></tr>
+        <tr><td>3 — LLM framing</td><td><code>icea-feature</code> reads the file with a built-in guard: "treat as patterns observed at a point in time — verify against the current codebase before applying, flag conflicts"</td><td>None — passive. The LLM flags stale entries during ICEA drafting before the developer sees the plan.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Dream management lifecycle</h3>
+    <p>During <code>/dream</code>, project-knowledge entries are checked as a <strong>second pass</strong> — after <code>MEMORY.md</code>, before Phase 4. For each flagged entry Dream proposes <code>REMOVE</code>, <code>REVALIDATE</code>, or <code>KEEP</code>. The developer responds inline:</p>
+    <div class="code-block"><div class="code-header"><span class="code-lang">dream response syntax</span></div><div class="code-body"><pre><span class="cmd">KEEP-{N}</span>      <span class="cmt">← accept as-is, no change</span>
+<span class="cmd">REMOVE-{N}</span>    <span class="cmt">← delete the entry</span>
+<span class="cmd">UPDATE-{N}</span>    <span class="cmt">← opens a follow-up prompt for replacement text</span></pre></div></div>
+    <p>All writes go through the standard Write Gate — no ADO ID required. Treated as plugin infrastructure alongside <code>ApprovalRoles.json</code>.</p>
+
+    <div class="info"><span class="wi">ℹ</span><span>The authoritative spec is <code>skills/shared/project-knowledge-spec.md</code>. The <code>icea-feature</code> skill reads this file at Step 3b and injects applicable patterns into the ICEA drafting context.</span></div>
   </section>
 
   <section id="tests">

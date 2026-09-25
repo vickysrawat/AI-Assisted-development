@@ -8,7 +8,7 @@
 //                      Exposes a LIBRARY api (require) + a generic CLI (init|get|set-gate|
 //                      set-payload). Every write is a MERGE-WRITE — read whole, change only owned
 //                      keys, preserve everything else (tolerant reader → skew-safe across skills
-//                      sharing one ledger). Single active writer assumed.
+//                      sharing one ledger). Writes are crash-safe (atomic temp→rename). Single active writer assumed.
 // What it touches:     Reads/writes ONE JSON ledger file (path supplied by the caller / --file).
 // What it does NOT do: No network, no git, no code edits, no LLM. Never deletes keys it does not own;
 //                      never rebuilds the file from scratch.
@@ -48,7 +48,16 @@ function load(file) {
 
 function save(file, cp) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, JSON.stringify(cp, null, 2) + '\n');
+  // A21: write to a temp file then rename — prevents corrupt ledger on crash mid-write.
+  // rename(2) is atomic on POSIX; on Windows the original is intact if rename fails.
+  const tmp = file + '.tmp.' + process.pid;
+  try {
+    fs.writeFileSync(tmp, JSON.stringify(cp, null, 2) + '\n');
+    fs.renameSync(tmp, file);
+  } catch (e) {
+    try { fs.unlinkSync(tmp); } catch (_) {}
+    throw e;
+  }
 }
 
 // Tolerant reader: ensure the substructures a writer owns exist WITHOUT touching foreign fields.
@@ -104,6 +113,27 @@ if (require.main === module) {
 
   try {
     let result, exit = 0;
+    // A14: Reject unknown flags per-operation — prevents silent no-ops from undocumented flag names.
+    const ALLOWED_CLI = {
+      'init':        new Set(['skill', 'ado', 'file', 'now', 'json', 'stack', 'from', 'to']),
+      'get':         new Set(['skill', 'ado', 'file', 'json']),
+      'set-gate':    new Set(['skill', 'ado', 'file', 'now', 'json', 'gate', 'verdict']),
+      'set-payload': new Set(['skill', 'ado', 'file', 'now', 'json', 'payload-json', 'payload-file', 'key', 'value']),
+      'validate':    new Set(['skill', 'ado', 'file', 'json']),
+      'check-gate':  new Set(['skill', 'ado', 'file', 'json', 'gate']),
+      'set-source':  new Set(['skill', 'ado', 'file', 'now', 'json', 'roots-json']),
+    };
+    const allowedForOp = ALLOWED_CLI[OP];
+    if (allowedForOp) {
+      for (const a of process.argv.slice(3)) {
+        if (!a.startsWith('--')) continue;
+        const flag = a.split('=')[0].slice(2);
+        if (!allowedForOp.has(flag)) {
+          process.stderr.write(`error: unknown flag --${flag} for ${OP}.\nKnown flags: ${[...allowedForOp].map(f => '--' + f).join(', ')}\n`);
+          process.exit(1);
+        }
+      }
+    }
     if (OP === 'init') {
       const existing = load(FILE);
       if (existing) result = { op: 'init', status: 'exists', file: FILE, checkpoint: existing };
@@ -120,11 +150,91 @@ if (require.main === module) {
       if (!SKILL) throw new Error('set-payload requires --skill');
       let patch = {};
       if (arg('payload-json') !== undefined) patch = JSON.parse(arg('payload-json'));
+      // B9: file-based payload avoids shell quoting failures, arg-length limits, and LLM truncation.
+      else if (arg('payload-file') !== undefined) patch = JSON.parse(fs.readFileSync(arg('payload-file'), 'utf8'));
       else if (arg('key') !== undefined) patch = { [arg('key')]: arg('value') };
       const cp = setPayload(load(FILE) || coreEnvelope({ skill: SKILL, ado: ADO, now: NOW }), SKILL, patch, NOW);
       save(FILE, cp); result = { op: 'set-payload', status: 'ok', file: FILE, payload: cp.payload[SKILL], checkpoint: cp };
+    } else if (OP === 'validate') {
+      // A2: three-scenario checkpoint validation — missing(2) / corrupt(3) / incomplete(4) / ok(0).
+      // Never writes. Safe to call before any resume/advance operation.
+      if (!fs.existsSync(FILE)) {
+        result = { op: 'validate', status: 'missing', file: FILE,
+                   message: 'Checkpoint file does not exist.',
+                   next: 'Read migration-tracker.md, then run: node scripts/checkpoint-ledger.cjs init --skill=<skill> --ado=<ado>' };
+        exit = 2;
+      } else {
+        let parsed = null;
+        try { parsed = JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch (e) {
+          result = { op: 'validate', status: 'corrupt', file: FILE, parse_error: e.message,
+                     message: 'Checkpoint file exists but is not valid JSON. Do NOT overwrite — inspect first.',
+                     next: 'Inspect the file. If unrecoverable: delete it, then run init. If repairable: fix JSON, then retry validate.' };
+          exit = 3;
+        }
+        if (parsed !== null) {
+          const REQUIRED = ['source', 'stage_gates'];
+          const missing = REQUIRED.filter(f => parsed[f] === undefined);
+          // Only flag payload.<skill> missing if the flow has progressed past init
+          // (stage_gates has entries). A fresh init with no gates is a valid clean-start state.
+          const hasProgress = Object.keys(parsed.stage_gates || {}).length > 0;
+          if (SKILL && hasProgress && (parsed.payload === undefined || parsed.payload[SKILL] === undefined))
+            missing.push(`payload.${SKILL}`);
+          if (missing.length > 0) {
+            result = { op: 'validate', status: 'incomplete', file: FILE, missing_fields: missing,
+                       message: `Checkpoint is valid JSON but missing required fields: ${missing.join(', ')}.`,
+                       next: 'init will NOT overwrite an existing file. Delete the file first, then run init.' };
+            exit = 4;
+          } else {
+            result = { op: 'validate', status: 'ok', file: FILE,
+                       message: 'Checkpoint is present, valid, and complete.' };
+            exit = 0;
+          }
+        }
+      }
+    } else if (OP === 'check-gate') {
+      // A9: exits 0 (PASS), 1 (REVISE), 2 (BLOCK), 3 (no verdict / unrecognised). Never writes.
+      // Safe to call before any gate-approval prompt.
+      const gate = arg('gate');
+      if (!SKILL || !ADO || !gate) throw new Error('check-gate requires --skill, --ado, --gate');
+      const cp = load(FILE);
+      if (!cp) throw new Error(`Ledger not found: ${FILE}. Run init first.`);
+      const raw     = (cp.stage_gates || {})[gate];
+      const verdict = raw !== undefined && raw !== null ? String(raw).toUpperCase() : null;
+      if (!verdict) {
+        result = { op: 'check-gate', status: 'none', file: FILE, gate, verdict: null,
+          message: 'No verdict recorded — gate has not been reached.' };
+        exit = 3;
+      } else if (verdict === 'PASS') {
+        result = { op: 'check-gate', status: 'PASS', file: FILE, gate, verdict,
+          message: 'Gate passed.' };
+        exit = 0;
+      } else if (verdict === 'REVISE') {
+        result = { op: 'check-gate', status: 'REVISE', file: FILE, gate, verdict,
+          message: 'Judge verdict is REVISE — developer must acknowledge before proceeding.' };
+        exit = 1;
+      } else if (verdict === 'BLOCK') {
+        result = { op: 'check-gate', status: 'BLOCK', file: FILE, gate, verdict,
+          message: 'Judge verdict is BLOCK — named approver and written reason required.' };
+        exit = 2;
+      } else {
+        result = { op: 'check-gate', status: 'unknown', file: FILE, gate, verdict,
+          message: `Unrecognised verdict value: ${verdict}.` };
+        exit = 3;
+      }
+    } else if (OP === 'set-source') {
+      if (!SKILL) throw new Error('set-source requires --skill');
+      if (arg('roots-json') === undefined) throw new Error('set-source requires --roots-json');
+      let roots;
+      try { roots = JSON.parse(arg('roots-json')); } catch (e) { throw new Error(`set-source: --roots-json is not valid JSON: ${e.message}`); }
+      if (!Array.isArray(roots) || roots.some(r => typeof r !== 'string')) throw new Error('set-source: --roots-json must be a JSON array of strings');
+      const cp = load(FILE) || coreEnvelope({ skill: SKILL, ado: ADO, now: NOW });
+      cp.source = cp.source || {};
+      cp.source.roots = roots;
+      cp.updated_at = NOW;
+      save(FILE, cp);
+      result = { op: 'set-source', status: 'ok', file: FILE, roots, checkpoint: cp };
     } else {
-      process.stderr.write('usage: checkpoint-ledger.cjs <init|get|set-gate|set-payload> --skill=<s> --ado=<id> [--gate --verdict] [--key --value | --payload-json] [--file --now]\n');
+      process.stderr.write('usage: checkpoint-ledger.cjs <init|get|set-gate|set-payload|validate|check-gate|set-source> --skill=<s> --ado=<id> [--gate=<gate>] ...\n');
       process.exit(1);
     }
     if (JSON_OUT) process.stdout.write(JSON.stringify(result, null, 2) + '\n');

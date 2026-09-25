@@ -66,6 +66,20 @@ assert('N-U4 both skill payloads still intact after tolerant write',
   after.payload?.upgrade?.baseline_tag === 'pre-upgrade/dotnet-6' && after.payload?.rewrite?.clusters === 3,
   JSON.stringify(after.payload));
 
+// B9: set-payload --payload-file reads and merges correctly (no shell JSON string)
+const payloadFile = path.join(DIR, 'cluster-payload.json');
+fs.writeFileSync(payloadFile, JSON.stringify({ cluster_1_verdict: 'PASS', cluster_1_bal_grade: 'A' }, null, 2));
+const pf = run(['set-payload', '--skill=rewrite', '--ado=9000', `--payload-file=${payloadFile}`]);
+assert('B9: --payload-file merges payload from file', pf.code === 0 && pf.json.payload?.cluster_1_verdict === 'PASS' && pf.json.payload?.cluster_1_bal_grade === 'A', `code=${pf.code} payload=${JSON.stringify(pf.json.payload)}`);
+assert('B9: --payload-file preserves existing payload keys', pf.json.checkpoint?.payload?.rewrite?.clusters === 3, `rewrite payload=${JSON.stringify(pf.json.checkpoint?.payload?.rewrite)}`);
+
+// B9: --payload-file with nonexistent path exits 1 without mutating ledger
+const before = JSON.parse(fs.readFileSync(FILE, 'utf8'));
+const pfMissing = run(['set-payload', '--skill=rewrite', '--ado=9000', '--payload-file=/nonexistent/path/payload.json']);
+assert('B9: --payload-file missing file exits 1', pfMissing.code === 1, `code=${pfMissing.code}`);
+const afterBad = JSON.parse(fs.readFileSync(FILE, 'utf8'));
+assert('B9: --payload-file missing file does not mutate ledger', JSON.stringify(before) === JSON.stringify(afterBad), 'ledger was mutated on bad file');
+
 // get on missing -> absent exit 7
 reset();
 const g = run(['get', '--skill=upgrade', '--ado=9000']);

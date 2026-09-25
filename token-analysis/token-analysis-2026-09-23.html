@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Token Analysis — 2026-09-24</title>
+  <style>
+    :root { --primary:#1a3a5c;--primary-light:#2c5f8a;--accent:#c8a951;--bg:#f8f9fa;--card:#ffffff;--text:#2d3436;--muted:#636e72;--border:#dfe6e9;--green:#00b894;--amber:#fdcb6e;--red:#e17055;--critical:#d63031;--high:#e17055;--medium:#fdcb6e;--low:#00b894; }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;}
+    .hero{background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;padding:48px 40px;}
+    .hero h1{font-size:2rem;font-weight:700;margin-bottom:6px;}
+    .hero h1 span{color:var(--accent);}
+    .hero .meta{font-size:0.88rem;opacity:0.75;margin-top:8px;}
+    .hero .kpi-row{display:flex;gap:32px;margin-top:24px;flex-wrap:wrap;}
+    .kpi{background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:10px;padding:16px 24px;min-width:140px;}
+    .kpi .val{font-size:1.6rem;font-weight:700;}
+    .kpi .lbl{font-size:0.78rem;opacity:0.8;text-transform:uppercase;letter-spacing:0.8px;margin-top:2px;}
+    .status{display:inline-block;padding:4px 12px;border-radius:20px;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}
+    .status.green{background:rgba(0,184,148,0.15);color:var(--green);border:1px solid var(--green);}
+    .status.amber{background:rgba(253,203,110,0.15);color:#c0882a;border:1px solid var(--amber);}
+    .status.red{background:rgba(225,112,85,0.15);color:var(--red);border:1px solid var(--red);}
+    .status.critical{background:rgba(214,48,49,0.1);color:var(--critical);border:1px solid var(--critical);}
+    .status.high{background:rgba(225,112,85,0.1);color:var(--high);border:1px solid var(--high);}
+    .status.medium{background:rgba(253,203,110,0.15);color:#c0882a;border:1px solid var(--amber);}
+    .status.low{background:rgba(0,184,148,0.1);color:var(--green);border:1px solid var(--green);}
+    .container{max-width:1140px;margin:0 auto;padding:0 24px;}
+    .toc{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px 32px;margin:-28px auto 40px;position:relative;z-index:10;box-shadow:0 4px 20px rgba(0,0,0,0.08);}
+    .toc h3{font-size:0.75rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:12px;}
+    .toc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px;}
+    .toc a{color:var(--primary);text-decoration:none;font-size:0.9rem;padding:5px 8px;border-radius:6px;display:block;}
+    .toc a:hover{background:var(--bg);}
+    .section{margin-bottom:48px;}
+    .section-header{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid var(--border);}
+    .section-header .icon{width:38px;height:38px;background:var(--primary);color:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
+    .section-header h2{font-size:1.4rem;color:var(--primary);}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:24px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.04);}
+    .card h3{font-size:1rem;color:var(--primary);margin-bottom:12px;font-weight:600;}
+    .card p,.card li{font-size:0.93rem;color:var(--text);}
+    .card ul{padding-left:20px;}
+    .card ul li{margin-bottom:5px;}
+    table{width:100%;border-collapse:collapse;background:var(--card);border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.04);border:1px solid var(--border);margin-bottom:20px;font-size:0.88rem;}
+    thead th{background:var(--primary);color:#fff;padding:11px 16px;text-align:left;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;font-size:0.78rem;}
+    tbody td{padding:11px 16px;border-bottom:1px solid var(--border);}
+    tbody tr:last-child td{border-bottom:none;}
+    tbody tr:hover{background:#f1f5f9;}
+    .bar-wrap{background:#e9ecef;border-radius:4px;height:8px;overflow:hidden;}
+    .bar{height:8px;border-radius:4px;}
+    .bar.green{background:var(--green);}
+    .bar.amber{background:var(--amber);}
+    .bar.red{background:var(--red);}
+    .rec-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:12px;display:flex;gap:16px;box-shadow:0 2px 8px rgba(0,0,0,0.04);}
+    .rec-card .rec-num{width:32px;height:32px;background:var(--accent);color:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.82rem;font-weight:700;flex-shrink:0;}
+    .rec-card .rec-body h4{font-size:0.95rem;color:var(--primary);margin-bottom:4px;font-weight:600;}
+    .rec-card .rec-body .finding{font-size:0.85rem;color:var(--muted);margin-bottom:8px;}
+    .rec-card .rec-body .action{font-size:0.88rem;color:var(--text);}
+    .rec-card .rec-meta{display:flex;gap:8px;align-items:flex-start;flex-shrink:0;flex-direction:column;}
+    .trend{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:10px;font-weight:600;font-size:0.95rem;}
+    .trend.stable{background:rgba(116,185,255,0.1);color:#0984e3;}
+    .chart-row{display:flex;align-items:center;gap:12px;margin-bottom:8px;font-size:0.85rem;}
+    .chart-row .session-name{width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);flex-shrink:0;}
+    .chart-row .bar-wrap{flex:1;}
+    .footer{background:var(--primary);color:rgba(255,255,255,0.7);text-align:center;padding:20px;font-size:0.82rem;margin-top:60px;}
+  </style>
+</head>
+<body>
+<header class="hero">
+  <h1>Token Analysis — <span>2026-09-24</span></h1>
+  <p class="meta">10 sessions analysed (10 new, 0 from cache) &bull; Generated by ai-assisted-development plugin v3.25.0</p>
+  <div class="kpi-row">
+    <div class="kpi"><div class="val">~6,827</div><div class="lbl">Fixed tokens / session</div></div>
+    <div class="kpi"><div class="val">~288K</div><div class="lbl">Avg session tokens</div></div>
+    <div class="kpi"><div class="val">149</div><div class="lbl">Avg turns / session</div></div>
+    <div class="kpi"><div class="val">n/a</div><div class="lbl">Correction rate</div></div>
+    <div class="kpi"><div class="val" style="color:#ff7675;">RED</div><div class="lbl">Overhead health</div></div>
+  </div>
+</header>
+
+<div class="container">
+  <nav class="toc">
+    <h3>Contents</h3>
+    <div class="toc-grid">
+      <a href="#static">Fixed Session Overhead</a>
+      <a href="#sessions">Session Analysis</a>
+      <a href="#expensive">Most Expensive Operations</a>
+      <a href="#recs">Recommendations</a>
+      <a href="#trend">Trend</a>
+    </div>
+  </nav>
+
+  <!-- SECTION 1: STATIC OVERHEAD -->
+  <section id="static" class="section">
+    <div class="section-header"><div class="icon">&#9878;</div><h2>Fixed Session Overhead</h2></div>
+    <div class="card">
+      <p>These tokens are consumed on every session start, before any prompt is typed.
+      <strong>Always-loaded total: ~6,827 tokens</strong>
+      <span class="status red" style="margin-left:10px;">RED</span></p>
+    </div>
+    <table>
+      <thead><tr><th>File</th><th>Characters</th><th>Est. Tokens</th><th>Load Type</th><th>% of Always Total</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>CLAUDE.md</code></td><td>21,261</td><td>~5,315</td>
+          <td><span class="status red">ALWAYS</span></td>
+          <td><div style="display:flex;align-items:center;gap:8px;"><div class="bar-wrap" style="width:100px"><div class="bar red" style="width:78%"></div></div><span>78%</span></div></td>
+        </tr>
+        <tr>
+          <td><code>.claude/rules/project-rules.md</code></td><td>4,123</td><td>~1,031</td>
+          <td><span class="status amber">ALWAYS</span></td>
+          <td><div style="display:flex;align-items:center;gap:8px;"><div class="bar-wrap" style="width:100px"><div class="bar amber" style="width:15%"></div></div><span>15%</span></div></td>
+        </tr>
+        <tr>
+          <td><code>.claude/graph/graph-index.md</code></td><td>1,923</td><td>~481</td>
+          <td><span class="status green">ALWAYS</span></td>
+          <td><div style="display:flex;align-items:center;gap:8px;"><div class="bar-wrap" style="width:100px"><div class="bar green" style="width:7%"></div></div><span>7%</span></div></td>
+        </tr>
+        <tr><td><code>.claude/rules/nodejs-typescript-rules.md</code></td><td>5,550</td><td>~1,388</td><td><span class="status green">CONDITIONAL</span></td><td>&#8212;</td></tr>
+        <tr><td><code>.claude/rules/javascript-rules.md</code></td><td>4,764</td><td>~1,191</td><td><span class="status green">CONDITIONAL</span></td><td>&#8212;</td></tr>
+        <tr><td><code>.claude/rules/python-rules.md</code></td><td>4,943</td><td>~1,236</td><td><span class="status green">CONDITIONAL</span></td><td>&#8212;</td></tr>
+        <tr><td><code>.claude/architecture/architecture.md</code></td><td>6,162</td><td>~1,541</td><td><span class="status green">ON_DEMAND</span></td><td>&#8212;</td></tr>
+        <tr><td><code>.claude/architecture/architecture-flows.md</code></td><td>5,973</td><td>~1,493</td><td><span class="status green">ON_DEMAND</span></td><td>&#8212;</td></tr>
+      </tbody>
+    </table>
+    <div class="card">
+      <p><strong>Typical session:</strong> ~11,855 tokens (always-loaded + top 3 conditional rules + architecture.md)</p>
+      <p style="margin-top:6px;"><strong>Maximum possible:</strong> ~29,843 tokens (all 14 rule files + all architecture docs + all graph module files)</p>
+    </div>
+  </section>
+
+  <!-- SECTION 2: SESSION ANALYSIS -->
+  <section id="sessions" class="section">
+    <div class="section-header"><div class="icon">&#128202;</div><h2>Session Analysis</h2></div>
+    <div class="card">
+      <h3>Estimated tokens per session (10 most recent)</h3>
+      <div class="chart-row"><span class="session-name" title="Large dev session 2026-09-24">Large dev session 2026-09-24</span><div class="bar-wrap"><div class="bar red" style="width:100%"></div></div><span style="font-size:0.82rem;color:var(--muted);width:90px;text-align:right;">~725,654</span></div>
+      <div class="chart-row"><span class="session-name" title="Dev session 2026-09-20 (b)">Dev session 2026-09-20 (b)</span><div class="bar-wrap"><div class="bar red" style="width:68%"></div></div><span style="font-size:0.82rem;color:var(--muted);width:90px;text-align:right;">~490,987</span></div>
+      <div class="chart-row"><span class="session-name" title="Migration skill work 2026-09-23">Migration skill work 2026-09-23</span><div class="bar-wrap"><div class="bar amber" style="width:57%"></div></div><span style="font-size:0.82rem;color:var(--muted);width:90px;text-align:right;">~416,965</span></div>
+      <div class="chart-row"><span class="session-name" title="Dev session 2026-09-21 (d)">Dev session 2026-09-21 (d)</span><div class="bar-wrap"><div class="bar amber" style="width:52%"></div></div><span style="font-size:0.82rem;color:var(--muted);width:90px;text-align:right;">~376,174</span></div>
+      <div class="chart-row"><span class="session-name" title="Dev session 2026-09-21 (b)">Dev session 2026-09-21 (b)</span><div class="bar-wrap"><div class="bar amber" style="width:36%"></div></div><span style="font-size:0.82rem;color:var(--muted);width:90px;text-align:right;">~257,901</span></div>
+      <div class="chart-row"><span class="session-name" title="Dev session 2026-09-21 (c)">Dev session 2026-09-21 (c)</span><div class="bar-wrap"><div class="bar amber" style="width:34%"></div></div><span style="font-size:0.82rem;color:var(--muted);width:90px;text-align:right;">~245,800</span></div>
+      <div class="chart-row"><span class="session-name" title="setup-init + graph-viz (current)">setup-init + graph-viz (current)</span><div class="bar-wrap"><div class="bar green" style="width:21%"></div></div><span style="font-size:0.82rem;color:var(--muted);width:90px;text-align:right;">~154,046</span></div>
+      <div class="chart-row"><span class="session-name" title="Dev session 2026-09-20 (a)">Dev session 2026-09-20 (a)</span><div class="bar-wrap"><div class="bar green" style="width:18%"></div></div><span style="font-size:0.82rem;color:var(--muted);width:90px;text-align:right;">~128,916</span></div>
+      <div class="chart-row"><span class="session-name" title="Dev session 2026-09-21 (a)">Dev session 2026-09-21 (a)</span><div class="bar-wrap"><div class="bar green" style="width:11%"></div></div><span style="font-size:0.82rem;color:var(--muted);width:90px;text-align:right;">~76,765</span></div>
+      <div class="chart-row"><span class="session-name" title="Short session 2026-09-23">Short session 2026-09-23</span><div class="bar-wrap"><div class="bar green" style="width:2%"></div></div><span style="font-size:0.82rem;color:var(--muted);width:90px;text-align:right;">~11,098</span></div>
+    </div>
+    <div class="card">
+      <h3>Skills detected (command prefixes)</h3>
+      <table>
+        <thead><tr><th>Skill</th><th>Invocations</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>setup-init</td><td>1</td><td><span class="status low">Active</span></td></tr>
+          <tr><td>graph-viz</td><td>1</td><td><span class="status low">Active</span></td></tr>
+          <tr><td>token-analysis</td><td>1</td><td><span class="status low">Active</span></td></tr>
+          <tr><td>icea-feature</td><td>1</td><td><span class="status low">Active</span></td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:0.82rem;color:var(--muted);margin-top:8px;">Skill detection is heuristic from JSONL command prefixes only. Re-run after more sessions for fuller coverage.</p>
+    </div>
+  </section>
+
+  <!-- SECTION 3: EXPENSIVE OPERATIONS -->
+  <section id="expensive" class="section">
+    <div class="section-header"><div class="icon">&#128293;</div><h2>Most Expensive Operations</h2></div>
+    <table>
+      <thead><tr><th>Rank</th><th>Session</th><th>Date</th><th>Est. Tokens</th><th>H/A Turns</th></tr></thead>
+      <tbody>
+        <tr><td><strong>1</strong></td><td>Large dev session</td><td>2026-09-24</td><td>~725,654</td><td>310 / 529</td></tr>
+        <tr><td><strong>2</strong></td><td>Dev session (b)</td><td>2026-09-20</td><td>~490,987</td><td>287 / 473</td></tr>
+        <tr><td><strong>3</strong></td><td>Migration skill work</td><td>2026-09-23</td><td>~416,965</td><td>193 / 330</td></tr>
+        <tr><td><strong>4</strong></td><td>Dev session (d)</td><td>2026-09-21</td><td>~376,174</td><td>234 / 375</td></tr>
+        <tr><td><strong>5</strong></td><td>Dev session (b)</td><td>2026-09-21</td><td>~257,901</td><td>107 / 158</td></tr>
+      </tbody>
+    </table>
+    <div class="card">
+      <p>The #1 session at ~726K tokens with 839 total turns is the dominant cost driver. Sessions with 200+ turns experience severe context accumulation — each turn re-sends all prior content.</p>
+    </div>
+  </section>
+
+  <!-- SECTION 4: RECOMMENDATIONS -->
+  <section id="recs" class="section">
+    <div class="section-header"><div class="icon">&#128161;</div><h2>Recommendations</h2></div>
+    <div class="rec-card">
+      <div class="rec-num">1</div>
+      <div class="rec-body">
+        <h4>Trim CLAUDE.md — it exceeds the 5,000-token threshold</h4>
+        <div class="finding">Finding: CLAUDE.md is 21,261 chars (~5,315 tokens) — 78% of fixed overhead, paid every session start.</div>
+        <div class="action">Move the §0a Keyword Handlers table (the largest section, ~8K chars) to a dedicated <code>keyword-handlers.md</code> rule file loaded only when needed. Move extended conventions to scoped rule files. Target: CLAUDE.md under 12K chars (~3,000 tokens).</div>
+      </div>
+      <div class="rec-meta"><span class="status critical">Critical</span><span class="status red">High saving</span></div>
+    </div>
+    <div class="rec-card">
+      <div class="rec-num">2</div>
+      <div class="rec-body">
+        <h4>Break very long sessions into focused sub-sessions</h4>
+        <div class="finding">Finding: All 10 sessions exceed 20 turns (range 43–839). The top session reached 839 turns (~726K tokens). Context accumulation compounds cost exponentially.</div>
+        <div class="action">Aim for sessions under 30 turns. One session = one goal. Use <code>/session-start</code> to warm up context from memory at the start of each new session rather than continuing a long one. A 50-turn session costs ~4x a 25-turn session due to context re-send accumulation.</div>
+      </div>
+      <div class="rec-meta"><span class="status high">High</span><span class="status red">High saving</span></div>
+    </div>
+    <div class="rec-card">
+      <div class="rec-num">3</div>
+      <div class="rec-body">
+        <h4>Split project-rules.md into scoped rule files</h4>
+        <div class="finding">Finding: project-rules.md (4,123 chars, ~1,031 tokens) is ALWAYS-loaded and exceeds the 1,000-token threshold for universal rules.</div>
+        <div class="action">Split into: <code>script-transparency-rules.md</code> (scoped to <code>**/*.cjs</code>), <code>design-rules.md</code> (scoped to source modules), keeping only the 3-5 truly universal rules in <code>project-rules.md</code>. Estimated saving: ~600 tokens per session.</div>
+        <div style="margin-top:6px;font-size:0.82rem;color:var(--muted);">File: <code>.claude/rules/project-rules.md</code></div>
+      </div>
+      <div class="rec-meta"><span class="status high">High</span><span class="status amber">Medium saving</span></div>
+    </div>
+  </section>
+
+  <!-- SECTION 5: TREND -->
+  <section id="trend" class="section">
+    <div class="section-header"><div class="icon">&#128200;</div><h2>Trend</h2></div>
+    <div class="card">
+      <div class="trend stable" style="margin-bottom:16px;">&#8594; Stable</div>
+      <p>Newer sessions (2026-09-21 to 09-24) average ~277K tokens vs older sessions (09-20) at ~320K. Token volume is slightly improving. Turn count is also improving (139 newer vs 159 older). Overall: stable with mild improvement.</p>
+      <table style="margin-top:16px;">
+        <thead><tr><th>Metric</th><th>Older sessions (first 5)</th><th>Newer sessions (last 5)</th><th>Direction</th></tr></thead>
+        <tbody>
+          <tr><td>Avg tokens / session</td><td>~319,956</td><td>~277,106</td><td>&#128994; Improving</td></tr>
+          <tr><td>Avg turns / session</td><td>159</td><td>139</td><td>&#128994; Improving</td></tr>
+          <tr><td>Correction rate</td><td>n/a</td><td>n/a</td><td>&#8212;</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<footer class="footer">
+  <p>Token Analysis &bull; ai-assisted-development plugin v3.25.0 &bull; 2026-09-24 &bull;
+  Estimates use chars &divide; 4 approximation &mdash; not exact API token counts</p>
+</footer>
+</body>
+</html>

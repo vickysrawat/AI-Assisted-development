@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dream Memory Health — </title>
+<style>
+  :root {
+    --dk-teal:#04342C; --md-teal:#1D9E75; --lt-teal:#E1F5EE;
+    --amber:#EF9F27; --red:#E24B4A; --bg:#F5F7F6; --card:#fff;
+    --text:#1a2e2a; --muted:#5a7570; --border:#d4e8e1;
+    --green:#1D9E75; --green-lt:rgba(29,158,117,0.12);
+    --amber-lt:rgba(239,159,39,0.15); --red-lt:rgba(226,75,74,0.12);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;}
+  /* Header */
+  .header{background:linear-gradient(135deg,var(--dk-teal),#0a5c47);color:#fff;padding:40px 40px 32px;}
+  .header h1{font-size:1.8rem;font-weight:700;letter-spacing:-0.5px;}
+  .header h1 span{color:#7fe0be;}
+  .header .meta{font-size:0.84rem;opacity:0.7;margin-top:6px;}
+  .header .kpi-row{display:flex;gap:20px;margin-top:24px;flex-wrap:wrap;}
+  .kpi{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.18);border-radius:10px;padding:14px 20px;min-width:130px;}
+  .kpi .v{font-size:1.55rem;font-weight:700;}
+  .kpi .l{font-size:0.72rem;opacity:0.75;text-transform:uppercase;letter-spacing:0.8px;margin-top:2px;}
+  .kpi.warn .v{color:#ffd87a;}
+  .kpi.ok .v{color:#7fe0be;}
+  /* Layout */
+  .container{max-width:1100px;margin:0 auto;padding:32px 24px;}
+  /* Section */
+  .section{margin-bottom:40px;}
+  .section-title{font-size:1.05rem;font-weight:700;color:var(--dk-teal);margin-bottom:14px;
+    padding-bottom:8px;border-bottom:2px solid var(--lt-teal);display:flex;align-items:center;gap:8px;}
+  .section-title .icon{width:28px;height:28px;background:var(--dk-teal);color:#fff;border-radius:7px;
+    display:flex;align-items:center;justify-content:center;font-size:0.85rem;flex-shrink:0;}
+  /* Cards grid */
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:24px;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;
+    box-shadow:0 2px 6px rgba(0,0,0,0.04);}
+  .card h3{font-size:0.78rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px;}
+  .card .big{font-size:2rem;font-weight:700;line-height:1;}
+  .card .sub{font-size:0.82rem;color:var(--muted);margin-top:4px;}
+  .card.green-card{border-left:4px solid var(--green);}
+  .card.amber-card{border-left:4px solid var(--amber);}
+  .card.red-card{border-left:4px solid var(--red);}
+  /* Progress bar */
+  .prog-wrap{background:#e4eeea;border-radius:4px;height:8px;margin-top:8px;overflow:hidden;}
+  .prog{height:8px;border-radius:4px;}
+  .prog.green{background:var(--green);}
+  .prog.amber{background:var(--amber);}
+  .prog.red{background:var(--red);}
+  /* Tables */
+  table{width:100%;border-collapse:collapse;background:var(--card);border-radius:10px;overflow:hidden;
+    box-shadow:0 2px 6px rgba(0,0,0,0.04);border:1px solid var(--border);font-size:0.87rem;}
+  thead th{background:var(--dk-teal);color:#fff;padding:10px 14px;text-align:left;
+    font-size:0.75rem;text-transform:uppercase;letter-spacing:0.4px;font-weight:600;}
+  tbody td{padding:10px 14px;border-bottom:1px solid var(--border);}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:#f0faf5;}
+  /* Badges */
+  .badge{display:inline-block;padding:3px 9px;border-radius:12px;font-size:0.72rem;font-weight:700;text-transform:uppercase;}
+  .badge.green{background:var(--green-lt);color:var(--md-teal);border:1px solid var(--green);}
+  .badge.amber{background:var(--amber-lt);color:#a06c00;border:1px solid var(--amber);}
+  .badge.red{background:var(--red-lt);color:var(--red);border:1px solid var(--red);}
+  .badge.teal{background:rgba(4,52,44,0.1);color:var(--dk-teal);border:1px solid var(--dk-teal);}
+  /* Confidence colour */
+  .conf-high{color:var(--green);font-weight:700;}
+  .conf-mid{color:#a06c00;font-weight:700;}
+  .conf-low{color:var(--red);font-weight:700;}
+  /* Dream run table — expandable */
+  .run-row{cursor:pointer;}
+  .run-row:hover{background:#f0faf5;}
+  .ops-row{display:none;}
+  .ops-row.open{display:table-row;}
+  .ops-inner{padding:0 14px 10px 32px;}
+  .op-item{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:6px;
+    margin:4px 0;cursor:pointer;border:1px solid transparent;font-size:0.84rem;}
+  .op-item:hover{background:var(--lt-teal);border-color:var(--border);}
+  .op-badge{padding:2px 8px;border-radius:10px;font-size:0.7rem;font-weight:700;text-transform:uppercase;}
+  .op-add{background:rgba(29,158,117,0.15);color:#0a5c47;}
+  .op-delete{background:rgba(226,75,74,0.12);color:var(--red);}
+  .op-promote{background:rgba(4,52,44,0.12);color:var(--dk-teal);}
+  .op-update{background:var(--amber-lt);color:#a06c00;}
+  /* Side panel */
+  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:100;}
+  .overlay.open{display:block;}
+  .panel{position:fixed;right:0;top:0;bottom:0;width:360px;background:#fff;
+    box-shadow:-6px 0 24px rgba(0,0,0,0.12);z-index:101;overflow-y:auto;
+    transform:translateX(100%);transition:transform 0.22s ease;}
+  .panel.open{transform:translateX(0);}
+  .panel-header{background:var(--dk-teal);color:#fff;padding:18px 20px;
+    display:flex;justify-content:space-between;align-items:flex-start;}
+  .panel-header h3{font-size:0.95rem;font-weight:700;line-height:1.4;}
+  .panel-close{background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;opacity:0.8;padding:2px 6px;}
+  .panel-close:hover{opacity:1;}
+  .panel-body{padding:20px;}
+  .panel-field{margin-bottom:16px;}
+  .panel-field .lbl{font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px;}
+  .panel-field .val{font-size:0.88rem;color:var(--text);}
+  .panel-field .before{background:#fff5f5;border-left:3px solid var(--red);padding:8px 12px;
+    border-radius:0 4px 4px 0;font-size:0.84rem;font-family:monospace;}
+  .panel-field .after{background:#f0fdf8;border-left:3px solid var(--green);padding:8px 12px;
+    border-radius:0 4px 4px 0;font-size:0.84rem;font-family:monospace;margin-top:8px;}
+  .panel-field .arrow{text-align:center;color:var(--muted);font-size:1rem;margin:4px 0;}
+  .conf-bar-wrap{background:#e4eeea;border-radius:4px;height:10px;margin-top:6px;}
+  .conf-bar{height:10px;border-radius:4px;background:var(--green);}
+  /* Inbox gauge */
+  .gauge-wrap{display:flex;align-items:center;gap:12px;margin-top:8px;}
+  .gauge{flex:1;background:#e4eeea;border-radius:6px;height:14px;overflow:hidden;}
+  .gauge-fill{height:14px;border-radius:6px;}
+  /* Footer */
+  .footer{text-align:center;color:var(--muted);font-size:0.78rem;padding:24px;margin-top:16px;
+    border-top:1px solid var(--border);}
+  @media(max-width:700px){.header{padding:24px 16px;}.container{padding:16px;}.panel{width:100%;}}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <h1>Dream Memory Health &mdash; <span></span></h1>
+  <p class="meta">Generated 2026-09-24 &bull; ai-assisted-development plugin v3.25.0</p>
+  <div class="kpi-row">
+    <div class="kpi ok">
+      <div class="v">5</div>
+      <div class="l">Total entries</div>
+    </div>
+    <div class="kpi ok">
+      <div class="v">0.80</div>
+      <div class="l">Avg confidence</div>
+    </div>
+    <div class="kpi ok">
+      <div class="v">0</div>
+      <div class="l">At risk (&le;0.3)</div>
+    </div>
+    <div class="kpi ok">
+      <div class="v">1</div>
+      <div class="l">Promote candidates</div>
+    </div>
+    <div class="kpi warn">
+      <div class="v">446</div>
+      <div class="l">CLAUDE.md lines ⚠</div>
+    </div>
+    <div class="kpi ok">
+      <div class="v">1</div>
+      <div class="l">Dream runs</div>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- SCORECARD -->
+  <section class="section">
+    <div class="section-title"><div class="icon">📊</div> Health Scorecard</div>
+    <div class="cards">
+      <div class="card green-card">
+        <h3>Total entries</h3>
+        <div class="big" style="color:var(--green);">5</div>
+        <div class="sub">Across 5 topic files &bull; 0 in MEMORY.md inbox</div>
+      </div>
+      <div class="card green-card">
+        <h3>Average confidence</h3>
+        <div class="big" style="color:var(--green);">0.80</div>
+        <div class="sub">All entries &ge;0.75 &bull; No at-risk entries</div>
+        <div class="prog-wrap"><div class="prog green" style="width:80%"></div></div>
+      </div>
+      <div class="card amber-card">
+        <h3>CLAUDE.md size</h3>
+        <div class="big" style="color:var(--amber);">446</div>
+        <div class="sub">Lines &bull; Budget ~200 &bull; 223% over budget</div>
+        <div class="prog-wrap"><div class="prog amber" style="width:100%"></div></div>
+      </div>
+      <div class="card green-card">
+        <h3>MEMORY.md inbox</h3>
+        <div class="big" style="color:var(--green);">21</div>
+        <div class="sub">Lines &bull; Limit 200 &bull; Clean after /dream</div>
+        <div class="prog-wrap"><div class="prog green" style="width:11%"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONFIDENCE DISTRIBUTION -->
+  <section class="section">
+    <div class="section-title"><div class="icon">📈</div> Confidence Distribution</div>
+    <div class="card" style="padding:24px;">
+      <svg viewBox="0 0 580 190" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:580px;display:block;">
+        <!-- Y axis label -->
+        <text x="8" y="30" font-size="11" fill="#5a7570">Band</text>
+        <text x="8" y="60" font-size="11" fill="#5a7570">0.8–1.0</text>
+        <text x="8" y="95" font-size="11" fill="#5a7570">0.6–0.8</text>
+        <text x="8" y="130" font-size="11" fill="#5a7570">0.4–0.6</text>
+        <text x="8" y="165" font-size="11" fill="#5a7570">0.2–0.4</text>
+
+        <!-- Bars (max width ~400px for 5 entries) -->
+        <!-- 0.8–1.0: 4 entries = 80% -->
+        <rect x="85" y="44" width="320" height="22" fill="#04342C" rx="3"/>
+        <text x="412" y="60" font-size="11" fill="#1a2e2a" font-weight="600">4 entries (80%)</text>
+
+        <!-- 0.6–0.8: 1 entry = 20% -->
+        <rect x="85" y="79" width="80" height="22" fill="#1D9E75" rx="3"/>
+        <text x="172" y="95" font-size="11" fill="#1a2e2a" font-weight="600">1 entry (20%)</text>
+
+        <!-- 0.4–0.6: 0 -->
+        <rect x="85" y="114" width="2" height="22" fill="#EF9F27" rx="1"/>
+        <text x="92" y="130" font-size="11" fill="#5a7570">0 entries</text>
+
+        <!-- 0.2–0.4: 0 -->
+        <rect x="85" y="149" width="2" height="22" fill="#E24B4A" rx="1"/>
+        <text x="92" y="165" font-size="11" fill="#5a7570">0 entries</text>
+
+        <!-- baseline -->
+        <line x1="85" y1="40" x2="85" y2="180" stroke="#d4e8e1" stroke-width="1"/>
+      </svg>
+      <p style="font-size:0.82rem;color:var(--muted);margin-top:8px;">All 5 entries are in the healthy confidence range (&ge;0.75). No entries at risk.</p>
+    </div>
+  </section>
+
+  <!-- DECAY CURVE -->
+  <section class="section">
+    <div class="section-title"><div class="icon">📉</div> Confidence Decay Curve</div>
+    <div class="card" style="padding:24px;">
+      <svg viewBox="0 0 580 240" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:580px;display:block;">
+        <!-- Grid -->
+        <line x1="60" y1="20" x2="60" y2="200" stroke="#d4e8e1" stroke-width="1"/>
+        <line x1="60" y1="200" x2="540" y2="200" stroke="#d4e8e1" stroke-width="1"/>
+        <!-- Y axis labels -->
+        <text x="8" y="24" font-size="10" fill="#5a7570">1.0</text>
+        <text x="8" y="60" font-size="10" fill="#5a7570">0.85</text>
+        <text x="8" y="110" font-size="10" fill="#5a7570">0.50</text>
+        <text x="8" y="200" font-size="10" fill="#5a7570">0.0</text>
+        <!-- Horizontal grid lines -->
+        <line x1="60" y1="20" x2="540" y2="20" stroke="#e8f5ef" stroke-width="1"/>
+        <line x1="60" y1="110" x2="540" y2="110" stroke="#e8f5ef" stroke-width="1"/>
+        <!-- Threshold lines -->
+        <line x1="60" y1="57" x2="540" y2="57" stroke="#04342C" stroke-width="1" stroke-dasharray="6,4" opacity="0.5"/>
+        <text x="545" y="61" font-size="9" fill="#04342C" opacity="0.7">PROMOTE 0.85</text>
+        <line x1="60" y1="110" x2="540" y2="110" stroke="#E24B4A" stroke-width="1" stroke-dasharray="6,4" opacity="0.4"/>
+        <text x="545" y="114" font-size="9" fill="#E24B4A" opacity="0.7">WATCH 0.50</text>
+        <!-- X axis labels -->
+        <text x="300" y="218" font-size="10" fill="#5a7570" text-anchor="middle">Dream Run #1 (2026-09-24)</text>
+        <text x="30" y="120" font-size="10" fill="#5a7570" transform="rotate(-90,30,120)">Avg conf</text>
+        <!-- Single data point: Run 1, avg 0.80 -->
+        <!-- y position: 200 - (0.80 * 180) = 200 - 144 = 56 -->
+        <circle cx="300" cy="56" r="7" fill="#1D9E75"/>
+        <text x="314" y="54" font-size="11" fill="#04342C" font-weight="700">0.80</text>
+        <text x="300" y="235" font-size="9" fill="#5a7570" text-anchor="middle">Only 1 dream run — trend visible after run #2</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- TOPIC COVERAGE TABLE -->
+  <section class="section">
+    <div class="section-title"><div class="icon">📁</div> Topic Coverage</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Topic file</th><th>Entries</th><th>Avg confidence</th>
+          <th>At risk</th><th>Ready to promote</th><th>Last dream</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>topic-email-claim.md</code></td><td>1</td>
+          <td><span class="conf-high">0.80</span></td>
+          <td>0</td><td>0</td><td>2026-09-24</td>
+        </tr>
+        <tr>
+          <td><code>topic-ado-125587.md</code></td><td>1</td>
+          <td><span class="conf-high">0.85</span></td>
+          <td>0</td><td><span class="badge teal">1 ✓</span></td><td>2026-09-24</td>
+        </tr>
+        <tr>
+          <td><code>topic-ado-126596.md</code></td><td>1</td>
+          <td><span class="conf-high">0.80</span></td>
+          <td>0</td><td>0</td><td>2026-09-24</td>
+        </tr>
+        <tr>
+          <td><code>topic-bearer-token.md</code></td><td>1</td>
+          <td><span class="conf-high">0.80</span></td>
+          <td>0</td><td>0</td><td>2026-09-24</td>
+        </tr>
+        <tr>
+          <td><code>topic-plugin-infra.md</code></td><td>1</td>
+          <td><span class="conf-high">0.75</span></td>
+          <td>0</td><td>0</td><td>2026-09-24</td>
+        </tr>
+        <tr style="background:#f8faf8;">
+          <td><code>MEMORY.md</code> (inbox)</td><td>0</td>
+          <td><span style="color:var(--muted);">—</span></td>
+          <td>0</td><td>0</td><td>2026-09-24 (cleared)</td>
+        </tr>
+        <tr style="background:#fff8f0;">
+          <td><code>CLAUDE.md</code> <span class="badge amber">446 lines ⚠</span></td>
+          <td>0 promoted</td>
+          <td><span style="color:var(--muted);">—</span></td>
+          <td>0</td><td>0</td><td>2026-09-24</td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="margin-top:10px;font-size:0.82rem;color:var(--muted);">⚠ CLAUDE.md is 446 lines — well over the ~200-line session-budget threshold. Planning &amp; Spec Protocol (~80 lines) and User Story Protocol (~60 lines) are candidates for extraction to scoped rule files. See <code>topic-plugin-infra.md</code> for details.</p>
+  </section>
+
+  <!-- ENTRIES AT RISK -->
+  <section class="section">
+    <div class="section-title"><div class="icon">⚠</div> Entries at Risk (confidence &le; 0.3)</div>
+    <div class="card" style="text-align:center;padding:32px;color:var(--muted);">
+      <div style="font-size:2rem;margin-bottom:8px;">✅</div>
+      <div style="font-weight:600;">No entries at risk</div>
+      <div style="font-size:0.84rem;margin-top:4px;">All 5 entries have confidence &ge;0.75 — no deletions recommended</div>
+    </div>
+  </section>
+
+  <!-- PROMOTE CANDIDATES -->
+  <section class="section">
+    <div class="section-title"><div class="icon">🚀</div> Promote Candidates (confidence &ge; 0.85)</div>
+    <table>
+      <thead>
+        <tr><th>Entry</th><th>Topic</th><th>Score</th><th>Sessions confirmed</th><th>Why promote</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>ADO-125587 implementation record</strong><br>
+            <span style="font-size:0.8rem;color:var(--muted);">incl. icea-floor hook gotcha</span></td>
+          <td><code>topic-ado-125587.md</code></td>
+          <td><span class="conf-high">0.85</span></td>
+          <td>6 auto-captures + session 2b4449e2</td>
+          <td>icea-floor rules already promoted to <code>project-rules.md</code>. The full implementation record is ready for CLAUDE.md reference if desired.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- DREAM RUN HISTORY -->
+  <section class="section">
+    <div class="section-title"><div class="icon">🌙</div> Dream Run History</div>
+    <table id="run-table">
+      <thead>
+        <tr>
+          <th>Run #</th><th>Date</th><th>Sessions</th>
+          <th>ADD</th><th>UPDATE</th><th>DELETE</th><th>PROMOTE</th><th>Avg conf</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="run-row" onclick="toggleOps('run1',this)">
+          <td><strong>#1</strong></td>
+          <td>2026-09-24</td>
+          <td>10 (first run)</td>
+          <td><span class="badge green">5</span></td>
+          <td><span style="color:var(--muted);">0</span></td>
+          <td><span class="badge red">1</span></td>
+          <td><span class="badge teal">1</span></td>
+          <td><span class="conf-high">0.80</span></td>
+          <td style="color:var(--muted);font-size:0.8rem;">▶</td>
+        </tr>
+        <tr id="run1-ops" style="display:none;">
+          <td colspan="9" style="padding:0;background:#f8fcfa;">
+            <div class="ops-inner" style="padding:12px 16px;">
+              <div class="op-item" onclick="openPanel('add-email')">
+                <span class="op-badge op-add">ADD</span>
+                <span>Email claim investigation</span>
+                <span style="margin-left:auto;font-size:0.78rem;color:var(--muted);">topic-email-claim.md</span>
+                <span style="color:var(--green);font-size:0.8rem;font-weight:600;margin-left:8px;">0.80</span>
+              </div>
+              <div class="op-item" onclick="openPanel('add-125587')">
+                <span class="op-badge op-add">ADD</span>
+                <span>ADO-125587 implementation record</span>
+                <span style="margin-left:auto;font-size:0.78rem;color:var(--muted);">topic-ado-125587.md</span>
+                <span style="color:var(--green);font-size:0.8rem;font-weight:600;margin-left:8px;">0.85</span>
+              </div>
+              <div class="op-item" onclick="openPanel('add-126596')">
+                <span class="op-badge op-add">ADD</span>
+                <span>ADO-126596 DB error surfacing</span>
+                <span style="margin-left:auto;font-size:0.78rem;color:var(--muted);">topic-ado-126596.md</span>
+                <span style="color:var(--green);font-size:0.8rem;font-weight:600;margin-left:8px;">0.80</span>
+              </div>
+              <div class="op-item" onclick="openPanel('add-bearer')">
+                <span class="op-badge op-add">ADD</span>
+                <span>BearerTokenHandler app-only fallback removed</span>
+                <span style="margin-left:auto;font-size:0.78rem;color:var(--muted);">topic-bearer-token.md</span>
+                <span style="color:var(--green);font-size:0.8rem;font-weight:600;margin-left:8px;">0.80</span>
+              </div>
+              <div class="op-item" onclick="openPanel('add-plugin')">
+                <span class="op-badge op-add">ADD</span>
+                <span>Plugin infrastructure notes</span>
+                <span style="margin-left:auto;font-size:0.78rem;color:var(--muted);">topic-plugin-infra.md</span>
+                <span style="color:var(--green);font-size:0.8rem;font-weight:600;margin-left:8px;">0.75</span>
+              </div>
+              <div class="op-item" onclick="openPanel('del-superseded')">
+                <span class="op-badge op-delete">DELETE</span>
+                <span>Superseded 2026-09-04 EmailClaim theory</span>
+                <span style="margin-left:auto;font-size:0.78rem;color:var(--muted);">MEMORY.md (removed)</span>
+                <span style="color:var(--red);font-size:0.8rem;font-weight:600;margin-left:8px;">0.15</span>
+              </div>
+              <div class="op-item" onclick="openPanel('promote-icea-floor')">
+                <span class="op-badge op-promote">PROMOTE</span>
+                <span>icea-floor hook rules</span>
+                <span style="margin-left:auto;font-size:0.78rem;color:var(--muted);">.claude/rules/project-rules.md</span>
+                <span style="color:var(--dk-teal);font-size:0.8rem;font-weight:600;margin-left:8px;">0.85</span>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- MEMORY.MD INBOX STATUS -->
+  <section class="section">
+    <div class="section-title"><div class="icon">📥</div> MEMORY.md Inbox Status</div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <h3 style="font-size:0.9rem;color:var(--dk-teal);font-weight:600;">Inbox fill level</h3>
+        <span class="badge green">21 / 200 lines</span>
+      </div>
+      <div class="gauge-wrap">
+        <div class="gauge"><div class="gauge-fill" style="width:10.5%;background:var(--green);"></div></div>
+        <span style="font-size:0.82rem;color:var(--muted);white-space:nowrap;">10.5% full</span>
+      </div>
+      <p style="font-size:0.82rem;color:var(--muted);margin-top:10px;">Inbox is clean — all 24 entries from previous sessions were processed and promoted to topic files during the 2026-09-24 dream run. No stale entries present.</p>
+    </div>
+  </section>
+
+</div><!-- /container -->
+
+<!-- OVERLAY + SIDE PANEL -->
+<div class="overlay" id="overlay" onclick="closePanel()"></div>
+<div class="panel" id="panel">
+  <div class="panel-header">
+    <h3 id="panel-title">Operation detail</h3>
+    <button class="panel-close" onclick="closePanel()">✕</button>
+  </div>
+  <div class="panel-body" id="panel-body"></div>
+</div>
+
+<footer class="footer">
+  Dream Memory Health &bull;  &bull; ai-assisted-development v3.25.0 &bull; 2026-09-24 &bull; Read-only — never modifies memory files
+</footer>
+
+<script>
+function toggleOps(id, row) {
+  var ops = document.getElementById(id + '-ops');
+  var arrow = row.cells[row.cells.length - 1];
+  if (ops.style.display === 'none') {
+    ops.style.display = 'table-row';
+    arrow.textContent = '▼';
+  } else {
+    ops.style.display = 'none';
+    arrow.textContent = '▶';
+  }
+}
+
+var panels = {
+  'add-email': {
+    title: '[ADD] Email claim investigation → topic-email-claim.md',
+    reason: '10 MEMORY.md auto-capture entries spanning the EmailClaimNotFound P1 investigation needed consolidation into a searchable reference.',
+    evidence: 'Sessions ccfe818b (Sep 02), a3dbf21a (Sep 03), 755e3591 (Sep 03), 2b4449e2 (Sep 09) + 10 MEMORY.md auto-capture entries.',
+    before: 'none',
+    after: 'Consolidated investigation record: shipped fix details, eliminated theories, open root cause, next-action playbook.',
+    conf: 0.80, confNote: '0.70 base + 0.10 (4 confirming sessions)',
+    risk: 'Investigation state fragmented across 10 inline entries; next incident wastes tokens re-establishing context.',
+    opClass: 'op-add'
+  },
+  'add-125587': {
+    title: '[ADD] ADO-125587 implementation → topic-ado-125587.md',
+    reason: '6 task/plan/error auto-capture entries covering the full ICEA cycle, 7 files implemented, test results, and the critical icea-floor hook gotcha.',
+    evidence: 'Session 2b4449e2 (Sep 09) + MEMORY.md ×6 entries (Sep 08–10).',
+    before: 'none',
+    after: 'Implementation record with file change table, test patterns (static reset, new unit project), icea-floor hook rules, remaining work list.',
+    conf: 0.85, confNote: '0.70 base + 0.15 (6 auto-captures confirmed by session)',
+    risk: 'icea-floor gotcha lost → next story blocked again; test setup patterns repeated from scratch.',
+    opClass: 'op-add'
+  },
+  'add-126596': {
+    title: '[ADD] ADO-126596 DB error surfacing → topic-ado-126596.md',
+    reason: 'Design decision (type-gate excludes InternalServerError) and implementation pattern (ProblemDetails type-gate) worth preserving.',
+    evidence: 'Session 2ab2eaff (Sep 21) + MEMORY.md ×3 entries.',
+    before: 'none',
+    after: 'Implementation record with type-gate rationale and reusable pattern: check type field before forwarding upstream error detail.',
+    conf: 0.80, confNote: '0.70 base + 0.10 (2 sessions, 3 auto-captures)',
+    risk: 'Type-gate rationale lost; future dev may wonder why InternalServerError is not forwarded.',
+    opClass: 'op-add'
+  },
+  'add-bearer': {
+    title: '[ADD] BearerTokenHandler app-only fallback → topic-bearer-token.md',
+    reason: 'Architectural change to BearerTokenHandler; latent-defect background important for future token investigations.',
+    evidence: 'Session 2ab2eaff (Sep 21) + MEMORY.md ×2 entries.',
+    before: 'none',
+    after: 'Change record with rationale, what was not changed (ITokenService/TokenCacheService), link to email-claim investigation.',
+    conf: 0.80, confNote: '0.70 base + 0.10 (session + memory)',
+    risk: 'Latent-defect background lost; future dev sees GetAccessTokenAsync unused and removes it.',
+    opClass: 'op-add'
+  },
+  'add-plugin': {
+    title: '[ADD] Plugin infrastructure notes → topic-plugin-infra.md',
+    reason: 'Setup history, token budget status (RED), and skill adoption gaps as a reference for tooling decisions.',
+    evidence: 'Sessions 19963629 (Sep 04), 4e891113 (Sep 23), 36fef957 (Sep 24) + MEMORY.md ×3.',
+    before: 'none',
+    after: 'Setup timeline, token overhead breakdown (7,405 always-loaded = RED), token-analysis cache location, skills never used.',
+    conf: 0.75, confNote: '0.70 base + 0.05 (3 sessions)',
+    risk: 'Token-analysis recommendations lost between sessions; CLAUDE.md reduction rationale forgotten.',
+    opClass: 'op-add'
+  },
+  'del-superseded': {
+    title: '[DELETE] Superseded 2026-09-04 EmailClaim initial theory',
+    reason: 'Entry explicitly marked SUPERSEDED and asserts a mechanism ("recycling resets token handler internal state") proven non-existent by 3 later sessions.',
+    evidence: 'Contradicted by sessions 2b4449e2, a3dbf21a, 755e3591 + entries from 2026-09-08 and 2026-09-10.',
+    before: '"Root cause: RequireEmailClaimAttribute uses ClaimTypes.Email but MIW v4.3.0 stores short names. Recycling fixes it because it resets the token handler\'s internal state."',
+    after: 'removed',
+    conf: 0.15, confNote: '0.85 original → explicit SUPERSEDED + 3 contradicting sessions = 0.15',
+    risk: 'Stale incorrect hypothesis survives; next incident investigation wastes time on mechanism that does not exist.',
+    opClass: 'op-delete'
+  },
+  'promote-icea-floor': {
+    title: '[PROMOTE] icea-floor hook rules → .claude/rules/project-rules.md',
+    reason: 'Hard mechanical blocker encountered on ADO-125587; not documented anywhere; caught developer off-guard; will recur on every future story.',
+    evidence: 'Session 2b4449e2 (Sep 09) + MEMORY.md [2026-09-10] entry. Developer confirmed promotion to project-rules.md (not CLAUDE.md).',
+    before: 'project-rules.md had no hook or ICEA workflow rules.',
+    after: 'New "ICEA / plugin hook rules" section in .claude/rules/project-rules.md with 4 specific rules about icea-floor behaviour.',
+    conf: 0.85, confNote: '0.70 base + 0.15 (confirmed in session + manual approval)',
+    risk: 'Next story hits the same icea-floor blocker; APPROVE ALL ADO-{ID} attempted and fails again.',
+    opClass: 'op-promote'
+  }
+};
+
+function openPanel(id) {
+  var d = panels[id];
+  if (!d) return;
+  document.getElementById('panel-title').textContent = d.title;
+  var pct = Math.round(d.conf * 100);
+  var body = '<div class="panel-field"><div class="lbl">Reason</div><div class="val">' + esc(d.reason) + '</div></div>';
+  body += '<div class="panel-field"><div class="lbl">Evidence</div><div class="val">' + esc(d.evidence) + '</div></div>';
+  if (d.before !== 'none') {
+    body += '<div class="panel-field"><div class="lbl">Before &rarr; After</div><div class="before">' + esc(d.before) + '</div><div class="arrow">&#8595;</div><div class="after">' + esc(d.after) + '</div></div>';
+  } else {
+    body += '<div class="panel-field"><div class="lbl">Before &rarr; After</div><div class="before">none (new entry)</div><div class="arrow">&#8595;</div><div class="after">' + esc(d.after) + '</div></div>';
+  }
+  body += '<div class="panel-field"><div class="lbl">Confidence</div><div class="val"><strong>' + d.conf + '</strong> &nbsp;<span style="color:var(--muted);font-size:0.82rem;">' + esc(d.confNote) + '</span></div><div class="conf-bar-wrap"><div class="conf-bar" style="width:' + pct + '%"></div></div></div>';
+  body += '<div class="panel-field"><div class="lbl">Risk if skipped</div><div class="val">' + esc(d.risk) + '</div></div>';
+  document.getElementById('panel-body').innerHTML = body;
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('panel').classList.add('open');
+}
+
+function closePanel() {
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('panel').classList.remove('open');
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

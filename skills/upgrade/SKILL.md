@@ -82,6 +82,40 @@ judge/checkpoint substrate (AC-F9/F10) in Steps 5–8.
 
 ## Step 1 — Intake & classification (implemented — the highest-risk component)
 
+> 📊 **STEP BOUNDARY — Step 1: Intake & classification**
+> The checkpoint is flushed — resuming here is safe.
+> **Reply `CONTINUE` to proceed with this step.**
+> Reply `COMPACT` if the context window is near capacity:
+>   1. Run `/compact`
+>   2. Resume with `UPGRADE RESUME ADO-{ID}`
+>      (The resume restarts at this step — the flush above ensures no rework.)
+> _(Do not proceed past this prompt without a reply.)_
+
+**Script preflight — verify all required plugin scripts exist before any execution:**
+```bash
+REQUIRED_SCRIPTS=(
+  "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs"
+  "$PLUGIN_DIR/scripts/upgrade-checkpoint.cjs"
+  "$PLUGIN_DIR/scripts/migration-source-detect.cjs"
+  "$PLUGIN_DIR/scripts/upgrade-classify.cjs"
+  "$PLUGIN_DIR/scripts/resolve-migration-roots.cjs"
+  "$PLUGIN_DIR/scripts/intake-verify.cjs"
+  "$PLUGIN_DIR/scripts/upgrade-tool-preflight.cjs"
+  "$PLUGIN_DIR/scripts/upgrade-knowledge-cache.cjs"
+  "$PLUGIN_DIR/scripts/upgrade-orchestrate.cjs"
+)
+for script in "${REQUIRED_SCRIPTS[@]}"; do
+  [ -f "$script" ] || { echo "❌ MISSING SCRIPT: $script — re-install the plugin or run /setup-sync."; exit 1; }
+done
+echo "✅ All required scripts present."
+```
+If any script is missing: **STOP** — do not proceed. Run `/setup-sync` or reinstall the plugin.
+
+```bash
+# Initialize checkpoint ledger — first action in Step 1, before any detection or classification
+node scripts/checkpoint-ledger.cjs init --skill=upgrade --ado={ADO_ID}
+```
+
 **Friction reduction (once per session).** Before the first Bash call, run the offer per
 `$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/friction-reduction-spec.md` — check
 whether `.claude/settings.local.json` already has the recommended patterns; if not, ask the
@@ -114,7 +148,49 @@ developer once. YES → merge patterns + confirm; NO → continue without writin
       No files were changed.
    ```
 
+```bash
+# Flush checkpoint before next step
+node scripts/checkpoint-ledger.cjs set-gate --skill=upgrade --ado={ADO_ID} --gate=step_1_classified --verdict=PASS
+node scripts/checkpoint-ledger.cjs set-payload --skill=upgrade --ado={ADO_ID} --key=stack --value={STACK}
+node scripts/checkpoint-ledger.cjs set-payload --skill=upgrade --ado={ADO_ID} --key=from --value={FROM}
+node scripts/checkpoint-ledger.cjs set-payload --skill=upgrade --ado={ADO_ID} --key=to --value={TO}
+```
+
+**Resolve migration roots** — run immediately after classification so `source.roots` is in the ledger before gap/risk analysis. For upgrade the source IS the CWD:
+```bash
+node "$PLUGIN_DIR/scripts/resolve-migration-roots.cjs" \
+  --source-path=$(pwd) \
+  --write-to=.claude/settings.local.json \
+  --depth=3 --json
+```
+- Exit 0 → migrationRoots recorded in `.claude/settings.local.json` → continue.
+- Exit 5 → plugin not integrated here (unexpected for upgrade — this implies `setup-init` was not run): present this prompt to the developer:
+  ```
+  ⚠ No plugin configuration found at .claude/settings.local.json.
+     Are there dependency repositories the migration should include?
+     Provide comma-separated absolute paths, or NONE to proceed with source root only:
+     > ___
+  ```
+  On NONE: log a `[FINDING]` entry to `migration-log.md`: "Scope limited to source root only — dependencies may be missed."
+  On paths provided: validate each exists (`test -d`), write paths to `.claude/settings.local.json`.migrationRoots and continue.
+- Exit 6 → STOP: report the missing directory path and which settings file configured it. Developer must fix before proceeding.
+
+After exit 0 (or manual path entry on exit 5), record migrationRoots in the ledger:
+```bash
+MIGRATION_ROOTS=$(node -e "const fs=require('fs');try{const s=JSON.parse(fs.readFileSync('.claude/settings.local.json','utf8'));process.stdout.write(JSON.stringify(s.migrationRoots||[]))}catch(e){process.stdout.write('[]')}")
+node scripts/checkpoint-ledger.cjs set-source --skill=upgrade --ado={ADO_ID} --roots-json="$MIGRATION_ROOTS"
+```
+
 ## Step 2 — Tool-availability preflight (implemented — AC-F2)
+
+> 📊 **STEP BOUNDARY — Step 2: Tool-availability preflight**
+> The checkpoint is flushed — resuming here is safe.
+> **Reply `CONTINUE` to proceed with this step.**
+> Reply `COMPACT` if the context window is near capacity:
+>   1. Run `/compact`
+>   2. Resume with `UPGRADE RESUME ADO-{ID}`
+>      (The resume restarts at this step — the flush above ensures no rework.)
+> _(Do not proceed past this prompt without a reply.)_
 
 Only reached when Step 1 classified `upgrade`. Probe the deterministic tool for the stack (read-only)
 and act on the status — see `references/tool-matrix.md` for the matrix + per-OS install steps:
@@ -134,7 +210,22 @@ The skill only **prints** install/verify steps for the developer to run; it neve
 and never bundles a tool. Exits 2 and 3 are prerequisite waits, not decision gates — no developer
 response or confirmation is needed; the skill continues automatically when the developer re-invokes.
 
+```bash
+# Flush checkpoint before next step
+node scripts/checkpoint-ledger.cjs set-gate --skill=upgrade --ado={ADO_ID} --gate=step_2_tool_available --verdict=PASS
+node scripts/checkpoint-ledger.cjs set-payload --skill=upgrade --ado={ADO_ID} --key=tool_available --value={TOOL_AVAILABLE}
+```
+
 ## Step 3 — Web-grounded gap/risk analysis (implemented — AC-F3)
+
+> 📊 **STEP BOUNDARY — Step 3: Web-grounded gap/risk analysis**
+> The checkpoint is flushed — resuming here is safe.
+> **Reply `CONTINUE` to proceed with this step.**
+> Reply `COMPACT` if the context window is near capacity:
+>   1. Run `/compact`
+>   2. Resume with `UPGRADE RESUME ADO-{ID}`
+>      (The resume restarts at this step — the flush above ensures no rework.)
+> _(Do not proceed past this prompt without a reply.)_
 
 Reached only after Step 1 classified `upgrade` and Step 2 found the tool `available`. Gather the
 breaking-change / deprecation facts for the planned hops. The **LLM grounds; the cache engine tags +
@@ -155,15 +246,44 @@ the service source is available. The Integration Inventory feeds the report's in
 `[INTEGRATION]` migration log entries. This is lighter than Rewrite/Replatform — it runs inside the
 gap/risk analysis, not as a separate pre-options step.
 
-**Initialize the migration log.** Before writing any `[INTEGRATION]` entries, create the log file
-with its required header (per `migration-log-spec.md` § Initialization):
+**Initialize and verify the migration log** — write and verify in a single Bash chain:
 
-```
-docs/migrations/{ADO}/migration-log.md
+```bash
+mkdir -p docs/migrations/{ADO} && \
+cat > docs/migrations/{ADO}/migration-log.md << 'LOGEOF'
+# Migration Log — {AppName} Upgrade (ADO-{ID})
+Living document. Updated at every decision point. Never truncated — the full history is the asset.
+Source: {full/source/path} ({source stack} {source version}) · Target: {target version} · Skill: Upgrade
+Started: {date} · ADO: {ADO ID}
+
+---
+
+## Decisions summary
+
+| Decision | Chosen | Alternatives rejected | Date |
+|---|---|---|---|
+
+## Risks accepted
+
+| Risk | Level | Accepted because | Compensating control |
+|---|---|---|---|
+
+---
+
+## Lessons
+
+---
+
+## Transferable Patterns
+
+LOGEOF
+head -1 docs/migrations/{ADO}/migration-log.md && \
+grep -c "## Decisions summary" docs/migrations/{ADO}/migration-log.md
 ```
 
-Create `docs/migrations/{ADO}/` if absent. This is a documentation artifact — not subject to
-the Write Gate.
+If the chain exits non-zero: **stop immediately** — do not continue. Report the exact shell output.
+Recovery is a separate, explicitly approved action — never automatic.
+This is a documentation artifact — not subject to the Write Gate.
 
 **Source-context intake gate** — per `$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/source-context-intake-spec.md`.
 Author the **Source Context Manifest** (`docs/migrations/{ADO}/source-context-manifest.md`) from the
@@ -176,6 +296,19 @@ node "$PLUGIN_DIR/scripts/intake-verify.cjs" verify --manifest=docs/migrations/{
 ```
 Exit 0 → record `stage_gates.intake_context=PASS` + `core.source_context`. Exit 2–9 → **STOP** and
 resolve. The gap/risk report (Step 4) cannot be gated PASS until this is done — see Step 8.
+Exit 2 carries a `reason` field in `--json` output: `manifest-missing` = file does not exist — author from the manifest template and re-run; `manifest-empty` = file was created but is empty — run `git log -- docs/migrations/{ADO}/source-context-manifest.md` to check for a recoverable draft before re-authoring from scratch.
+
+**Hard stop — do not advance to Step 4 until intake is confirmed.** Present this prompt and wait:
+
+```
+🛑 INTAKE GATE — reply INTAKE CONFIRMED ADO-{ID} to continue to the gap/risk analysis,
+   or resolve the errors above and re-run intake-verify.cjs verify.
+```
+
+Only `INTAKE CONFIRMED ADO-{ID}` continues. Do not generate gap/risk prose, do not advance
+to Step 4, until this reply is received and `stage_gates.intake_context=PASS` is durable
+in the ledger.
+
 2. **Ground on miss/stale.** Use WebSearch to find the change from an **authoritative** source
    (official migration guide / release notes / deprecation list). Never source a breaking-change
    claim from model memory.
@@ -188,7 +321,31 @@ resolve. The gap/risk report (Step 4) cannot be gated PASS until this is done �
    A stable fact is immutable: an identical re-put is idempotent; a differing claim under the same id
    returns `immutable-conflict` (exit 8) for you to resolve, never silently overwrite.
 
+```bash
+# Flush checkpoint before next step
+node scripts/checkpoint-ledger.cjs set-gate --skill=upgrade --ado={ADO_ID} --gate=intake_context --verdict=PASS
+```
+Then record full source_context including summary. Use `modules_total`, `modules_mapped`,
+`modules_out_of_scope` from the `intake-verify.cjs verify --json` output above.
+Set `coverage_verdict` to `"full"` if `modules_out_of_scope == 0`, otherwise `"partial"`:
+```bash
+node scripts/checkpoint-ledger.cjs set-payload \
+  --skill=upgrade --ado={ADO_ID} \
+  --payload-json='{"source_context":{"manifest_path":"docs/migrations/{ADO_ID}/source-context-manifest.md","verified":true,"roots_expected":[{ROOTS_ARRAY}],"modules_total":{N},"modules_mapped":{M},"modules_out_of_scope":{K},"verified_at":"{DATE}","summary":{"coverage_verdict":"{full|partial}","modules_total":{N},"modules_mapped":{M},"modules_out_of_scope":{K},"partial_row_count":0}}}'
+```
+The `manifest-read-guard.cjs` hook arms after this write — subsequent Read calls to the manifest
+are blocked and redirected to `source_context.summary` in the ledger.
+
 ## Step 4 — Decision-grade Gap + Risk report (implemented — AC-F3)
+
+> 📊 **STEP BOUNDARY — Step 4: Decision-grade Gap + Risk report**
+> The checkpoint is flushed — resuming here is safe.
+> **Reply `CONTINUE` to proceed with this step.**
+> Reply `COMPACT` if the context window is near capacity:
+>   1. Run `/compact`
+>   2. Resume with `UPGRADE RESUME ADO-{ID}`
+>      (The resume restarts at this step — the flush above ensures no rework.)
+> _(Do not proceed past this prompt without a reply.)_
 
 Assemble the report per the schema in `references/gap-risk-report.md`. It is the **headline
 deliverable** — emit it whether or not the developer proceeds:
@@ -210,7 +367,7 @@ docs/migrations/{ADO}/ADO-{ADO_ID}-gap-risk-report.md
 ```
 
 Documentation artifact — not subject to the Write Gate. Create the directory if absent.
-Record the path: `upgrade-checkpoint.cjs set-payload --report-path=<path>`
+Record the path: `node scripts/checkpoint-ledger.cjs set-payload --skill=upgrade --ado={ADO_ID} --key=report_path --value=<path>`
 
 **APPROVE REPORT gate.** Present this prompt and stop:
 
@@ -224,14 +381,35 @@ The report is your value from this run — saved whether or not you proceed to e
 ```
 
 Only `APPROVE REPORT ADO-{ID}` continues. Record the choice:
-  `upgrade-checkpoint.cjs set-payload --proceed-after-report=<true|false>`
+  `node scripts/checkpoint-ledger.cjs set-payload --skill=upgrade --ado={ADO_ID} --key=proceed_after_report --value=<true|false>`
+Pre-append guard:
+```bash
+test -f docs/migrations/{ADO}/migration-log.md && echo "log OK" || echo "log ABSENT — STOP: return to Step 3 log init"
+```
+If absent: halt and report — do not create the file here.
 Write a `[DECISION]` migration log entry for this gate.
 
 The report is the point where value is delivered. Everything below runs **only if the developer
 chooses to proceed** (replies `APPROVE REPORT ADO-{ID}`) — and every step that touches the working
 repo is authored here but executed by the developer (LLM authors + rehearses, human executes).
 
+```bash
+# Flush checkpoint before next step
+node scripts/checkpoint-ledger.cjs set-gate --skill=upgrade --ado={ADO_ID} --gate=report --verdict=PASS
+node scripts/checkpoint-ledger.cjs set-payload --skill=upgrade --ado={ADO_ID} --key=report_path --value={REPORT_PATH}
+node scripts/checkpoint-ledger.cjs set-payload --skill=upgrade --ado={ADO_ID} --key=proceed_after_report --value={PROCEED_AFTER_REPORT}
+```
+
 ## Step 4.5 — Delta design documents + APPROVE DESIGN (new)
+
+> 📊 **STEP BOUNDARY — Step 4.5: Delta design documents + APPROVE DESIGN**
+> The checkpoint is flushed — resuming here is safe.
+> **Reply `CONTINUE` to proceed with this step.**
+> Reply `COMPACT` if the context window is near capacity:
+>   1. Run `/compact`
+>   2. Resume with `UPGRADE RESUME ADO-{ID}`
+>      (The resume restarts at this step — the flush above ensures no rework.)
+> _(Do not proceed past this prompt without a reply.)_
 
 Author the **non-empty delta documents only** — the gap/risk analysis identifies which dimensions the
 upgrade actually changes; author delta documents solely for those (per `target-design-spec.md` delta
@@ -247,7 +425,22 @@ package replacements). Infrastructure/deployment deltas only if the upgrade incl
 - **APPROVE DESIGN** — records `payload.upgrade.gate_verdicts.design_approved = true`. Required before
   the baseline tag. Write `[DECISION]` + `[REVISION]` migration log entries.
 
+```bash
+# Flush checkpoint before next step
+node scripts/checkpoint-ledger.cjs set-gate --skill=upgrade --ado={ADO_ID} --gate=design_approved --verdict=PASS
+node scripts/checkpoint-ledger.cjs set-payload --skill=upgrade --ado={ADO_ID} --key=design_doc_path --value={DESIGN_DOC_PATH}
+```
+
 ## Step 5 — Baseline tag + working branch (implemented — AC-F3 execution)
+
+> 📊 **STEP BOUNDARY — Step 5: Baseline tag + working branch**
+> The checkpoint is flushed — resuming here is safe.
+> **Reply `CONTINUE` to proceed with this step.**
+> Reply `COMPACT` if the context window is near capacity:
+>   1. Run `/compact`
+>   2. Resume with `UPGRADE RESUME ADO-{ID}`
+>      (The resume restarts at this step — the flush above ensures no rework.)
+> _(Do not proceed past this prompt without a reply.)_
 
 The oracle is the **pre-upgrade baseline** — `self-run` almost by definition (the app builds and runs;
 it is what you are upgrading). Golden master, if used as a secondary smoke, captures baseline behaviour
@@ -267,14 +460,45 @@ node "$PLUGIN_DIR/scripts/upgrade-orchestrate.cjs" plan --stack=<token> --from=<
 created before the first edit so verification always has a clean pre-upgrade reference. Record the
 tag in the checkpoint: `upgrade-checkpoint.cjs set-payload --baseline-tag=<tag> --hops=<...>`.
 
+```bash
+# Flush checkpoint before next step
+node scripts/checkpoint-ledger.cjs set-gate --skill=upgrade --ado={ADO_ID} --gate=step_5_baseline_tagged --verdict=PASS
+node scripts/checkpoint-ledger.cjs set-payload --skill=upgrade --ado={ADO_ID} --key=baseline_tag --value={BASELINE_TAG}
+node scripts/checkpoint-ledger.cjs set-payload --skill=upgrade --ado={ADO_ID} --key=hops --value={HOPS}
+```
+
 ## Step 6 — Run the stack tool per hop (implemented — AC-F3 execution)
+
+> 📊 **STEP BOUNDARY — Step 6: Run the stack tool per hop**
+> The checkpoint is flushed — resuming here is safe.
+> **Reply `CONTINUE` to proceed with this step.**
+> Reply `COMPACT` if the context window is near capacity:
+>   1. Run `/compact`
+>   2. Resume with `UPGRADE RESUME ADO-{ID}`
+>      (The resume restarts at this step — the flush above ensures no rework.)
+> _(Do not proceed past this prompt without a reply.)_
 
 Walk the runbook one hop at a time. For each hop: run the deterministic tool for that hop, then make
 **exactly one commit** (`commit_plan[i].commit_msg`). One commit per hop keeps history bisectable so
 a later verify failure pins the exact hop. Never blend hops into one diff; never hand-author the bulk
 transform.
 
+```bash
+# Flush after each hop (replace N with 1-based hop index)
+node scripts/checkpoint-ledger.cjs set-gate --skill=upgrade --ado={ADO_ID} --gate=step_6_hop_N_complete --verdict=PASS
+node scripts/checkpoint-ledger.cjs set-payload --skill=upgrade --ado={ADO_ID} --key=completed_hops --value=N
+```
+
 ## Step 7 — Residual remediation + verify vs baseline oracle (implemented — AC-F3 execution)
+
+> 📊 **STEP BOUNDARY — Step 7: Residual remediation + verify vs baseline oracle**
+> The checkpoint is flushed — resuming here is safe.
+> **Reply `CONTINUE` to proceed with this step.**
+> Reply `COMPACT` if the context window is near capacity:
+>   1. Run `/compact`
+>   2. Resume with `UPGRADE RESUME ADO-{ID}`
+>      (The resume restarts at this step — the flush above ensures no rework.)
+> _(Do not proceed past this prompt without a reply.)_
 
 The tool leaves a residual (~10–30%, stack-dependent). Remediate it with the LLM, but **each fix
 passes the Write Gate** (`APPROVE ADO-{ID}`), and the baseline-oracle regression net catches drift.
@@ -289,7 +513,22 @@ resolution options and **no merge is allowed** until verify passes. If a residua
 hit, hand back to the developer with the residual list. Post-upgrade, offer the ladder
 (→ Rewrite / Replatform) per `references/gap-risk-report.md`.
 
+```bash
+# Flush checkpoint before next step
+node scripts/checkpoint-ledger.cjs set-gate --skill=upgrade --ado={ADO_ID} --gate=verify --verdict=PASS
+node scripts/checkpoint-ledger.cjs set-payload --skill=upgrade --ado={ADO_ID} --key=verify_report_path --value={VERIFY_REPORT_PATH}
+```
+
 ## Step 8 — Checkpoint + judge at every gate (implemented — AC-F9/F10, inline)
+
+> 📊 **STEP BOUNDARY — Step 8: Checkpoint + judge at every gate**
+> The checkpoint is flushed — resuming here is safe.
+> **Reply `CONTINUE` to proceed with this step.**
+> Reply `COMPACT` if the context window is near capacity:
+>   1. Run `/compact`
+>   2. Resume with `UPGRADE RESUME ADO-{ID}`
+>      (The resume restarts at this step — the flush above ensures no rework.)
+> _(Do not proceed past this prompt without a reply.)_
 
 Each gate (report · residual · verify) records a verdict from an **independent judge** (separate agent
 + separate model — see `$PLUGIN_DIR/skills/shared/judge.md`) and persists it to the resumable
@@ -315,6 +554,15 @@ redirects to the shared docs.)
 
 ## Step 8a — Generate test plan (after verify passes)
 
+> 📊 **STEP BOUNDARY — Step 8a: Generate test plan**
+> The checkpoint is flushed — resuming here is safe.
+> **Reply `CONTINUE` to proceed with this step.**
+> Reply `COMPACT` if the context window is near capacity:
+>   1. Run `/compact`
+>   2. Resume with `UPGRADE RESUME ADO-{ID}`
+>      (The resume restarts at this step — the flush above ensures no rework.)
+> _(Do not proceed past this prompt without a reply.)_
+
 After Step 7 verification passes (`upgrade-orchestrate.cjs verify` exits 0), invoke
 the test-plan skill in subagent mode — no prompt, no budget warning:
 
@@ -328,6 +576,12 @@ Record the returned test plan path in the ledger:
 
 If the test-plan skill fails, log a warning in the migration log and continue — the
 upgrade is not gated on test plan generation.
+
+```bash
+# Flush checkpoint before next step
+node scripts/checkpoint-ledger.cjs set-gate --skill=upgrade --ado={ADO_ID} --gate=step_8a_test_plan --verdict=PASS
+node scripts/checkpoint-ledger.cjs set-payload --skill=upgrade --ado={ADO_ID} --key=testPlanPath --value={TEST_PLAN_PATH}
+```
 
 ---
 

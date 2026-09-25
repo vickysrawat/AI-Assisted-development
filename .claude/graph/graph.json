@@ -1,0 +1,182 @@
+{
+  "meta": {
+    "version": "1.0",
+    "generated": "2026-09-23",
+    "moduleCount": 8,
+    "structure": "flat",
+    "stale": false
+  },
+  "nodes": [
+    {
+      "id": "-project-deploy",
+      "module": "_project-deploy",
+      "domain": "deployment",
+      "type": "shared-lib",
+      "detailFile": "graph/_project-deploy.md",
+      "entryPoint": "_project-deploy/CLAUDE.md",
+      "paths": [
+        "_project-deploy/**"
+      ],
+      "fingerprint": "3a59cba002fe219b94ee7f8db2eef66bd2023ce0",
+      "hub": false,
+      "edges": []
+    },
+    {
+      "id": "contest",
+      "module": "contest",
+      "domain": "presentation",
+      "type": "shared-lib",
+      "detailFile": "graph/contest.md",
+      "entryPoint": null,
+      "paths": [
+        "contest/**"
+      ],
+      "fingerprint": "cab7b6849ef94506eb4220cbba72754b32cc4492",
+      "hub": false,
+      "edges": []
+    },
+    {
+      "id": "docs",
+      "module": "docs",
+      "domain": "documentation",
+      "type": "shared-lib",
+      "detailFile": "graph/docs.md",
+      "entryPoint": null,
+      "paths": [
+        "docs/**"
+      ],
+      "fingerprint": "9bc724c554e4e11f1fa7bbc06919cbb9aeaff8cd",
+      "hub": false,
+      "edges": []
+    },
+    {
+      "id": "guides",
+      "module": "guides",
+      "domain": "documentation",
+      "type": "shared-lib",
+      "detailFile": "graph/guides.md",
+      "entryPoint": null,
+      "paths": [
+        "guides/**"
+      ],
+      "fingerprint": "a337e8fc9da67a5e7b288d42cfc86f28f917a106",
+      "hub": false,
+      "edges": []
+    },
+    {
+      "id": "scripts",
+      "module": "scripts",
+      "domain": "orchestration",
+      "type": "service",
+      "detailFile": "graph/scripts.md",
+      "entryPoint": "scripts/setup-init-bootstrap.cjs",
+      "paths": [
+        "scripts/**"
+      ],
+      "fingerprint": "10152b1bec5b5c256d3d8e0f6e89ca0df838d1a0",
+      "hub": true,
+      "edges": [
+        {
+          "to": "skills",
+          "type": "INFERRED",
+          "confidence": 0.9,
+          "note": "Scripts are invoked by skills via Bash tool calls"
+        },
+        {
+          "to": "tests",
+          "type": "INFERRED",
+          "confidence": 0.95,
+          "note": "Tests mirror scripts 1:1"
+        }
+      ]
+    },
+    {
+      "id": "skills",
+      "module": "skills",
+      "domain": "orchestration",
+      "type": "domain",
+      "detailFile": "graph/skills.md",
+      "entryPoint": "skills/setup-init/SKILL.md",
+      "paths": [
+        "skills/**"
+      ],
+      "fingerprint": "2f595bfa50942a1ae07a803681ab479b3cb3a813",
+      "hub": true,
+      "edges": [
+        {
+          "to": "scripts",
+          "type": "INFERRED",
+          "confidence": 0.95,
+          "note": "Skills invoke scripts via Bash tool calls"
+        },
+        {
+          "to": "_project-deploy",
+          "type": "INFERRED",
+          "confidence": 0.8,
+          "note": "setup-init skill provisions _project-deploy templates into target projects"
+        }
+      ]
+    },
+    {
+      "id": "tests",
+      "module": "tests",
+      "domain": "testing",
+      "type": "repository",
+      "detailFile": "graph/tests.md",
+      "entryPoint": "tests/jest.suite.test.cjs",
+      "paths": [
+        "tests/**"
+      ],
+      "fingerprint": "1ff78a239c520f221de8add96218600445ec95ca",
+      "hub": false,
+      "edges": [
+        {
+          "to": "scripts",
+          "type": "INFERRED",
+          "confidence": 0.99,
+          "note": "Each test file spawns its corresponding script as a subprocess"
+        }
+      ]
+    },
+    {
+      "id": "tools",
+      "module": "tools",
+      "domain": "tooling",
+      "type": "shared-lib",
+      "detailFile": "graph/tools.md",
+      "entryPoint": null,
+      "paths": [
+        "tools/**"
+      ],
+      "fingerprint": "09234b55769c2c1df8cbec6149ad66cc9e7ce74b",
+      "hub": false,
+      "edges": []
+    }
+  ],
+  "edges": [
+    {
+      "from": "scripts",
+      "to": "skills",
+      "type": "invokes",
+      "confidence": "INFERRED"
+    },
+    {
+      "from": "skills",
+      "to": "-project-deploy",
+      "type": "reads",
+      "confidence": "INFERRED"
+    },
+    {
+      "from": "skills",
+      "to": "scripts",
+      "type": "invokes",
+      "confidence": "INFERRED"
+    },
+    {
+      "from": "tests",
+      "to": "scripts",
+      "type": "depends",
+      "confidence": "EXTRACTED"
+    }
+  ]
+}

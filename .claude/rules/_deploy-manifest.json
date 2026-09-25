@@ -1,0 +1,41 @@
+{
+  "threshold": 0.6,
+  "mode": "repo-wide",
+  "stack_keys": [
+    "ado-net-legacy",
+    "api-security",
+    "auth",
+    "backend-base",
+    "csharp-framework48",
+    "data-access",
+    "javascript",
+    "nodejs-typescript",
+    "observability",
+    "project",
+    "python",
+    "rest-api",
+    "sql-server",
+    "testing-backend"
+  ],
+  "deployed_rules": [
+    "ado-net-legacy-rules.md",
+    "api-security-rules.md",
+    "auth-rules.md",
+    "backend-base-rules.md",
+    "csharp-framework48-rules.md",
+    "data-access-rules.md",
+    "javascript-rules.md",
+    "nodejs-typescript-rules.md",
+    "observability-rules.md",
+    "project-rules.md",
+    "python-rules.md",
+    "rest-api-rules.md",
+    "sql-server-rules.md",
+    "testing-backend-rules.md"
+  ],
+  "skipped_developer_edited": [],
+  "near_miss": [],
+  "repo_type": "PYTHON_FASTAPI",
+  "deployed_at": "2026-09-24",
+  "plugin_version": "3.25.0"
+}

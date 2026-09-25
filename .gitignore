@@ -57,15 +57,20 @@ tests/migration-validation/runs/
 
 
 
-# === ai-assisted-development (managed) ===
 
+# === ai-assisted-development (managed) ===
+.claude/settings.local.json
+.claude/security-checkpoint.json
+.claude/code-review-checkpoint.json
+.claude/file-cache.json
+.claude/dream-init-state.json
 CodeReviews/*
+!CodeReviews/code-review-ledger.md
 security/*
+!security/security-ledger.md
 dynamic-scan/*
-token-analysis/*
-prod-readiness/*
-temp/*
-# Build artifacts auto-generated in test fixtures by IDE C# tooling (never commit)
-tests/fixtures/**/obj/
-tests/fixtures/**/bin/
+!dynamic-scan/dynamic-scan-ledger.md
+temp/
+.claude/plugin-path.txt
+.claude/session-context.json
 # === end ai-assisted-development ===

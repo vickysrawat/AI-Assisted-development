@@ -1,0 +1,58 @@
+{
+  "ado-net-legacy-rules.md": {
+    "deployedAt": "2026-09-24",
+    "pluginVersion": "3.25.0"
+  },
+  "api-security-rules.md": {
+    "deployedAt": "2026-09-24",
+    "pluginVersion": "3.25.0"
+  },
+  "auth-rules.md": {
+    "deployedAt": "2026-09-24",
+    "pluginVersion": "3.25.0"
+  },
+  "backend-base-rules.md": {
+    "deployedAt": "2026-09-24",
+    "pluginVersion": "3.25.0"
+  },
+  "csharp-framework48-rules.md": {
+    "deployedAt": "2026-09-24",
+    "pluginVersion": "3.25.0"
+  },
+  "data-access-rules.md": {
+    "deployedAt": "2026-09-24",
+    "pluginVersion": "3.25.0"
+  },
+  "javascript-rules.md": {
+    "deployedAt": "2026-09-24",
+    "pluginVersion": "3.25.0"
+  },
+  "nodejs-typescript-rules.md": {
+    "deployedAt": "2026-09-24",
+    "pluginVersion": "3.25.0"
+  },
+  "observability-rules.md": {
+    "deployedAt": "2026-09-24",
+    "pluginVersion": "3.25.0"
+  },
+  "project-rules.md": {
+    "deployedAt": "2026-09-24",
+    "pluginVersion": "3.25.0"
+  },
+  "python-rules.md": {
+    "deployedAt": "2026-09-24",
+    "pluginVersion": "3.25.0"
+  },
+  "rest-api-rules.md": {
+    "deployedAt": "2026-09-24",
+    "pluginVersion": "3.25.0"
+  },
+  "sql-server-rules.md": {
+    "deployedAt": "2026-09-24",
+    "pluginVersion": "3.25.0"
+  },
+  "testing-backend-rules.md": {
+    "deployedAt": "2026-09-24",
+    "pluginVersion": "3.25.0"
+  }
+}

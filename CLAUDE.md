@@ -5,9 +5,7 @@
 #
 # Stack: <set per repo — e.g. ".NET 8+ / C# · Angular 17+ · Node.js · Azure DevOps">
 #        setup-init / architect populate this from the detected repo type.
-# Domain: <business domain, identified at setup by business-context-generation.md — e.g.
-#          legal / healthcare / fintech / ecommerce / govtech / generic. Drives the
-#          project-local B-series in .claude/business-context.md. Re-run with `SET DOMAIN`.>
+# Domain: generic (developer tooling, US jurisdiction — see .claude/business-context.md)
 #        Supported backends: .NET Core · ASP.NET Framework 4.x · Java/Spring Boot · Python (FastAPI/Django/Flask) · Node.js
 #        Supported frontends: Angular · React. Tracking: Azure DevOps.
 #        NOTE: migration source/target support is a SUBSET of stack support — see the rewrite skill's
@@ -168,6 +166,8 @@ Recognised globally, no /command needed. ADO ID is case-insensitive (`ADO-1847`,
 
 ## 1. PROJECT OVERVIEW
 
+This is the **ai-assisted-development** Claude Code plugin (v3.25.0) — an ICEA-driven development workflow toolkit for distributed teams using Azure DevOps. It provides 47 skills (Markdown SKILL.md files executed by Claude), ~45 Node.js utility scripts, an enforcement hook suite, and a codebase knowledge graph system, targeting .NET, Java/Spring Boot, Python, Node.js, Angular, and React projects.
+
 Distributed team (PM · Developers · QA). All feature work is driven by ICEA documents
 (Intent · Context · Examples · Acceptance) — no ticket goes Active without an approved ICEA.
 Approved ICEAs are saved to `docs/Release{R}/Sprint{S}/UserStory{ID}/ADO-{ID}-{feature}.icea.md`.
@@ -238,3 +238,30 @@ If asked to implement something new and no approved ICEA exists: say so, run
 `/ai-assisted-development:icea-feature`, and do not proceed until `APPROVE ADO-{ID}`. This is
 output-gated — orientation, questions, and reading architecture docs are always permitted;
 only implementation-code generation is blocked. Override: `/skip-icea` (warns once; not recommended).
+
+---
+
+## Common Commands
+
+```bash
+# Run all tests (CI mode, via Jest wrapper that spawns each *.test.cjs as a subprocess)
+npm test
+
+# Run a single test file directly (each file is a self-contained node script)
+node tests/<name>.test.cjs
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with c8 coverage (HTML + cobertura + lcov in coverage/)
+npm run test:coverage
+
+# Bump version and commit release
+npm run bump:patch   # or bump:minor / bump:major
+npm run release      # bump + git commit
+
+# Audit npm dependencies for high-severity vulnerabilities
+npm audit
+```
+
+**Architecture:** This repo IS the plugin. All skills live under `skills/<skill-name>/SKILL.md` — plain Markdown read by Claude at runtime (no compilation). Scripts under `scripts/` are Node.js `.cjs` files invoked by skills via `Bash` tool calls. Tests in `tests/` mirror `scripts/` 1:1 (`scripts/foo.cjs` → `tests/foo.test.cjs`). The `_project-deploy/` folder contains the CLAUDE.md template that `setup-init-bootstrap.cjs` copies into target projects. `skills/shared/` holds cross-skill specs referenced by `$PLUGIN_DIR` paths — never by relative paths (see `skills/shared/plugin-path-resolution.md`).

@@ -119,6 +119,10 @@ execute the skill immediately — priority over chat.
 | `REWRITE STATUS ADO-{ID}` | Re-entry point: read rewrite ledger fresh, render state, end with the single Next action. Read-only. Per `skills/shared/migration-ledger-schema.md` |
 | `REPLATFORM STATUS ADO-{ID}` | Re-entry point: read replatform ledger fresh, render state, end with the single Next action. Read-only. Per `skills/shared/migration-ledger-schema.md` |
 | `MIGRATE` (and all MIGRATE variants, each `ADO-{ID}`) | **RETIRED** — `migration`/`migration-status` skills are gone. Do NOT auto-route. Use: `UPGRADE ADO-{ID}` (same stack, higher version) · `REWRITE ADO-{ID}` (different stack) · `REPLATFORM ADO-{ID}` (on-prem → cloud). See `docs/migrations/2026-09-migration-skill-family.md`. |
+| `METRICS RELEASE-{N}` | Run the release-metrics skill for Release {N} — generates `release-metrics/release-metrics-R{N}-{date}.md` (Mermaid) and `.html` (Chart.js) covering all ADOs in the release |
+| `METRICS RELEASE-{N} SPRINT-{S}` | Same as above but scoped to a single sprint |
+| `METRICS RELEASE-{N} VS RELEASE-{M}` | Same as above with explicit trend comparison against Release {M} |
+| `LESSONS RELEASE-{N}` | Alias for `METRICS RELEASE-{N}` — produces the same dual-output report; the Lessons tab is the primary focus |
 | `LESSONS ADO-{ID}` | Re-generate the lessons learned section for a single ADO — reads its ai-audit.md and tracker.md, rewrites the `### Lessons learned` section in the tracker. Then asks: "Does any lesson here belong in project-knowledge.md? (yes / no)" — on yes, shows the candidate entry and writes to `.claude/project-knowledge.md` on confirmation. |
 | `KNOWLEDGE ADD` | Add a new entry to `.claude/project-knowledge.md` — prompt for title, source ADO(s), code anchor (optional), pattern text. Write after confirmation. See `skills/shared/project-knowledge-spec.md` for format. |
 | `KNOWLEDGE REMOVE {N}` | Show entry N from `.claude/project-knowledge.md` and remove after explicit confirmation. |

@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plugin Production Readiness — 2026-09-20</title>
+<style>
+  :root {
+    --green: #16a34a; --green-bg: #f0fdf4; --green-border: #bbf7d0;
+    --yellow: #ca8a04; --yellow-bg: #fefce8; --yellow-border: #fef08a;
+    --red: #dc2626; --red-bg: #fef2f2; --red-border: #fecaca;
+    --blue: #1d4ed8; --blue-bg: #eff6ff; --blue-border: #bfdbfe;
+    --gray: #6b7280; --gray-bg: #f9fafb; --gray-border: #e5e7eb;
+    --dark: #111827; --card: #ffffff; --body: #f3f4f6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background: var(--body); color: var(--dark); line-height: 1.6; }
+  .header { background: linear-gradient(135deg,#1e1b4b 0%,#312e81 100%); color: white; padding: 2.5rem 2rem 2rem; }
+  .header h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.25rem; }
+  .header .meta { color: #c7d2fe; font-size: 0.9rem; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+  .verdict-card { border-radius: 12px; padding: 1.75rem 2rem; margin-bottom: 2rem; border: 2px solid; }
+  .verdict-notready { background: #fff7ed; border-color: #fb923c; }
+  .verdict-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .score-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; margin: 1.5rem 0; }
+  .score-card { border-radius: 10px; padding: 1.25rem; border: 1px solid; text-align: center; }
+  .score-card.green { background: var(--green-bg); border-color: var(--green-border); }
+  .score-card.yellow { background: var(--yellow-bg); border-color: var(--yellow-border); }
+  .score-card.red { background: var(--red-bg); border-color: var(--red-border); }
+  .score-val { font-size: 2rem; font-weight: 800; line-height: 1; margin-bottom: 0.25rem; }
+  .score-card.green .score-val { color: var(--green); }
+  .score-card.yellow .score-val { color: var(--yellow); }
+  .score-card.red .score-val { color: var(--red); }
+  .score-label { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gray); }
+  .score-name { font-size: 0.95rem; font-weight: 600; margin-top: 0.25rem; }
+  .actions-box { background: var(--blue-bg); border: 1px solid var(--blue-border); border-radius: 10px; padding: 1.25rem 1.5rem; margin-top: 1.25rem; }
+  .actions-box h3 { color: var(--blue); font-size: 1rem; margin-bottom: 0.75rem; }
+  .actions-box ol { padding-left: 1.25rem; }
+  .actions-box li { margin-bottom: 0.5rem; font-size: 0.95rem; }
+  .section { margin-bottom: 2rem; }
+  .section-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--gray-border); }
+  .domain-card { background: var(--card); border-radius: 10px; border: 1px solid var(--gray-border); margin-bottom: 1.25rem; overflow: hidden; }
+  .domain-header { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--gray-border); }
+  .domain-badge { font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 9999px; white-space: nowrap; }
+  .badge-green { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+  .badge-yellow { background: var(--yellow-bg); color: var(--yellow); border: 1px solid var(--yellow-border); }
+  .badge-red { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+  .domain-title { font-weight: 700; font-size: 1rem; flex: 1; }
+  .domain-score { font-size: 1.5rem; font-weight: 800; }
+  .domain-score.green { color: var(--green); }
+  .domain-score.yellow { color: var(--yellow); }
+  .domain-score.red { color: var(--red); }
+  .domain-body { padding: 1.25rem; }
+  .check-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-bottom: 1rem; }
+  .check-table th { text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gray); padding: 0.4rem 0.75rem; background: var(--gray-bg); }
+  .check-table td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--gray-border); vertical-align: top; }
+  .check-table tr:last-child td { border-bottom: none; }
+  .tick { color: var(--green); font-weight: 700; }
+  .cross { color: var(--red); font-weight: 700; }
+  .warn { color: var(--yellow); font-weight: 700; }
+  .gap-box { background: var(--red-bg); border: 1px solid var(--red-border); border-radius: 8px; padding: 0.9rem 1rem; margin-top: 0.75rem; font-size: 0.9rem; }
+  .gap-box h4 { color: var(--red); font-size: 0.85rem; text-transform: uppercase; margin-bottom: 0.4rem; }
+  .fix-box { background: var(--green-bg); border: 1px solid var(--green-border); border-radius: 8px; padding: 0.9rem 1rem; margin-top: 0.6rem; font-size: 0.9rem; }
+  .fix-box h4 { color: var(--green); font-size: 0.85rem; text-transform: uppercase; margin-bottom: 0.4rem; }
+  .warn-box { background: var(--yellow-bg); border: 1px solid var(--yellow-border); border-radius: 8px; padding: 0.9rem 1rem; margin-top: 0.6rem; font-size: 0.9rem; }
+  .warn-box h4 { color: var(--yellow); font-size: 0.85rem; text-transform: uppercase; margin-bottom: 0.4rem; }
+  .info-box { background: var(--blue-bg); border: 1px solid var(--blue-border); border-radius: 8px; padding: 0.9rem 1rem; margin-top: 0.6rem; font-size: 0.9rem; }
+  .info-box h4 { color: var(--blue); font-size: 0.85rem; text-transform: uppercase; margin-bottom: 0.4rem; }
+  code { font-family: 'Consolas','Courier New',monospace; background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.85em; }
+  .roadmap-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; }
+  .roadmap-col { background: var(--card); border: 1px solid var(--gray-border); border-radius: 10px; padding: 1.25rem; }
+  .roadmap-col h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 2px solid; }
+  .roadmap-col.blocker h3 { color: var(--red); border-color: var(--red-border); }
+  .roadmap-col.soon h3 { color: var(--yellow); border-color: var(--yellow-border); }
+  .roadmap-col.sprint h3 { color: var(--blue); border-color: var(--blue-border); }
+  .roadmap-col ul { list-style: none; padding: 0; }
+  .roadmap-col li { font-size: 0.88rem; padding: 0.4rem 0; border-bottom: 1px solid var(--gray-border); display: flex; gap: 0.5rem; align-items: flex-start; }
+  .roadmap-col li:last-child { border-bottom: none; }
+  .strengths ul { list-style: none; padding: 0; }
+  .strengths li { padding: 0.4rem 0; border-bottom: 1px solid var(--gray-border); font-size: 0.92rem; display: flex; gap: 0.5rem; }
+  .strengths li:last-child { border-bottom: none; }
+  .note-box { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 0.9rem 1rem; margin-bottom: 1.25rem; font-size: 0.88rem; color: #0c4a6e; }
+  @media (max-width: 768px) {
+    .score-grid { grid-template-columns: repeat(2,1fr); }
+    .roadmap-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🤖 Plugin Production Readiness Assessment</h1>
+  <div class="meta">ai-assisted-development · Source v3.25.0 · Installed v3.23.0 · Assessed 2026-09-20 · Domain: Plugin Dev Environment</div>
+</div>
+
+<div class="container">
+
+  <!-- Context note -->
+  <div class="note-box">
+    <strong>Assessment context:</strong> This is the plugin's own source repository (dev environment), not a target project deployment. Artifacts deployed <em>by</em> setup-init into target projects (<code>.claude/commands/</code>, <code>.claude/rules/</code>, <code>.claude/architecture/</code>, <code>.claude/graph/</code>) are legitimately absent here and are not counted as failures. Findings focus on what <em>should</em> exist in the plugin source repo itself.
+  </div>
+
+  <!-- Verdict -->
+  <div class="verdict-card verdict-notready">
+    <div class="verdict-title">🔶 Not Ready — Governance + Memory gaps block production confidence</div>
+    <div>AI-1 (Infrastructure) and AI-4 (Governance) are both below the 3/5 floor required for a ready verdict. Memory is critically bloated at 585 lines and Dream has never been run. No security scan or code-review ledger exists for this codebase. The test-plan skill (v3.25.0 feature) is unregistered in <code>plugin.json</code>.</div>
+
+    <div class="score-grid" style="margin-top:1.25rem;">
+      <div class="score-card red">
+        <div class="score-val">2</div>
+        <div class="score-label">/ 5</div>
+        <div class="score-name">AI-1 Infrastructure</div>
+      </div>
+      <div class="score-card green">
+        <div class="score-val">4</div>
+        <div class="score-label">/ 5</div>
+        <div class="score-name">AI-2 Model Routing</div>
+      </div>
+      <div class="score-card red">
+        <div class="score-val">2</div>
+        <div class="score-label">/ 5</div>
+        <div class="score-name">AI-3 Memory Health</div>
+      </div>
+      <div class="score-card red">
+        <div class="score-val">2</div>
+        <div class="score-label">/ 5</div>
+        <div class="score-name">AI-4 Governance Rails</div>
+      </div>
+      <div class="score-card yellow">
+        <div class="score-val">3</div>
+        <div class="score-label">/ 5</div>
+        <div class="score-name">AI-5 Skill Quality</div>
+      </div>
+      <div class="score-card yellow">
+        <div class="score-val">3</div>
+        <div class="score-label">/ 5</div>
+        <div class="score-name">AI-6 Session Budget</div>
+      </div>
+    </div>
+
+    <div class="actions-box">
+      <h3>Top 3 Actions</h3>
+      <ol>
+        <li><strong>Run <code>/dream</code></strong> — MEMORY.md is at 585 lines (3× the warning threshold). Consolidate before memory exceeds usable context budget.</li>
+        <li><strong>Register the test-plan skill in <code>plugin.json</code></strong> and add <code>commands/test-plan.md</code> — the skill exists in <code>skills/test-plan/</code> and is referenced in CLAUDE.md §0a but is not in the plugin manifest.</li>
+        <li><strong>Run <code>/security-review --full</code> and <code>/code-review --full</code></strong> to establish a baseline governance ledger for this codebase.</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- Domain findings -->
+  <div class="section">
+    <div class="section-title">Domain Findings</div>
+
+    <!-- AI-1 -->
+    <div class="domain-card">
+      <div class="domain-header">
+        <div class="domain-score red">2/5</div>
+        <div class="domain-title">AI-1 — Plugin Infrastructure Health</div>
+        <div class="domain-badge badge-red">RED</div>
+      </div>
+      <div class="domain-body">
+        <table class="check-table">
+          <tr><th>Check</th><th>Status</th><th>Detail</th></tr>
+          <tr><td>CLAUDE.md present</td><td><span class="tick">✅</span></td><td>Present, v3.25.0 declared</td></tr>
+          <tr><td>memory/MEMORY.md present</td><td><span class="warn">⚠️</span></td><td>Present but 585 lines — critically above 200-line threshold</td></tr>
+          <tr><td>memory/dream-log.md</td><td><span class="cross">❌</span></td><td>MISSING — Dream has never been run on this repo</td></tr>
+          <tr><td>.claude/settings.json</td><td><span class="cross">❌</span></td><td>MISSING — no model overrides or env config</td></tr>
+          <tr><td>architecture-deployment.md</td><td><span class="cross">❌</span></td><td>MISSING in .claude/architecture/</td></tr>
+          <tr><td>.claude/commands/ stubs</td><td><span class="warn">⚠️</span></td><td>0 stubs — setup-init not run on source repo (expected for plugin dev env)</td></tr>
+          <tr><td>.claude/rules/ files</td><td><span class="warn">⚠️</span></td><td>0 files — same: not deployed here (expected)</td></tr>
+          <tr><td>.claude/graph/</td><td><span class="warn">⚠️</span></td><td>MISSING — knowledge graph not generated for plugin source tree</td></tr>
+          <tr><td>.claude/file-cache.json</td><td><span class="warn">⚠️</span></td><td>MISSING</td></tr>
+          <tr><td>token-analysis/token-graph.json</td><td><span class="tick">✅</span></td><td>Present (0 sessions analyzed)</td></tr>
+          <tr><td>dream-init-state.json</td><td><span class="warn">⚠️</span></td><td>MISSING — setup-init not run on source repo</td></tr>
+          <tr><td>.gitignore coverage (13 entries)</td><td><span class="warn">⚠️</span></td><td>6 missing: security-checkpoint.json, code-review-checkpoint.json, file-cache.json, dream-init-state.json, .claude/architecture/, memory/health.html</td></tr>
+          <tr><td>Plugin version match</td><td><span class="cross">❌</span></td><td>Source 3.25.0 vs installed 3.23.0 — 2 versions of drift</td></tr>
+        </table>
+
+        <div class="gap-box">
+          <h4>Critical Gaps</h4>
+          <ul style="padding-left:1.25rem;">
+            <li>Dream never run → no memory consolidation log, MEMORY.md unmanaged</li>
+            <li>Installed plugin (3.23.0) is 2 versions behind source (3.25.0) — test-plan skill and other v3.24/3.25 changes are not deployed</li>
+            <li>6 gitignore entries missing — CI/CD could accidentally commit checkpoint and cache files</li>
+          </ul>
+        </div>
+        <div class="fix-box">
+          <h4>Fixes</h4>
+          <ul style="padding-left:1.25rem;">
+            <li>Run <code>/dream</code> immediately to establish dream-log.md and consolidate memory</li>
+            <li>Run <code>/gitignore-sync</code> to add the 6 missing entries</li>
+            <li>Install/publish v3.25.0 to close the version drift</li>
+            <li>Run <code>/setup-init</code> (or consider whether arch docs should exist for the plugin source tree)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI-2 -->
+    <div class="domain-card">
+      <div class="domain-header">
+        <div class="domain-score green">4/5</div>
+        <div class="domain-title">AI-2 — Model Routing Appropriateness</div>
+        <div class="domain-badge badge-green">GREEN</div>
+      </div>
+      <div class="domain-body">
+        <table class="check-table">
+          <tr><th>Check</th><th>Status</th><th>Detail</th></tr>
+          <tr><td>Generation tier (ICEA_MODEL)</td><td><span class="tick">✅</span></td><td><code>claude-opus-4-8</code> — correct high-capability model</td></tr>
+          <tr><td>Review tier (REVIEW_MODEL)</td><td><span class="tick">✅</span></td><td><code>claude-sonnet-4-6</code> — appropriate</td></tr>
+          <tr><td>Infrastructure tier (INFRA_MODEL)</td><td><span class="tick">✅</span></td><td><code>claude-sonnet-4-6</code> — appropriate</td></tr>
+          <tr><td>last_reviewed within cadence</td><td><span class="tick">✅</span></td><td>2026-08-21 (30 days ago, cadence 90 days — 60 days remaining)</td></tr>
+          <tr><td>No Haiku on generation tier</td><td><span class="tick">✅</span></td><td>Confirmed</td></tr>
+          <tr><td>Project-level settings.json overrides</td><td><span class="warn">⚠️</span></td><td>.claude/settings.json absent — no project env configuration documented</td></tr>
+        </table>
+        <div class="fix-box">
+          <h4>Enhancement</h4>
+          Create <code>.claude/settings.json</code> to document any project-level env overrides, even if defaults are used. This enables future per-project customisation without touching plugin.json.
+        </div>
+      </div>
+    </div>
+
+    <!-- AI-3 -->
+    <div class="domain-card">
+      <div class="domain-header">
+        <div class="domain-score red">2/5</div>
+        <div class="domain-title">AI-3 — Memory and Context Health</div>
+        <div class="domain-badge badge-red">RED</div>
+      </div>
+      <div class="domain-body">
+        <table class="check-table">
+          <tr><th>Check</th><th>Status</th><th>Detail</th></tr>
+          <tr><td>MEMORY.md line count</td><td><span class="cross">❌</span></td><td><strong>585 lines</strong> — 3× the 200-line warning threshold. Token budget risk on every session start.</td></tr>
+          <tr><td>Topic files count</td><td><span class="warn">⚠️</span></td><td>0 topic files — Dream has never split content into topic files</td></tr>
+          <tr><td>Last dream run</td><td><span class="cross">❌</span></td><td>NEVER — dream-log.md does not exist</td></tr>
+          <tr><td>Dream-log entries</td><td><span class="cross">❌</span></td><td>0 runs recorded (dream-log.md missing)</td></tr>
+          <tr><td>MEMORY.md content recency</td><td><span class="tick">✅</span></td><td>Most recent entry: 2026-09-17 — content is current but unmanaged</td></tr>
+        </table>
+
+        <div class="gap-box">
+          <h4>Critical — Memory token budget risk</h4>
+          MEMORY.md at 585 lines loads on every session start. At ~4 chars/token this is ~5,000–6,000 tokens consumed before any user message. After Dream consolidation and demotion to topic files, the target is &lt;100 lines in MEMORY.md. The current state also means no confidence scoring, no stale-entry pruning, and no promote candidates.
+        </div>
+        <div class="fix-box">
+          <h4>Fix</h4>
+          Run <code>/dream</code> now. Dream will read the 585-line MEMORY.md, score entries, demote low-confidence entries to topic files, propose ADD/UPDATE/DELETE operations, and establish the dream-log.md consolidation record. Target: MEMORY.md &lt;150 lines after first run.
+        </div>
+      </div>
+    </div>
+
+    <!-- AI-4 -->
+    <div class="domain-card">
+      <div class="domain-header">
+        <div class="domain-score red">2/5</div>
+        <div class="domain-title">AI-4 — Governance Rails</div>
+        <div class="domain-badge badge-red">RED</div>
+      </div>
+      <div class="domain-body">
+        <table class="check-table">
+          <tr><th>Check</th><th>Status</th><th>Detail</th></tr>
+          <tr><td>ICEA files present</td><td><span class="warn">⚠️</span></td><td>2 ICEA files: ADO-9000 (migration-skill-family), ADO-9004 (knowledge-freshness) — sparse coverage</td></tr>
+          <tr><td>Code review ledger</td><td><span class="cross">❌</span></td><td>MISSING — /code-review has never been run on this codebase</td></tr>
+          <tr><td>Security scan run &lt;30 days</td><td><span class="cross">❌</span></td><td>security/ directory is empty — /security-review has never been run</td></tr>
+          <tr><td>B-series override annotations</td><td><span class="cross">❌</span></td><td>Cannot determine — no security reports exist</td></tr>
+          <tr><td>PR compliance (ICEA recency)</td><td><span class="warn">⚠️</span></td><td>0 ICEA files newer than MEMORY.md — cannot determine PR workflow adoption</td></tr>
+          <tr><td>Dynamic scan</td><td><span class="cross">❌</span></td><td>No evidence of DAST run (no target app, but skill testing is expected)</td></tr>
+        </table>
+
+        <div class="gap-box">
+          <h4>Gaps</h4>
+          <ul style="padding-left:1.25rem;">
+            <li>This codebase (the plugin source) has never had a security or code-review scan — no baseline vulnerability or defect density is known</li>
+            <li>Only 2 ICEA files exist — most recent development work (test-plan skill, rewrite/upgrade/replatform refactoring) has no ICEA governance trail</li>
+          </ul>
+        </div>
+        <div class="fix-box">
+          <h4>Fixes</h4>
+          <ul style="padding-left:1.25rem;">
+            <li>Run <code>/security-review --full</code> to establish a security baseline for the plugin source tree</li>
+            <li>Run <code>/code-review --full</code> to establish a defect baseline</li>
+            <li>Ensure in-flight work (test-plan skill, etc.) has a corresponding ICEA on disk</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI-5 -->
+    <div class="domain-card">
+      <div class="domain-header">
+        <div class="domain-score yellow">3/5</div>
+        <div class="domain-title">AI-5 — Skill Quality and Consent Governance</div>
+        <div class="domain-badge badge-yellow">YELLOW</div>
+      </div>
+      <div class="domain-body">
+        <table class="check-table">
+          <tr><th>Check</th><th>Status</th><th>Detail</th></tr>
+          <tr><td>graph-index-schema.md</td><td><span class="tick">✅</span></td><td>Schema v1.1 — current</td></tr>
+          <tr><td>graph-module-schema.md</td><td><span class="tick">✅</span></td><td>Schema v1.1 — current</td></tr>
+          <tr><td>scope-flags-spec.md</td><td><span class="tick">✅</span></td><td>Spec v1.6 (2026-09-14) — current</td></tr>
+          <tr><td>source-file-consent.md</td><td><span class="tick">✅</span></td><td>Spec v1.0 — present</td></tr>
+          <tr><td>business-context-severity.md</td><td><span class="tick">✅</span></td><td>Spec v2.0 (2026-09-01) — current</td></tr>
+          <tr><td>Consent wired into review skills</td><td><span class="cross">❌</span></td><td>Only 1/4 review skills references consent spec — icea-review, pr-spec-review, code-review, security-review need audit</td></tr>
+          <tr><td>Cache-aware scanning</td><td><span class="tick">✅</span></td><td>security/SKILL.md (12 refs), code-review/SKILL.md (12 refs) — excellent</td></tr>
+          <tr><td>SRP — SIGNAL-1 (multi-persona)</td><td><span class="tick">✅</span></td><td>None detected</td></tr>
+          <tr><td>SRP — SIGNAL-5 (thick skill-less commands)</td><td><span class="tick">✅</span></td><td>None detected</td></tr>
+          <tr><td>SRP — SIGNAL-4 (size &gt;600 lines)</td><td><span class="warn">⚠️</span></td><td>5 large skills: architect (1193), icea-feature (1558), pr-create (648), release-metrics (646), setup-status (1007)</td></tr>
+          <tr><td>test-plan skill registered</td><td><span class="cross">❌</span></td><td>skills/test-plan/SKILL.md exists but NOT in plugin.json components.skills or components.commands</td></tr>
+          <tr><td>Plugin manifest completeness</td><td><span class="warn">⚠️</span></td><td>46 commands, 48 skills in plugin.json; 51 skill directories — 3 unaccounted (may include test-plan + 2 others)</td></tr>
+        </table>
+
+        <div class="gap-box">
+          <h4>Critical — test-plan skill unregistered</h4>
+          <code>skills/test-plan/SKILL.md</code> is present and CLAUDE.md §0a already documents the SAVE/EXPAND/REFRESH TEST handlers, but the skill is absent from <code>plugin.json</code>. This means it will not be deployed by install.sh and users of the installed v3.23.0 cannot use it. The 3.25.0 release is incomplete until this is registered.
+        </div>
+        <div class="warn-box">
+          <h4>SRP Inspection Required</h4>
+          icea-feature (1558 lines) and architect (1193 lines) exceed the 600-line SIGNAL-4 threshold by a significant margin. These should be inspected for SRP violations (multiple personas, multiple distinct artifact types, re-entrant stage-gated sub-phases). Until inspected and cleared (or violations fixed), AI-5 is capped at Score 3.
+        </div>
+        <div class="fix-box">
+          <h4>Fixes</h4>
+          <ul style="padding-left:1.25rem;">
+            <li>Add <code>test-plan</code> to <code>plugin.json</code> <code>components.skills</code> and <code>components.commands</code></li>
+            <li>Create <code>commands/test-plan.md</code> stub (the thin proxy command)</li>
+            <li>Audit icea-review, pr-spec-review, code-review command, security-review command for consent spec wiring (3 of 4 are missing)</li>
+            <li>Inspect icea-feature and architect for SRP violations — document clearance or split</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI-6 -->
+    <div class="domain-card">
+      <div class="domain-header">
+        <div class="domain-score yellow">3/5</div>
+        <div class="domain-title">AI-6 — Session Budget and Context Health</div>
+        <div class="domain-badge badge-yellow">YELLOW</div>
+      </div>
+      <div class="domain-body">
+        <table class="check-table">
+          <tr><th>Check</th><th>Status</th><th>Detail</th></tr>
+          <tr><td>Context limit hits</td><td><span class="tick">✅</span></td><td>0 sessions hitting &gt;85K tokens (0 sessions analyzed in token-graph)</td></tr>
+          <tr><td>--area flags available</td><td><span class="tick">✅</span></td><td>scope-flags-spec.md v1.6 present; --area, --changed, --full all supported</td></tr>
+          <tr><td>Cache-aware scanning</td><td><span class="tick">✅</span></td><td>Present in security and code-review</td></tr>
+          <tr><td>token-graph populated</td><td><span class="warn">⚠️</span></td><td>token-graph.json exists but 0 sessions — no empirical usage patterns</td></tr>
+          <tr><td>MEMORY.md context cost</td><td><span class="cross">❌</span></td><td>585 lines loads on every session — significant standing context cost (see AI-3)</td></tr>
+        </table>
+
+        <div class="warn-box">
+          <h4>Standing Budget Risk</h4>
+          The 585-line MEMORY.md is the primary session budget risk. Every new conversation loads this file, consuming ~5–6K tokens before any work begins. Resolving AI-3 (Dream run) will directly improve AI-6.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Remediation roadmap -->
+  <div class="section">
+    <div class="section-title">Remediation Roadmap</div>
+    <div class="roadmap-grid">
+      <div class="roadmap-col blocker">
+        <h3>🔴 Before Next Release (Blockers)</h3>
+        <ul>
+          <li><span>1.</span> Run <code>/dream</code> to consolidate MEMORY.md (585 lines → &lt;150)</li>
+          <li><span>2.</span> Register <code>test-plan</code> in plugin.json + create commands/test-plan.md stub</li>
+          <li><span>3.</span> Run <code>/gitignore-sync</code> to add 6 missing .gitignore entries</li>
+          <li><span>4.</span> Publish v3.25.0 to close version drift (installed at 3.23.0)</li>
+        </ul>
+      </div>
+      <div class="roadmap-col soon">
+        <h3>⚠️ Within 30 Days</h3>
+        <ul>
+          <li><span>5.</span> Run <code>/security-review --full</code> — establish security baseline</li>
+          <li><span>6.</span> Run <code>/code-review --full</code> — establish defect baseline</li>
+          <li><span>7.</span> Audit consent spec wiring in 3 missing review skills</li>
+          <li><span>8.</span> Create <code>.claude/settings.json</code> with env configuration</li>
+        </ul>
+      </div>
+      <div class="roadmap-col sprint">
+        <h3>📋 Next Sprint</h3>
+        <ul>
+          <li><span>9.</span> Inspect icea-feature (1558 lines) for SRP violations; split if violations found</li>
+          <li><span>10.</span> Inspect architect (1193 lines) for SRP violations</li>
+          <li><span>11.</span> Run <code>/token-analysis</code> to populate token-graph empirically</li>
+          <li><span>12.</span> Populate architecture docs for the plugin source tree via <code>/architect</code></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Strengths -->
+  <div class="section">
+    <div class="section-title">Strengths</div>
+    <div class="strengths">
+      <ul>
+        <li><span>✅</span> Model routing is well-configured across all 3 tiers — generation (Opus 4.8), review (Sonnet 4.6), infrastructure (Sonnet 4.6) — and last reviewed within cadence (30 days ago, 60 days remaining)</li>
+        <li><span>✅</span> All 5 shared specs present and current: graph-index-schema v1.1, graph-module-schema v1.1, scope-flags-spec v1.6, source-file-consent v1.0, business-context-severity v2.0</li>
+        <li><span>✅</span> Cache-aware scanning wired deeply into both security (12 refs) and code-review (12 refs) — expensive full-tree scans can be avoided</li>
+        <li><span>✅</span> No SRP violations detected (no multi-persona skills, no thick skill-less commands)</li>
+        <li><span>✅</span> CLAUDE.md is up to date at v3.25.0 with complete §0a keyword handlers including new SAVE/EXPAND/REFRESH TEST commands</li>
+        <li><span>✅</span> token-analysis/token-graph.json is seeded — ready to collect session data once scans run</li>
+        <li><span>✅</span> Memory content is current (most recent entry 2026-09-17) — just needs Dream consolidation to manage size</li>
+        <li><span>✅</span> .gitignore already covers 7 of 13 critical entries: settings.json, settings.local.json, CodeReviews/, security/, dynamic-scan/, token-analysis/, prod-readiness/</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="text-align:center; color: var(--gray); font-size:0.8rem; padding: 1.5rem 0; border-top: 1px solid var(--gray-border); margin-top:1rem;">
+    Plugin Production Readiness · ai-assisted-development v3.25.0 · Generated 2026-09-20 · Reads plugin state only — no application source files
+  </div>
+</div>
+</body>
+</html>

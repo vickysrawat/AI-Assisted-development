@@ -1,0 +1,42 @@
+{
+  "_comment": [
+    "Declared context headroom per skill/step (tokens). The context-guard.cjs UserPromptSubmit",
+    "hook reads this to block a developer reply when remaining < declared, preventing a step",
+    "from starting on an exhausted session. Values come from the budget table in each skill.",
+    "",
+    "model_windows: set to match the model in use. Default 200K is safe but conservative —",
+    "update to 1000000 for 1M-context models so the guard only fires when genuinely needed.",
+    "",
+    "To add a new skill: add a key under 'skills' with step → headroom pairs. The skill",
+    "participates by writing .claude/active-task.json at each STEP BOUNDARY. See",
+    "skills/shared/context-budget-spec.md for the full protocol."
+  ],
+  "default_window": 200000,
+  "model_windows": {
+    "claude-sonnet-4-6": 200000,
+    "claude-opus-4-8": 200000,
+    "claude-haiku-4-5-20251001": 200000
+  },
+  "skills": {
+    "rewrite": {
+      "step1":   40000,
+      "step1.5": 25000,
+      "step2":   25000,
+      "step2.5": 100000,
+      "step3":   10000,
+      "step5":   25000
+    },
+    "upgrade": {
+      "step1":  20000,
+      "step3":  30000,
+      "step5":  20000
+    },
+    "replatform": {
+      "R1": 25000,
+      "R2": 40000,
+      "R3": 30000,
+      "R4": 20000,
+      "R5": 20000
+    }
+  }
+}

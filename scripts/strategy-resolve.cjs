@@ -8,8 +8,8 @@
 // What it does NOT do: No LLM, no network, no git, no inference, no fallback to another stack.
 // APIs / commands:     Node fs, path. Run: node scripts/strategy-resolve.cjs --target=dotnet --json
 //                      Subset consumers (e.g. Replatform verify-only): --tokens=BUILD,TEST_ALL,SERVE,E2E
-// How to verify:       exit 0 implemented+complete · 2 malformed (missing token/STATUS) ·
-//                      3 not-implemented · 4 missing profile file.
+// How to verify:       exit 0 implemented+complete · 2 malformed (missing token, blank body,
+//                      or unfilled placeholder in body) · 3 not-implemented · 4 missing profile file.
 
 'use strict';
 const fs   = require('fs');
@@ -43,6 +43,17 @@ function headerValue(content, key) {
 // A profile declares a token as a "## TOKEN" heading.
 function hasToken(content, token) {
   return new RegExp(`^##\\s+${token}\\b`, 'm').test(content);
+}
+
+// Extract the text body of a "## TOKEN" section (content between heading and next ##).
+function tokenBody(content, token) {
+  const sections = content.split(/\n(?=##\s)/);
+  for (const section of sections) {
+    if (new RegExp(`^##\\s+${token}\\b`).test(section)) {
+      return section.replace(/^##[^\n]*\n?/, '');
+    }
+  }
+  return '';
 }
 
 function emit(json, obj, humanLines) {
@@ -100,6 +111,35 @@ function main() {
       [`❌ Profile "${args.target}" is STATUS: implemented but missing required tokens:`,
        `   ${missing.join(', ')}`,
        '   The profile is malformed; the skill STOPs.']);
+    process.exit(2);
+  }
+
+  // A8: validate token bodies — empty body or unsubstituted placeholder both exit 2.
+  // Lookbehind excludes shell ${VAR} expansions; matches {BUILD}, {build}, {Build}, etc.
+  const PLACEHOLDER_RE = /(?<!\$)\{[A-Za-z][A-Za-z0-9_]*\}/g;
+  const emptyBodies = [];
+  const unfilledPlaceholders = {};
+  for (const tok of required) {
+    const body = tokenBody(content, tok).trim();
+    if (!body) {
+      emptyBodies.push(tok);
+    } else {
+      const matches = body.match(PLACEHOLDER_RE);
+      if (matches) unfilledPlaceholders[tok] = [...new Set(matches)];
+    }
+  }
+  if (emptyBodies.length > 0 || Object.keys(unfilledPlaceholders).length > 0) {
+    emit(args.json,
+      { target: args.target, resolved: false, reason: 'incomplete-bodies',
+        empty_tokens: emptyBodies,
+        unfilled_placeholders: unfilledPlaceholders,
+        profile_path: profilePath },
+      [`❌ Profile "${args.target}" has incomplete token bodies:`,
+       emptyBodies.length ? `   Empty bodies (blank sections): ${emptyBodies.join(', ')}` : null,
+       Object.keys(unfilledPlaceholders).length
+         ? `   Unfilled placeholders: ${JSON.stringify(unfilledPlaceholders)}` : null,
+       `   Open the profile at ${profilePath}, complete each listed section, then re-run.`,
+      ].filter(Boolean));
     process.exit(2);
   }
 

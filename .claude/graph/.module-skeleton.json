@@ -1,0 +1,79 @@
+{
+  "generatedAt": "2026-09-23",
+  "structure": "flat",
+  "moduleCount": 8,
+  "modules": [
+    {
+      "id": "contest",
+      "module": "contest",
+      "domain": "contest",
+      "paths": [
+        "contest/**"
+      ],
+      "entryPoint": null
+    },
+    {
+      "id": "docs",
+      "module": "docs",
+      "domain": "docs",
+      "paths": [
+        "docs/**"
+      ],
+      "entryPoint": null
+    },
+    {
+      "id": "guides",
+      "module": "guides",
+      "domain": "guides",
+      "paths": [
+        "guides/**"
+      ],
+      "entryPoint": null
+    },
+    {
+      "id": "scripts",
+      "module": "scripts",
+      "domain": "scripts",
+      "paths": [
+        "scripts/**"
+      ],
+      "entryPoint": null
+    },
+    {
+      "id": "skills",
+      "module": "skills",
+      "domain": "skills",
+      "paths": [
+        "skills/**"
+      ],
+      "entryPoint": null
+    },
+    {
+      "id": "tests",
+      "module": "tests",
+      "domain": "tests",
+      "paths": [
+        "tests/**"
+      ],
+      "entryPoint": null
+    },
+    {
+      "id": "tools",
+      "module": "tools",
+      "domain": "tools",
+      "paths": [
+        "tools/**"
+      ],
+      "entryPoint": null
+    },
+    {
+      "id": "-project-deploy",
+      "module": "_project-deploy",
+      "domain": "_project-deploy",
+      "paths": [
+        "_project-deploy/**"
+      ],
+      "entryPoint": null
+    }
+  ]
+}

@@ -142,18 +142,45 @@ When the conservative bias rule says stop:
 
 ## Step 0 — Initialize artifacts (FIRST action — no exception)
 
+> 📊 **STEP BOUNDARY — Step 0: Initialize artifacts**
+> The checkpoint is flushed — resuming here is safe.
+> **Reply `CONTINUE` to proceed with this step.**
+> Reply `COMPACT` if the context window is near capacity:
+>   1. Run `/compact`
+>   2. Resume with `REWRITE RESUME ADO-{ID}`
+>      (The resume restarts at this step — the flush above ensures no rework.)
+> _(Do not proceed past this prompt without a reply.)_
+
+<!-- Checkpoint already flushed in this step. -->
+
 Run this step **before any analysis, any Bash call, and any user-facing output** (other than
 the friction-reduction offer, which is a question, not an artifact write). These are
 documentation artifacts — **not subject to the Write Gate** — write them immediately.
 
-**1. Create the migration log.**
+**0. Script preflight — verify all required plugin scripts exist before any execution:**
 ```bash
-mkdir -p docs/migrations/{ADO}
+REQUIRED_SCRIPTS=(
+  "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs"
+  "$PLUGIN_DIR/scripts/resolve-migration-roots.cjs"
+  "$PLUGIN_DIR/scripts/migration-source-detect.cjs"
+  "$PLUGIN_DIR/scripts/rewrite-decompose.cjs"
+  "$PLUGIN_DIR/scripts/intake-verify.cjs"
+  "$PLUGIN_DIR/scripts/graph-derive-documents.cjs"
+  "$PLUGIN_DIR/scripts/strategy-resolve.cjs"
+  "$PLUGIN_DIR/scripts/rewrite-bal.cjs"
+)
+for script in "${REQUIRED_SCRIPTS[@]}"; do
+  [ -f "$script" ] || { echo "❌ MISSING SCRIPT: $script — re-install the plugin or run /setup-sync."; exit 1; }
+done
+echo "✅ All required scripts present."
 ```
-Then write `docs/migrations/{ADO}/migration-log.md` with the exact header from
-`migration-log-spec.md § Initialization`:
+If any script is missing: **STOP** — do not proceed. Run `/setup-sync` or reinstall the plugin.
 
-```markdown
+**1. Create and verify the migration log** — write and verify in a single Bash chain (mechanically inseparable):
+
+```bash
+mkdir -p docs/migrations/{ADO} && \
+cat > docs/migrations/{ADO}/migration-log.md << 'LOGEOF'
 # Migration Log — {AppName} Rewrite (ADO-{ID})
 Living document. Updated at every decision point. Never truncated — the full history is the asset.
 Source: {full/source/path} ({source stack} {source version}) · Target: {target stack + versions} · {architecture pattern} · {hosting} · Skill: Rewrite
@@ -194,6 +221,19 @@ Future migrations of similar apps: read the ## Lessons section.
 
 ## Transferable Patterns
 
+LOGEOF
+head -1 docs/migrations/{ADO}/migration-log.md && \
+grep -c "## Decisions summary" docs/migrations/{ADO}/migration-log.md
+```
+
+If the chain exits non-zero (directory creation failed, write failed, `head` returns wrong first
+line, or `grep` count is 0): **stop immediately** — do not proceed to tracker or checkpoint
+creation. Report the exact shell output to the developer.
+Recovery is a separate, explicitly approved action — never automatic:
+```bash
+# Recovery only — do not run automatically:
+mkdir -p docs/migrations/{ADO}
+# Then re-attempt the write + verify chain above.
 ```
 
 Phase headings, Decisions summary, Risks accepted, and Lessons sections are pre-populated empty so events and rows can be appended as the migration progresses — never pre-fill them with placeholder data.
@@ -206,10 +246,37 @@ node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" init --skill=rewrite --ado={ADO
 ```
 This creates `.claude/migration/{ADO}.checkpoint.json` — a **git-ignored, machine-readable** file
 used exclusively for inter-script state sharing (`intake-verify.cjs`, `rewrite-bal.cjs`,
-`checkpoint-ledger.cjs`). It is NOT the resume mechanism and is NOT committed. Do not describe it
-to the developer as a tracker. The `migration-tracker.md` (next) is the resume mechanism.
+`checkpoint-ledger.cjs`). It is the **primary resume record** — machine-written and script-validated.
+Do not describe it as a tracker. The `migration-tracker.md` (next) is the human-readable display artifact.
 
-**3. Create the migration tracker.**
+**3. Resolve migration roots** — discover all dependency repositories the migration should include.
+Must run AFTER `checkpoint-ledger init` so set-source can merge into the existing ledger without auto-creating a parallel envelope. Writes `migrationRoots` to the SOURCE app's settings (not the target CWD):
+```bash
+node "$PLUGIN_DIR/scripts/resolve-migration-roots.cjs" \
+  --source-path=<source-application-path-provided-by-developer> \
+  --write-to=<source-application-path-provided-by-developer>/.claude/settings.local.json \
+  --depth=3 --json
+```
+- Exit 0 → migrationRoots recorded in the source app's `.claude/settings.local.json` → continue.
+- Exit 5 → plugin not integrated in source: present this prompt to the developer:
+  ```
+  ⚠ No plugin configuration found at {source_path}/.claude/settings.local.json.
+     Are there dependency repositories the migration should include beyond {source_path}?
+     Provide comma-separated absolute paths, or NONE to proceed with source root only:
+     > ___
+  ```
+  On NONE: log a `[FINDING]` entry to `migration-log.md`: "Scope limited to source root only — dependencies may be missed."
+  On paths provided: validate each exists (`test -d`), then manually write the developer-provided paths to `settings.local.json`.migrationRoots (alongside `sourcePath`) and continue.
+- Exit 6 → STOP: report the missing directory path and which settings file configured it. Developer must fix before proceeding.
+
+After exit 0 (or manual path entry on exit 5), record migrationRoots in the ledger:
+```bash
+SOURCE_SETTINGS=<source-application-path-provided-by-developer>/.claude/settings.local.json
+MIGRATION_ROOTS=$(node -e "const fs=require('fs');try{const s=JSON.parse(fs.readFileSync(process.env.SOURCE_SETTINGS||'$SOURCE_SETTINGS','utf8'));process.stdout.write(JSON.stringify(s.migrationRoots||[]))}catch(e){process.stdout.write('[]')}")
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-source --skill=rewrite --ado={ADO} --roots-json="$MIGRATION_ROOTS"
+```
+
+**4. Create the migration tracker.**
 Write `docs/migrations/{ADO}/migration-tracker.md` immediately — this is the human-readable,
 committed resume point. Use this template (fill in what is known; mark the rest `⬜ Not started`):
 
@@ -261,15 +328,29 @@ Run Step 1 — detect the source stack:
 `node "$PLUGIN_DIR/scripts/migration-source-detect.cjs" --roots=<source> --json`
 ```
 
-**4. Verify all three exist before proceeding.**
-If any of the three writes (migration log, migration tracker, checkpoint ledger init) fails,
-**stop and report the error** — never continue without all three in place.
+**4. Verify the migration tracker and checkpoint ledger exist.**
+(The migration log was verified by its write+chain exit code above — no additional check needed.)
+```bash
+test -f docs/migrations/{ADO}/migration-tracker.md && echo "tracker OK" || echo "tracker MISSING — STOP"
+```
+If the checkpoint ledger init (Step 3 above) produced a non-zero exit, that was already a stop
+condition. If the tracker is missing: **stop and report** — do not proceed to Step 1.
 
 ---
 
 ## Step 1 — Intake & posture (implemented — AC-F4)
 
-**Context check.** Verify > 80K tokens remain before proceeding. If < 40K, stop and surface the tracker per the Context budget management section above. Expected cost for Step 1: ~10–15K tokens.
+> 📊 **STEP BOUNDARY — Step 1: Intake & posture**
+> Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step1","ado":"{ADO}"}`
+> The checkpoint is flushed — resuming here is safe.
+> **Reply `CONTINUE` to proceed with this step.**
+> Reply `COMPACT` if the context window is near capacity:
+>   1. Run `/compact`
+>   2. Resume with `REWRITE RESUME ADO-{ID}`
+>      (The resume restarts at this step — the flush above ensures no rework.)
+> _(Do not proceed past this prompt without a reply.)_
+
+**Context check.** Expected cost for Step 1: ~25–40K tokens (see budget table above). Apply the conservative bias rule — if the previous step consumed significantly more than expected, stop and compact before continuing.
 
 **Friction reduction (once per session).** Before the first Bash call, run the offer per
 `$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/friction-reduction-spec.md` — check
@@ -293,9 +374,27 @@ developer once. YES → merge patterns + confirm; NO → continue without writin
 
 **Update migration-tracker.md** — mark Phase 1 ✅, update "Next action" to "Run Step 1.5 integration verification", add source-context-manifest.md and integration-inventory.md to the Committed artifacts table (as ⬜ pending).
 
+```bash
+# Flush checkpoint before next step
+node scripts/checkpoint-ledger.cjs set-gate --skill=rewrite --ado={ADO_ID} --gate=step_1_intake_complete --verdict=PASS
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=source_stack --value={SOURCE_STACK}
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=posture --value={POSTURE}
+```
+
 ---
 
 ## Step 1.5 — Integration verification + oracle mode detection (new)
+
+> 📊 **STEP BOUNDARY — Step 1.5: Integration verification + oracle mode detection**
+> The checkpoint is flushed — resuming here is safe.
+> **Reply `CONTINUE` to proceed with this step.**
+> Reply `COMPACT` if the context window is near capacity:
+>   1. Run `/compact`
+>   2. Resume with `REWRITE RESUME ADO-{ID}`
+>      (The resume restarts at this step — the flush above ensures no rework.)
+> _(Do not proceed past this prompt without a reply.)_
+
+<!-- Checkpoint already flushed in this step. -->
 
 **Context check.** Expected cost for Step 1.5: ~15–25K tokens (depends on integration count). Stop and surface tracker if < 40K remaining.
 
@@ -307,6 +406,11 @@ Run before options are presented. Produces two outputs that feed the options pre
 - Produces the **Integration Inventory** — documentation artifact, not subject to the Write Gate. Write immediately to `docs/migrations/{ADO}/integration-inventory.md`.
 - Classification per service: data-access-only | business-logic | mixed | unknown
 - Options derived per service: inline as project | NuGet package | keep external
+- Pre-append guard — run before writing any log entries:
+  ```bash
+  test -f docs/migrations/{ADO}/migration-log.md && echo "log OK" || echo "log ABSENT — STOP: return to Step 0"
+  ```
+  If absent: halt Step 1.5, report to the developer. Do not create the file here — recovery belongs in Step 0.
 - Write `[INTEGRATION]` migration log entries per `migration-log-spec.md` (log initialized at Step 0)
 
 **PARTIAL rows during options:** advisory — highlighted and flagged in the options table but
@@ -327,11 +431,12 @@ authored with unverified auth schemes. The developer must resolve them before th
 Before options, read the source's own documented knowledge AND source code, then author the
 **Source Context Manifest** (`docs/migrations/{ADO}/source-context-manifest.md`, from
 `$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/source-context-manifest-template.md`): source context
-files (CLAUDE.md, architecture docs, settings), every `additionalDirectories` root, the cross-cutting
+files (CLAUDE.md, architecture docs, settings), every `migrationRoots` entry, the cross-cutting
 concern scan (impl, not declaration), and **full source coverage** — every `graph.json` module marked
 `mapped`/`out-of-scope`, behavior-bearing units cited to a **source** `file#line`. Then verify:
 ```bash
 node "$PLUGIN_DIR/scripts/intake-verify.cjs" verify --manifest=docs/migrations/{ADO}/source-context-manifest.md \
+  --settings=<source-application-path-provided-by-developer>/.claude/settings.local.json \
   --skill=rewrite --inventory=docs/migrations/{ADO}/integration-inventory.md --json
 ```
 Exit 0 → record the gate in the checkpoint ledger immediately:
@@ -339,15 +444,20 @@ Exit 0 → record the gate in the checkpoint ledger immediately:
 node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
   --skill=rewrite --ado={ADO} --gate=intake_context --verdict=PASS
 ```
-Then record source context fields:
+Then record full source_context including summary. Use the `modules_total`, `modules_mapped`,
+`modules_out_of_scope` values from the `--json` output above. Set `coverage_verdict` to `"full"`
+if `modules_out_of_scope == 0`, otherwise `"partial"`:
 ```bash
 node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-payload \
   --skill=rewrite --ado={ADO} \
-  --payload-json='{"source_context":{"manifest_path":"docs/migrations/{ADO}/source-context-manifest.md","verified":true}}'
+  --payload-json='{"source_context":{"manifest_path":"docs/migrations/{ADO}/source-context-manifest.md","verified":true,"roots_expected":[{ROOTS_ARRAY}],"modules_total":{N},"modules_mapped":{M},"modules_out_of_scope":{K},"verified_at":"{DATE}","summary":{"coverage_verdict":"{full|partial}","modules_total":{N},"modules_mapped":{M},"modules_out_of_scope":{K},"partial_row_count":0}}}'
 ```
-Exit 2/3/4/5/6/7/8/9 → **STOP** and resolve (missing manifest · uncovered root · dangling citation ·
+The `manifest-read-guard.cjs` hook arms after this write — subsequent Read calls to the manifest
+are blocked and redirected to `source_context.summary` in the ledger.
+Exit 2/3/4/5/6/7/8/9 → **STOP** and resolve (missing/empty manifest · uncovered root · dangling citation ·
 PARTIAL with reachable source · unwired dependency · unaccounted module · behavior cited to a doc ·
 cross-cutting scan missing/empty/uncited).
+Exit 2 check `--json` reason field: `manifest-missing` = file absent, start fresh from the manifest template; `manifest-empty` = file exists but is empty, run `git log -- docs/migrations/{ADO}/source-context-manifest.md` before deciding to re-author from scratch.
 A judge pass confirms `unwired_candidates[]` and that the cross-cutting scan found real concerns.
 
 Record all three outputs in the checkpoint before proceeding to Step 2.
@@ -356,6 +466,15 @@ Record all three outputs in the checkpoint before proceeding to Step 2.
 ---
 
 ## Step 2 — Options (assurance × effort × TCO, including DAG per option) (updated)
+
+> 📊 **STEP BOUNDARY — Step 2: Options**
+> The checkpoint is flushed — resuming here is safe.
+> **Reply `CONTINUE` to proceed with this step.**
+> Reply `COMPACT` if the context window is near capacity:
+>   1. Run `/compact`
+>   2. Resume with `REWRITE RESUME ADO-{ID}`
+>      (The resume restarts at this step — the flush above ensures no rework.)
+> _(Do not proceed past this prompt without a reply.)_
 
 **Write the options file to disk before presenting to the developer.** The options file is a required
 artifact — write it immediately after completing the options analysis, before showing the options table
@@ -455,7 +574,56 @@ integration-specific questions surfaced by PARTIAL rows.}
 
 ---
 
+{Judge verdict gate — include in the options document based on the verdict the judge returned:}
+
+{If judge_verdict is PASS:}
+> ✅ **Judge verdict (options_judge): PASS** — [one-line summary from the `## Judge Analysis` section above]
+
+{If judge_verdict is REVISE:}
+> ⛔ **JUDGE VERDICT: REVISE — acknowledgement required before `APPROVE OPTIONS`.**
+> The judge identified findings (see `## Judge Analysis` above) that should be addressed before
+> committing to a target option. You may override if you have reviewed the findings and accept the risk.
+>
+> To proceed, type exactly:
+> `I ACKNOWLEDGE THE JUDGE VERDICT: options_judge — [one sentence stating what you accept]`
+>
+> On receipt: record `set-gate --gate=options_judge_acknowledged --verdict=ACKNOWLEDGED`,
+> then display the APPROVE OPTIONS or PROCEED prompt.
+> Do NOT display `APPROVE OPTIONS` or `PROCEED` without this acknowledgement.
+
+{If judge_verdict is BLOCK:}
+> 🚫 **JUDGE VERDICT: BLOCK — `options_judge` is a hard block. Named approver required.**
+> See `## Judge Analysis` above for the blocking finding.
+>
+> To proceed, type exactly:
+> `APPROVER: [full name] REASON: [written justification]`
+>
+> On receipt: record `set-gate --gate=options_judge_block_override --verdict=BLOCK_OVERRIDE`
+> with approver and reason in the payload, then display the APPROVE OPTIONS prompt.
+> Do NOT display `APPROVE OPTIONS` without this override.
+
+---
+
+{If the PARTIAL integration rows table above is **empty** (zero PARTIAL rows):}
 _To proceed: `APPROVE OPTIONS ADO-{ID} [A | B | C]` with answers to the pre-design questions above._
+
+{If the PARTIAL integration rows table above contains **one or more rows**:}
+> ⚠ **{N} PARTIAL integration row(s) remain — advisory now, hard block at APPROVE DESIGN.**
+> Every PARTIAL row must be resolved to `VERIFIED` before `APPROVE DESIGN` closes.
+> `target-integration-architecture.md` and `target-security-architecture.md` cannot be accurately
+> authored with unverified contracts. Authoring them against unresolved rows will require a
+> full revision cascade when the block fires at Step 2.5.
+>
+> Unresolved PARTIAL rows:
+> {for each PARTIAL row: `- **{service name}**: {what must be resolved}`}
+>
+> **Reply with one of:**
+> - `PROCEED ADO-{ID} [A|B|C]` — acknowledge the PARTIAL rows and commit to resolving them
+>   before Step 2.5 design authoring begins. Records a `[DECISION]` migration log entry:
+>   `PARTIAL rows acknowledged at Options — {N} rows outstanding: {service names}.`
+> - `STOP` — return to Step 1.5 Integration Inventory to resolve PARTIAL rows first.
+>
+> Do NOT reply `APPROVE OPTIONS` when PARTIAL rows are present — use `PROCEED` or `STOP`.
 ```
 
 **After APPROVE OPTIONS:** update the status line in `{ADO}-options.md` from
@@ -472,7 +640,8 @@ generated options (`references/byo-design.md`) — never silently accepted.
 **Intake gate precondition (fail-closed).** Before decomposing, confirm the intake gate is PASS —
 `decompose` must not run on unread source:
 ```bash
-node "$PLUGIN_DIR/scripts/intake-verify.cjs" check-gate --ado={ADO} --json   # non-zero → STOP, finish Step 1.5
+node "$PLUGIN_DIR/scripts/intake-verify.cjs" check-gate --ado={ADO} \
+  --settings=<source-application-path-provided-by-developer>/.claude/settings.local.json --json   # non-zero → STOP, finish Step 1.5
 ```
 
 **Each option carries its OWN target-space DAG** — there is no target application yet, so the source
@@ -513,13 +682,49 @@ Step 2.5, once `target-component-architecture.md` is authored, **re-derive** the
 DAG from the finalized component inventory (basis promoted from INFERRED → `computed`); that committed
 DAG feeds Step 3 (code generation).
 
+```bash
+# Flush checkpoint before next step
+node scripts/checkpoint-ledger.cjs set-gate --skill=rewrite --ado={ADO_ID} --gate=options_approved --verdict=PASS
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=selected_option --value={SELECTED_OPTION}
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=committed_dag_path --value={COMMITTED_DAG_PATH}
+```
+
 ## Step 2.5 — Target design documents (new)
 
-**Context check.** Expected cost for Step 2.5: ~60–100K tokens (7 documents, design review loops). Stop and surface tracker if < 80K remaining — this step cannot be split mid-document.
+> 📊 **STEP BOUNDARY — Step 2.5: Target design documents**
+> Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step2.5","ado":"{ADO}"}`
+> The checkpoint is flushed — resuming here is safe.
+> **Reply `CONTINUE` to proceed with this step.**
+> Reply `COMPACT` if the context window is near capacity:
+>   1. Run `/compact`
+>   2. Resume with `REWRITE RESUME ADO-{ID}`
+>      (The resume restarts at this step — the flush above ensures no rework.)
+> _(Do not proceed past this prompt without a reply.)_
+
+<!-- Checkpoint already flushed in this step. -->
+
+**Context check.** Main-session orchestration cost for Step 2.5: ~10–20K (see budget table above). Per-document drafting runs in isolated subagents (~8–15K each × 7 docs = ~56–105K in subagents, not counted against the main session). The context guard requires 100K headroom before this step starts — if it blocked your reply, run /compact then `REWRITE RESUME ADO-{ID}`. This step cannot be split mid-document.
 
 Runs after `APPROVE OPTIONS`, before any code generation. The selected option's **inferred** target-space
 DAG (from Step 2) is the working baseline the component architecture document is authored against; the
 committed DAG is re-derived from that document below (step 5).
+
+**0. Spec preflight — verify all required specs exist before spawning any subagent:**
+```bash
+REQUIRED_SPECS=(
+  "$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/target-design-spec.md"
+  "$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/document-orchestrator.md"
+  "$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/golden-master-spec.md"
+  "$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/feasibility-spec.md"
+  "$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/design-revision-spec.md"
+  "$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/integration-verification-spec.md"
+)
+for spec in "${REQUIRED_SPECS[@]}"; do
+  [ -f "$spec" ] || { echo "❌ MISSING SPEC: $spec — fix the plugin installation before proceeding."; exit 1; }
+done
+echo "✅ All required specs present."
+```
+If any spec is missing: **STOP** — do not spawn subagents. Re-run `/setup-sync` or reinstall the plugin before retrying.
 
 **1. Derive the document-authoring order:**
 ```bash
@@ -550,12 +755,28 @@ After `APPROVE DESIGN`, record the gate in the checkpoint ledger:
 ```bash
 node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
   --skill=rewrite --ado={ADO} --gate=design_approved --verdict=PASS
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=committed_dag_path --value={COMMITTED_DAG_PATH}
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=design_doc_paths --value={DESIGN_DOC_PATHS}
 ```
 
 **3. Developer reviews and the feedback loop runs** via `design-revision-spec.md`:
 - Corrections → `document-feedback.md` (revision cascade)
 - Option changes → `option-change-spec.md` (bounded | significant | fundamental)
 - New information → routed through the appropriate verification spec first
+
+**Judge verdict gate — run before displaying APPROVE DESIGN:**
+```bash
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" check-gate \
+  --skill=rewrite --ado={ADO} --gate=design_judge --json
+```
+- **Exit 0 (PASS):** display inline: `✅ Judge verdict (design_judge): PASS — [one-line summary from the judge's review of the design documents]` then proceed to APPROVE DESIGN.
+- **Exit 1 (REVISE):** **DO NOT display APPROVE DESIGN.** Show the full judge output and require:
+  `I ACKNOWLEDGE THE JUDGE VERDICT: design_judge — [one sentence stating what you accept]`
+  On receipt: record `set-gate --gate=design_judge_acknowledged --verdict=ACKNOWLEDGED`; then display APPROVE DESIGN.
+- **Exit 2 (BLOCK):** **DO NOT display APPROVE DESIGN.** Show the full judge output and require:
+  `APPROVER: [full name] REASON: [written justification]`
+  On receipt: record `set-gate --gate=design_judge_block_override --verdict=BLOCK_OVERRIDE`.
+- **Exit 3 (no verdict):** the judge has not assessed the design documents. Show: `⚠ Judge has not run for gate design_judge — complete the judge pass before APPROVE DESIGN.` Do not display APPROVE DESIGN.
 
 **4. APPROVE DESIGN** — all 7 documents must reach `Status: APPROVED` with no PARTIAL/UNVERIFIED
 integration rows remaining. Records `payload.rewrite.gate_verdicts.design_approved = true`.
@@ -577,6 +798,15 @@ loop wave) per `migration-log-spec.md`.
 
 ## Step 3 — Resolve execution profile, then generate per cluster + design-quality gate (was Step 4)
 
+> 📊 **STEP BOUNDARY — Step 3: Resolve execution profile + generate per cluster**
+> The checkpoint is flushed — resuming here is safe.
+> **Reply `CONTINUE` to proceed with this step.**
+> Reply `COMPACT` if the context window is near capacity:
+>   1. Run `/compact`
+>   2. Resume with `REWRITE RESUME ADO-{ID}`
+>      (The resume restarts at this step — the flush above ensures no rework.)
+> _(Do not proceed past this prompt without a reply.)_
+
 **First, resolve the target execution profile** — the stack-specific commands/paths that keep this
 skill's logic stack-agnostic (`$PLUGIN_DIR/skills/shared/migration-knowledge/refs/strategies/README.md`).
 Run at the start of the generation phase, once per target track:
@@ -589,7 +819,7 @@ node "$PLUGIN_DIR/scripts/strategy-resolve.cjs" --target=<target-token> --json
 | Exit | Meaning | Action |
 |---|---|---|
 | 0 | resolved (`STATUS: implemented`, full token contract present) | proceed; if `unverified:true`, log a `⚠ MATURITY` warning in the migration log — informational, no developer response required |
-| 2 | implemented but a required token is missing (malformed profile) | **STOP** — fix the profile |
+| 2 | malformed profile: required token missing, token body blank, or body contains an unsubstituted placeholder (`{BUILD}`, `{build}`) | **STOP** — open the profile at `profile_path`; JSON shows `missing_tokens`, `empty_tokens`, or `unfilled_placeholders` |
 | 3 | `STATUS` not `implemented` (stub) | **STOP** — target not runnable |
 | 4 | no profile file for the target token | **STOP** — never fall back to another stack's toolchain (same honest-refusal rule as an unmapped source) |
 
@@ -598,6 +828,48 @@ Use the resolved profile's tokens for every stack-specific command below — `SK
 (per-cluster generation), and `TEST_ALL` + `COVERAGE` + `SERVE` + `E2E` + `CONFIG` + `FITNESS`
 (verification, Step 4). Never hard-code `dotnet build` / `npm run build` from memory — read them from the
 profile.
+
+Exit 2 also fires for two body-level failures: (a) a token heading exists but its body is blank
+(empty section), or (b) the body contains an unsubstituted template placeholder — `{UPPER_CASE}`,
+`{lowercase}`, or `{MixedCase}` (any brace-enclosed identifier not preceded by `$`). JSON fields:
+`empty_tokens: ["BUILD"]` or `unfilled_placeholders: { "BUILD": ["{BUILD}"] }`. Remediation: open
+the profile at `profile_path`, complete or fill in each listed section, then re-run.
+
+**DAG cluster spec generation — run before any worktree is created.**
+
+This is the AUTHORITATIVE cluster schedule. Output is saved to disk; all cluster assignments,
+wave ordering, and dependency order in this step come exclusively from this file. The LLM never
+re-derives cluster specs from design documents — not on first run, not on resume, not after
+session compaction.
+
+```bash
+node "$PLUGIN_DIR/scripts/rewrite-decompose.cjs" decompose \
+  --graph=<committed_dag_path> --space=target --json \
+  > docs/migrations/{ADO}/cluster-spec.json
+echo "decompose exit: $?"
+```
+
+`<committed_dag_path>` = `payload.rewrite.committed_dag_path` from the checkpoint.
+If absent, re-derive from `target-component-architecture.md` using the same inputs as Step 2.5.
+
+| Exit | `acyclic` field | Action |
+|---|---|---|
+| 0 | `true` | `cluster-spec.json` is valid — use `worktree_plan` for wave schedule, `clusters` for module lists, `order` for build order. Proceed. |
+| 11 | `false` | **ABORT** — `cluster-spec.json` is invalid (`acyclic: false`; `cycles` array names offending modules). Do not create any worktree or spawn any subagent. Tell the developer: _"DAG cycle detected among [{cycles}]. Fix the dependency in `target-component-architecture.md`, then re-run Step 2.5 to re-derive the DAG and get `APPROVE DESIGN` again."_ |
+| 1 | — | **ABORT** — graph file is malformed or missing. Show stderr; instruct the developer to re-derive at Step 2.5. |
+
+Record the spec path in the checkpoint:
+```bash
+node scripts/checkpoint-ledger.cjs set-payload \
+  --skill=rewrite --ado={ADO_ID} \
+  --key=cluster_spec_path \
+  --value=docs/migrations/{ADO}/cluster-spec.json
+```
+
+**All cluster scheduling below reads ONLY from `cluster-spec.json`:**
+- Wave schedule: `worktree_plan` array — wave 1 clusters first, wave 2 next, etc.
+- Cluster list: `clusters` array — each cluster's `name` and `modules`
+- Build order: `order` array — topological sort result
 
 **Execution model: orchestrator + subagent per cluster.**
 The main session is the **orchestrator only** — it does NOT generate code directly. Each cluster
@@ -643,7 +915,14 @@ Context files (read these at the start — use the paths below, read fresh from 
   - ERL spec: {PLUGIN_DIR}/skills/rewrite/references/erl.md
 
 Your instructions are the 8 numbered steps listed in the ## Cluster subagent section that the orchestrator has copied below this line. Follow them in order.
-Return a structured result containing: verdict, diff_path, assurance_path, test_plan_path, log_fragment_path, bal_grade, checkpoint_payload_json.
+Write your checkpoint payload to disk — do NOT return it as JSON text (avoids shell quoting failures and truncation):
+```bash
+mkdir -p ".claude/migration/{ADO}/clusters/{N}"
+cat > ".claude/migration/{ADO}/clusters/{N}/cluster-{N}-payload.json" << 'PAYLOAD'
+{ "cluster_{N}_verdict": "<PASS|REVISE|BLOCK>", "cluster_{N}_assurance_path": "<path>", "cluster_{N}_test_plan_path": "<path>", "cluster_{N}_bal_grade": "<A|B|C|D>" }
+PAYLOAD
+```
+Return in your text response: `verdict`, `diff_summary` (one paragraph), `diff_path`, `assurance_path`, `test_plan_path`, `log_fragment_path`, `bal_grade`. These short fields are safe to return as text.
 ```
 
 Create the worktree before spawning. Use a fixed path pattern so the orchestrator and subagent agree:
@@ -663,13 +942,13 @@ return before proceeding to the next wave.
 - `test_plan_path`: `docs/migrations/{ADO}/{ADO}-cluster-{N}-test-plan.md`
 - `log_fragment_path`: `docs/migrations/{ADO}/cluster-{N}-log-fragment.md`
 - `bal_grade`: the BAL grade (A | B | C | D) computed by rewrite-bal.cjs
-- `checkpoint_payload_json`: JSON string for `checkpoint-ledger.cjs set-payload` — the orchestrator runs this after the wave, sequentially, to avoid concurrent checkpoint writes
+- Checkpoint payload written to `.claude/migration/{ADO}/clusters/{N}/cluster-{N}-payload.json` by the subagent
 
-**Step B2 — Update checkpoint sequentially.** After all subagents in the wave return (not during the wave), run the checkpoint update for each cluster in order:
+**Step B2 — Update checkpoint sequentially.** After all subagents in the wave return (not during the wave), run the checkpoint update for each cluster in order using the file written by the subagent — never inject JSON through the shell:
 ```bash
 node "{PLUGIN_DIR}/scripts/checkpoint-ledger.cjs" set-payload \
   --skill=rewrite --ado={ADO} \
-  --payload-json='{checkpoint_payload_json from subagent}'
+  --payload-file=".claude/migration/{ADO}/clusters/{N}/cluster-{N}-payload.json"
 ```
 Never run checkpoint updates from inside the cluster subagent — sequential updates in the orchestrator prevent concurrent JSON corruption.
 
@@ -683,9 +962,20 @@ The Write Gate lives in the orchestrator (main session), not in the subagent. On
 the orchestrator commit the worktree files to the target folder.
 
 **Step D — Handle REVISE / BLOCK.**
-- REVISE: re-spawn the subagent with the findings appended to the prompt. Cap at 3 iterations; on
-  iteration 4 escalate to the developer before continuing.
-- BLOCK: stop the wave immediately; surface the blocking finding to the developer.
+- REVISE: re-spawn the subagent with the findings appended to the prompt. Cap at 3 iterations. On
+  iteration 4, **halt and require developer acknowledgement before any further re-spawn:**
+  > ⛔ **Cluster {N} ({name}) — REVISE verdict after 3 iterations. Developer action required.**
+  > Findings from latest iteration: [paste the subagent's current finding list verbatim]
+  > To re-spawn iteration 4, type: `I ACKNOWLEDGE THE JUDGE VERDICT: cluster-{N} — [one sentence stating what you accept and why re-try is warranted]`
+  > To skip this cluster, type: `SKIP CLUSTER {N}`
+  > Do not re-spawn without a developer reply.
+- BLOCK: **halt the wave immediately and require developer acknowledgement before closing the cluster:**
+  > 🚫 **Cluster {N} ({name}) — BLOCK verdict. Wave halted.**
+  > Blocking finding: [paste the subagent's blocking finding verbatim]
+  > This cluster cannot proceed without an explicit override from a named approver.
+  > To acknowledge and skip, type: `APPROVER: [full name] REASON: [written justification]`
+  > To retry from scratch, type: `RETRY CLUSTER {N}`
+  > Do not close the cluster without a developer reply.
 
 **Step E — Append log fragments.** After all subagents in the wave return, append each cluster's
 `cluster-{N}-log-fragment.md` to `migration-log.md` sequentially in cluster order, then delete
@@ -730,6 +1020,12 @@ corrupt the file.
 
 8. **Return structured result** to the orchestrator: verdict, diff_path, assurance_path, test_plan_path, log_fragment_path, bal_grade, checkpoint_payload_json.
 
+```bash
+# Flush checkpoint before next step
+node scripts/checkpoint-ledger.cjs set-gate --skill=rewrite --ado={ADO_ID} --gate=step_3_wave_N_complete --verdict=PASS
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=wave_N_cluster_paths --value={WAVE_N_CLUSTER_PATHS}
+```
+
 ## Step 4 — Per-cluster BAL + ERL — runs inside the cluster subagent
 
 All BAL + ERL instructions are in cluster subagent step 6 (above). Step 4 is a reference anchor only.
@@ -747,6 +1043,15 @@ docs/migrations/{ADO}/{ADO}-assurance-summary.md
 Include: all clusters, their BAL grade (from `bal_grade` in Step B return values), ERL grade per domain, and the final whole-target assurance (weakest-link across all clusters). Write this after Step 5 completion gate passes.
 
 ## Step 5 — Two-gate model (was Step 6)
+
+> 📊 **STEP BOUNDARY — Step 5: Two-gate model**
+> The checkpoint is flushed — resuming here is safe.
+> **Reply `CONTINUE` to proceed with this step.**
+> Reply `COMPACT` if the context window is near capacity:
+>   1. Run `/compact`
+>   2. Resume with `REWRITE RESUME ADO-{ID}`
+>      (The resume restarts at this step — the flush above ensures no rework.)
+> _(Do not proceed past this prompt without a reply.)_
 
 The `<provisional>` BAL grade comes from each cluster subagent's `bal_grade` return value (collected in Step B). Run the merge gate for each cluster using that value:
 ```bash
@@ -774,7 +1079,24 @@ this is a documentation artifact, not subject to the Write Gate. Then prompt the
 and remove any residual project-specific detail before closing the migration."
 **Update migration-tracker.md** — mark Phase 5 ✅, add {ADO}-assurance-summary.md to Committed artifacts, update "Next action" to "Run Step 5a: verify cluster test plan paths and assemble combined test plan".
 
+```bash
+# Flush checkpoint before next step
+node scripts/checkpoint-ledger.cjs set-gate --skill=rewrite --ado={ADO_ID} --gate=merge_gate --verdict=PASS
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=assurance_summary_path --value={ASSURANCE_SUMMARY_PATH}
+```
+
 ## Step 5a — Collect test plans and assemble combined document (orchestrator)
+
+> 📊 **STEP BOUNDARY — Step 5a: Collect test plans + assemble combined document**
+> The checkpoint is flushed — resuming here is safe.
+> **Reply `CONTINUE` to proceed with this step.**
+> Reply `COMPACT` if the context window is near capacity:
+>   1. Run `/compact`
+>   2. Resume with `REWRITE RESUME ADO-{ID}`
+>      (The resume restarts at this step — the flush above ensures no rework.)
+> _(Do not proceed past this prompt without a reply.)_
+
+<!-- Checkpoint already flushed in this step. -->
 
 Test plans are generated inside each cluster subagent (cluster subagent step 6) and returned as
 `test_plan_path` in the subagent's structured result. The orchestrator does NOT re-invoke the
@@ -810,7 +1132,7 @@ test-plan skill — it collects the paths already returned.
   Source Context Manifest must cover every root + every `graph.json` module (full accounting) with
   resolving citations; `decompose` calls `check-gate` and STOPs if it is not. No design on unread source.
 - NEVER accept `PARTIAL`/`unknown` when the resolving source is reachable in a configured root
-  (`additionalDirectories`) — resolve it at intake (exit 5), never defer it.
+  (`migrationRoots`) — resolve it at intake (exit 5), never defer it.
 - NEVER present options before the Integration Inventory is complete — PARTIAL rows are advisory
   during options but the oracle mode and integration approaches must be known.
 - NEVER generate code before `APPROVE DESIGN` closes — all 7 design documents must be approved.
@@ -840,10 +1162,12 @@ test-plan skill — it collects the paths already returned.
 - ALWAYS run Step 0 first — migration log + migration tracker + checkpoint ledger init happen before
   any analysis or output. The log must exist before any [INTEGRATION], [FINDING], or [OPTION] entries
   are appended.
-- ALWAYS update `migration-tracker.md` at every step and gate transition — it is the resume
-  mechanism. A tracker with a stale "Next action" is worse than no tracker (it points the wrong way).
-- NEVER describe `checkpoint.json` to the developer as a tracker or resume mechanism — it is
-  git-ignored script interop state only.
+- ALWAYS update `migration-tracker.md` at every step and gate transition — for human readability
+  and audit trail. A stale tracker is a poor developer experience but does not misguide resume
+  (resume is checkpoint-driven via `stage_gates` + `phase_history`).
+- The checkpoint JSON (`.claude/migration/{ADO}.checkpoint.json`) is the **primary resume record**
+  — machine-written by `checkpoint-ledger.cjs`, validated by `validate`. The tracker enriches the
+  human render; it does not override the checkpoint. Never treat a stale tracker as a resume blocker.
 - ALWAYS save per-cluster BAL + ERL results to `{ADO}-cluster-{N}-assurance.md` — the
   checkpoint JSON is machine-only and not human-reviewable.
 - ALWAYS write the combined assurance summary to `{ADO}-assurance-summary.md` after the
