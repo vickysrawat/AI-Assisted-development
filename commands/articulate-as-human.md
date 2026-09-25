@@ -1,6 +1,6 @@
 ---
-description: Deterministically scan a generated document (Markdown, HTML, or plain text) for generic "AI-sounding" writing patterns — stock vocabulary, weasel attribution, the "not just X, it's Y" negation, dangling "-ing" clauses, bold-lead-in bullet lists, transition/em-dash density, uniform rhythm, and repeated openers. Reports findings by tier with file:line locations. Never rewrites silently — rewrites only flagged spans, only on explicit request.
-argument-hint: "<path-to-file-or-dir> [--json report.json]  —  the document (or folder) to scan; omit to be prompted"
+description: Humanize text in two modes. File mode deterministically scans generated documents (Markdown, HTML, plain text) for generic "AI-sounding" patterns and reports findings by tier with file:line locations before any rewrite. Direct-text mode rewrites provided text and returns it in chat/console with no report and no file changes. Never rewrites files silently — rewrites only flagged spans on explicit request.
+argument-hint: "<path-or-text> [--json report.json] | --text <text> | --file <path-to-file-or-dir>  — auto-detect file path vs direct text when flags are omitted"
 ---
 
 # /articulate-as-human
@@ -11,21 +11,40 @@ argument-hint: "<path-to-file-or-dir> [--json report.json]  —  the document (o
 
 ## Your task
 
-Run a tone pass over the target document and **report structurally — do not rewrite anything
-unless the user later asks for it.**
+Run `/articulate-as-human` in the correct mode and follow that mode's contract exactly.
 
 ---
 
-### Step 1 — Parse arguments
+### Step 1 — Parse arguments and choose mode
 
-Take the file or directory path from the invocation arguments. If no path was given **in an
-interactive session**, prompt via `AskUserQuestion` for the path (or the current selection /
-most recently generated document) before proceeding; do not guess a target silently. Pass
-`--json report.json` through to the script if the user asked for a machine-readable report.
+Resolve mode in this order:
+
+1. `--text <text>` → **direct-text mode** (explicit override).
+2. `--file <path>` → **file mode** (explicit override).
+3. No override:
+   - If the argument resolves to an **existing file or directory path**, use **file mode**.
+   - Otherwise treat it as **direct text**.
+
+If no argument was given in an interactive session, prompt via `AskUserQuestion` for either a
+file/directory path or direct text; do not guess silently.
+
+`--json report.json` is for **file mode only**.
 
 ---
 
-### Step 2 — Run the deterministic scan first
+### Step 2A — Direct-text mode (no file scan)
+
+When in direct-text mode, humanize the provided text and return the rewritten result directly
+in chat/console.
+
+- Preserve meaning, facts, names, numbers, citations, and required structure.
+- Remove generic AI/corporate phrasing and keep wording specific to the content.
+- Do **not** create a report file.
+- Do **not** modify any files.
+
+---
+
+### Step 2B — File mode: run the deterministic scan first
 
 Always run the script before eyeballing the text — the point is repeatable, located findings:
 
@@ -37,7 +56,7 @@ Pure Node built-ins (`fs`, `path`), no npm deps — runs under restricted egress
 
 ---
 
-### Step 3 — Report before rewriting
+### Step 3 — File mode: report before rewriting
 
 Read `$PLUGIN_DIR/skills/articulate-as-human/SKILL.md` and follow its workflow exactly.
 Present the script's findings grouped by tier (tier1 vocabulary, hedges, weasel attribution,
@@ -48,7 +67,7 @@ contractually required.
 
 ---
 
-### Step 4 — Add one qualitative pass
+### Step 4 — File mode: add one qualitative pass
 
 Read `$PLUGIN_DIR/skills/articulate-as-human/references/qualitative-review.md` and apply it —
 catch the staging/inflation/mechanical-structure/leftover patterns regex can't. Mark these as
@@ -57,7 +76,7 @@ passage.
 
 ---
 
-### Step 5 — Rewrite only on request
+### Step 5 — File mode: rewrite only on request
 
 Only if the user explicitly asks to fix flagged spans: rewrite **only** those spans, preserve
 every fact/name/number/citation and structural contract the document follows, replace each
