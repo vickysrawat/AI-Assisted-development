@@ -6,3 +6,6 @@
 
 ### [capture] 2026-09-25 — Task completed — /operations runbook for ai-assisted-development plugin
 ### [capture] 2026-09-24 — Task completed — /app-readiness assessment for the plugin itself
+
+### [capture] 2026-09-25 — Error resolved — Mermaid HTML inline corruption + garbage content after </html>
+### [capture] 2026-09-25 — Task completed — /operations runbook for ai-assisted-development plugin

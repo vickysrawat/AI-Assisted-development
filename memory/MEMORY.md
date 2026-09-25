@@ -1,5 +1,10 @@
 # MEMORY.md — Project memory (dream-managed)
 
+### 2026-09-25 — Error resolved — Mermaid HTML inline corruption + garbage content after </html>
+
+Root cause: when inlining mermaid.min.js via a line-by-line filter, lines inside the mermaid library that contained the target string ("mermaid.min.js") were deleted, corrupting the library. A subsequent re-injection left ~2.1MB of orphaned content after `</html>` which contained broken `<script>` tags the browser executed, causing `SyntaxError: Unexpected token ')'`. Fix: (1) replace corrupted script tag by byte-position using `indexOf('<script>')` + `indexOf('</script>')` — never use string matching on minified JS; (2) truncate file at `</html>` using position arithmetic to remove garbage; (3) when removing markup from an HTML file that has large embedded scripts, only operate on `html.substring(0, html.indexOf('</main>'))` — never line-filter the full file. Gotcha: never use line-by-line filtering on HTML files containing inlined minified JS; always operate by structural position.
+Trigger: Error resolved  Confidence: 0.95  Source: auto-capture
+
 ### 2026-09-25 — Task completed — /operations runbook for ai-assisted-development plugin
 
 Generated docs/operations/ai-assisted-development-Operational-Runbook.md (+ HTML companion). 72 open ⚠ TODOs — primarily contacts, expiry dates, PAT rotation calendar, ADO org/project placeholders, and data-retention policy. Key operational facts: plugin is developer-local (no server), all state is git-tracked file-based JSON, AZURE_DEVOPS_PAT is the only rotatable secret. Mermaid diagrams degrade to source text (no vendored mermaid.min.js committed).
