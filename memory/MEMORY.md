@@ -1,5 +1,10 @@
 # MEMORY.md — Project memory (dream-managed)
 
+### 2026-09-25 — Task completed — /operations runbook for ai-assisted-development plugin
+
+Generated docs/operations/ai-assisted-development-Operational-Runbook.md (+ HTML companion). 72 open ⚠ TODOs — primarily contacts, expiry dates, PAT rotation calendar, ADO org/project placeholders, and data-retention policy. Key operational facts: plugin is developer-local (no server), all state is git-tracked file-based JSON, AZURE_DEVOPS_PAT is the only rotatable secret. Mermaid diagrams degrade to source text (no vendored mermaid.min.js committed).
+Trigger: Task completed  Confidence: 0.90  Source: auto-capture
+
 ### 2026-09-24 — Task completed — /app-readiness assessment for the plugin itself
 
 App-readiness --full run on the plugin repo (2026-09-24). Verdict: Not Ready. EA-3 (Observability) = 2 Red: no structured logging, scripts emit console.log only. EA-4 (Security) = 2 Red/Blocking: security/ folder absent, no /security-review ever run. EA-1 pipeline YAML is well-structured (CI + ReleaseValidation, npm audit, version consistency) but ADO live state unverified (PAT not set). EA-5 + EA-6 = 4 Green. Report at prod-readiness/app-readiness-2026-09-24.html.
