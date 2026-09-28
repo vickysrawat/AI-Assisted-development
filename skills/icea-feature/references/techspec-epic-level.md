@@ -35,7 +35,7 @@ each story's individual tech spec linked below.
 
 > Story 1 is always the shared-components story — it owns all new database schema (DDL),
 > shared service contracts, and common types that later stories depend on.
-> Stories are broken by logical completion — each is a shippable slice (≤5 SP).
+> Stories are broken by logical completion — each is a shippable slice (≤8 SP).
 > Never broken by AC.
 
 ---
@@ -151,7 +151,7 @@ The epic is done when ALL of the following are true:
 
 - [ ] Story 1 schema matches the overall data model — no missing tables or columns
 - [ ] Auth & Security section: every story's endpoints enforce the stated auth pattern
-- [ ] No story breaks the ≤5 SP / shippable-slice rule
+- [ ] No story breaks the ≤8 SP / shippable-slice rule
 - [ ] Dependencies column in Story Breakdown matches actual implementation order
 - [ ] Each story's AC Coverage Matrix has no gaps (all ACs → files, all files → ACs)
 - [ ] {Stack-specific cross-cutting check — e.g. all Dapper queries parameterised}

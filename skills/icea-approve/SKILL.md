@@ -40,6 +40,36 @@ Which ICEA would you like to approve?
 ## Step 2 — Locate files on disk
 
 ```bash
+GOVERNANCE=$(node -e "try{const s=JSON.parse(require('fs').readFileSync('.claude/dream-init-state.json','utf8'));process.stdout.write(s.governance_mode||'full')}catch(e){process.stdout.write('full')}")
+
+if [ "$GOVERNANCE" = "lightweight" ]; then
+  PLAN_FILE=$(find docs -path "*UserStory${ADO_ID}*" -name "ADO-${ADO_ID}-*.plan.md" 2>/dev/null | head -1)
+  [ -z "$PLAN_FILE" ] && echo "LIGHTWEIGHT_GATE_BLOCKED" || echo "LIGHTWEIGHT_MODE: $PLAN_FILE"
+fi
+```
+
+**If `LIGHTWEIGHT_GATE_BLOCKED`** — HARD STOP:
+```
+⛔ No plan found for ADO #{ADO_ID} in lightweight mode.
+   Create a plan first: goal-loop ADO-{ADO_ID}
+```
+
+**If `LIGHTWEIGHT_MODE`:**
+- Skip Step 3a (test plan gate — generated after approval in lightweight flow)
+- Skip Step 3b (ICEA gap check — no ICEA exists in lightweight mode)
+- Check Open Questions gate: read plan's Open Questions section; if any entry lacks owner or deferral — block with: `⛔ Open Questions must be resolved or deferred before approval. Run goal-loop ADO-{ADO_ID} to update the plan.`
+- On `APPROVE ADO-{ID}` (or auto-approve call from goal-loop):
+  - Stamp `Status: ✅ Approved` in plan file
+  - Write audit entry:
+    ```bash
+    node .claude/hooks/audit-append.cjs "{\"event\":\"gate.approve\",\"action\":\"APPROVE\",\"ado\":\"${ADO_ID}\",\"result\":\"granted\",\"source\":\"icea-approve\",\"detail\":\"lightweight mode — plan approved\"}" 2>/dev/null || true
+    ```
+  - Confirm: `✅ Plan Approved — ADO #{ADO_ID}`
+- Note: in the lightweight happy path, icea-approve is called internally by goal-loop. `APPROVE ADO-{ID}` keyword still works for standalone/recovery use.
+
+**If `GOVERNANCE_MODE=full`** — proceed to the existing `find docs` commands below (Steps 2–5 unchanged):
+
+```bash
 find docs -name "ADO-${ADO_ID}-*.icea.md" 2>/dev/null
 find docs -name "ADO-${ADO_ID}-*.techspec.md" 2>/dev/null
 ```
@@ -78,7 +108,23 @@ Check whether a QA test plan has been generated for this ADO:
 find docs -path "*UserStory${ADO_ID}*" -name "ADO-${ADO_ID}-*.test-plan.md" 2>/dev/null
 ```
 
-**If found:** record `TEST_PLAN_EXISTS=true`. Continue to Step 3b.
+**If found:** record `TEST_PLAN_EXISTS=true`. Then check whether the test plan is stale:
+
+```bash
+test -f ".claude/signals/test-plan-stale-ADO-${ADO_ID}.json" \
+  && echo "TEST_PLAN_STALE" || echo "TEST_PLAN_CURRENT"
+```
+
+**If `TEST_PLAN_STALE`:** hard-block —
+```
+⛔ TEST PLAN STALE — the ICEA or Tech Spec was revised after the test plan was generated.
+   Test cases may no longer match the current acceptance criteria.
+
+   Run REFRESH TEST ADO-{ADO_ID} to update the test plan, then re-run APPROVE.
+```
+Stop here.
+
+**If `TEST_PLAN_CURRENT`:** continue to Step 3b.
 
 **If not found and no `--skip-test-gate` flag:** hard-block —
 

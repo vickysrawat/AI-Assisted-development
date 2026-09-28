@@ -33,17 +33,20 @@
 //   node "$PLUGIN_DIR/scripts/signal-write.cjs" \
 //     --type gap \
 //     --category dependency-contract-missing \
-//     --ado-id 1234 \
+//     --ado-id 1234 \                  ← optional; null when ADO not in context
 //     --detail "IUserRepository.GetById — return contract not in Context"
 //
 //   node "$PLUGIN_DIR/scripts/signal-write.cjs" \
-//     --type story-quality \
-//     --category clarifications-required \
-//     --ado-id 1234 \
-//     --count 3 \
-//     --detail "auth model, error handling, pagination behaviour"
+//     --type revision \
+//     --category context-incomplete \  ← no --ado-id: still useful for pattern learning
+//     --detail "ICEA edited outside formal skill flow"
+//
+// --ado-id is OPTIONAL. Dream uses signals for pattern learning (category tallies →
+// project-knowledge.md), not for ADO attribution. Capture with null ADO when the
+// ADO is not in context — the pattern is still recorded and promoted.
 //
 // Output file: .claude/signals/{ms-timestamp}-{type}-ADO-{ID}.json
+//              or  .claude/signals/{ms-timestamp}-{type}-UNKNOWN.json when no ADO
 // Always exits 0 — never blocks skill flows.
 
 'use strict';
@@ -63,8 +66,8 @@ const adoId    = arg('ado-id');
 const detail   = arg('detail');    // brief description of the specific signal
 const count    = arg('count');     // for story-quality: number of clarifying questions
 
-if (!type || !category || !adoId) {
-  process.stderr.write('signal-write: --type, --category, and --ado-id are required\n');
+if (!type || !category) {
+  process.stderr.write('signal-write: --type and --category are required (--ado-id is optional)\n');
   process.exit(0);
 }
 
@@ -73,7 +76,7 @@ try {
     timestamp:  new Date().toISOString(),
     type,
     category,
-    ado_id:     adoId,
+    ado_id:     adoId || null,   // null when ADO not in context — pattern still captured by Dream
     detail:     detail || null,
     count:      count ? parseInt(count, 10) : null,
   };
@@ -81,7 +84,9 @@ try {
   const signalsDir = path.join(process.cwd(), '.claude', 'signals');
   fs.mkdirSync(signalsDir, { recursive: true });
 
-  const filename = Date.now() + '-' + type + '-ADO-' + adoId + '.json';
+  // Filename: include ADO ID when available, use 'UNKNOWN' otherwise
+  const adoTag = adoId ? 'ADO-' + adoId : 'UNKNOWN';
+  const filename = Date.now() + '-' + type + '-' + adoTag + '.json';
   fs.writeFileSync(
     path.join(signalsDir, filename),
     JSON.stringify(entry, null, 2) + '\n',

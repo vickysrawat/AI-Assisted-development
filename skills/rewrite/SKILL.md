@@ -377,7 +377,11 @@ developer once. YES → merge patterns + confirm; NO → continue without writin
 ```bash
 # Flush checkpoint before next step
 node scripts/checkpoint-ledger.cjs set-gate --skill=rewrite --ado={ADO_ID} --gate=step_1_intake_complete --verdict=PASS
+# Store all stack + version facts — resume reads these directly instead of re-reading generated files
 node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=source_stack --value={SOURCE_STACK}
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=source_version --value={SOURCE_VERSION}
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=target_stack --value={TARGET_STACK}
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=target_version --value={TARGET_VERSION}
 node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=posture --value={POSTURE}
 ```
 
@@ -386,6 +390,7 @@ node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --
 ## Step 1.5 — Integration verification + oracle mode detection (new)
 
 > 📊 **STEP BOUNDARY — Step 1.5: Integration verification + oracle mode detection**
+> Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step1.5","ado":"{ADO}"}`
 > The checkpoint is flushed — resuming here is safe.
 > **Reply `CONTINUE` to proceed with this step.**
 > Reply `COMPACT` if the context window is near capacity:
@@ -428,12 +433,43 @@ authored with unverified auth schemes. The developer must resolve them before th
   no oracle or deferred → BAL caps at C/D; this is stated up front, not as a surprise at the gate.
 
 **3. Source-context intake gate** — per `$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/source-context-intake-spec.md`.
+
+**Sub-step skip guard — run before authoring the manifest:**
+```bash
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" check-gate \
+  --skill=rewrite --ado={ADO} --gate=manifest_authored 2>/dev/null
+```
+- **Exit 0 (PASS):** The manifest was authored and verified in a previous run. Skip re-authoring — proceed directly to running `intake-verify.cjs` below.
+- **Exit 3 (no verdict):** Author the manifest fresh per the instructions below.
+
 Before options, read the source's own documented knowledge AND source code, then author the
 **Source Context Manifest** (`docs/migrations/{ADO}/source-context-manifest.md`, from
 `$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/source-context-manifest-template.md`): source context
 files (CLAUDE.md, architecture docs, settings), every `migrationRoots` entry, the cross-cutting
 concern scan (impl, not declaration), and **full source coverage** — every `graph.json` module marked
-`mapped`/`out-of-scope`, behavior-bearing units cited to a **source** `file#line`. Then verify:
+`mapped`/`out-of-scope`, behavior-bearing units cited to a **source** `file#line`.
+
+After writing the manifest to disk, record the sub-step gate immediately — before running verify:
+```bash
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
+  --skill=rewrite --ado={ADO} --gate=manifest_authored --verdict=PASS \
+  --artifact-path="docs/migrations/{ADO}/source-context-manifest.md" \
+  --sentinel="## " --min-bytes=100
+```
+This gate is the sub-step recovery point. If context exhausts after this write, resume skips
+re-authoring and restarts at intake-verify.
+
+> ⚓ **Safe point SP-1.5-1 — manifest authored and verified, before coupling scan**
+> Checkpoint is flushed: manifest_authored gate written. Apply the conservative bias rule —
+> if the session is nearing the context limit, stop cleanly here:
+> 1. Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step1.5-sp1","ado":"{ADO}"}`
+> 2. Update `migration-tracker.md` — "Next action: `REWRITE RESUME {ADO}`"
+> 3. Surface this and STOP:
+>    > Progress saved. Type `REWRITE RESUME {ADO}` — resume continues from the coupling scan,
+>    > skipping manifest authoring (manifest_authored gate is PASS).
+> If context is healthy, continue without pausing.
+
+Then verify:
 ```bash
 node "$PLUGIN_DIR/scripts/intake-verify.cjs" verify --manifest=docs/migrations/{ADO}/source-context-manifest.md \
   --settings=<source-application-path-provided-by-developer>/.claude/settings.local.json \
@@ -442,7 +478,9 @@ node "$PLUGIN_DIR/scripts/intake-verify.cjs" verify --manifest=docs/migrations/{
 Exit 0 → record the gate in the checkpoint ledger immediately:
 ```bash
 node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
-  --skill=rewrite --ado={ADO} --gate=intake_context --verdict=PASS
+  --skill=rewrite --ado={ADO} --gate=intake_context --verdict=PASS \
+  --artifact-path="docs/migrations/{ADO}/source-context-manifest.md" \
+  --sentinel="## " --min-bytes=100
 ```
 Then record full source_context including summary. Use the `modules_total`, `modules_mapped`,
 `modules_out_of_scope` values from the `--json` output above. Set `coverage_verdict` to `"full"`
@@ -461,6 +499,97 @@ Exit 2 check `--json` reason field: `manifest-missing` = file absent, start fres
 A judge pass confirms `unwired_candidates[]` and that the cross-cutting scan found real concerns.
 
 Record all three outputs in the checkpoint before proceeding to Step 2.
+
+**4. Architectural coupling scan** — per `$PLUGIN_DIR/skills/shared/architectural-coupling-spec.md`.
+
+Run after the source coverage table is complete (all modules mapped/scoped). Scan for all five
+coupling types (domain, technology, data, deployment, integration). Record each finding in the
+manifest's `## Coupling Patterns` section. Assign severity per Section 3 of the coupling spec.
+Name `concerns[]` for every `severity=critical` + `pattern_type=deployment` entry — required for
+cluster enforcement at Step 3.
+
+After the scan, derive `required_cluster_splits` and store in the checkpoint payload alongside
+the coupling patterns array. Build the `technology_couplings` list for the research agent at Step 2:
+
+```bash
+# Write the coupling payload file — use --payload-file to avoid shell quoting failures on the array
+mkdir -p ".claude/migration/{ADO}"
+cat > ".claude/migration/{ADO}/coupling-payload.json" << 'EOF'
+{
+  "coupling_patterns": [
+    { "id": "CP-1", "pattern_type": "deployment", "severity": "critical", "name": "{name}",
+      "concerns": ["{concern-a}", "{concern-b}"], "locations": ["{src/…}"], "migration_signal": "{signal}" },
+    { "id": "CP-2", "pattern_type": "technology", "severity": "major", "name": "{name}",
+      "technology": "{WCF|MSMQ|WindowsAuth|…}", "locations": ["{src/…#L}"], "migration_signal": "{signal}" }
+  ],
+  "required_cluster_splits": [
+    { "concern_a": "{concern-a}", "concern_b": "{concern-b}", "source": "{coupling pattern name}" }
+  ],
+  "technology_couplings": [
+    { "pattern": "{WCF}", "locations_count": {N} }
+  ]
+}
+EOF
+
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-payload \
+  --skill=rewrite --ado={ADO} \
+  --payload-file=".claude/migration/{ADO}/coupling-payload.json"
+```
+
+**5. Coupling Resolution Gate** — per `$PLUGIN_DIR/skills/shared/architectural-coupling-spec.md` Section 7.
+
+Present the gate for every `severity=critical` or `severity=major` coupling. Show ALL approaches
+evaluated (including rejected ones with specific evidence). Gather developer constraints — not
+approach decisions. Wait for `COUPLING-GATE-CONFIRMED`.
+
+Parse replies and record `resolution_approach`, `external_dependencies`, `facade_note` per coupling.
+Write a `decision_log` entry per coupling. Then:
+
+```bash
+# Update coupling payload with resolution decisions
+cat > ".claude/migration/{ADO}/coupling-payload-resolved.json" << 'EOF'
+{
+  "coupling_patterns": [ /* updated with resolution_approach, external_dependencies per coupling */ ],
+  "required_cluster_splits": [ /* derived from replace|facade deployment couplings */ ],
+  "technology_couplings": [ /* { pattern, locations_count, resolution_approach } */ ]
+}
+EOF
+
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-payload \
+  --skill=rewrite --ado={ADO} \
+  --payload-file=".claude/migration/{ADO}/coupling-payload-resolved.json"
+
+# Hard enforcement: structural completeness check before gate is set
+node "$PLUGIN_DIR/scripts/coupling-resolution-validate.cjs" \
+  --checkpoint=".claude/migration/{ADO}.checkpoint.json" --json
+```
+
+Exit 0 → set the gate:
+```bash
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
+  --skill=rewrite --ado={ADO} --gate=coupling_resolution_confirmed --verdict=PASS
+```
+
+Exit 1 → show the issues from `coupling-resolution-validate.cjs` output and re-present the gate
+for the couplings with structural issues. Do NOT set the gate until the script exits 0.
+
+Write the coupling scan summary to `migration-log.md`:
+```
+[COUPLING-SCAN] {N} coupling patterns: {critical} critical, {major} major, {minor} minor.
+Required cluster splits: {N}. Technology couplings: [{list}].
+Coupling Resolution Gate: {approach per CP-N, e.g. "CP-2 facade (System A, B out of scope)"}
+```
+
+> ⚓ **Safe point SP-1.5-2 — coupling resolution confirmed, before Step 2**
+> Checkpoint is flushed: coupling_resolution_confirmed gate written. Apply the conservative bias rule —
+> if the session is nearing the context limit, stop cleanly here:
+> 1. Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step1.5-sp2","ado":"{ADO}"}`
+> 2. Update `migration-tracker.md` — "Next action: `REWRITE RESUME {ADO}`"
+> 3. Surface this and STOP:
+>    > Progress saved. Type `REWRITE RESUME {ADO}` — resume continues from Step 2 options analysis.
+>    > Coupling resolution decisions are stored in the checkpoint — no rework required.
+> If context is healthy, continue without pausing.
+
 **Update migration-tracker.md** — mark Phase 1.5 ✅, add source-context-manifest.md and integration-inventory.md to Committed artifacts, update "Next action" to "Run Step 2 options analysis".
 
 ---
@@ -468,6 +597,7 @@ Record all three outputs in the checkpoint before proceeding to Step 2.
 ## Step 2 — Options (assurance × effort × TCO, including DAG per option) (updated)
 
 > 📊 **STEP BOUNDARY — Step 2: Options**
+> Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step2","ado":"{ADO}"}`
 > The checkpoint is flushed — resuming here is safe.
 > **Reply `CONTINUE` to proceed with this step.**
 > Reply `COMPACT` if the context window is near capacity:
@@ -476,10 +606,144 @@ Record all three outputs in the checkpoint before proceeding to Step 2.
 >      (The resume restarts at this step — the flush above ensures no rework.)
 > _(Do not proceed past this prompt without a reply.)_
 
+**Prerequisite gate check — run before any Step 2 work:**
+```bash
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" check-gate \
+  --skill=rewrite --ado={ADO} --gate=coupling_resolution_confirmed --json
+```
+- **Exit 0 (PASS):** proceed.
+- **Exit 3 (no verdict):** STOP — the Coupling Resolution Gate was not completed in Step 1.5.
+  Return to Step 1.5 and complete the gate before proceeding to options.
+- **Exit 1 (REVISE):** STOP — a correction was flagged. Read `payload.rewrite.options_judge_correction`
+  and show the pending corrections to the developer.
+
+**If `payload.rewrite.options_judge_correction` is non-null and `pending` is non-empty:**
+The options judge previously returned REVISE and corrections are in progress. Present the
+pending corrections to the developer before showing options. See correction handling below.
+
+**Invoke the migration-research-agent before calculating options.** Ground the options analysis
+in cited external facts — EoL status, CVE exposure, ecosystem health, hiring trend, tooling
+availability — for each source and target stack layer. Read `skills/shared/migration-research-spec.md`
+Section 5 for the invocation pattern.
+
+**Research bundle cache — check before invoking, write immediately after.**
+The agent invocation is expensive and must not repeat on context-exhaustion re-runs or across
+separate migrations with the same source→target stack pair. The cache is machine-level (shared
+across all projects on this machine) and is never committed to any repo.
+
+For each source→target stack pair you need facts for:
+```bash
+CACHE_KEY="{source_stack}-{source_version}-to-{target_stack}-{target_version}"
+BUNDLE_FILE="$(mktemp).json"
+
+# Check the machine-level cache first
+CACHE_RESULT=$(node "$PLUGIN_DIR/scripts/research-cache.cjs" lookup \
+  --key="$CACHE_KEY" --json 2>/dev/null)
+CACHE_STATUS=$(echo "$CACHE_RESULT" | node -e \
+  "try{process.stdout.write(JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).status)}catch(_){process.stdout.write('miss')}")
+
+if [ "$CACHE_STATUS" = "hit" ]; then
+  CACHE_STALENESS=$(echo "$CACHE_RESULT" | node -e \
+    "try{process.stdout.write(JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).staleness)}catch(_){process.stdout.write('')}")
+  CACHE_AGE=$(echo "$CACHE_RESULT" | node -e \
+    "try{process.stdout.write(String(JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).age_days))}catch(_){process.stdout.write('?')}")
+  if [ "$CACHE_STALENESS" = "stale" ]; then
+    echo "⚠ Research cache hit (${CACHE_AGE} days old) — facts may have changed."
+    echo "  To force a refresh: delete the cache entry and re-run Step 2."
+  else
+    echo "Research cache hit (${CACHE_AGE} days old) — skipping agent invocation"
+  fi
+  # Extract bundle from cache result and use it directly — skip agent invocation
+  echo "$CACHE_RESULT" | node -e \
+    "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));require('fs').writeFileSync('$BUNDLE_FILE',JSON.stringify(d.entry.bundle,null,2))"
+else
+  echo "Research cache miss — invoking migration-research-agent for $CACHE_KEY"
+  # Invoke the Agent tool with the migration-research-agent (see invocation pattern below)
+  # Write the returned bundle to a temp file IMMEDIATELY after receiving it — before any analysis:
+  #   echo '{...bundle JSON...}' > "$BUNDLE_FILE"
+  # Then write to the machine-level cache:
+  node "$PLUGIN_DIR/scripts/research-cache.cjs" write \
+    --key="$CACHE_KEY" \
+    --bundle-file="$BUNDLE_FILE" \
+    --source-stack="{source_stack}" --source-version="{source_version}" \
+    --target-stack="{target_stack}" --target-version="{target_version}"
+  echo "Research bundle cached for future use."
+fi
+# BUNDLE_FILE now contains the research bundle — use it for options analysis below
+# Store cache key in checkpoint so resume can locate the bundle without re-deriving
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-payload \
+  --skill=rewrite --ado={ADO} --key=research_cache_key --value="$CACHE_KEY"
+```
+
+**Extract cloud component recommendations from the bundle** (for the "Coupling addressed" option rows).
+The bundle may contain a `{ "type": "coupling_replacements", ... }` entry — find it:
+```bash
+COUPLING_REPLACEMENTS=$(node -e "
+  const b = JSON.parse(require('fs').readFileSync('$BUNDLE_FILE','utf8'));
+  const arr = Array.isArray(b) ? b : [];
+  const entry = arr.find(e => e.type === 'coupling_replacements');
+  process.stdout.write(JSON.stringify(entry || null));
+")
+```
+
+For each technology coupling in `payload.rewrite.technology_couplings[]`:
+- If `COUPLING_REPLACEMENTS` contains a matching pattern → use `recommendations[]` to populate the "Coupling addressed" option row per Section 4 rendering rules
+- If the agent returned `confidence=UNKNOWN` for the pattern → use the offline fallback table from `$PLUGIN_DIR/skills/shared/migration-research-spec.md` Section 7 with `[⚠ offline reference — {spec_date}]`
+- For `resolution_approach=facade` → use the recommendation with `coexistence_note` + `pattern_name` (Strangler Fig / Anti-Corruption Layer)
+
+Write the bundle to cache as the **first action** after the agent returns — before any analysis
+or options file write. If context exhausts between receiving the bundle and writing the cache,
+the agent is re-invoked on next run (acceptable residual — the window is narrow).
+
+Construct the input (rewrite mode — replace `{detected stack}` / `{version}` with actual values
+from migration-source-detect.cjs output and the selected target option):
+```json
+{
+  "migration_type": "rewrite",
+  "source_layers": [
+    { "stack": "{detected source stack}", "version": "{detected version}", "cloud_hosted": "{provider or null}" }
+  ],
+  "target_layers": [
+    { "stack": "{selected target stack}", "version": "{target version}" }
+  ]
+}
+```
+
+Invoke the Agent tool with this JSON as the task. Receive the per-layer bundle. Apply the
+**full citation rendering rules from `migration-research-spec.md` Section 4** — mandatory:
+- Section 4.1 — inline rendering per confidence tier (high/medium/low/UNKNOWN)
+- Section 4.1 — stale signal when cache age > 30 days: `[⚠ cached {age}d ago — consider refreshing]`
+- Section 4.1 — `additional_sources` display: `[{authority}; also: {source2}, {source3}]`
+- Section 4.2 — source_type validation: degrade `community` facts to `medium`; require ≥2 sources for `multi-vendor` at `high`
+- Section 4.3 — append `## Research Citations` block to every options file (see template below)
+
 **Write the options file to disk before presenting to the developer.** The options file is a required
 artifact — write it immediately after completing the options analysis, before showing the options table
 in chat. Path: `docs/migrations/{ADO}/{ADO}-options.md`. This is a documentation artifact —
-not subject to the Write Gate. Structure:
+not subject to the Write Gate.
+
+**Pre-write guard — run before every options file write:**
+```bash
+OPTIONS_FILE="docs/migrations/{ADO}/{ADO}-options.md"
+
+if [ -f "$OPTIONS_FILE" ]; then
+  node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" check-gate \
+    --skill=rewrite --ado={ADO} --gate=options_approved 2>/dev/null
+  if [ $? -eq 0 ]; then
+    echo "✅ Options already approved — reading existing file, skipping re-write"
+    # Do not re-write. Read the existing file to orient and proceed to APPROVE OPTIONS prompt.
+    exit 0
+  else
+    # File exists but options_approved is not set — partial write from a previous run.
+    # Do NOT read the existing file as authoritative — it may be truncated or incomplete.
+    echo "⚠ Incomplete options file found from previous run — overwriting from scratch"
+    rm -f "$OPTIONS_FILE"
+  fi
+fi
+# Proceed to write the options file fresh
+```
+
+**Structure:**
 
 **Context check.** Expected cost for Step 2 options analysis: ~15–25K tokens. Stop and surface tracker if < 40K remaining before options analysis begins.
 
@@ -511,7 +775,7 @@ _Generated: {date} · Skill: rewrite · Status: Awaiting APPROVE OPTIONS_
 |---|---|---|
 | Target stack | {description} | estimate:target-projection |
 | Posture | {posture} | computed |
-| Clusters | {N} ({cluster names}) | estimate:target-projection |
+| Clusters | {N} ({cluster names using concern vocabulary}) | estimate:target-projection |
 | Wave schedule | {N} waves — {wave breakdown} | estimate:target-projection |
 | Effort | {Low-medium / Medium / High} | estimate:source-analysis |
 | Onboarding cost | {description} | estimate:team-profile |
@@ -519,11 +783,45 @@ _Generated: {date} · Skill: rewrite · Status: Awaiting APPROVE OPTIONS_
 | Assurance ceiling | {BAL level} ({oracle mode}) | computed |
 | UI migration | {source pattern → target pattern} | estimate:source-analysis |
 | WCF handling | {approach} | estimate:source-analysis |
+| Coupling addressed | {For each critical coupling: CP-{N} {name} → {how this option resolves it}. E.g. "CP-1 domain coupling → domain layer extracted into business-logic cluster; CP-2 WCF → Azure Service Bus (cloud component grounding at Step 2 research)". If a critical coupling is not resolved by this option, state explicitly: "CP-{N} not addressed — residual risk: {consequence}."}  | coupling-analysis |
 
 **DAG basis:** INFERRED — {why INFERRED, not computed — target app does not exist yet}
 
 **Summary:** {2–4 sentences covering structural fit, key trade-offs, and one sentence on the highest-risk
 element for this option — no generic marketing language}
+
+**PO framework — populate from the migration-research-agent bundle for this option's stacks:**
+
+**(a) What happens if not resolved:**
+- Source stack EoL: `{source eol_status.status} as of {eol_status.date} [{source_url}, {retrieved_date}]`
+  — or `WARNING: EoL date not found for {stack} — check: {canonical_url}` if UNKNOWN
+- Source CVE exposure: `{source cve_exposure.level} [{source_url}, {retrieved_date}]`
+  — or `WARNING: CVE exposure not determined — check: {canonical_url}` if UNKNOWN
+- If source stack is EoL or high CVE exposure: state the concrete consequence (security patch
+  gap, vendor support end, known exploit surface). Never leave this as generic prose.
+
+**(b) Tradeoffs — what this option sacrifices (not just what it gains):**
+- Target ecosystem health: `{target ecosystem_health.signal} [{source_url}, {retrieved_date}]`
+  — or `WARNING: ecosystem signal not available — check: {canonical_url}` if UNKNOWN
+- Target hiring trend: `{target hiring_trend.signal} [{source_url}, {retrieved_date}]`
+  — or `WARNING: hiring signal not available — check: {canonical_url}` if UNKNOWN
+- Target tooling availability: `{target tooling_availability.signal} [{source_url}, {retrieved_date}]`
+  — or `WARNING: tooling signal not available — check: {canonical_url}` if UNKNOWN
+- What this option does NOT gain: `[project-specific — requires your input]`
+  (e.g. feature parity timeline, migration labour cost, team retraining effort)
+
+**(c) Whether it can remain (residual risks that survive migration even on success):**
+- Application-layer residuals: `[project-specific — requires your input]`
+  (e.g. legacy integrations not yet migrated, test coverage debt carried forward)
+- Target stack EoL at migration completion: `{target eol_status.status} [{source_url}, {retrieved_date}]`
+  — verify the target version will still be active when the migration completes.
+
+**(d) How to verify success:**
+- Target stack active: `{target eol_status.status=active [{source_url}, {retrieved_date}]}`
+  — or `WARNING: target EoL status not confirmed — check: {canonical_url}` if UNKNOWN
+- Functional acceptance: `[project-specific — list acceptance tests confirming the migrated
+  application behaviour matches the source oracle]`
+- Performance: `[project-specific — list NFR thresholds to verify post-migration]`
 
 ---
 
@@ -556,6 +854,27 @@ reasoning. Never summarised. Includes: source findings that the options table do
 per-option verdict with RECOMMENDED / Conditional / Not recommended, a recommendation scorecard
 table weighted by the application's actual characteristics.}
 
+**Coupling resolution quality check — mandatory when `payload.rewrite.coupling_patterns` is non-empty:**
+The judge MUST also assess the coupling resolution content in the options document. For every
+critical/major coupling pattern in the payload, verify ALL of the following:
+
+1. **Coverage**: every critical/major coupling is addressed in EVERY option's "Coupling addressed" row.
+   A coupling absent from an option is a `missing-coverage` finding.
+
+2. **Evidence specificity**: rejected alternatives cite SPECIFIC evidence — integration inventory row
+   numbers, named external systems, module graph findings. Generic statements ("not viable", "too complex",
+   "not feasible") without a named source are `incomplete` findings.
+
+3. **Consumer completeness for facade**: any facade coupling must name the external consumers with
+   their migration status. "External consumers exist" without names is an `incomplete` finding.
+
+4. **Factual consistency**: evidence cited must not contradict source documents. If an option says
+   "System A is internal-only" but the integration inventory shows System A is VERIFIED external →
+   `hallucination` finding. Cite the specific integration inventory row and the specific options claim.
+
+Flag each finding with its type (`hallucination` / `incomplete` / `missing-coverage`) and CP-ID.
+These finding types determine the correction path shown in the REVISE verdict.
+
 ---
 
 ## Pre-design questions (answer with APPROVE OPTIONS)
@@ -580,16 +899,79 @@ integration-specific questions surfaced by PARTIAL rows.}
 > ✅ **Judge verdict (options_judge): PASS** — [one-line summary from the `## Judge Analysis` section above]
 
 {If judge_verdict is REVISE:}
-> ⛔ **JUDGE VERDICT: REVISE — acknowledgement required before `APPROVE OPTIONS`.**
-> The judge identified findings (see `## Judge Analysis` above) that should be addressed before
-> committing to a target option. You may override if you have reviewed the findings and accept the risk.
+
+**First: categorise each REVISE finding as one of three types** (see `architectural-coupling-spec.md` Section 6):
+- `hallucination` — evidence contradicts source documents (integration inventory, coupling scan findings)
+- `incomplete` — substantiation present but not specific enough (no named evidence source)
+- `missing-coverage` — coupling not addressed in one or more options
+
+**Before showing the correction interface, record pending corrections in checkpoint:**
+```bash
+cat > ".claude/migration/{ADO}/judge-correction.json" << 'EOF'
+{
+  "options_judge_correction": {
+    "at": "{today}",
+    "pending": [
+      { "cp_id": "CP-{N}", "type": "{hallucination|incomplete|missing-coverage}", "action": "{rerun-coupling-gate|in-place-correct}", "status": "pending" }
+    ],
+    "completed": [],
+    "iteration": {current iteration number — start at 1}
+  }
+}
+EOF
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-payload \
+  --skill=rewrite --ado={ADO} --payload-file=".claude/migration/{ADO}/judge-correction.json"
+```
+
+Then show the correction interface per finding type:
+
+> ⛔ **JUDGE VERDICT: REVISE — coupling resolution findings must be resolved before `APPROVE OPTIONS`.**
+> These findings must be corrected — the developer selected an option based on this information.
 >
-> To proceed, type exactly:
-> `I ACKNOWLEDGE THE JUDGE VERDICT: options_judge — [one sentence stating what you accept]`
+> **[HALLUCINATION — step-back required]**
+> CP-{N}: [specific claim in options document] contradicts [source: integration-inventory.md row N / coupling scan finding].
 >
-> On receipt: record `set-gate --gate=options_judge_acknowledged --verdict=ACKNOWLEDGED`,
-> then display the APPROVE OPTIONS or PROCEED prompt.
-> Do NOT display `APPROVE OPTIONS` or `PROCEED` without this acknowledgement.
+> ⚠ Safe point check before step-back: if context is near the limit, stop here:
+>   Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step2-correction","ado":"{ADO}"}`
+>   Type `REWRITE RESUME {ADO}` in a new session to continue corrections.
+>
+> To correct: type `RERUN-COUPLING-GATE CP-{N}`
+>   The skill will re-read the integration inventory and re-present the gate for CP-{N} only
+>   with the corrected evidence. The options document will be updated after you confirm.
+>
+> **[INCOMPLETE — in-place correction]**
+> CP-{N}: [specific substantiation gap — what evidence is missing]
+> To correct: type `OPTIONS-CORRECT CP-{N} [your corrected rejection reason with specific evidence]`
+>
+> **[MISSING COVERAGE]**
+> CP-{N} not addressed in [Option X]: provide the coupling resolution for this option.
+> To correct: included in your OPTIONS-CORRECT reply.
+
+**Correction command handling:**
+
+`RERUN-COUPLING-GATE CP-{N}`:
+1. Re-read `integration-inventory.md` and `coupling_patterns` from checkpoint
+2. Re-present the Section 7 gate format for CP-{N} only — show corrected evidence, striking through the hallucinated claim
+3. Parse developer's corrected reply
+4. Update `coupling_patterns[CP-{N}]` in checkpoint payload
+5. Update CP-{N} coupling rows in the options document for every option
+6. Mark CP-{N} complete in `options_judge_correction.completed`
+
+`OPTIONS-CORRECT CP-{N} [corrected content]`:
+1. Update the coupling row for CP-{N} in the options document
+2. Record correction in `decision_log`
+3. Mark CP-{N} complete in `options_judge_correction.completed`
+
+After all corrections complete: clear `options_judge_correction` (set to null) and re-run the judge automatically.
+
+**Iteration cap:** if `options_judge_correction.iteration` reaches 3 and judge returns REVISE again:
+> ⛔ **Judge has returned REVISE {3} times on coupling resolution. Developer acknowledgement required.**
+> Type: `I ACKNOWLEDGE COUPLING JUDGE ITERATION 4 — [one sentence: what you accept and why]`
+> Do NOT re-run the judge without this acknowledgement.
+
+On receipt: record `set-gate --gate=options_judge_acknowledged --verdict=ACKNOWLEDGED`,
+then display the APPROVE OPTIONS or PROCEED prompt.
+Do NOT display `APPROVE OPTIONS` or `PROCEED` without this acknowledgement.
 
 {If judge_verdict is BLOCK:}
 > 🚫 **JUDGE VERDICT: BLOCK — `options_judge` is a hard block. Named approver required.**
@@ -624,6 +1006,19 @@ _To proceed: `APPROVE OPTIONS ADO-{ID} [A | B | C]` with answers to the pre-desi
 > - `STOP` — return to Step 1.5 Integration Inventory to resolve PARTIAL rows first.
 >
 > Do NOT reply `APPROVE OPTIONS` when PARTIAL rows are present — use `PROCEED` or `STOP`.
+
+---
+
+## Research Citations
+
+> Facts in this document were retrieved by the migration-research-agent and cached locally.
+> Cache key: `{cache_key}` · Retrieved: `{generated_at}` · Cache age at generation: `{age}d`
+> {if age > 30d: ⚠ Cache is stale — facts may have changed. Refresh: delete the cache entry and re-run Step 2.}
+
+| # | Fact type | Applies to | Source type | Authority | Retrieved | Conf. | Source(s) |
+|---|---|---|---|---|---|---|---|
+| 1 | {fact_type} | {applies_to} | {source_type}{if cloud: " ({cloud_provider})"} | {authority} | {retrieved_date} | {confidence} | {source links — multiple for cloud/multi-vendor} |
+| … | … | … | … | … | … | … | … |
 ```
 
 **After APPROVE OPTIONS:** update the status line in `{ADO}-options.md` from
@@ -684,8 +1079,11 @@ DAG feeds Step 3 (code generation).
 
 ```bash
 # Flush checkpoint before next step
-node scripts/checkpoint-ledger.cjs set-gate --skill=rewrite --ado={ADO_ID} --gate=options_approved --verdict=PASS
+node scripts/checkpoint-ledger.cjs set-gate --skill=rewrite --ado={ADO_ID} --gate=options_approved --verdict=PASS \
+  --artifact-path="docs/migrations/{ADO_ID}/{ADO_ID}-options.md" --sentinel="## Option " --min-bytes=200
+# Store option selection and human-readable label — resume reads these instead of re-reading options file
 node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=selected_option --value={SELECTED_OPTION}
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=selected_option_label --value="{SELECTED_OPTION_LABEL}"
 node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=committed_dag_path --value={COMMITTED_DAG_PATH}
 ```
 
@@ -741,20 +1139,101 @@ Integration Inventory is shared state passed to all agents.
 All 7 documents are documentation artifacts — **not subject to the Write Gate** — write them to
 `docs/migrations/{ADO}/` immediately as they are drafted:
 
-| # | File | Content |
-|---|---|---|
-| 1 | `target-component-architecture.md` | Component inventory, layer structure, DI wiring, key patterns |
-| 2 | `target-data-architecture.md` | Entity model, ORM/Dapper strategy, migrations, schema decisions |
-| 3 | `target-security-architecture.md` | Auth scheme, claims, role model, policy definitions |
-| 4 | `target-integration-architecture.md` | Per-service client strategy, PARTIAL resolutions |
-| 5 | `target-infrastructure-architecture.md` | Hosting, IIS config, networking, identity |
-| 6 | `target-deployment-architecture.md` | CI/CD pipeline, deployment units, environment config |
-| 7 | `migration-feasibility.md` | Cluster effort table, risk register, BAL ceiling, recommended floor |
+| # | File | Gate | Required section | Content |
+|---|---|---|---|---|
+| 1 | `target-component-architecture.md` | `design_doc_component_written` | `## Coupling pattern resolutions` | Component inventory, layer structure, DI wiring, key patterns |
+| 2 | `target-data-architecture.md` | `design_doc_data_written` | `## ` | Entity model, ORM/Dapper strategy, migrations, schema decisions |
+| 3 | `target-security-architecture.md` | `design_doc_security_written` | `## Coupling pattern resolutions` | Auth scheme, claims, role model, policy definitions |
+| 4 | `target-integration-architecture.md` | `design_doc_integration_written` | `## Coupling pattern resolutions` | Per-service client strategy, PARTIAL resolutions |
+| 5 | `target-infrastructure-architecture.md` | `design_doc_infrastructure_written` | `## ` | Hosting, IIS config, networking, identity |
+| 6 | `target-deployment-architecture.md` | `design_doc_deployment_written` | `## ` | CI/CD pipeline, deployment units, environment config |
+| 7 | `migration-feasibility.md` | `design_doc_feasibility_written` | Cluster effort table, risk register, BAL ceiling, recommended floor |
+
+**`## Coupling pattern resolutions` section — required in component, security, and integration docs.**
+Each of these three documents must include this section. Write one entry per critical/major coupling
+that affects that document's domain. Use the DECISION comment format — state what was decided, what
+was rejected and why (with specific evidence), what the impact is on this document's content:
+
+```markdown
+## Coupling pattern resolutions
+
+### CP-{N} — {name} ({resolution_approach})
+**Decision:** {what was decided — e.g. "WCF facade retained; internal routing via Azure Service Bus"}
+**Alternatives rejected:**
+- {approach}: {specific reason citing evidence — e.g. "replace: System A and System B are VERIFIED
+  consumers (integration-inventory.md rows 3, 7) not in migrationRoots — cannot be migrated in this project"}
+- {approach}: {reason}
+**Impact on this document:** {what component/integration/security element this creates or changes}
+**Lifecycle:** {for facade — duration and conditions for removal; for replace — none}
+```
+
+_If no critical/major couplings affect this document's domain: write `## Coupling pattern resolutions\n_No coupling decisions affect this document's domain._`_
+
+**Sub-step skip guard — check each document's gate before spawning its subagent:**
+```bash
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" check-gate \
+  --skill=rewrite --ado={ADO} --gate={gate} 2>/dev/null
+```
+- **Exit 0 (PASS):** Document was authored in a previous run — skip subagent spawn, use the existing file.
+- **Exit 3 (no verdict):** Spawn the document subagent as normal per `document-orchestrator.md`.
+
+If all 7 gates are already PASS (context exhausted after all docs were authored but before `APPROVE DESIGN`),
+skip all subagents and proceed directly to the judge verdict gate below.
+
+> ⚓ **Safe point SP-2.5 — after each document wave, before next wave**
+> Applied after each wave of document subagents returns and their sub-step gates are written.
+> Apply the conservative bias rule — if the session is nearing the context limit:
+> 1. Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step2.5-sp","ado":"{ADO}"}`
+> 2. Update `migration-tracker.md` — mark completed documents ✅, "Next action: `REWRITE RESUME {ADO}`"
+> 3. Surface this and STOP:
+>    > Progress saved. Type `REWRITE RESUME {ADO}` — resume reads sub-step gates and skips
+>    > already-authored documents. Only remaining documents will be re-spawned.
+> If context is healthy, continue to the next document wave without pausing.
+
+**After all subagents in a wave return, record sub-step gates sequentially** (never from inside
+a subagent — matches the cluster B2 pattern: sequential writer prevents concurrent JSON corruption).
+Three documents require the `## Coupling pattern resolutions` section — use the stronger sentinel
+for those; the other four documents use the general `## ` sentinel:
+```bash
+# component, integration, security — must have ## Coupling pattern resolutions section
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
+  --skill=rewrite --ado={ADO} --gate=design_doc_component_written --verdict=PASS \
+  --artifact-path="docs/migrations/{ADO}/target-component-architecture.md" \
+  --sentinel="## Coupling pattern resolutions" --min-bytes=200
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
+  --skill=rewrite --ado={ADO} --gate=design_doc_integration_written --verdict=PASS \
+  --artifact-path="docs/migrations/{ADO}/target-integration-architecture.md" \
+  --sentinel="## Coupling pattern resolutions" --min-bytes=200
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
+  --skill=rewrite --ado={ADO} --gate=design_doc_security_written --verdict=PASS \
+  --artifact-path="docs/migrations/{ADO}/target-security-architecture.md" \
+  --sentinel="## Coupling pattern resolutions" --min-bytes=200
+
+# data, infrastructure, deployment, feasibility — standard sentinel
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
+  --skill=rewrite --ado={ADO} --gate=design_doc_data_written --verdict=PASS \
+  --artifact-path="docs/migrations/{ADO}/target-data-architecture.md" \
+  --sentinel="## " --min-bytes=200
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
+  --skill=rewrite --ado={ADO} --gate=design_doc_infrastructure_written --verdict=PASS \
+  --artifact-path="docs/migrations/{ADO}/target-infrastructure-architecture.md" \
+  --sentinel="## " --min-bytes=200
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
+  --skill=rewrite --ado={ADO} --gate=design_doc_deployment_written --verdict=PASS \
+  --artifact-path="docs/migrations/{ADO}/target-deployment-architecture.md" \
+  --sentinel="## " --min-bytes=200
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
+  --skill=rewrite --ado={ADO} --gate=design_doc_feasibility_written --verdict=PASS \
+  --artifact-path="docs/migrations/{ADO}/migration-feasibility.md" \
+  --sentinel="## " --min-bytes=200
+```
 
 After `APPROVE DESIGN`, record the gate in the checkpoint ledger:
 ```bash
 node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
-  --skill=rewrite --ado={ADO} --gate=design_approved --verdict=PASS
+  --skill=rewrite --ado={ADO} --gate=design_approved --verdict=PASS \
+  --artifact-path="docs/migrations/{ADO}/target-component-architecture.md" \
+  --sentinel="## Coupling pattern resolutions" --min-bytes=200
 node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=committed_dag_path --value={COMMITTED_DAG_PATH}
 node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=design_doc_paths --value={DESIGN_DOC_PATHS}
 ```
@@ -765,6 +1244,22 @@ node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --
 - New information → routed through the appropriate verification spec first
 
 **Judge verdict gate — run before displaying APPROVE DESIGN:**
+
+The design judge performs a CONSISTENCY check (not a quality check — quality was already verified
+at the options judge gate). The judge verifies that each critical/major coupling decision approved
+at `APPROVE OPTIONS` is faithfully recorded in the relevant design documents.
+
+Specifically, for each critical/major coupling in `payload.rewrite.coupling_patterns`:
+- The resolution approach in `## Coupling pattern resolutions` matches what was approved at options
+  (e.g., if options approved `facade`, the design doc must record `facade` — not `replace`)
+- The external_dependencies named in `target-integration-architecture.md` match those in the checkpoint
+- The component created for a `facade` coupling appears in `target-component-architecture.md`
+- The security boundary for a `facade` WindowsAuth coupling appears in `target-security-architecture.md`
+
+A design doc that records a DIFFERENT resolution approach than what was approved at options is a
+REVISE finding — the developer chose an option based on a specific coupling strategy; the design
+must implement what was agreed, not re-open the decision.
+
 ```bash
 node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" check-gate \
   --skill=rewrite --ado={ADO} --gate=design_judge --json
@@ -799,6 +1294,7 @@ loop wave) per `migration-log-spec.md`.
 ## Step 3 — Resolve execution profile, then generate per cluster + design-quality gate (was Step 4)
 
 > 📊 **STEP BOUNDARY — Step 3: Resolve execution profile + generate per cluster**
+> Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step3","ado":"{ADO}"}`
 > The checkpoint is flushed — resuming here is safe.
 > **Reply `CONTINUE` to proceed with this step.**
 > Reply `COMPACT` if the context window is near capacity:
@@ -806,6 +1302,57 @@ loop wave) per `migration-log-spec.md`.
 >   2. Resume with `REWRITE RESUME ADO-{ID}`
 >      (The resume restarts at this step — the flush above ensures no rework.)
 > _(Do not proceed past this prompt without a reply.)_
+
+### Dirty-stop protocol — applies throughout Step 3
+
+If you detect a degraded session (slow responses, truncated output, or the conservative bias rule says stop) at any point **between** safe points SP-1 through SP-4, execute this sequence immediately in order — do not skip any step:
+
+**1. Write the dirty-stop data file:**
+```bash
+mkdir -p ".claude/migration/{ADO}"
+cat > ".claude/migration/{ADO}/dirty-stop-data.json" << 'EOF'
+{
+  "stopped_at": "{brief position description — e.g. step3-wave1-stepC}",
+  "stopped_before": "{next action that did not start — e.g. Write Gate presentation for wave 1}",
+  "at": "{today's date YYYY-MM-DD}",
+  "wave_current": {N},
+  "clusters_completed": [{names of clusters whose cluster_N_merged gate is PASS — read from payload.rewrite.clusters}],
+  "clusters_pending": [{names of clusters not yet merged}],
+  "reason": "context-near-limit"
+}
+EOF
+```
+
+**2. Record the dirty-stop in the checkpoint (atomic — cannot be partially written):**
+```bash
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" dirty-stop \
+  --skill=rewrite --ado={ADO} \
+  --data-file=".claude/migration/{ADO}/dirty-stop-data.json"
+```
+
+**3. Update `migration-tracker.md` — mark current phase 🔴 (unexpected stop):**
+Show per-cluster status by name:
+```
+| Cluster | Status |
+|---|---|
+| {name} | ✅ Merged — will not be repeated on resume |
+| {name} | ⬜ Pending — resume will continue here |
+```
+Set "Next action" to: `REWRITE RESUME {ADO}`
+
+**4. Surface this message and STOP:**
+> Session context is nearing the limit. Progress has been saved to the checkpoint.
+>
+> Clusters this wave:
+>   ✅ {cluster name} — merged and complete (will not be repeated on resume)
+>   ⬜ {cluster name} — pending (resume continues here)
+>
+> Open `docs/migrations/{ADO}/migration-tracker.md` to review full status.
+>
+> **To resume:** start a new session and type `REWRITE RESUME {ADO}`
+>            or run `/compact` in this session, then type `REWRITE RESUME {ADO}`
+
+Do NOT attempt to continue after step 4. The dirty-stop payload is cleared automatically after the wave completes successfully (SP-4).
 
 **First, resolve the target execution profile** — the stack-specific commands/paths that keep this
 skill's logic stack-agnostic (`$PLUGIN_DIR/skills/shared/migration-knowledge/refs/strategies/README.md`).
@@ -858,13 +1405,51 @@ If absent, re-derive from `target-component-architecture.md` using the same inpu
 | 11 | `false` | **ABORT** — `cluster-spec.json` is invalid (`acyclic: false`; `cycles` array names offending modules). Do not create any worktree or spawn any subagent. Tell the developer: _"DAG cycle detected among [{cycles}]. Fix the dependency in `target-component-architecture.md`, then re-run Step 2.5 to re-derive the DAG and get `APPROVE DESIGN` again."_ |
 | 1 | — | **ABORT** — graph file is malformed or missing. Show stderr; instruct the developer to re-derive at Step 2.5. |
 
-Record the spec path in the checkpoint:
+**Cluster naming convention — required when `required_cluster_splits` is non-empty:**
+Each cluster in the target DAG must be named using the concern vocabulary from the coupling
+analysis. A cluster named "cluster-1" or "monolith" is invalid when splits exist — the
+validator cannot match an anonymous name to a concern. Use the concern names from
+`payload.rewrite.coupling_patterns[].concerns[]` (e.g., `"business-logic"`, `"data-access"`,
+`"auth"`, `"core-api"`, `"frontend"`). Normalisation is applied (`"Business Logic"` → `"business-logic"`).
+
+After decompose writes `cluster-spec.json`, run the coupling boundary validator:
+```bash
+node "$PLUGIN_DIR/scripts/coupling-boundary-validate.cjs" \
+  --checkpoint=".claude/migration/{ADO}.checkpoint.json" \
+  --cluster-spec="docs/migrations/{ADO}/cluster-spec.json" \
+  --json
+```
+- **Exit 0:** all required splits respected — proceed.
+- **Exit 1:** one or more violations or unmapped concerns. Read the JSON output:
+  - `violations[]` — two concerns found in the same cluster; split the cluster and re-run decompose.
+  - `unmapped[]` — a concern from a required split has no matching cluster name; rename the
+    cluster containing that concern to match the concern name, then re-run the validator.
+- **Exit 1 (bad args/file missing):** fix the path and retry — do NOT skip the validation.
+
+Record the spec path and cluster inventory in the checkpoint — resume reads these directly
+instead of re-parsing cluster-spec.json:
 ```bash
 node scripts/checkpoint-ledger.cjs set-payload \
   --skill=rewrite --ado={ADO_ID} \
   --key=cluster_spec_path \
   --value=docs/migrations/{ADO}/cluster-spec.json
+
+# Store cluster count and name+worktree inventory for resume orientation
+CLUSTER_COUNT=$(node -e "const d=JSON.parse(require('fs').readFileSync('docs/migrations/{ADO}/cluster-spec.json','utf8'));process.stdout.write(String(d.clusters?.length||0))")
+CLUSTER_META=$(node -e "const d=JSON.parse(require('fs').readFileSync('docs/migrations/{ADO}/cluster-spec.json','utf8'));process.stdout.write(JSON.stringify((d.clusters||[]).map((c,i)=>({id:i+1,name:c.name||'cluster-'+(i+1),worktree:'.claude/worktrees/{ADO}-cluster-'+(i+1)}))))")
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=cluster_count --value="$CLUSTER_COUNT"
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} \
+  --payload-json="{\"clusters\":$CLUSTER_META}"
 ```
+
+> ⚓ **Safe point SP-1 — cluster schedule ready, before wave 1 spawns**
+> Checkpoint is flushed: cluster-spec.json written, clusters array and count stored.
+> Apply the conservative bias rule — if the session is nearing the context limit, stop cleanly here:
+> 1. Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step3-sp1","ado":"{ADO}"}`
+> 2. Update `migration-tracker.md` — "Next action: `REWRITE RESUME {ADO}`"
+> 3. Surface this and STOP:
+>    > Progress saved. Type `REWRITE RESUME {ADO}` — resume reads cluster inventory from the checkpoint and starts wave 1 with no repeated work.
+> If context is healthy, continue without pausing — no developer reply required.
 
 **All cluster scheduling below reads ONLY from `cluster-spec.json`:**
 - Wave schedule: `worktree_plan` array — wave 1 clusters first, wave 2 next, etc.
@@ -925,11 +1510,34 @@ PAYLOAD
 Return in your text response: `verdict`, `diff_summary` (one paragraph), `diff_path`, `assurance_path`, `test_plan_path`, `log_fragment_path`, `bal_grade`. These short fields are safe to return as text.
 ```
 
-Create the worktree before spawning. Use a fixed path pattern so the orchestrator and subagent agree:
+Create the worktree before spawning using an idempotent guard — this block must be safe to re-run
+if a previous session created the worktree but did not complete the wave:
+
 ```bash
-git worktree add {repo-root}/.claude/worktrees/{ADO}-cluster-{N} -b cluster-{ADO}-{N}
+REPO_ROOT=$(git rev-parse --show-toplevel)
+WORKTREE_PATH="$REPO_ROOT/.claude/worktrees/{ADO}-cluster-{N}"
+
+# Case 1: cluster was already merged and approved in a previous run — skip entirely
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" check-gate \
+  --skill=rewrite --ado={ADO} --gate=cluster_{N}_merged 2>/dev/null
+if [ $? -eq 0 ]; then
+  echo "✅ Cluster {N} ({name}) already merged — skipping subagent spawn"
+  # Do not spawn subagent for this cluster; advance to the next cluster in the wave
+
+# Case 2: worktree exists from a previous incomplete run — reset it and reuse
+elif git worktree list --porcelain | grep -q "^worktree $WORKTREE_PATH$"; then
+  echo "⚠ Worktree for cluster {N} exists from a previous run — cleaning and reusing"
+  git -C "$WORKTREE_PATH" checkout .   # discard any uncommitted file changes
+  git -C "$WORKTREE_PATH" clean -fd    # remove untracked files left by the previous subagent
+  # Proceed to spawn subagent against the cleaned worktree
+
+# Case 3: no worktree exists — create it fresh
+else
+  git worktree add "$WORKTREE_PATH" -b cluster-{ADO}-{N}
+  # Proceed to spawn subagent
+fi
 ```
-`{repo-root}` is the repository root (resolve with `git rev-parse --show-toplevel`).
+`REPO_ROOT` is the repository root resolved at runtime — never hard-coded.
 
 Run all clusters in the same wave simultaneously (parallel Agent tool calls). Wait for all to
 return before proceeding to the next wave.
@@ -952,6 +1560,15 @@ node "{PLUGIN_DIR}/scripts/checkpoint-ledger.cjs" set-payload \
 ```
 Never run checkpoint updates from inside the cluster subagent — sequential updates in the orchestrator prevent concurrent JSON corruption.
 
+> ⚓ **Safe point SP-2 — wave N subagent verdicts collected and persisted, before Write Gate**
+> Checkpoint is flushed: all cluster verdicts, assurance paths, BAL grades stored via B2.
+> Apply the conservative bias rule — if the session is nearing the context limit, stop cleanly here:
+> 1. Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step3-sp2","ado":"{ADO}"}`
+> 2. Update `migration-tracker.md` — "Next action: `REWRITE RESUME {ADO}`"
+> 3. Surface this and STOP:
+>    > Progress saved. Type `REWRITE RESUME {ADO}` — resume reads cluster verdicts from checkpoint and continues from the Write Gate for this wave.
+> If context is healthy, continue without pausing — no developer reply required.
+
 **Step C — Present diffs for Write Gate approval.** For each PASS cluster, show the diff and prompt:
 ```
 📁 WRITE PENDING — Cluster {N}: {name}
@@ -960,6 +1577,12 @@ Never run checkpoint updates from inside the cluster subagent — sequential upd
 ```
 The Write Gate lives in the orchestrator (main session), not in the subagent. Only on APPROVE does
 the orchestrator commit the worktree files to the target folder.
+
+After committing, record the cluster as merged so the worktree guard skips it on any future re-run:
+```bash
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
+  --skill=rewrite --ado={ADO} --gate=cluster_{N}_merged --verdict=PASS
+```
 
 **Step D — Handle REVISE / BLOCK.**
 - REVISE: re-spawn the subagent with the findings appended to the prompt. Cap at 3 iterations. On
@@ -978,9 +1601,47 @@ the orchestrator commit the worktree files to the target folder.
   > Do not close the cluster without a developer reply.
 
 **Step E — Append log fragments.** After all subagents in the wave return, append each cluster's
-`cluster-{N}-log-fragment.md` to `migration-log.md` sequentially in cluster order, then delete
-the fragment files. Never let subagents write directly to `migration-log.md` — concurrent writes
-corrupt the file.
+fragment to `migration-log.md` **sequentially in cluster order** using the gated block below.
+Never let subagents write directly to `migration-log.md` — concurrent writes corrupt the file.
+
+For each cluster N in wave order:
+
+```bash
+# Pre-append guard: verify migration-log.md exists before any append
+test -f "docs/migrations/{ADO}/migration-log.md" \
+  || { echo "❌ migration-log.md missing — do not proceed, return to Step 0"; exit 1; }
+
+# Check if this cluster's fragment was already appended in a previous run
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" check-gate \
+  --skill=rewrite --ado={ADO} --gate=cluster_{N}_fragment_appended 2>/dev/null
+if [ $? -eq 0 ]; then
+  # Already appended — the re-run subagent re-created the fragment file; discard it
+  echo "Fragment for cluster {N} already appended in a previous run — discarding re-created file"
+  rm -f "docs/migrations/{ADO}/cluster-{N}-log-fragment.md"
+else
+  # DECISION: write gate BEFORE appending, not after.
+  # If context exhausts after the gate write but before the append, the log will be
+  # missing cluster {N}'s entries — a detectable omission (no entries for cluster {N}).
+  # If the gate were written after the append and context exhausted between the two,
+  # a re-run would double-append — an undetectable duplicate that corrupts the audit record.
+  # Detectable omission is always safer than undetectable duplication.
+  node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
+    --skill=rewrite --ado={ADO} --gate=cluster_{N}_fragment_appended --verdict=PASS
+  cat "docs/migrations/{ADO}/cluster-{N}-log-fragment.md" \
+    >> "docs/migrations/{ADO}/migration-log.md"
+  rm -f "docs/migrations/{ADO}/cluster-{N}-log-fragment.md"
+  echo "✅ Fragment for cluster {N} appended and file removed."
+fi
+```
+
+> ⚓ **Safe point SP-3 — wave N fragment appends complete, before tracker update and wave gate**
+> Checkpoint is flushed: all cluster_{N}_fragment_appended gates written, migration-log.md updated.
+> Apply the conservative bias rule — if the session is nearing the context limit, stop cleanly here:
+> 1. Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step3-sp3","ado":"{ADO}"}`
+> 2. Update `migration-tracker.md` — "Next action: `REWRITE RESUME {ADO}`"
+> 3. Surface this and STOP:
+>    > Progress saved. Type `REWRITE RESUME {ADO}` — resume skips completed fragment appends and continues from the tracker update.
+> If context is healthy, continue without pausing — no developer reply required.
 
 **Step F — Update tracker.** After the wave is complete and diffs are approved, update
 `migration-tracker.md`: mark completed clusters ✅, update "Next action" to the next wave or Step 5.
@@ -1024,7 +1685,18 @@ corrupt the file.
 # Flush checkpoint before next step
 node scripts/checkpoint-ledger.cjs set-gate --skill=rewrite --ado={ADO_ID} --gate=step_3_wave_N_complete --verdict=PASS
 node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=wave_N_cluster_paths --value={WAVE_N_CLUSTER_PATHS}
+# Clear any dirty_stop entry from this wave — wave is complete, clean state
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --payload-json='{"dirty_stop":null}'
 ```
+
+> ⚓ **Safe point SP-4 — wave N complete, before wave N+1 (or Step 5)**
+> Checkpoint is flushed: step_3_wave_N_complete gate written, wave cluster paths stored.
+> Apply the conservative bias rule — if the session is nearing the context limit, stop cleanly here:
+> 1. Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step3-sp4-wave{N}","ado":"{ADO}"}`
+> 2. Update `migration-tracker.md` — "Next action: `REWRITE RESUME {ADO}`"
+> 3. Surface this and STOP:
+>    > Wave {N} complete and saved. Type `REWRITE RESUME {ADO}` — resume reads the wave gate, skips wave {N}, and starts wave {N+1} (or Step 5 if all waves complete).
+> If context is healthy, continue without pausing — no developer reply required.
 
 ## Step 4 — Per-cluster BAL + ERL — runs inside the cluster subagent
 
@@ -1045,6 +1717,7 @@ Include: all clusters, their BAL grade (from `bal_grade` in Step B return values
 ## Step 5 — Two-gate model (was Step 6)
 
 > 📊 **STEP BOUNDARY — Step 5: Two-gate model**
+> Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step5","ado":"{ADO}"}`
 > The checkpoint is flushed — resuming here is safe.
 > **Reply `CONTINUE` to proceed with this step.**
 > Reply `COMPACT` if the context window is near capacity:
@@ -1081,7 +1754,8 @@ and remove any residual project-specific detail before closing the migration."
 
 ```bash
 # Flush checkpoint before next step
-node scripts/checkpoint-ledger.cjs set-gate --skill=rewrite --ado={ADO_ID} --gate=merge_gate --verdict=PASS
+node scripts/checkpoint-ledger.cjs set-gate --skill=rewrite --ado={ADO_ID} --gate=merge_gate --verdict=PASS \
+  --artifact-path="docs/migrations/{ADO_ID}/{ADO_ID}-assurance-summary.md" --sentinel="## " --min-bytes=100
 node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=assurance_summary_path --value={ASSURANCE_SUMMARY_PATH}
 ```
 
@@ -1175,3 +1849,5 @@ test-plan skill — it collects the paths already returned.
 - ALWAYS present oracle mode options with assurance-ceiling consequences and wait for explicit
   developer choice before recording — NEVER auto-select or infer the mode from silence.
 - Write migration log entries per `migration-log-spec.md` at each phase — never defer logging.
+
+> Write `.claude/active-task.json`: `{}` — clears the active step after completion gate passes; hook exits 0 on next unrelated message.

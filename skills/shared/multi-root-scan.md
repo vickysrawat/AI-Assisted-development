@@ -118,3 +118,7 @@ subsequent root is a dependency; modules derived from it are tagged with `source
 - NEVER change the shape of `additionalDirectories` in `settings.local.json` — it is a flat string
   array Claude Code reads directly for file access.
 - Ledger-writing scanners default to repo-only; dependencies require an explicit `--with-deps`.
+- Direction, tier, and display label for cloned dependency repos come from the
+  `## Locally-Cloned Dependency Repos` table in `architecture-integrations.md` — not from
+  this resolver. This resolver provides scan roots only; semantic metadata lives in the
+  architecture doc so it is committed and team-shared.

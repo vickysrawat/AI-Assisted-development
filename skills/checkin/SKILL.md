@@ -74,6 +74,73 @@ Report scope immediately:
 
 ---
 
+## Step 1b — Governance mode check (spec routing for Check B)
+
+```bash
+GOVERNANCE=$(node -e "try{const s=JSON.parse(require('fs').readFileSync('.claude/dream-init-state.json','utf8'));process.stdout.write(s.governance_mode||'full')}catch(e){process.stdout.write('full')}")
+if [ -n "${ADO_ID}" ]; then
+  if [ "$GOVERNANCE" = "lightweight" ]; then
+    SPEC_FILE=$(find docs -path "*UserStory${ADO_ID}*" -name "ADO-${ADO_ID}-*.plan.md" 2>/dev/null | head -1)
+    [ -z "$SPEC_FILE" ] && echo "CHECK_B_SPEC=NONE" || echo "CHECK_B_SPEC=plan:$SPEC_FILE"
+  else
+    SPEC_FILE=$(find docs -path "*UserStory${ADO_ID}*" -name "ADO-${ADO_ID}-*.icea.md" 2>/dev/null | head -1)
+    [ -z "$SPEC_FILE" ] && echo "CHECK_B_SPEC=NONE" || echo "CHECK_B_SPEC=icea:$SPEC_FILE"
+  fi
+else
+  echo "CHECK_B_SPEC=NONE"
+fi
+```
+
+Routes Check B (Step 4) to the correct spec:
+- `CHECK_B_SPEC=plan:{path}` → run pr-spec-review against plan file (Must Have items as spec)
+- `CHECK_B_SPEC=icea:{path}` → existing Check B behaviour (unchanged)
+- `CHECK_B_SPEC=NONE` in **lightweight** → **WARN** (not FAIL): "No plan found for ADO #{ID}. Check B skipped."
+- `CHECK_B_SPEC=NONE` in **full** → **FAIL** (existing behaviour — no ICEA is a compliance failure)
+
+Pass `CHECK_B_SPEC` into Step 4 where Check B is executed.
+
+---
+
+## Step 1c — Deterministic graph refresh (always runs, non-blocking)
+
+Before loading shared context, refresh the knowledge graph with the deterministic sync
+script. This keeps the graph current without LLM cost so Check A and Check B work from
+accurate module/edge data.
+
+```bash
+PLUGIN_DIR=$(cat .claude/plugin-path.txt 2>/dev/null || echo "")
+STALE=$(test -f .claude/graph/.stale && echo "STALE" || echo "FRESH")
+if [ -n "$PLUGIN_DIR" ] && [ "$STALE" = "STALE" ]; then
+  GRAPH_SYNC_OUT=$(node "$PLUGIN_DIR/scripts/graph-sync-deterministic.cjs" 2>/dev/null)
+  GRAPH_SYNC_EXIT=$?
+  UNMATCHED_DEPS=$(printf '%s\n' "$GRAPH_SYNC_OUT" | grep '^WARN_UNMATCHED_DEP:' | sed 's/^WARN_UNMATCHED_DEP: //' || true)
+else
+  GRAPH_SYNC_EXIT=0
+  UNMATCHED_DEPS=""
+fi
+```
+
+- **`.stale` absent** → graph is current — skip the sync entirely (zero overhead)
+- **`.stale` present** → run the sync: updates fingerprints, re-derives EXTRACTED edges,
+  syncs external nodes from architecture docs. Deletes `.stale` on success.
+- **Exit code 1** (`NEW_MODULES_DETECTED`) → append this advisory to the final verdict:
+  ```
+  ⚠ New source module(s) detected in this commit. Run /graph-sync after merging to
+    classify them and keep the knowledge graph accurate.
+  ```
+- **`UNMATCHED_DEPS` non-empty** → append to the final verdict (non-blocking advisory):
+  ```
+  ℹ️  Dependency repos not annotated in architecture-integrations.md:
+      {each path on its own line}
+      Run /update-arch --integrations to add direction/tier for accurate graph classification.
+  ```
+- **Script absent or fails** → skip silently; never block the commit gate.
+
+In compact mode (`output_mode = "compact"`): show one-line result only:
+`✅ Step 1c — Graph sync: {N} modules updated` or `✅ Step 1c — Graph current (skipped)`
+
+---
+
 ## Step 2 — Load shared context (once, shared across all three checks)
 
 Load these once. Do not reload per check:

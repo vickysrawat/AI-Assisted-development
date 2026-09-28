@@ -1,0 +1,8 @@
+# .gitattributes — merge strategies for generated append-only files
+
+# Governance audit logs: one file per day, append-only JSON Lines.
+# Union merge combines lines from both branches without a conflict marker.
+.claude/audit/*.jsonl merge=union
+
+# Signal files: short-lived, cleared by Dream. Same append pattern.
+.claude/signals/*.json merge=union

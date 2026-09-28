@@ -82,6 +82,7 @@ source-file-consent category — see `$PLUGIN_DIR/skills/shared/source-file-cons
 | `tech` | `internal` (called by icea-feature at Step 8, before the temp write) | **Category C** | The on-disk approved ICEA + the in-context Tech Spec draft + architecture docs. Never source. |
 | `code` | `internal` (called by icea-implement at Step 4a) | **Category C** | The in-context generated code + the approved ICEA (intent) + the approved Tech Spec (plan). Nothing is on disk yet, so no source file is read. |
 | `code` | `standalone` (`/critic code [ADO-<id>]`) | **Category A** (source) + **C** (docs) | Staged/changed source files, announced before reading (same implicit-consent model as `/code-review --changed`), plus the approved ICEA and Tech Spec (docs/ artefacts, Category C). |
+| `plan` | `internal` (called by goal-loop after SAVE PLAN) | **Category C** | Plan file (in context) + architecture docs. Never source. |
 
 `tech` mode is **internal-only** — it is meaningful only while a freshly drafted
 Tech Spec is still in context beside its ICEA. The only path that reads source
@@ -351,6 +352,42 @@ Concerns ({N}):
       without flagging the guess.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
+
+---
+
+## Mode: plan critique (lightweight governance — internal only)
+
+> **Acting as:** [TL] Marcus Reid — Tech Lead. Scrutinize the plan for clarity, concreteness, and
+> bounded scope before auto-approval. See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
+
+Evaluates a lightweight plan before auto-approval. Checks:
+
+1. **Goal clarity** — Must be specific and measurable. Fails: "improve performance". Passes: "reduce P95 API latency to < 200ms under 100 concurrent users".
+2. **Must Have concreteness** — Each item must be verifiable behaviour or outcome. Flag: "make it faster", "refactor X", "improve UX" (no criterion).
+3. **AC count sanity** — Warn if ≤ 1 item (too coarse) or ≥ 8 items (recommend splitting).
+4. **Won't Have present** — At least one entry required; confirms scope is bounded. Warn if absent.
+5. **B-series flags** — Same as icea mode: flag if any Must Have item touches regulated data, auth, payments, PII, or safety — require explicit note in the plan.
+6. **Open Questions blocking** — Any Open Question with no owner or no deferral justification = REVISE.
+
+Verdicts: PASS · PASS WITH NOTES · REVISE (same as other modes)
+
+### plan mode output
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔎 CRITIC — plan critique — ADO #{ID} [LIGHTWEIGHT]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Verdict: {PASS | PASS WITH NOTES | REVISE}
+
+Concerns ({N}):
+  [Goal]         Goal is too vague to be measurable.
+  [Must Have]    Item [2] — "improve UX" has no verifiable criterion.
+  [Won't Have]   Section absent — scope is unbounded.
+  [Open Questions] Question [1] has no owner.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**Bounded auto-revise:** goal-loop may rewrite Must Have items in context and re-run once (max 1 retry). This is shorter than the 2-retry loop for icea/tech/code because the plan is simpler; if the single retry still returns REVISE, stop and instruct the developer to fix manually.
 
 ---
 

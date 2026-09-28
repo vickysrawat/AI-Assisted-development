@@ -67,6 +67,105 @@ own source reads). See `$PLUGIN_DIR/skills/shared/source-file-consent.md`.
    from the current branch name (pattern `ADO-[0-9]+`). If neither resolves, ask:
    *"Which work item should I drive? (ADO-<id>)"* and stop.
 
+3. Read governance mode:
+
+```bash
+GOVERNANCE=$(node -e "try{const s=JSON.parse(require('fs').readFileSync('.claude/dream-init-state.json','utf8'));process.stdout.write(s.governance_mode||'full')}catch(e){process.stdout.write('full')}")
+echo "GOVERNANCE_MODE=$GOVERNANCE"
+```
+
+---
+
+### Step 0 — Lightweight mode branch (if GOVERNANCE_MODE=lightweight)
+
+If `GOVERNANCE_MODE=lightweight` — announce and replace Steps 1 & 2 with the lightweight orchestration below:
+
+```
+🔁 Goal-loop — ADO-{ID}
+   ⚡ LIGHTWEIGHT MODE
+   Workflow: draft plan → SAVE PLAN (write+critique+approve+test-plan) → IMPLEMENT → checkin
+   ICEA and Tech Spec steps are skipped. I approve nothing on your behalf.
+   I stop at: SAVE PLAN · WRITE PENDING.
+```
+
+Check for existing plan:
+```bash
+PLAN=$(find docs -path "*UserStory${ADO_ID}*" -name "ADO-${ADO_ID}-*.plan.md" 2>/dev/null | head -1)
+PLAN_STATUS=$([ -n "$PLAN" ] && grep "^Status:" "$PLAN" | head -1 || echo "")
+TEST_PLAN=$(find docs -path "*UserStory${ADO_ID}*" -name "ADO-${ADO_ID}-*.test-plan.md" 2>/dev/null | head -1)
+```
+
+Branch:
+- `Status: ✅ Approved` + test plan exists → skip to Step 3 (IMPLEMENT)
+- `Status: ✅ Approved` + no test plan → run test-plan (`--source plan --subagent`) then go to Step 3
+- Plan exists, not approved → re-run `SAVE PLAN ADO-{ID}` ceremony
+- No plan → draft plan inline (see below)
+
+**Before drafting — read project-knowledge.md:**
+```bash
+cat .claude/project-knowledge.md 2>/dev/null || echo "NOT_FOUND"
+```
+If entries exist: apply relevant patterns when populating Must Have items and scope.
+Note applied entries at the top of the plan: `ℹ Applied {N} pattern(s) from project-knowledge.md: "{title}"…`
+Skip this note if zero entries were applicable. Treat entries as observed patterns — verify against the current request; flag conflicts as an Open Question.
+
+**Draft plan inline:**
+```
+📋 LIGHTWEIGHT PLAN — ADO #{ADO_ID}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Goal: {one sentence — what this delivers and to whom}
+
+Must Have (these become acceptance criteria):
+  [1] {concrete, testable requirement}
+  [2] {concrete, testable requirement}
+
+Won't Have (explicitly deferred):
+  [1] {out of scope item}
+
+Open Questions:
+  [1] {question} — Owner: {owner}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Review above. When ready: SAVE PLAN ADO-{ADO_ID}
+```
+
+**On `SAVE PLAN ADO-{ID}` (full ceremony — no separate APPROVE message needed):**
+
+1. Collect Release + Sprint (ask once if not in context)
+2. Write plan to `docs/Release{R}/Sprint{S}/UserStory{ADO_ID}/ADO-{ADO_ID}-{feature}.plan.md` with `Status: DRAFT`
+3. Run critic (plan mode):
+   ```
+   Read $PLUGIN_DIR/skills/critic/SKILL.md and execute with mode=plan, source=internal
+   ```
+   - PASS / PASS WITH NOTES → proceed to step 4
+   - REVISE → show findings; rewrite Must Have items in context, max 1 auto-retry;
+     if still REVISE after retry → stop: "Fix the plan and re-run SAVE PLAN ADO-{ADO_ID}"
+4. If critic PASS: stamp `Status: ✅ Approved` in plan file; write audit entry:
+   ```bash
+   node .claude/hooks/audit-append.cjs "{\"event\":\"gate.approve\",\"action\":\"SAVE PLAN\",\"ado\":\"${ADO_ID}\",\"result\":\"granted\",\"source\":\"goal-loop\",\"detail\":\"lightweight auto-approve\"}" 2>/dev/null || true
+   ```
+5. Auto-generate test plan:
+   ```
+   Read $PLUGIN_DIR/skills/test-plan/SKILL.md and execute for ADO-{ID} with --source plan --subagent
+   ```
+6. Confirm and prompt:
+   ```
+   ✅ Plan approved + test plan generated — ADO #{ADO_ID} [LIGHTWEIGHT MODE]
+      Plan:      docs/.../ADO-{ADO_ID}-{feature}.plan.md
+      Test plan: docs/.../ADO-{ADO_ID}-{feature}.test-plan.md
+
+   Ready to implement: IMPLEMENT ADO-{ADO_ID}
+   ```
+
+After IMPLEMENT + Write Gate approved → trigger checkin:
+```
+Read $PLUGIN_DIR/skills/checkin/SKILL.md and execute.
+```
+
+---
+
+### Step 0 — Full mode (if GOVERNANCE_MODE=full)
+
 Announce the plan so the developer knows the gates that are coming:
 ```
 🔁 Goal-loop — ADO-{ID}

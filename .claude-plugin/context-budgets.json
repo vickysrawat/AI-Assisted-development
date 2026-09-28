@@ -13,8 +13,9 @@
   ],
   "default_window": 200000,
   "model_windows": {
-    "claude-sonnet-4-6": 200000,
-    "claude-opus-4-8": 200000,
+    "claude-sonnet-4-6":         1000000,
+    "claude-sonnet-4-6[1m]":     1000000,
+    "claude-opus-4-6":           200000,
     "claude-haiku-4-5-20251001": 200000
   },
   "skills": {
@@ -37,6 +38,13 @@
       "R3": 30000,
       "R4": 20000,
       "R5": 20000
+    },
+    "icea-implement": {
+      "step4-start": 60000
+    },
+    "icea-feature": {
+      "step4-draft-icea": 80000,
+      "step8-draft-tech": 100000
     }
   }
 }

@@ -76,7 +76,7 @@ process.stdin.on('end', () => {
   if (remaining >= declared) process.exit(0);
 
   const pct       = Math.round((used / windowSize) * 100);
-  const resumeCmd = ado ? `${skill.toUpperCase()} RESUME ADO-${ado}` : `Resume the ${skill} skill`;
+  const resumeCmd = activeTask.resume_cmd || (ado ? `${skill.toUpperCase()} RESUME ADO-${ado}` : `Resume the ${skill} skill`);
 
   process.stderr.write(
     `⛔ CONTEXT GUARD — insufficient headroom for ${skill} / ${step}\n\n` +

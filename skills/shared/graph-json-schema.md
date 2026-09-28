@@ -83,11 +83,15 @@ byte-identical file so diffs stay minimal.
 | `id` | Stable identifier — the detail-file basename without extension, lowercase-kebab. Edges reference this. |
 | `module` | PascalCase display name (matches the index `Module` column) |
 | `domain` | snake_case domain label (matches the index `Domain` column) |
-| `type` | **Node type (required)** ∈ `service` · `repository` · `ui` · `datastore` · `external-api` · `shared-lib` · `domain`. Drives filterable traversal, precise impact analysis, and visualisation grouping. When ambiguous, pick the closest and let `/graph-sync` refine it. |
+| `type` | **Node type (required)** ∈ `service` · `repository` · `ui` · `datastore` · `domain` (internal codebase types) · `external-api` · `database` · `message-bus` · `shared-library` · `upstream-app` · `downstream-app` · `storage` · `identity-provider` (external dependency types). Drives filterable traversal, precise impact analysis, AC obligation inference, and visualisation grouping. External types never carry source `paths` or source fingerprints. When ambiguous, pick the closest and let `/graph-sync` refine it. |
+| `external` | **Optional boolean.** `true` for all external dependency nodes (types: `external-api`, `database`, `message-bus`, `shared-library`, `upstream-app`, `downstream-app`, `storage`, `identity-provider`). Absent or `false` for internal codebase nodes. Skills filter on this to separate system-boundary nodes from module nodes without inspecting `type`. |
+| `tech` | **Optional string.** Technology/protocol label for external nodes — e.g. `"REST/JSON"`, `"gRPC"`, `"SQL Server"`, `"Redis"`, `"Azure Service Bus"`, `"NuGet"`, `"npm"`, `"Azure Blob"`. Free-form; used in detail files and ICEA Context narrative. Absent for internal nodes. |
+| `direction` | **Optional.** Flow direction relative to this application — `"outbound"` (this app calls/writes to the dependency), `"inbound"` (the dependency pushes data/events into this app), `"bidirectional"`. Absent for internal nodes unless populated from the `## Locally-Cloned Dependency Repos` table in `architecture-integrations.md` (applied by graph-sync Step 7a for `sourceRoot` nodes). Drives `fed-by` vs `feeds` edge type and the correct AC obligation. |
+| `source` | **Optional string.** Which architecture doc populated this node — e.g. `"architecture-integrations.md"`, `"architecture-data.md"`, `"architecture-deployment.md"`. Lets graph-sync re-sync only the relevant doc when it changes. Absent for internal nodes. |
 | `detailFile` | Relative path from `.claude/` — matches the index `Detail File` column |
 | `entryPoint` | Most-representative file (human orientation pointer; matches the index `Entry Point`) |
 | `paths` | **Array** of source-root globs the module owns, **relative to `sourceRoot`** (or the repo root when `sourceRoot` is absent). Usually one; a multi-root module (e.g. frontend + backend) lists each. Fingerprint and traversal-load span all of them. |
-| `sourceRoot` | **Optional, absent-tolerant.** Absolute (forward-slashed) path of the source root a module was derived from when it lives in a locally-cloned dependency repo listed in `additionalDirectories` (see `skills/shared/multi-root-scan.md`). **Absent ⇒ the repo root** (the common case — repo-local modules never carry it). Consumers resolve `paths`/`entryPoint`/fingerprint roots against `sourceRoot` when present. Additive field — `meta.schemaVersion` stays `"1.0"`; a graph without it is valid. |
+| `sourceRoot` | **Optional, absent-tolerant.** Absolute (forward-slashed) path of the source root a module was derived from when it lives in a locally-cloned dependency repo listed in `additionalDirectories` (see `skills/shared/multi-root-scan.md`). **Absent ⇒ the repo root** (the common case — repo-local modules never carry it). Consumers resolve `paths`/`entryPoint`/fingerprint roots against `sourceRoot` when present. When the matching `architecture-integrations.md` entry includes a `Local path:` annotation, graph-sync Step 7a populates `direction` and `type` from the `## Locally-Cloned Dependency Repos` table instead of inferring them from folder structure. Additive field — `meta.schemaVersion` stays `"1.0"`; a graph without it is valid. |
 | `fingerprint` | **Module-wide** fingerprint — see below. Mirrored into the detail file's `_Fingerprint:` header. |
 | `hub` | Derived flag: `true` when the node's total degree (in + out edges) exceeds the hub threshold. Traversal-load excludes hubs from neighborhood expansion so a `Core`/`Common` module never blows the token budget. |
 
@@ -101,13 +105,60 @@ byte-identical file so diffs stay minimal.
 |---|---|
 | `from` | Source node `id` (must exist in `nodes`) |
 | `to` | Target node `id` (must exist in `nodes` — **no dangling edges**) |
-| `type` | Relationship type ∈ `depends` (default) · `calls` · `publishes` · `reads` · `extends` |
+| `type` | Relationship type ∈ `depends` (default) · `calls` · `reads` · `publishes` · `extends` (internal-to-internal) · `writes` · `subscribes` · `uses` · `fed-by` · `feeds` (internal-to-external or external-to-internal). See AC obligation table in `skills/icea-feature/SKILL.md` step 2b. |
 | `confidence` | Provenance ∈ **`EXTRACTED`** (found directly in source — e.g. an import/using/reference), **`INFERRED`** (reasonable model inference), **`AMBIGUOUS`** (flagged for human review). Impact analysis must never treat an `INFERRED`/`AMBIGUOUS` edge as fact. |
 | `reason` | Optional short phrase (≤4 words) — why the dependency exists |
 
 **Reverse edges are derived, not stored.** "What depends on X?" = every edge whose
 `to == X`. Inverting the edge list is a single pass, so `dependents` is computed at
 query time — never materialised (keeps the file minimal and drift-free).
+
+### External dependency node example
+
+External dependency nodes follow the same schema but with the additional fields and no source paths:
+
+```json
+{
+  "id": "payments-api",
+  "module": "PaymentsAPI",
+  "domain": "external",
+  "type": "external-api",
+  "external": true,
+  "tech": "REST/JSON",
+  "direction": "outbound",
+  "source": "architecture-integrations.md",
+  "detailFile": "graph/payments-api.md",
+  "entryPoint": "",
+  "paths": [],
+  "fingerprint": "doc-entry-sha1",
+  "hub": false
+}
+```
+
+**External node fingerprint rule:** Because external nodes have no source files, their
+fingerprint is computed from the text of their entry in the source architecture doc:
+
+```bash
+echo -n "{full text of the doc entry for this dependency}" | sha1sum | cut -d' ' -f1
+```
+
+When the doc entry changes (URL, tech, protocol version), the fingerprint changes and
+graph-sync regenerates the detail file. This keeps external nodes in sync with the
+architecture docs without scanning source files.
+
+**Edge types for external nodes** (complete set):
+
+| Edge type | Direction | Meaning |
+|---|---|---|
+| `calls` | internal → external-api | This app calls the external API |
+| `writes` | internal → database / storage | This app writes to the data store |
+| `reads` | internal → database / storage | This app reads from the data store |
+| `subscribes` | internal → message-bus | This app consumes from the queue/topic |
+| `publishes` | internal → message-bus | This app publishes to the queue/topic |
+| `uses` | internal → shared-library | This app depends on the library |
+| `fed-by` | upstream-app → internal | The upstream app pushes data into this app |
+| `feeds` | internal → downstream-app | This app pushes data to the downstream app |
+| `calls` | internal → identity-provider | This app requests tokens / validates identity |
 
 ### `directoryCatalog` — optional top-level key
 

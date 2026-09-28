@@ -49,7 +49,7 @@ Read .claude/plugin-path.txt → PLUGIN_DIR
 | `EXPAND TEST ADO-{ID}` | Expand all stub suites with an approved source artifact on disk |
 | `EXPAND TEST ADO-{ID} Suite-N` | Expand a single named suite |
 | `EXPAND TEST ADO-{ID} TC-{ID}` | Expand a single TC stub to full steps |
-| `REFRESH TEST ADO-{ID}` | Re-generate cross-cutting suites from current source artifact |
+| `REFRESH TEST ADO-{ID}` | Smart merge refresh — regenerate cross-cutting + stub suites; insert revision notices in expanded suites (Step 9x) |
 | `REFRESH TEST ADO-{ID} --combine` | Re-assemble the rewrite combined doc from cluster files |
 
 All writes follow the Write Gate. `--subagent` suppresses developer prompts and budget
@@ -78,17 +78,31 @@ Infer Release and Sprint from the ADO ID's ICEA/ledger path on disk.
 1. Extract ADO ID from the command. Normalise: `ADO-1847`, `ADO #1847`, `1847` all resolve the same.
 2. Resolve `--source` flag. If omitted, auto-detect by checking for artifacts on disk in this order:
    ```
-   docs/**/*ADO-{ID}*.techspec.md  → source: icea
-   .claude/migrations/{ID}/payload.upgrade  → source: upgrade
-   .claude/migrations/{ID}/payload.rewrite  → source: rewrite
-   .claude/migrations/{ID}/payload.replatform → source: replatform
+   docs/**/*ADO-{ID}*.plan.md (Status: ✅ Approved)  → source: plan
+   docs/**/*ADO-{ID}*.techspec.md                    → source: icea
+   .claude/migrations/{ID}/payload.upgrade            → source: upgrade
+   .claude/migrations/{ID}/payload.rewrite            → source: rewrite
+   .claude/migrations/{ID}/payload.replatform         → source: replatform
+   ```
+   To check plan status when auto-detecting:
+   ```bash
+   PLAN_FILE=$(find docs -path "*ADO-{ID}*" -name "ADO-{ID}-*.plan.md" 2>/dev/null | head -1)
+   PLAN_STATUS=$([ -n "$PLAN_FILE" ] && grep "^Status:" "$PLAN_FILE" | head -1 || echo "")
+   # Only use plan source if Status: ✅ Approved
    ```
    If no artifact is found, halt:
    ```
    ⚠ No approved artifact found for ADO-{ID}.
-     Run SAVE TECH ADO-{ID} (icea), or check that a migration ledger exists
-     under .claude/migrations/{ID}/.
+     Run SAVE PLAN ADO-{ID} (lightweight) or SAVE TECH ADO-{ID} (full), or check that a
+     migration ledger exists under .claude/migrations/{ID}/.
    ```
+
+   **`--source plan` handling:**
+   - Read plan file; extract Must Have items `[N] {text}` as AC list → `TC-P{N}`
+   - Suite 1 (Plan Verification): one positive + one negative TC per Must Have item
+   - Cross-cutting suites (Regression, Security, NFR): stubs marked `⚠ [lightweight — expand manually]`
+   - Infer Release and Sprint from plan file path
+   - In `--subagent` mode, skip developer prompt and generate directly
 3. Check for `--subagent` flag. If present, skip all developer prompts and budget warnings
    throughout this skill — internal-caller mode.
 
@@ -102,6 +116,12 @@ Show a single prompt before generating anything:
 ```
 Tech Spec / ledger approved for ADO-{ID}. Generate test plan? Y/N
 (Source: {source type} · Estimated output: {N} suites)
+```
+
+**Lightweight plan (source = plan):**
+```
+Plan approved for ADO-{ID}. Generate test plan from {N} Must Have items? Y/N
+(Plan Verification suite + cross-cutting stubs)
 ```
 
 **Epic skeleton:**
@@ -501,6 +521,59 @@ Include all stubs in the Execution Tracker with Status ⬜.
 
 ---
 
+## Step 9x — REFRESH TEST (smart merge — triggered by REFRESH TEST ADO-{ID})
+
+Refreshes the test plan after an ICEA, Tech Spec, or Plan revision. Applies a smart merge
+strategy so developer-written test cases in already-expanded suites are never silently
+overwritten.
+
+**1. Locate the existing test plan:**
+```bash
+TEST_PLAN=$(find docs -path "*UserStory${ADO_ID}*" -name "ADO-${ADO_ID}-*.test-plan.md" 2>/dev/null | head -1)
+```
+If not found: exit with `⚠ No test plan found — run SAVE TEST ADO-{ADO_ID} to generate one.`
+
+**2. Read the `<!-- test-plan-state` metadata block** from the existing test plan to
+identify each suite and its status: `stub` | `generated` | `expanded`.
+
+**3. Apply smart merge — suite by suite:**
+
+| Suite status | Action |
+|---|---|
+| **Cross-cutting** (Regression, Security, NFR) | Always regenerate from current spec — these are fully auto-generated, no developer content at risk |
+| **`stub`** | Regenerate fully from current spec — no developer content present |
+| **`generated`** (auto-expanded by tool, not developer) | Regenerate fully — content is auto-generated |
+| **`expanded`** (developer has written or edited content) | **Do NOT overwrite.** Insert a revision notice block at the top of the suite section instead |
+
+**Revision notice block format** (inserted at top of the suite, before the first TC):
+```markdown
+<!-- ⚠ REVISION NOTICE — {date}
+     ICEA/Tech Spec revised after this suite was expanded.
+     Review the following test cases against the updated spec before approving:
+     {list of TC IDs that reference ACs which changed — or "review all TCs"}
+     Remove this block when the review is complete.
+-->
+```
+
+To identify which TCs reference changed ACs: compare the revision log entries in the
+revised ICEA/Tech Spec against the AC references (`**AC:** AC-F{N}`) in the suite.
+If the revision log is absent or the changed ACs cannot be determined, list "review all TCs".
+
+**4. Update metadata block:** set `cross-cutting-suites-status: generated` and update
+`refreshed-at: {date}` in the test plan header. Do not change `status` for expanded suites.
+
+**5. Write updated file** — the Write Gate applies unless called with `--subagent`.
+
+**6. Confirm:**
+```
+✅ Test plan refreshed — {path}
+   Cross-cutting suites: regenerated
+   Stub/generated suites: regenerated
+   Expanded suites: {N} revision notice(s) inserted — review required
+```
+
+---
+
 ## Step 10 — Write Gate
 
 Show each file before writing:
@@ -527,7 +600,8 @@ After writing, output a one-line confirmation:
 - NEVER write to disk without Write Gate approval, except when called with `--subagent`
   under a parent skill's standing approval.
 - NEVER show the budget warning or developer prompts when `--subagent` is set.
-- NEVER overwrite a `generated` suite without prompting, except with `--force`.
+- NEVER overwrite an `expanded` suite (developer-written content) during REFRESH TEST — always insert a revision notice block instead (Step 9x).
+- NEVER overwrite a `generated` suite without prompting, except with `--force` or during REFRESH TEST (auto-generated content has no developer work to protect).
 - NEVER modify cluster files during `--combine` — the combined doc is assembled read-only
   from cluster files; cluster files are the source of truth.
 - NEVER generate NFR TCs for NFR domains absent from the replatform ledger.

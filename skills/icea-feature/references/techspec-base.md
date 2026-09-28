@@ -124,7 +124,7 @@ Populated from the overlay template.}
 | 1 | TBD | {what user can do after this ships} | {N} | Yes | None |
 
 > Stories broken by logical completion — each story is a shippable slice
-> delivering user value independently (≤5 SP). Never broken by AC.
+> delivering user value independently (≤8 SP). Never broken by AC.
 
 ---
 

@@ -193,6 +193,15 @@ const HOOK_FILES = [
   'web-grounding-guard.cjs',
   'audit-append.cjs',
   'audit-prompt.cjs',
+  'icea-revision-signal.cjs',
+  'context-guard.cjs',
+  // git pre-commit: governance gate (ICEA + secrets) — complements findings-gate-precommit.
+  // Not auto-installed as .git/hooks/pre-commit (findings-gate-precommit owns that slot).
+  // Deployed to .claude/hooks/ so teams can manually chain it via a pre-commit wrapper.
+  'governance-gate-precommit.cjs',
+  // git pre-commit: full chain wrapper — runs findings-gate then governance-gate in sequence.
+  // Install manually: cp .claude/hooks/pre-commit-full.cjs .git/hooks/pre-commit
+  'pre-commit-full.cjs',
   'validate-ledgers.py',
   'validate-pr-compliance.py',
   'validate-audit.py',
@@ -234,6 +243,9 @@ const GITIGNORE_BASE = [
   '.claude/graph/.module-skeleton.json',
   // Rule refresh snapshots — canonical copies of deployed rule files; regenerable, per-machine.
   '.claude/rules/.snapshots/',
+  // Session logs written by output-log-write.cjs when output_mode="compact".
+  // Developer-local; not team-shared. Cleared automatically by the developer.
+  '.claude/logs/',
 ];
 
 // Required Dream sections in CLAUDE.md — checked by regex, sourced from plugin template
@@ -1002,6 +1014,19 @@ function stepWireSettings(manifest, shellType) {
       wired = true;
     }
 
+    // ── UserPromptSubmit: context-guard (always node — context budget enforcement) ──
+    // Blocks a reply when remaining context < declared headroom for the active skill step.
+    // Universal: deployed for all projects (icea-feature + icea-implement + migration skills).
+    const contextGuardWired = settings.hooks.UserPromptSubmit.some(
+      h => h.hooks && h.hooks.some(x => x.command && x.command.includes('context-guard.cjs'))
+    );
+    if (!contextGuardWired) {
+      settings.hooks.UserPromptSubmit.push({
+        hooks: [{ type: 'command', command: 'node .claude/hooks/context-guard.cjs' }],
+      });
+      wired = true;
+    }
+
     // ── PostToolUse: memory-log ───────────────────────────────────────────────────
     if (!settings.hooks.PostToolUse) settings.hooks.PostToolUse = [];
     const expectedMemLogCmd = hookCmd('memory-log', shellType);
@@ -1018,12 +1043,28 @@ function stepWireSettings(manifest, shellType) {
       });
       wired = true;
     }
+
+    // ── PostToolUse: icea-revision-signal ─────────────────────────────────────────
+    // Captures a revision signal whenever any ADO artifact or source code file is
+    // edited outside the formal skill flow (without running REVISE ADO-{ID}).
+    // Always-node — not shell-dependent; single .cjs file.
+    const revSigCmd = 'node .claude/hooks/icea-revision-signal.cjs';
+    const revSigWired = settings.hooks.PostToolUse.some(
+      h => h.hooks && h.hooks.some(x => x.command === revSigCmd)
+    );
+    if (!revSigWired) {
+      settings.hooks.PostToolUse.push({
+        matcher: 'Write|Edit',
+        hooks: [{ type: 'command', command: revSigCmd }],
+      });
+      wired = true;
+    }
   }
   if (!settings.customInstructions) {
     settings.customInstructions = 'Response style: suppress preambles and plan-restatement before tool calls. When writing to existing files, show only a unified diff (changed lines + 3 lines of context) rather than the full file content. When writing new files, show the full content. Never echo generated file content to chat if the content is also being written to disk.';
   }
   atomicWrite(settingsPath, JSON.stringify(settings, null, 2));
-  console.log('  ✓ settings.json: PreToolUse (icea-floor + secret-guard + script-review-gate + context-budget-tech-write) + UserPromptSubmit (memory-capture + audit-prompt) + PostToolUse (memory-log) hooks '
+  console.log('  ✓ settings.json: PreToolUse (icea-floor + secret-guard + script-review-gate + context-budget-tech-write) + UserPromptSubmit (memory-capture + audit-prompt + context-guard) + PostToolUse (memory-log + icea-revision-signal) hooks '
     + (NO_HOOKS ? 'skipped (--no-hooks)' : (wired ? 'added' : 'already present')));
   console.log('  ✓ settings.json: autoMemoryEnabled '
     + (autoMemSet ? 'set to false (Dream owns repo memory/)' : 'left as-is (developer override)'));
@@ -1123,6 +1164,14 @@ function stepSeedStateFiles(manifest) {
     // ICEA quality signal promotion threshold — number of occurrences before Dream proposes
     // adding a pattern to project-knowledge.md. Default 2; increase for larger teams.
     gap_promotion_threshold:   2,
+    // Chat verbosity — "verbose" (default) shows full skill output in chat;
+    // "compact" shows one-line summaries and writes verbose detail to .claude/logs/.
+    // Toggle with: SET OUTPUT verbose | SET OUTPUT compact
+    output_mode:               'verbose',
+    // CI deterministic graph sync — when true, the CI pipeline runs
+    // scripts/graph-sync-deterministic.cjs on every merge to keep the graph current.
+    // Enable with: SET GRAPH-SYNC-CI on (shows pipeline YAML snippet to add)
+    ci_graph_sync:             false,
   });
 
   // file-cache.json — verbatim seed from setup-init Step 6

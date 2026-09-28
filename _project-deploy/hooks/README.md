@@ -17,7 +17,8 @@ them. Each hard rule lives at the lowest tier that can hold it:
 | File | Tier | Rule enforced |
 |---|---|---|
 | `icea-floor.sh` | (b) PreToolUse | Source-file writes blocked when no approved ICEA (or T1 bug spec) exists. Coarse floor — the prompt gate provides the per-feature judgment; this guarantees code is never written with no approval at all. Override is loud and session-wide: `SKIP_ICEA_FLOOR=1` with `ICEA_FLOOR_JUSTIFICATION`, logged to the audit trail. |
-| `findings-gate-precommit.sh` | (c) git pre-commit | Open Critical/High findings block commits even when the developer bypasses /checkin and runs `git commit` directly. Override is loud: `SKIP_FINDINGS_GATE=1` with justification. |
+| `findings-gate-precommit.sh` | (c) git pre-commit (auto-installed) | Open Critical/High findings block commits even when the developer bypasses /checkin and runs `git commit` directly. Override is loud: `SKIP_FINDINGS_GATE=1` with justification. |
+| `governance-gate-precommit.cjs` | (c) git pre-commit (manual chain) | ICEA gate + secrets check at commit time via `scripts/validate-governance.cjs`. Complements `findings-gate-precommit` — that gate checks open findings; this gate checks ICEA compliance. Deployed to `.claude/hooks/` by `setup-init` but not auto-installed. Teams that want both gates chain them in a custom `.git/hooks/pre-commit` wrapper that calls both scripts sequentially. |
 | `validate-ledgers.py` | (c) CI | Ledger invariants: no empty dismissal justifications, valid reason categories, no FP collisions, summary counts match sections. Fails the pipeline on violation. |
 | `validate-pr-compliance.py` | (c) CI **required check** | Server-side ICEA floor per PR (approved ICEA matching the branch ADO ID must exist) + T1 bound re-verification as pure diff math. Runs as required Build Validation — unbypassable. A failure when local gates "passed" is bypass telemetry (ADR 0009). |
 
@@ -38,9 +39,18 @@ them. Each hard rule lives at the lowest tier that can hold it:
 # dispatch.ps1 auto-detects bash availability and falls back to .ps1 equivalents
 # when bash is restricted. The .sh files are kept unchanged as the primary implementation.
 
-# (c) git pre-commit (use the shim — routes to PS1 when bash is restricted):
-cp .claude/hooks/findings-gate-precommit-shim.sh .git/hooks/pre-commit
-chmod +x .git/hooks/pre-commit
+# (c) git pre-commit — findings gate only (auto-installed by setup-init):
+cp .claude/hooks/findings-gate-precommit.cjs .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit    # Linux/macOS only
+
+# (c) git pre-commit — FULL CHAIN (findings-gate + governance-gate, recommended):
+#   Gate 1: open Critical/High findings + settings.json secrets  (fast — ledger scan)
+#   Gate 2: ICEA compliance + staged-file secrets + env-file block (per-file analysis)
+cp .claude/hooks/pre-commit-full.cjs .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit    # Linux/macOS only
+#
+# To revert to findings-gate only:
+#   cp .claude/hooks/findings-gate-precommit.cjs .git/hooks/pre-commit
 
 # (c) CI (Azure DevOps pipeline step):
 - script: python3 .claude/hooks/validate-ledgers.py

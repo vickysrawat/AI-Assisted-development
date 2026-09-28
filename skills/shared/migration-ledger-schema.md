@@ -202,13 +202,85 @@ Read the JSON `status` field and branch — these three cases are mutually exclu
 > To repair: delete `.claude/migration/{ADO_ID}.checkpoint.json`, then run `init`, then reply **CONFIRMED**.
 > Reply **CONFIRMED** to continue on best-available state (tracker primary, checkpoint supplementary).
 
-**(d) `status: "ok"` — proceed normally. No prompt needed; continue to Step 2.**
+**(d) `status: "ok"` — run artifact validation before proceeding.**
 
-**2. Run Status** (above) — load the ledger, identify the first unfinished stage/gate.
+```bash
+node scripts/checkpoint-ledger.cjs validate-artifacts \
+  --skill=<upgrade|rewrite|replatform> --ado={ADO_ID} --json
+```
 
-**3. Hand to the invoking skill**, which continues at that stage per its own stage flow.
+Branch on exit code:
+- **Exit 0** — all artifact-tracked PASS gates have their files on disk. Continue to Step 2.
+- **Exit 2** — one or more artifacts recorded as complete are missing, empty, or structurally invalid:
+  > ⚠ RESUME DEGRADED — Checkpoint gate verdicts do not match files on disk.
+  > The following artifacts recorded as complete are missing or corrupt:
+  >
+  > | Gate | Expected file | Problem |
+  > |---|---|---|
+  > | {gate} | {artifact_path} | {status: missing \| empty \| truncated} |
+  >
+  > **To recover:**
+  > A) Restore the missing file (git checkout the file, or re-run the step that produced it):
+  >    `git log --all --oneline -- {artifact_path}`
+  >    `git checkout <commit-hash> -- {artifact_path}`
+  >    Then type: `{SKILL} RESUME {ADO_ID}` to re-validate.
+  > B) Clear the gate and re-run that step from scratch — delete the checkpoint entry for that gate,
+  >    then type: `{SKILL} RESUME {ADO_ID}` and the skill will re-run the missing step.
+  > C) Type **SKIP ARTIFACT CHECK** to continue without the missing file (risk: skill may fail mid-step).
+  >
+  > **Do NOT proceed to Step 2 without one of A / B / C.**
 
-**4.** Any state change is written via `checkpoint-ledger.cjs set-gate / set-payload` (skew-safe merge-write).
+**2. Check for options_judge_correction** — if `payload.<skill>.options_judge_correction` is
+non-null and `pending` is non-empty, a judge REVISE correction loop is in progress. Surface this
+before orientation — the developer must complete corrections before proceeding:
+
+> ⚠ **Options judge correction in progress** — {iteration} previous REVISE verdict(s).
+>
+> Completed corrections: {completed[].cp_id list}
+> Pending corrections:
+> {for each pending entry:
+>   - CP-{cp_id} ({type}) → {action: "type RERUN-COUPLING-GATE CP-{N}" or "type OPTIONS-CORRECT CP-{N} [reason]"}
+> }
+>
+> Safe point: context was near the limit when the previous session stopped mid-correction.
+> Complete the pending corrections above, then the judge will re-run automatically.
+
+On each correction received: mark the item complete in `options_judge_correction.completed`,
+remove from `pending`, update checkpoint. When `pending` is empty: clear `options_judge_correction`
+(set to null) and re-run the options judge.
+
+If `payload.<skill>.options_judge_correction` is null or absent, skip this step.
+
+**3. Check for dirty_stop** — if `payload.<skill>.dirty_stop` is non-null in the loaded ledger,
+the previous session stopped unexpectedly between safe points. Surface this before orientation:
+
+> ⚠ **Unplanned stop detected** — the previous session ended without reaching a safe point.
+>
+> Stopped at: `{dirty_stop.stopped_at}`
+> Was about to: `{dirty_stop.stopped_before}`
+> Stopped on: `{dirty_stop.at}`
+>
+> Cluster status at time of stop:
+>   ✅ {name} — complete (will not be repeated)
+>   ⬜ {name} — was pending
+>
+> The checkpoint records all completed gates. Resume will continue from the first unfinished gate.
+> Type **CONFIRMED** to continue, or **RESTART WAVE {N}** to re-run the entire wave from scratch.
+
+On CONFIRMED: clear dirty_stop before continuing:
+```bash
+node scripts/checkpoint-ledger.cjs set-payload \
+  --skill=<skill> --ado={ADO_ID} --payload-json='{"dirty_stop":null}'
+```
+On RESTART WAVE {N}: clear the wave's cluster merged gates, then proceed to Step 3 wave N.
+
+If `payload.<skill>.dirty_stop` is null or absent, skip this step — proceed directly to Step 3.
+
+**4. Run Status** (above) — load the ledger, identify the first unfinished stage/gate.
+
+**5. Hand to the invoking skill**, which continues at that stage per its own stage flow.
+
+**6.** Any state change is written via `checkpoint-ledger.cjs set-gate / set-payload` (skew-safe merge-write).
 
 Read-only orientation first; only the continuation writes. A skill continues from ONLY its own `payload.<skill>`. Other payloads are opaque.
 

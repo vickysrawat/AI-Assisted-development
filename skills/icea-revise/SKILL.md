@@ -257,6 +257,45 @@ cp temp/ADO-{ADO_ID}-tech.md {permanent TechSpec path}
 rm temp/ADO-{ADO_ID}-tech.md
 ```
 
+**After files are written — mandatory test plan refresh:**
+
+A revision to the ICEA or Tech Spec invalidates the existing test plan. Refresh it now
+so test cases stay aligned with the updated acceptance criteria and examples.
+
+```bash
+TEST_PLAN=$(find docs -path "*UserStory${ADO_ID}*" -name "ADO-${ADO_ID}-*.test-plan.md" 2>/dev/null | head -1)
+echo "TEST_PLAN=${TEST_PLAN:-NOT_FOUND}"
+```
+
+**If `TEST_PLAN` found:**
+```
+Read $PLUGIN_DIR/skills/test-plan/SKILL.md and execute with:
+  REFRESH TEST ADO-{ADO_ID}
+```
+Check the result — REFRESH TEST confirms success with `✅ Test plan refreshed` or signals
+failure. **Only delete the stale marker on confirmed success:**
+```bash
+# Only run if REFRESH TEST output contained a success confirmation
+REFRESH_OK=$(grep -c "Test plan refreshed\|✅" <<< "$REFRESH_OUTPUT" 2>/dev/null || echo "0")
+[ "$REFRESH_OK" -gt 0 ] && rm -f .claude/signals/test-plan-stale-ADO-{ADO_ID}.json
+```
+On success:
+```
+✅ Test plan refreshed — docs/.../ADO-{ADO_ID}-{feature}.test-plan.md
+   Cross-cutting suites regenerated. Expanded story suites marked with revision notices.
+```
+On failure (marker kept):
+```
+⚠ Test plan refresh failed — stale marker preserved.
+  Run REFRESH TEST ADO-{ADO_ID} manually before approving.
+```
+
+**If `NOT_FOUND`:** delete the stale marker silently (no test plan to refresh) and note
+in the revision preview: `⚠ No test plan on disk — run SAVE TEST ADO-{ADO_ID} to generate one.`
+```bash
+rm -f .claude/signals/test-plan-stale-ADO-{ADO_ID}.json
+```
+
 **Verify status before copying — mandatory check:**
 Before executing the cp command, confirm the temp file does NOT contain
 `✅ Approved`. If it does, the status mutation in Step 5 was not applied —

@@ -504,6 +504,10 @@ Wait for graph-create to complete. Confirm `.claude/graph/graph.json` and
 ```
 Read .claude/plugin-path.txt to get PLUGIN_DIR (if absent, use §1a resolver), then
 Read $PLUGIN_DIR/skills/graph-sync/SKILL.md and execute it in full.
+Graph-sync Step 2x reads the architecture docs populated by architect (Step 3a) and
+creates external dependency nodes (external-api, database, message-bus, shared-library,
+upstream-app, downstream-app, storage, identity-provider) in graph.json — this is
+automatic and requires no extra step.
 Graph-sync Step 8a calls graph-extract-edges.js after updating graph.json —
 this refines EXTRACTED edges with any changes since graph-create ran.
 ```

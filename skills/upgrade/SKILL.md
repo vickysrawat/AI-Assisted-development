@@ -83,6 +83,7 @@ judge/checkpoint substrate (AC-F9/F10) in Steps 5–8.
 ## Step 1 — Intake & classification (implemented — the highest-risk component)
 
 > 📊 **STEP BOUNDARY — Step 1: Intake & classification**
+> Write `.claude/active-task.json`: `{"skill":"upgrade","step":"step1","ado":"{ADO_ID}"}`
 > The checkpoint is flushed — resuming here is safe.
 > **Reply `CONTINUE` to proceed with this step.**
 > Reply `COMPACT` if the context window is near capacity:
@@ -219,6 +220,7 @@ node scripts/checkpoint-ledger.cjs set-payload --skill=upgrade --ado={ADO_ID} --
 ## Step 3 — Web-grounded gap/risk analysis (implemented — AC-F3)
 
 > 📊 **STEP BOUNDARY — Step 3: Web-grounded gap/risk analysis**
+> Write `.claude/active-task.json`: `{"skill":"upgrade","step":"step3","ado":"{ADO_ID}"}`
 > The checkpoint is flushed — resuming here is safe.
 > **Reply `CONTINUE` to proceed with this step.**
 > Reply `COMPACT` if the context window is near capacity:
@@ -347,6 +349,30 @@ are blocked and redirected to `source_context.summary` in the ledger.
 >      (The resume restarts at this step — the flush above ensures no rework.)
 > _(Do not proceed past this prompt without a reply.)_
 
+**Invoke the migration-research-agent before assembling the report.** Ground the source stack
+lifecycle and CVE signals in cited external facts. Read `skills/shared/migration-research-spec.md`
+Section 5 for the invocation pattern.
+
+Construct the input (upgrade mode — use detected stack and version from Step 1 classification):
+```json
+{
+  "migration_type": "upgrade",
+  "source_layers": [
+    { "stack": "{current stack token}", "version": "{current version}", "cloud_hosted": "{provider or null}" }
+  ],
+  "target_layers": [
+    { "stack": "{current stack token}", "version": "{target version}" }
+  ]
+}
+```
+
+Invoke the Agent tool with this JSON as the task. Receive the per-layer bundle. Apply the
+confidence rendering rules from `migration-research-spec.md` Section 4:
+- `confidence=high` → state as fact: `{value} [{source_url}, {retrieved_date}]`
+- `confidence=medium` → `(industry benchmark as of {retrieved_date})`
+- `confidence=low` → `WARNING: {claim} — unverified, check: {canonical_url or source_url}`
+- `confidence=UNKNOWN` → `WARNING: {fact type} not found — check: {canonical_url}`
+
 Assemble the report per the schema in `references/gap-risk-report.md`. It is the **headline
 deliverable** — emit it whether or not the developer proceeds:
 
@@ -356,6 +382,27 @@ deliverable** — emit it whether or not the developer proceeds:
 - Include the **dependency ledger** — a package with no target-compatible version is a hard ⛔ BLOCKER.
 - List what's possible / blocked / manual, then the **post-upgrade ladder** (→ Rewrite / Replatform).
 - Even a RED/BLOCKER verdict yields a decision-grade report (graceful degradation) — never a bare fail.
+
+**PO framework — add these two sections to the gap+risk report (populate from agent bundle):**
+
+**What happens if not resolved:**
+- Source version EoL: `{source eol_status.status} as of {eol_status.date} [{source_url}, {retrieved_date}]`
+  — or `WARNING: EoL date not found for {stack} {version} — check: {canonical_url}` if UNKNOWN
+- CVE exposure: `{source cve_exposure.level} [{source_url}, {retrieved_date}]`
+  — or `WARNING: CVE exposure not determined — check: {canonical_url}` if UNKNOWN
+- If EoL is within 12 months: state the vendor support end date explicitly and the concrete
+  consequence (security patch gap, no further official vulnerability fixes).
+
+**Whether it can remain (residual risks that survive the upgrade even on success):**
+These risks are NOT resolved by completing the upgrade — state each explicitly:
+- Application-layer breaking changes not yet addressed: `[project-specific — requires your input]`
+  (deprecated APIs removed in the target version, framework behaviour changes in the target)
+- Team retraining gap: `[project-specific — requires your input]`
+  (new patterns introduced in the target version the team is not yet familiar with)
+- Downstream dependency compatibility: `[project-specific — requires your input]`
+  (packages not yet compatible with the target version — cross-reference the dependency ledger above)
+- Ecosystem signal at target version: `{target ecosystem_health.signal} [{source_url}, {retrieved_date}]`
+  — or `WARNING: ecosystem signal not available for {stack} {target version} — check: {canonical_url}` if UNKNOWN
 
 **The gap/risk report IS Document 7 (feasibility).** Per `feasibility-spec.md`, this spec governs the
 report's format directly — no separate `migration-feasibility.md` is produced for upgrade.
@@ -434,6 +481,7 @@ node scripts/checkpoint-ledger.cjs set-payload --skill=upgrade --ado={ADO_ID} --
 ## Step 5 — Baseline tag + working branch (implemented — AC-F3 execution)
 
 > 📊 **STEP BOUNDARY — Step 5: Baseline tag + working branch**
+> Write `.claude/active-task.json`: `{"skill":"upgrade","step":"step5","ado":"{ADO_ID}"}`
 > The checkpoint is flushed — resuming here is safe.
 > **Reply `CONTINUE` to proceed with this step.**
 > Reply `COMPACT` if the context window is near capacity:
@@ -582,6 +630,8 @@ upgrade is not gated on test plan generation.
 node scripts/checkpoint-ledger.cjs set-gate --skill=upgrade --ado={ADO_ID} --gate=step_8a_test_plan --verdict=PASS
 node scripts/checkpoint-ledger.cjs set-payload --skill=upgrade --ado={ADO_ID} --key=testPlanPath --value={TEST_PLAN_PATH}
 ```
+
+> Write `.claude/active-task.json`: `{}` — clears the active step; hook exits 0 on next unrelated message.
 
 ---
 

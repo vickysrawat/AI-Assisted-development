@@ -43,18 +43,37 @@ function safeJson(filePath) {
 function loadAuditEvents() {
   const auditDir = path.join(process.cwd(), '.claude', 'audit');
   if (!fs.existsSync(auditDir)) return { all: [], filtered: [], available: false };
+
+  // Accept both legacy per-event .json files (audit-write.cjs) and
+  // current per-day .jsonl files (audit-append.cjs). Sort for chronological order.
   const files = fs.readdirSync(auditDir)
-    .filter(f => f.endsWith('.json') && !f.startsWith('.'))
+    .filter(f => (f.endsWith('.json') || f.endsWith('.jsonl')) && !f.startsWith('.'))
     .sort();
-  const all = [];
+
+  const raw_events = [];
   for (const f of files) {
     try {
-      const entry = JSON.parse(fs.readFileSync(path.join(auditDir, f), 'utf8'));
-      all.push(entry);
+      const raw = fs.readFileSync(path.join(auditDir, f), 'utf8');
+      if (f.endsWith('.jsonl')) {
+        // JSONL: one JSON object per line — parse each line independently.
+        for (const line of raw.split('\n')) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          try { raw_events.push(JSON.parse(trimmed)); } catch (_) {}
+        }
+      } else {
+        // Legacy single-object .json file from audit-write.cjs.
+        raw_events.push(JSON.parse(raw));
+      }
     } catch (_) {}
   }
+
+  // Normalise every event to the canonical field shape (handles both audit-write and
+  // audit-append schemas in one pass — see normalizeEvent() above for the mapping).
+  const all = raw_events.map(normalizeEvent);
+
   const cutoff = cutoffDate();
-  const filtered = all.filter(e => new Date(e.timestamp) >= cutoff);
+  const filtered = all.filter(e => e.timestamp && new Date(e.timestamp) >= cutoff);
   return { all, filtered, available: true, fileCount: files.length };
 }
 
@@ -80,6 +99,56 @@ function configuredModels(env) {
     infrastructure: env.INFRA_MODEL    || null,
     note: 'Configured model tiers — per-invocation tracking available in Item 15 (Pass B)',
   };
+}
+
+// ── Schema normalisation ──────────────────────────────────────────────────────
+//
+// Two audit writers produce incompatible field names:
+//   audit-write.cjs  (skill-driven, legacy .json files)  → event: SCREAMING_SNAKE, actor, role, ado_id, timestamp
+//   audit-append.cjs (hook-driven, daily .jsonl files)   → event: dot.notation,    os_user/git_email, actor_confidence, ado, ts
+//
+// normalizeEvent() maps both to the canonical shape that analysis functions expect,
+// so no analysis function needs to handle both schemas.
+
+// Maps dot.notation event + action → canonical SCREAMING_SNAKE event type.
+function normalizeEventType(e) {
+  const action = (e.action || '').toUpperCase();
+  switch (e.event) {
+    case 'gate.approve':
+      // APPROVE ADO-{ID} → APPROVE_ADO; APPROVE OPTIONS → APPROVE_OPTIONS; etc.
+      if (action === 'APPROVE') return 'APPROVE_ADO';
+      return 'APPROVE_' + action.replace(/[\s-]+/g, '_');
+    case 'gate.bypass': {
+      if (action === 'APPROVE ALL')  return 'APPROVE_ALL';
+      if (action === 'REVOKE ALL')   return 'REVOKE_ALL';
+      if (action.startsWith('SAVE') && action.includes('ACCEPT')) return 'BYPASS_ICEA';
+      if (action === 'SKIP-ICEA' || action === 'SKIP_ICEA_FLOOR') return 'BYPASS_ICEA_FLOOR';
+      if (action === 'BYPASS_TEST_GATE') return 'BYPASS_TEST_GATE';
+      return 'BYPASS_' + action.replace(/[\s-]+/g, '_');
+    }
+    case 'gate.block':
+      return 'BLOCK_' + action.replace(/[\s-]+/g, '_');
+    case 'gate.web-grounding':
+      return 'WEB_GROUNDING';
+    default:
+      return e.event;   // audit-write.cjs events are already canonical
+  }
+}
+
+// Returns a new event object with all fields normalised to the canonical shape.
+function normalizeEvent(e) {
+  return Object.assign({}, e, {
+    // Event type: dot.notation → SCREAMING_SNAKE (no-op for audit-write events)
+    event: normalizeEventType(e),
+    // Canonical actor: prefer verified identity, fall back through available signals
+    actor: e.actor || e.verified_actor || e.os_user || e.git_email || 'unknown',
+    // Canonical role
+    role:  e.role || (e.actor_confidence === 'verified' ? 'verified' : 'developer'),
+    // Canonical ADO ID: audit-write uses ado_id, audit-append uses ado
+    ado_id: e.ado_id || e.ado || null,
+    // Canonical timestamp: audit-write uses timestamp, audit-append uses ts
+    timestamp: e.timestamp || e.ts,
+  });
 }
 
 // ── Event analysis helpers ────────────────────────────────────────────────────

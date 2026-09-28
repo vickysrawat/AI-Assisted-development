@@ -50,7 +50,12 @@ _Generated: YYYY-MM-DD | Modules: N | Structure: flat|domain_
 
 ## Module table
 
-One row per module. No exceptions, no nested rows, no sub-tables.
+One row per module and one row per external dependency node. No exceptions, no nested rows, no sub-tables.
+
+External dependency nodes (type: `external-api`, `database`, `message-bus`, `shared-library`,
+`upstream-app`, `downstream-app`, `storage`, `identity-provider`) appear in the table with
+their `Entry Point` column set to the type label in brackets — e.g. `[external-api]`. This
+makes system boundaries visible in the always-loaded index without reading detail files.
 
 ```markdown
 | Module | Domain | Detail File | Entry Point |
@@ -58,6 +63,9 @@ One row per module. No exceptions, no nested rows, no sub-tables.
 | Orders | orders | graph/orders.md | src/Orders/OrderService.cs |
 | Payments | payments | graph/payments.md | src/Payments/PaymentGateway.cs |
 | Auth | auth | graph/auth.md | src/Auth/AuthService.cs |
+| PaymentsAPI | external | graph/payments-api.md | [external-api] |
+| OrdersDB | external | graph/orders-db.md | [database] |
+| NotificationBus | external | graph/notification-bus.md | [message-bus] |
 ```
 
 ### Column rules
@@ -98,6 +106,8 @@ Rules:
 - Maximum 1 sentence per module — no bullet lists, no dependency info, no patterns
 - All N modules must appear — same order as the table above
 - Regenerate this section on every graph-sync run (not only when nodes change)
+- **External dependency nodes** use the bounded context from their detail file; the key file is replaced with `tech: {tech}, direction: {direction}` to surface boundary metadata without reading the detail file:
+  `**PaymentsAPI** — Third-party payment gateway for card settlement. tech: REST/JSON, direction: outbound`
 
 ---
 

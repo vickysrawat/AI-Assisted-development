@@ -58,6 +58,48 @@ needed — subsequent `IMPLEMENT ADO-{ID} Story-{N}` calls use it automatically.
 ## Step 2 — Locate and validate files
 
 ```bash
+GOVERNANCE=$(node -e "try{const s=JSON.parse(require('fs').readFileSync('.claude/dream-init-state.json','utf8'));process.stdout.write(s.governance_mode||'full')}catch(e){process.stdout.write('full')}")
+
+if [ "$GOVERNANCE" = "lightweight" ]; then
+  PLAN_FILE=$(find docs -path "*UserStory${ADO_ID}*" -name "ADO-${ADO_ID}-*.plan.md" 2>/dev/null | head -1)
+  if [ -z "$PLAN_FILE" ]; then
+    echo "LIGHTWEIGHT_GATE_BLOCKED: No plan file"
+  else
+    PLAN_STATUS=$(grep "^Status:" "$PLAN_FILE" | head -1)
+    echo "LIGHTWEIGHT_MODE: $PLAN_FILE | $PLAN_STATUS"
+  fi
+fi
+```
+
+**If `LIGHTWEIGHT_GATE_BLOCKED`** — HARD STOP:
+```
+⛔ No plan found for ADO #{ADO_ID}. Run: goal-loop ADO-{ADO_ID}
+```
+
+**If `LIGHTWEIGHT_MODE` + status ≠ `✅ Approved`** — HARD STOP:
+```
+⛔ Plan not approved. Run: SAVE PLAN ADO-{ADO_ID} (saves + approves automatically)
+```
+
+**If `LIGHTWEIGHT_MODE` + `Status: ✅ Approved`:**
+- Extract Must Have items as ACs: `[N] {text}` → `AC-F{N}`
+- Create minimal tracker and write to `docs/Release{R}/Sprint{S}/UserStory{ADO_ID}/ADO-{ADO_ID}-{feature}.tracker.md`:
+  ```markdown
+  # Tracker — {feature} [LIGHTWEIGHT]
+  ADO #{ADO_ID} · governance: lightweight
+
+  | AC | Must Have item | Status |
+  |---|---|---|
+  | AC-F1 | {item 1 text} | ⏳ Pending |
+  ```
+- Generate code per Must Have item (same layer order as full mode)
+- **Step 4a critic (code mode)** — runs unchanged; oracle = plan Must Have items as ACs (no ICEA or Tech Spec oracle)
+- **Step 4b AC self-scoring** — `percentDone` = fraction of Must Have items implemented
+- Write Gate unchanged (`APPROVE ADO-{ID}` before code hits disk)
+
+**If `GOVERNANCE_MODE=full`** — skip to existing `find docs` commands below (Steps 2–5 unchanged):
+
+```bash
 find docs -name "ADO-${ADO_ID}-*.icea.md" 2>/dev/null
 find docs -name "ADO-${ADO_ID}-*.techspec.md" 2>/dev/null
 find docs -name "ADO-${ADO_ID}-*.tracker.md" 2>/dev/null
@@ -181,6 +223,54 @@ Use the stored value for all test generation in Step 4.
 
 ---
 
+## Step 3d — Context budget guard (before code generation)
+
+Count pending ACs from the tracker located in Step 3:
+
+```bash
+AC_COUNT=$(grep -c "⏳ Pending" "$TRACKER" 2>/dev/null || echo 1)
+echo "AC_COUNT=$AC_COUNT"
+```
+
+> Write `.claude/active-task.json`: `{"skill":"icea-implement","step":"step4-start","ado":"{ADO_ID}","resume_cmd":"IMPLEMENT ADO-{ADO_ID}"}`
+
+Write the file via Bash:
+```bash
+node -e "require('fs').writeFileSync('.claude/active-task.json', JSON.stringify({skill:'icea-implement',step:'step4-start',ado:'${ADO_ID}',resume_cmd:'IMPLEMENT ADO-'+String('${ADO_ID}')},null,2))"
+```
+
+Read $PLUGIN_DIR/skills/shared/context-budget-check.md and execute it with:
+  operation_name    = "Code generation — {AC_COUNT} pending ACs / ADO #{ADO_ID}"
+  size_signal       = $AC_COUNT
+  size_label        = "{AC_COUNT} pending ACs"
+  threshold_medium  = 10
+  threshold_high    = 20
+  recovery_command  = "IMPLEMENT ADO-{ADO_ID}{if Epic: ' Story-{N}'}"
+  skip_keywords     = ["IMPLEMENT ADO-"]
+  operation_needs   = [
+    "Read ICEA, Tech Spec, and architecture docs from disk",
+    "Generate implementation code for each pending AC across all layers",
+    "Run the critic (Step 4a) and goal-loop (Step 4b) on the full output"
+  ]
+  risks_if_continue = [
+    "Truncated code — missing layers or incomplete ACs",
+    "Critic and goal-loop evaluate partial output — false pass"
+  ]
+  saved_context = "ICEA, Tech Spec, and tracker at docs/.../UserStory{ADO_ID}/ — nothing on disk is lost"
+
+**⛔ BUDGET_WARN / BUDGET_STOP — HARD STOP:**
+Do NOT proceed to Step 4 until the developer replies.
+BUDGET_WARN is identical to BUDGET_STOP here — both block code generation.
+
+On `BUDGET_OK` or `BUDGET_SKIPPED` or `IMPLEMENT ADO-{ADO_ID} CONTINUE` or `IMPLEMENT ADO-{ADO_ID} FORCE`:
+
+> 📊 **STEP BOUNDARY — Step 4: Code generation**
+> `active-task.json` is written — resuming here after `/compact` or a new session is safe.
+> **Reply `CONTINUE` to generate code for: {comma-separated list of pending AC IDs}**
+> _(Do not proceed past this prompt without a reply.)_
+
+---
+
 ## Step 4 — Generate code
 
 Generate implementation code for each pending AC in order.
@@ -240,9 +330,21 @@ Generate in dependency order:
   or the framework actually present
 - **Unit tests — ICEA Examples as primary source (full gap analysis)**
 
+  > **Hard rule — applies to ALL story types without exception:**
+  > This gap analysis runs for SKILL.md-only stories, documentation-only stories, and
+  > Markdown-only stories exactly as it runs for compiled-code stories. The gap signal
+  > categories (return-shape-unspecified, test-data-unspecified, edge-case-missing,
+  > mock-contract-missing, dependency-contract-missing) apply equally to manual scenario
+  > tests. "No compiled test framework" is never a reason to skip this step — it is a
+  > reason to check even more carefully, because manual tests have no compiler to catch
+  > underspecified inputs. For non-compiled stories, "assertion" means "observable outcome
+  > from a concrete manual invocation" — the concreteness requirement is identical.
+
   For every Example in the ICEA `## Examples` section, attempt to generate a real
-  assertion using the framework detected in Step 3c. Map the Example's input/output
-  pair directly to the framework's assertion syntax:
+  assertion using the framework detected in Step 3c. For SKILL.md-only or non-compiled
+  stories, map each Example's input/output pair to a concrete manual scenario verification
+  (specific input JSON or action → specific observable output or state). For compiled
+  stories, map to the framework's assertion syntax:
 
   | Framework | Assertion syntax |
   |---|---|
@@ -448,6 +550,16 @@ Read $PLUGIN_DIR/skills/shared/goal-loop-spec.md and run the engine with:
                    table) + Files Changed section (id = the Tech Spec file/row ref,
                    type = structural). This makes "done" require every planned
                    change to be realized, not only that the ACs pass.
+                 • Test suite expansion — one deferred criterion (id = test-suite-{STORY_N},
+                   type = process): "The story's test plan suite shows status: generated
+                   in the test-plan-state metadata block of the test plan file."
+                   This criterion is checked post-write in Step 6a, not pre-write.
+                   Score it as `deferred` in the goal-loop rubric — it does not block
+                   the Write Gate (Step 5) but it DOES block marking the story Done
+                   in Step 6. If Step 6a has not yet run, this criterion is unmet and
+                   percentDone is < 100% for the story's completion record.
+                   For SKILL.md-only stories: "verified by design" is never an
+                   acceptable score — status: generated in metadata is the only pass.
   artifact   = the in-context generated code from Step 4
   regenerate = re-run Step 4 code generation addressing each `remaining`,
                then re-run Step 4a (critic) on the result
@@ -525,6 +637,22 @@ and stop for an explicit `APPROVE ADO-{ADO_ID}` on it, per CLAUDE.md §0 and
 ---
 
 ## Step 6 — Update tracker
+
+**Write implementation signal (best-effort — never blocks):**
+
+After files are written, record that implementation happened for this ADO. This feeds
+Dream's pattern learning — even if the category is generic, it confirms implementation
+activity against this ADO:
+
+```bash
+PLUGIN_DIR=$(cat .claude/plugin-path.txt 2>/dev/null || echo "")
+[ -n "$PLUGIN_DIR" ] && node "$PLUGIN_DIR/scripts/signal-write.cjs" \
+  --type revision \
+  --category scope-changed \
+  --ado-id "${ADO_ID}" \
+  --detail "Story ${STORY_N:-main} source/config files written via icea-implement" \
+  2>/dev/null || true
+```
 
 After writing, update the tracker immediately (no gate — tracking artefact):
 - AC rows: `⏳ Pending` → `✅ Done`
@@ -631,7 +759,125 @@ Confirm:
    All ACs complete. ICEA marked COMPLETE.
 ```
 
-Then run the pre-commit gate below (Step 7) before handing off.
+> Write `.claude/active-task.json`: `{}` — clears the active step; hook exits 0 on next unrelated message.
+
+Then run Step 6a (test suite expansion) before the pre-commit gate.
+
+---
+
+## Step 6a — Test suite expansion (mandatory post-write — NEVER skip)
+
+The test plan skeleton was generated at SAVE TECH (icea-feature Step 10b). Each story's suite is
+a stub until this step runs. This step runs post-write, after the tracker is updated, before
+checkin. It is mandatory for ALL story types without exception — including SKILL.md-only stories,
+documentation-only stories, and stories with no compiled test framework. "Verified by design" is
+never an acceptable substitute for an expanded test suite.
+
+**1. Locate the test plan file:**
+```bash
+TEST_PLAN=$(find docs -path "*UserStory${ADO_ID}*" \
+  -name "ADO-${ADO_ID}-*.test-plan.md" 2>/dev/null | head -1)
+echo "TEST_PLAN=${TEST_PLAN:-NOT_FOUND}"
+```
+
+**2. If NOT_FOUND:**
+
+First check whether the approval used `--skip-test-gate` (spike or prototype):
+```bash
+AUDIT_FILE=$(find docs -path "*UserStory${ADO_ID}*" -name "ADO-${ADO_ID}-*.ai-audit.md" 2>/dev/null | head -1)
+SKIP_GATE=$([ -n "$AUDIT_FILE" ] && grep -c "gate.test-plan-skip" "$AUDIT_FILE" 2>/dev/null || echo "0")
+```
+
+**If `SKIP_GATE > 0`** (approval deliberately bypassed test gate — spike/prototype):
+```
+⚠ No test plan found for ADO #{ADO_ID}.
+  Note: test-gate was bypassed at approval (spike/prototype — audit entry exists).
+  Proceeding without test plan. Run SAVE TEST ADO-{ADO_ID} when ready.
+```
+Append audit row and continue to Step 7:
+```
+| {next #} | {TS} | {actor} | implementation | test-plan-skipped | Story {N} | ADO #{ADO_ID} | - | No test plan — skip-test-gate bypass recorded at approval |
+```
+
+**If `SKIP_GATE = 0`** — Hard gate:
+```
+⛔ NO TEST PLAN — no test plan found for ADO #{ADO_ID}.
+
+   The test plan must exist before implementation can be expanded and marked Done.
+   Run: SAVE TEST ADO-{ADO_ID}
+   Then re-run: IMPLEMENT ADO-{ADO_ID} Story-{N}
+```
+Append audit row and stop:
+```
+| {next #} | {TS} | {actor} | implementation | test-plan-missing | Story {N} | ADO #{ADO_ID} | - | BLOCKED — no test plan on disk; run SAVE TEST ADO-{ADO_ID} |
+```
+
+**Lightweight mode — auto-generate after code write instead of blocking:**
+
+In lightweight mode (`GOVERNANCE=lightweight`), when `TEST_PLAN=NOT_FOUND`, generate the
+test plan automatically now (after code has been written) rather than blocking:
+```
+Read $PLUGIN_DIR/skills/test-plan/SKILL.md and execute:
+  SAVE TEST ADO-{ADO_ID} --subagent
+```
+The skill auto-detects `--source plan` from the plan file on disk and generates a
+Plan Verification suite from Must Have items. After generation:
+```bash
+rm -f ".claude/signals/test-plan-stale-ADO-${ADO_ID}.json"
+```
+Confirm: `✅ Test plan generated from plan — developer can now use it to verify the implementation.`
+Then continue to Step 7.
+
+**3. If found:** Check whether the test plan is stale (ICEA, Tech Spec, or Plan was revised after generation):
+
+```bash
+test -f ".claude/signals/test-plan-stale-ADO-${ADO_ID}.json" \
+  && echo "TEST_PLAN_STALE" || echo "TEST_PLAN_CURRENT"
+```
+
+**If `TEST_PLAN_STALE`:** Auto-refresh before expanding stubs — no developer prompt needed:
+```
+Read $PLUGIN_DIR/skills/test-plan/SKILL.md and execute with:
+  REFRESH TEST ADO-{ADO_ID}
+```
+After refresh:
+```bash
+rm -f ".claude/signals/test-plan-stale-ADO-${ADO_ID}.json"
+```
+Continue with the freshly refreshed test plan.
+
+**If `TEST_PLAN_CURRENT`:** Read the `<!-- test-plan-state` metadata block at the top of the file.
+Find the entry where `id: Story-{STORY_N}` matches the story just implemented. Extract the
+`suite` value and the `status` value.
+
+**If `status: stub`** — expand now in subagent mode (no prompts, no budget warning):
+```
+Read $PLUGIN_DIR/skills/test-plan/SKILL.md and execute it with:
+  EXPAND TEST ADO-{ADO_ID} {suite} --subagent
+```
+After expansion succeeds:
+- Update the metadata entry in the test plan file: `status: stub` → `status: generated`
+- Append audit row:
+  ```
+  | {next #} | {TS} | {actor} | implementation | test-suite-expanded | Story {N} | ADO #{ADO_ID} | - | {suite} expanded — {TC count} TCs written |
+  ```
+
+**If `status: generated`** — already expanded from a prior run (idempotent — safe to check every
+time). Append audit row:
+```
+| {next #} | {TS} | {actor} | implementation | test-suite-already-expanded | Story {N} | ADO #{ADO_ID} | - | {suite} already generated — skipped |
+```
+
+**Hard rules for this step:**
+- NEVER skip this step — not for SKILL.md-only stories, not for documentation-only stories,
+  not under APPROVE ALL ADO-{ID}, not under time pressure, not when context is low
+- NEVER treat "verified by design" as expanded TCs — it is not
+- NEVER require developer interaction — `--subagent` flag suppresses all prompts; runs silently
+- The `status` field in the metadata block is machine-readable — no LLM judgment required;
+  `stub` means expand, `generated` means skip
+- This step closes the goal-loop's deferred `test-suite-{STORY_N}` criterion — the story is
+  not 100% done until this step appends a `test-suite-expanded` or `test-suite-already-expanded`
+  audit row
 
 ---
 
@@ -697,12 +943,16 @@ For each checkin ❌ FAIL + fix cycle:
 - ALWAYS append `code-critic-revise` audit rows and tracker Follow-ups for every critic REVISE+fix cycle in Step 4a
 - ALWAYS append `goal-loop-iter` audit rows for every goal-loop iteration in Step 4b
 - ALWAYS populate tracker Delivered, Tests added, Design decisions, and Known gaps sections at Step 6 — never leave them as placeholders after implementation
+- ALWAYS run the Step 4 Example gap analysis for every story type — SKILL.md-only, documentation-only, and Markdown-only stories are NOT exempt; "no compiled code" never skips gap analysis
+- ALWAYS write a gap signal via signal-write.cjs for every Example that fails the gap analysis — even for SKILL.md stories; gap categories apply equally to manual scenario tests
+- ALWAYS run Step 6a (test suite expansion) after Step 6 for every story — SKILL.md-only stories are NOT exempt; "verified by design" is never an acceptable substitute for status: generated in the test-plan-state metadata
 - ALWAYS update the tracker story/implementation section Status to `✅ Done` at Step 6
 - ALWAYS append the `story-complete` audit row at Step 6
 - ALWAYS append `build-issue`, Follow-ups tracker row, and `build-fixed` audit rows for each checkin ❌ FAIL + fix cycle in Step 7
 - ALWAYS append `checkin-pass` audit row when checkin ✅ / ⚠ in Step 7
 - NEVER leave Follow-ups table empty after a REVISE cycle or build failure — every rework leaves a row
 - ALWAYS offer the test-plan skill after checkin passes — do not silently skip it (AC-F50)
+- Mid-story context exhaustion (after CONTINUE is allowed in) produces REWORK, not corruption — the tracker is the implicit checkpoint (✅ Done ACs are skipped on re-run; ⏳ Pending ACs regenerate cleanly). Per-AC temp writes (`temp/ADO-{ID}-AC-{N}.draft.md`) would reduce rework to one AC but are deferred as a follow-up — do not implement inline.
 
 ---
 

@@ -78,6 +78,7 @@ Detect source runtime topology
 ## Step R1 — Intake, posture, integration verification, NFR spec, options (implemented — AC-F7; extended)
 
 > 📊 **STEP BOUNDARY — Step R1: Intake, posture, integration verification, NFR spec, options**
+> Write `.claude/active-task.json`: `{"skill":"replatform","step":"R1","ado":"{ADO_ID}"}`
 > The checkpoint is flushed — resuming here is safe.
 > **Reply `CONTINUE` to proceed with this step.**
 > Reply `COMPACT` if the context window is near capacity:
@@ -215,6 +216,36 @@ developer once. YES → merge patterns + confirm; NO → continue without writin
    - **regulated?** data-residency / PII / financial constraints (hard-block NFRs)
    Record them → they flow into `replatform-plan.cjs plan --cicd-platform=<> --iac-flavor=<>` and the ledger.
 6. Capture the **NFR spec** as the PRIMARY intent — see `references/nfr-spec.md`.
+6b. **Invoke the migration-research-agent before presenting 6R options.** Ground the target
+   component facts (pricing, SLA, GA status, compliance, egress) in cited external facts.
+   Read `skills/shared/migration-research-spec.md` Section 5 for the invocation pattern.
+
+   Construct the input (replatform mode — answers from the intake questions above feed these values):
+   ```json
+   {
+     "migration_type": "replatform",
+     "source_environment": {
+       "type": "{on-prem or cloud}",
+       "runtime": "{detected source runtime — e.g. 'IIS/.NET 4.8'}",
+       "cloud_provider": null
+     },
+     "target_environment": {
+       "cloud": "{target cloud: azure | aws | gcp}",
+       "components": [
+         { "name": "{component name}", "type": "{compute | database | storage | messaging | other}" }
+       ],
+       "region": "{target region from intake}"
+     }
+   }
+   ```
+
+   Invoke the Agent tool with this JSON as the task. Receive the per-component bundle. Apply the
+   confidence rendering rules from `migration-research-spec.md` Section 4:
+   - `confidence=high` → state as fact: `{value} [{source_url}, {retrieved_date}]`
+   - `confidence=medium` → `(industry benchmark as of {retrieved_date})`
+   - `confidence=low` → `WARNING: {claim} — unverified, check: {canonical_url or source_url}`
+   - `confidence=UNKNOWN` → `WARNING: {fact type} not found — check: {canonical_url}`
+
 7. Present cloud-target **OPTIONS** (IaaS VM / App Service / AKS / Container Apps / Functions) per
    **`options-insight-spec.md`**:
    - Each option carries a **capability summary** (count + list + estimated IaC/runbook effort) — compute
@@ -228,6 +259,46 @@ developer once. YES → merge patterns + confirm; NO → continue without writin
    - `requires:` on compliance / NFR-floor / security → named human before `APPROVE OPTIONS`.
    - PARTIAL integration rows: advisory here, **hard block at APPROVE DESIGN** (R1.5).
    Feasibility gated GREEN/YELLOW/RED (`feasibility-spec.md`); hard blocker → STOP or hybrid.
+
+   **PO framework — add these three sections to each 6R option presented:**
+
+   **(a) What happens if not resolved (populate from agent bundle — source environment signals):**
+   - Source environment lifecycle/CVE signals (agent bundle applies where source is cloud-hosted):
+     `{source CVE signal} [{source_url}, {retrieved_date}]`
+     — or `[project-specific — assess vendor support status for on-prem runtime manually]`
+     if source is on-prem (agent bundle has no on-prem lifecycle data)
+   - Consequence of choosing this option and then doing nothing further: derive from signals above.
+
+   **(b) Whether it can remain (operational residuals that survive migration even on success):**
+   - Cold-start latency: `[project-specific — verify whether this target option introduces
+     cold-start for your workload pattern (serverless/container targets)]`
+   - Cloud ops skill gap: `[project-specific — estimate team retraining effort from IIS/Windows
+     ops model to target cloud ops model]`
+   - Egress costs not in initial estimate: `{egress_cost_signal.signal} [{source_url}, {retrieved_date}]`
+     — or `WARNING: Egress cost signal not available — check: {canonical_url}` if UNKNOWN
+     (egress costs are frequently excluded from initial TCO models and surface after go-live)
+   - Vendor lock-in exit cost: `[project-specific — identify proprietary services in this option
+     with no portable equivalent; estimate exit effort]`
+   - Compliance residuals: if `compliance_certifications.certs` does not include a required cert:
+     `WARNING: {required cert} not confirmed for {component} — check: {canonical_url}`
+
+   **(c) How to verify success (populate from agent bundle — target component signals):**
+   - SLA baseline: `{sla_percentage.value} [{source_url}, {retrieved_date}]`
+     — or `WARNING: SLA not found for {component} — check: {canonical_url}` if UNKNOWN
+     Verify your application availability target meets or exceeds this baseline.
+   - GA status: `{ga_status.status} [{source_url}, {retrieved_date}]`
+     — or `WARNING: GA status not determined for {component} — check: {canonical_url}` if UNKNOWN
+     If Preview: verify there is a GA commitment date before committing to this option.
+   - Functional: `[project-specific — list acceptance tests confirming the migrated application
+     behaves identically to the source (same inputs, same outputs)]`
+   - Performance: `[project-specific — list NFR thresholds to verify post-migration
+     (latency p99, throughput, availability)]`
+   - Cost: verify actual workload cost against `{pricing_range.value} [{source_url}, {retrieved_date}]`
+     — or `WARNING: pricing not grounded — check: {canonical_url}` if UNKNOWN
+
+   **Note for Retire and Retain postures:** sections (b) and (c) are not applicable.
+   Mark both as: `Not applicable — {posture name}: {one-line rationale e.g. "no target component
+   to provision" or "no migration performed"}.`
    **Judge verdict gate — run before APPROVE OPTIONS:**
    ```bash
    node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" check-gate \
@@ -302,6 +373,7 @@ node scripts/checkpoint-ledger.cjs set-payload --skill=replatform --ado={ADO_ID}
 ## Step R2 — Cloud-capability decomposition (implemented — AC-F7)
 
 > 📊 **STEP BOUNDARY — Step R2: Cloud-capability decomposition**
+> Write `.claude/active-task.json`: `{"skill":"replatform","step":"R2","ado":"{ADO_ID}"}`
 > The checkpoint is flushed — resuming here is safe.
 > **Reply `CONTINUE` to proceed with this step.**
 > Reply `COMPACT` if the context window is near capacity:
@@ -338,6 +410,7 @@ node scripts/checkpoint-ledger.cjs set-payload --skill=replatform --ado={ADO_ID}
 ## Step R3 — Author IaC + config + pipeline + runbooks (implemented — AC-F7)
 
 > 📊 **STEP BOUNDARY — Step R3: Author IaC + config + pipeline + runbooks**
+> Write `.claude/active-task.json`: `{"skill":"replatform","step":"R3","ado":"{ADO_ID}"}`
 > The checkpoint is flushed — resuming here is safe.
 > **Reply `CONTINUE` to proceed with this step.**
 > Reply `COMPACT` if the context window is near capacity:
@@ -376,6 +449,7 @@ node scripts/checkpoint-ledger.cjs set-payload --skill=replatform --ado={ADO_ID}
 ## Step R4 — Human executes (implemented — AC-F7)
 
 > 📊 **STEP BOUNDARY — Step R4: Human executes**
+> Write `.claude/active-task.json`: `{"skill":"replatform","step":"R4","ado":"{ADO_ID}"}`
 > The checkpoint is flushed — resuming here is safe.
 > **Reply `CONTINUE` to proceed with this step.**
 > Reply `COMPACT` if the context window is near capacity:
@@ -413,6 +487,7 @@ node scripts/checkpoint-ledger.cjs set-payload --skill=replatform --ado={ADO_ID}
 ## Step R5 — NFR assurance + Well-Architected + behavioral regression (implemented — AC-F8)
 
 > 📊 **STEP BOUNDARY — Step R5: NFR assurance + Well-Architected + behavioral regression**
+> Write `.claude/active-task.json`: `{"skill":"replatform","step":"R5","ado":"{ADO_ID}"}`
 > The checkpoint is flushed — resuming here is safe.
 > **Reply `CONTINUE` to proceed with this step.**
 > Reply `COMPACT` if the context window is near capacity:
@@ -524,6 +599,8 @@ NFR gate is not blocked by test plan generation failure.
 node scripts/checkpoint-ledger.cjs set-gate --skill=replatform --ado={ADO_ID} --gate=step_r5a_test_plan --verdict=PASS
 node scripts/checkpoint-ledger.cjs set-payload --skill=replatform --ado={ADO_ID} --key=testPlanPath --value={TEST_PLAN_PATH}
 ```
+
+> Write `.claude/active-task.json`: `{}` — clears the active step; hook exits 0 on next unrelated message.
 
 ---
 

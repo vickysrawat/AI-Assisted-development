@@ -65,6 +65,23 @@ Do NOT trigger for:
 
 ---
 
+## Governance Gate — run before any other step
+
+```bash
+GOVERNANCE=$(node -e "try{const s=JSON.parse(require('fs').readFileSync('.claude/dream-init-state.json','utf8'));process.stdout.write(s.governance_mode||'full')}catch(e){process.stdout.write('full')}")
+echo "GOVERNANCE_MODE=$GOVERNANCE"
+```
+
+If `GOVERNANCE_MODE=lightweight` — **HARD STOP:**
+```
+⛔ ICEA gate disabled — this project is in lightweight governance mode.
+   Use goal-loop instead:  goal-loop ADO-{ID}
+   To re-enable full mode: SET GOVERNANCE full
+```
+Do not proceed. Do not ask for ADO ID, Release, or Sprint.
+
+---
+
 ## Resolve PLUGIN_DIR — do this first, before any step
 
 Read `.claude/plugin-path.txt` to get PLUGIN_DIR. If absent or empty, use the §1a resolver:
@@ -85,25 +102,129 @@ Store as PLUGIN_DIR. All `$PLUGIN_DIR` references in this skill use this value.
 
 ## Codebase Orientation (run before Step 1)
 
-> Schema: `$PLUGIN_DIR/skills/shared/graph-index-schema.md` · `$PLUGIN_DIR/skills/shared/graph-module-schema.md`
+> Schema: `$PLUGIN_DIR/skills/shared/graph-index-schema.md` · `$PLUGIN_DIR/skills/shared/graph-module-schema.md` · `$PLUGIN_DIR/skills/shared/graph-json-schema.md`
 
 Before intercepting the feature request, orient yourself to the project without
 reading raw source files:
 
 1. **Read `.claude/architecture/architecture.md`** if it exists — this gives the
    system overview, layer responsibilities, and key patterns.
-2. **Use `.claude/graph/graph-index.md`** — it is auto-loaded via `paths: always`
-   and already in context. Its **Module Summaries** section lists every module's
-   bounded context and key files inline. Match the feature request to the closest
-   module entry and use its summary directly — **no detail file read needed** for
-   basic orientation. Only read the module's detail file (the `Detail File` column
-   path) if you additionally need patterns or the full dependency list.
-3. **Read `.claude/architecture/architecture-deployment.md`** if it exists — this gives the
-   hosting model (IIS / container / App Service), auth strategy (Entra ID / JWT / API key),
-   environment list, and CI/CD pipeline. Reference this when drafting ACs for API endpoints,
-   auth flows, route configuration, or environment-specific behaviour. If the file is missing,
-   note in the ICEA Context section: "⚠ Deployment context not captured — run `/update-arch
-   --deployment` for hosting/auth details."
+2. **Use `.claude/graph/graph-index.md`** — auto-loaded via `paths: always` and already
+   in context. Match the feature request to the closest module entry from the **Module
+   Summaries** section. Record the matched module's name and its `Detail File` path.
+
+2a. **Always read the primary module's detail file** (the `Detail File` path from step 2).
+    The index summary is breadth-only — the detail file has three things the index omits:
+
+    - **Patterns** — module-specific coding conventions (e.g. "all DB access via Dapper;
+      never EF Core; events via MediatR"). ICEA ACs must use these idioms — without this,
+      ACs use generic language that the codebase does not follow.
+    - **Dependencies** with typed relationships (`calls`, `reads`, `publishes`, `extends`,
+      `depends`) — the type determines which AC category applies (see 2b below).
+    - **Depended on by** — reverse edges listing modules that call or read this one. Any
+      change to the module's public interface or data contract affects these consumers.
+
+    Extract and hold in context: all Patterns entries, all Dependencies with their type,
+    all "Depended on by" entries.
+
+2b. **Query `graph.json` for the primary module's hub flag and typed edges:**
+
+    ```bash
+    node -e "
+    try {
+      const g = JSON.parse(require('fs').readFileSync('.claude/graph/graph.json','utf8'));
+      const mod = '{PRIMARY_MODULE_ID_LOWERCASE}';
+      const node = g.nodes.find(n => n.id===mod || n.module.toLowerCase()===mod);
+      const out = g.edges.filter(e => e.from===(node&&node.id));
+      const inc = g.edges.filter(e => e.to===(node&&node.id));
+      console.log(JSON.stringify({hub:node&&node.hub,out,inc}));
+    } catch(e) { console.log('GRAPH_JSON_UNAVAILABLE'); }
+    " 2>/dev/null
+    ```
+
+    **If `hub: true`** — insert a visible warning in the ICEA Context section and in the
+    orientation declaration (step 7):
+    ```
+    ⚠ HUB MODULE — this module has many dependents. Changes here propagate widely.
+    Scope this feature carefully; consider whether downstream modules need explicit ACs.
+    ```
+
+    **From `inc[]` (modules whose edges point TO this module)** — these are upstream callers.
+    If the feature changes the module's public interface or data contract, these callers are
+    affected. Add any whose edge type is `calls`, `reads`, or `extends` to a
+    `DOWNSTREAM_AFFECTED` list. (`depends`-type edges are structural and weaker — omit them.)
+
+    **From `out[]` (modules this one calls)** — if the feature adds a new outbound call,
+    check whether a resilience AC (timeout/retry/circuit-breaker) is needed based on edge type.
+
+    **If `GRAPH_JSON_UNAVAILABLE`** — fall back to the detail file's Dependencies and
+    Depended-on-by sections already read in step 2a. They carry the same data in prose form.
+
+    **Edge type → AC obligation mapping:**
+
+    | Edge type | Target node type | Direction | AC obligation |
+    |---|---|---|---|
+    | `calls` | internal module | out | Resilience AC if B is slow or external |
+    | `reads` | internal module / database | out | Absent-data AC: behaviour when data is missing or stale |
+    | `writes` | database / storage | out | Data integrity AC: transaction scope, rollback on failure |
+    | `publishes` | internal / message-bus | out | Event-contract AC: schema compatibility; consumers must not break |
+    | `subscribes` | message-bus | out | Poison-message AC: handling of malformed/unprocessable messages; ordering guarantee |
+    | `extends` | internal module | out | Interface-compliance AC: Liskov / contract conformance |
+    | `uses` | shared-library | out | Version-pinning AC: no floating version; breaking-change review on upgrade |
+    | `feeds` | downstream-app | out | Backward-compatibility AC: downstream consumer notified of interface changes |
+    | `fed-by` | upstream-app | inc | Availability-dependency AC: behaviour when upstream is slow, down, or sends malformed data |
+    | `calls` | identity-provider | out | Auth AC: token expiry handling; fallback on IdP unavailability |
+    | `calls` / `reads` | any | inc (B → this) | Caller-impact AC: if this module's interface changes, note B as affected |
+
+    When the target node has `external: true`, always add a resilience AC regardless of edge type.
+    Read the target node's detail file **AC obligations** section — it contains the pre-computed
+    AC text derived from the dependency type and tech, saving further analysis.
+
+2c. **Traverse the dependency chain for multi-layer features** (limit: 2 hops from primary
+    module). When the feature spans multiple layers — e.g. Controller → Service → Repository
+    → DB — use the `out[]` edges and their own detail files to identify every module in the
+    chain. List them in the ICEA Context section under `## Affected modules` in layer order,
+    and generate at least one AC per layer. Do not traverse into modules the feature does not
+    touch — depth-first, stop when the next hop is clearly out of scope.
+
+3. **Architecture doc reads — graph-first optimization (token saving):**
+
+   Before reading any architecture doc, check whether the graph already contains the relevant
+   external dependency nodes (populated by graph-sync Step 2x). If it does, the architecture
+   doc read is redundant — the graph already holds the data in a denser, queryable form.
+
+   ```bash
+   node -e "
+   try {
+     const g = JSON.parse(require('fs').readFileSync('.claude/graph/graph.json','utf8'));
+     const ext = g.nodes.filter(n => n.external === true);
+     const hasDeps    = ext.some(n => ['external-api','upstream-app','downstream-app'].includes(n.type));
+     const hasData    = ext.some(n => n.type === 'database');
+     const hasInfra   = ext.some(n => ['message-bus','storage','identity-provider'].includes(n.type));
+     console.log(JSON.stringify({hasDeps, hasData, hasInfra, count: ext.length}));
+   } catch(e) { console.log('GRAPH_JSON_UNAVAILABLE'); }
+   " 2>/dev/null
+   ```
+
+   - If `hasDeps: true` → **skip reading `architecture-integrations.md`** for this ICEA run.
+     Use the graph's external-api/upstream-app/downstream-app nodes and their detail files instead.
+   - If `hasData: true` → **skip reading `architecture-data.md`** for integration/data-store context.
+     Use the graph's database nodes and their detail files instead.
+   - If `hasInfra: true` → **skip the infrastructure sections of `architecture-deployment.md`**
+     (message-bus, storage, identity-provider). Still read deployment.md for hosting model, auth
+     strategy, environment list, and NFR targets — those are not in the graph.
+   - If `GRAPH_JSON_UNAVAILABLE` or `count: 0` → fall back to reading the architecture docs
+     (current behaviour — no change).
+
+   This is the primary token saving: one graph query replaces reading 1–3 architecture docs.
+   The graph's external node detail files carry pre-computed AC obligations, so even the
+   AC drafting step is faster.
+
+   **Read `.claude/architecture/architecture-deployment.md`** if it exists — for hosting model
+   (IIS / container / App Service), auth strategy (Entra ID / JWT / API key), environment list,
+   CI/CD pipeline, and NFR targets. This part of deployment.md is NOT in the graph and must
+   always be read. If the file is missing, note in the ICEA Context section: "⚠ Deployment
+   context not captured — run `/update-arch --deployment` for hosting/auth details."
 
    Additionally, when `architecture-deployment.md` is absent, insert this visible advisory
    banner at the top of the generated ICEA document (before the Intent section):
@@ -185,9 +306,19 @@ reading raw source files:
    Continuing with current graph…
    ```
    Then proceed — do not block execution.
-7. From the graph, identify which module the request touches. Note the module's
-   entry-point and key files — reference them in the ICEA's Context section
-   without opening them.
+7. **Orientation summary** — consolidate the graph analysis into an in-context record:
+
+   - **Primary module:** `{module name}` (hub: yes/no)
+   - **Key files:** `{entry point}`, `{secondary file if in detail file}`
+   - **Patterns to apply:** `{list from detail file — these govern AC idiom}`
+   - **Dependency chain:** `{layer 1} → {layer 2} → …` (from 2c traversal)
+   - **Downstream consumers affected:** `{modules from DOWNSTREAM_AFFECTED}` or "none"
+   - **Edge-type AC obligations:** `{list by edge type from 2b table}` or "none"
+
+   Reference all of the above in the ICEA's Context section without opening source files.
+   The patterns drive AC language; the dependency chain drives layer-by-layer AC coverage;
+   the downstream list drives caller-impact ACs; the edge-type obligations drive resilience,
+   event-contract, and interface-compliance ACs.
 
 ## Execution Steps
 
@@ -197,9 +328,15 @@ reading raw source files:
 > See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
 > **Required first output — orientation declaration:**
-> Before collecting identifiers or drafting anything, output this line:
-> `ORIENTATION: <module> (domain: <domain>) — <bounded context from Module Summaries in graph-index.md>`
-> This line must be the first output of this skill. An ICEA response that omits it is incomplete.
+> Before collecting identifiers or drafting anything, output these lines:
+> ```
+> ORIENTATION: <module> (domain: <domain>, hub: yes|no) — <bounded context>
+> CHAIN:       <layer 1> → <layer 2> → … | or: single-module
+> DOWNSTREAM:  <affected consumer modules> | or: none
+> EDGE-ACs:    <edge-type obligations> | or: none
+> ```
+> These four lines must be the first output of this skill. An ICEA response that omits
+> any of them is incomplete. `hub: yes` triggers the HUB MODULE warning in the ICEA.
 
 **Collect three identifiers.** If any are missing, ask in a single prompt:
 
@@ -339,6 +476,9 @@ Append row:
 ```
 
 **After every response during Step 3, end with this exact line — no exceptions:**
+
+> Write `.claude/active-task.json`: `{"skill":"icea-feature","step":"step4-draft-icea","ado":"{ADO_ID}","resume_cmd":"PLAN ADO-{ADO_ID}"}`
+
 ```
 Review the plan. When ready: SAVE PLAN ADO-{ADO_ID}
 ```
@@ -693,7 +833,8 @@ Only proceed past this point when `ICEA_GATE_PASSED` is confirmed.
 
 **⚠ CONTEXT BUDGET CHECK — run immediately after gate passes:**
 
-> Skip if Step 8 was entered via the `TECH ADO-{ID}` cross-session recovery keyword.
+> Write `.claude/active-task.json`: `{"skill":"icea-feature","step":"step8-draft-tech","ado":"{ADO_ID}","resume_cmd":"TECH ADO-{ADO_ID}"}`
+> Skip writing if Step 8 was entered via the `TECH ADO-{ID}` cross-session recovery keyword (fresh session — budget check will be skipped anyway).
 
 ```bash
 ICEA_LINES=$(wc -l < "$ICEA_FILE" 2>/dev/null || echo 0)
@@ -856,7 +997,7 @@ Total SP: {N}
 Type: STORY — single implementation ADO, no child ADOs needed.
 ```
 
-If total SP > 5 → **EPIC**:
+If total SP > 8 → **EPIC**:
 ```
 Total SP: {N}
 Type: EPIC — break into stories by logical completion.
@@ -879,8 +1020,8 @@ The Story Breakdown table in the ICEA is also updated with this information.
 
 | Sizing result | Template to use | Flow |
 |---|---|---|
-| STORY (total SP ≤ 5) | `techspec-base.md` + overlay | Single-spec flow — continue below |
-| EPIC (total SP > 5) | `techspec-epic-level.md` | Epic-level spec flow — see below |
+| STORY (total SP ≤ 8) | `techspec-base.md` + overlay | Single-spec flow — continue below |
+| EPIC (total SP > 8) | `techspec-epic-level.md` | Epic-level spec flow — see below |
 
 **If STORY — proceed with single-spec drafting:**
 
@@ -1120,6 +1261,25 @@ file after each change so the preview stays current.
 
 When satisfied: SAVE TECH ADO-{ADO_ID}
 ```
+
+**Immediately after Tech Spec draft is written to temp, generate the test plan draft:**
+
+```
+Read $PLUGIN_DIR/skills/test-plan/SKILL.md and execute for ADO-{ID} with --source icea --subagent
+Write the result to: temp/ADO-{ADO_ID}-testplan.md  (temp location — moved to permanent at SAVE TECH)
+```
+
+After test plan is written, append to the developer prompt above:
+```
+📄 Test Plan draft written to temp/ADO-{ADO_ID}-testplan.md
+   Open alongside the Tech Spec to review test cases before approving.
+
+   If test cases reveal gaps in the Tech Spec, make changes here in chat
+   before SAVE TECH — both files will be updated.
+```
+
+The developer reviews both documents together. Any Tech Spec change that affects test cases
+is applied to both temp files in the same review session before SAVE TECH.
 
 ---
 
@@ -1380,6 +1540,66 @@ Share with your Tech Lead and Product team for review.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
+> Write `.claude/active-task.json`: `{}` — clears the active step; hook exits 0 on next unrelated message.
+
+### Step 10a — Auto-approve ICEA (runs inline after SAVE TECH)
+
+Immediately after confirming the tech spec is saved, invoke icea-approve automatically:
+```
+Read $PLUGIN_DIR/skills/icea-approve/SKILL.md and execute it for ADO-{ID} in auto-approve mode.
+```
+
+**Auto-approve mode** (triggered from Step 10a, not standalone `APPROVE ADO-{ID}`):
+- Run the Open Questions gate (Step 0 of icea-approve) — if questions remain, HALT with the
+  existing "⛔ Open Questions remain" message; do NOT auto-approve. Developer must run
+  `REVISE ADO-{ID}` to resolve, then `SAVE TECH ADO-{ID}` again.
+- If Open Questions gate passes: stamp `Status: ✅ Approved` on the ICEA, write audit entry, skip
+  the developer-facing approval summary (it was already shown as part of the SAVE TECH confirmation).
+
+### Step 10b — Write test plan to permanent location and clear stale marker
+
+The test plan was generated alongside the Tech Spec (before SAVE TECH) so the developer
+could review both together. Now that SAVE TECH has been confirmed, move the test plan
+from temp to its permanent location and clear any stale marker.
+
+```bash
+# Test plan was already generated in temp/ during the Tech Spec review step.
+# Move it to permanent location alongside ICEA + Tech Spec:
+TEST_PLAN_TEMP="temp/ADO-{ADO_ID}-testplan.md"
+if [ -f "$TEST_PLAN_TEMP" ]; then
+  cp "$TEST_PLAN_TEMP" "$DEST_DIR/ADO-{ADO_ID}-{feature}.test-plan.md"
+  rm "$TEST_PLAN_TEMP"
+else
+  # Fallback: generate now if temp file is missing (e.g. session resume)
+  echo "Generating test plan..."
+fi
+```
+
+If fallback generation is needed:
+```
+Read $PLUGIN_DIR/skills/test-plan/SKILL.md and execute for ADO-{ID} with --source icea --subagent
+```
+
+Clear the stale marker (fresh test plan was just generated):
+```bash
+rm -f ".claude/signals/test-plan-stale-ADO-{ADO_ID}.json"
+```
+
+Confirm:
+```
+✅ Test plan saved — docs/Release{R}/Sprint{S}/UserStory{ADO_ID}/ADO-{ADO_ID}-{feature}.test-plan.md
+
+Ready to implement:
+  IMPLEMENT ADO-{ADO_ID}
+```
+
+---
+
+> **Note — test plan generated BEFORE SAVE TECH:**
+> The test plan draft is produced at Tech Spec draft time (see Step 9 below) so the developer
+> can review test cases alongside the Tech Spec and revise either if gaps are found. The
+> `SAVE TECH` prompt references both the Tech Spec temp file AND the test plan temp file.
+
 ---
 
 ### Step 10 Epic Save — move all temp files to permanent (EPIC only)
@@ -1539,7 +1759,7 @@ transparency). Never name the persona in any artifact — note this is distinct 
 - NEVER generate implementation code — that is icea-implement's responsibility
 - NEVER write Status: ✅ Approved — that is icea-approve's responsibility
 - NEVER handle revision inline — redirect to REVISE ADO-{ID}
-- NEVER break Epic stories by AC — break by logical completion (≤5 SP shippable slice)
+- NEVER break Epic stories by AC — break by logical completion (≤8 SP shippable slice)
 - NEVER mark a field complete if it contains [?]
 - NEVER re-ask questions already answered in the plan
 - NEVER omit the AC Coverage Matrix — every Tech Spec must have bidirectional AC↔File traceability

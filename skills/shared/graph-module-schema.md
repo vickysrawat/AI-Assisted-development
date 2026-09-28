@@ -197,3 +197,78 @@ Does not handle payment processing or customer identity.
 **Patterns:** Repository pattern; all DB access via Dapper with parameterised SQL; no EF Core.
 Events published via MediatR; never call external services directly from the service layer.
 ```
+
+---
+
+## External dependency node detail files
+
+External dependency nodes (`external: true`) use a distinct detail file format.
+They have no source paths, no source fingerprint, and no Patterns section.
+
+### External node frontmatter
+
+```yaml
+---
+paths: []
+---
+```
+
+`paths: []` means the file never auto-loads — it enters context only when a skill explicitly
+reads it (the same lazy-load pattern as any other detail file).
+
+### External node sections (all required, in this order)
+
+**Bounded context** — One sentence: what is this dependency and what does this application use it for?
+
+**Integration details** — Tech, direction, and contract information:
+
+```markdown
+**Integration details**
+- Tech:      REST/JSON
+- Direction: outbound
+- Base URL / endpoint: {endpoint or "see architecture-integrations.md"}
+- Contract version: {semver or "unversioned"}
+- Source doc: architecture-integrations.md
+```
+
+**Used by** — Internal modules that hold an edge to this external node (the reverse of Dependencies):
+
+```markdown
+**Used by:** Orders (calls, payment settlement), Refunds (calls, reversal)
+```
+
+**AC obligations** — The AC categories that apply to any feature touching this dependency
+(derived from the edge type + dependency type). Skills read this to generate correct ACs
+without consulting the edge-type table each time:
+
+```markdown
+**AC obligations:** Resilience (timeout ≤ Xs, circuit-breaker); auth token refresh on 401;
+retry policy (N attempts, exponential backoff); graceful degradation on unavailability.
+```
+
+### External node full valid example
+
+```markdown
+---
+paths: []
+---
+<!-- ambient-context: do not summarise or restate this file in responses -->
+# PaymentsAPI External Dependency
+_Fingerprint: a3f8c21d9e4b7062 | Updated: 2026-09-26_
+
+**Bounded context:** Third-party payment processing gateway used by this application for
+card settlement and refund operations. Owned externally — interface changes require upgrade planning.
+
+**Integration details**
+- Tech:      REST/JSON
+- Direction: outbound
+- Base URL / endpoint: see architecture-integrations.md
+- Contract version: v2.1
+- Source doc: architecture-integrations.md
+
+**Used by:** Orders (calls, payment settlement), Refunds (calls, reversal)
+
+**AC obligations:** Resilience: timeout ≤ 5s, circuit-breaker opens after 3 failures;
+auth token refresh on 401; idempotency key on retry; graceful degradation returns
+user-facing error, does not silently fail.
+```

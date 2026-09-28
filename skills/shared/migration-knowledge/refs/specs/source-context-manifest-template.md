@@ -53,3 +53,16 @@ _Every `graph.json` module → `mapped` or `out-of-scope`. Unlisted module = sil
 |---|---|---|---|
 | {ModuleA} business-logic | mapped | {target cluster} | {src/…#L} |
 | {ModuleB} | out-of-scope | {why excluded} | {src/…#L} |
+
+## Coupling Patterns
+_Systematic coupling scan per `skills/shared/architectural-coupling-spec.md`. Every coupling type
+(domain, technology, data, deployment, integration) must be assessed; state "none found" if absent.
+`severity=critical` deployment couplings must have named `concerns[]` — required for cluster enforcement._
+
+| ID | Type | Severity | Name | Concerns (abstract) | Technology | Locations | Migration signal |
+|---|---|---|---|---|---|---|---|
+| CP-1 | deployment | critical | {name — e.g. 'Business logic mixed with data access'} | {concern-a}, {concern-b} | — | {src/…} | {what the target must do — technology-neutral} |
+| CP-2 | technology | major | {name — e.g. 'WCF service contract'} | — | WCF | {src/…#L} | {replacement strategy signal} |
+| CP-3 | domain | minor | {name} | — | — | {src/…#L} | {migration signal} |
+
+_Delete unused rows. Add rows for every finding. If a type has no findings, add a row: `| — | {type} | — | none found | — | — | — | — |`_

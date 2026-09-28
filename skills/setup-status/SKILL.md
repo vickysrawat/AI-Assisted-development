@@ -618,7 +618,7 @@ hookFiles.forEach(h => {
   const f = path.join('.claude','hooks', h+ext);
   console.log(h+ext+': '+(fs.existsSync(f) ? 'OK' : 'MISSING'));
 });
-['check-settings-secrets.cjs','script-review-gate.cjs','context-budget-tech-write.cjs','audit-append.cjs','audit-prompt.cjs'].forEach(h => {
+['check-settings-secrets.cjs','script-review-gate.cjs','context-budget-tech-write.cjs','audit-append.cjs','audit-prompt.cjs','context-guard.cjs'].forEach(h => {
   console.log(h+': '+(fs.existsSync(path.join('.claude','hooks',h)) ? 'OK' : 'MISSING'));
 });
 
@@ -642,6 +642,8 @@ try {
   const memCmd=((s.hooks||{}).UserPromptSubmit||[]).flatMap(h=>(h.hooks||[])).find(x=>(x.command||'').includes('memory-capture'));
   console.log('PreToolUse icea-floor: '+(iceaCmd ? iceaCmd.command : 'NOT_WIRED'));
   console.log('UserPromptSubmit memory-capture: '+(memCmd ? memCmd.command : 'NOT_WIRED'));
+  const guardCmd=((s.hooks||{}).UserPromptSubmit||[]).flatMap(h=>(h.hooks||[])).find(x=>(x.command||'').includes('context-guard.cjs'));
+  console.log('UserPromptSubmit context-guard: '+(guardCmd ? guardCmd.command : 'NOT_WIRED'));
 } catch(e) { console.log('settings.json: READ_ERROR'); }
 
 // 4. git pre-commit

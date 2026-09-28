@@ -7,7 +7,11 @@ description: >
   files are its generated projection. Recomputes module-wide fingerprints, regenerates
   only stale modules, detects new/removed/renamed modules, derives typed dependency
   edges from source imports, flags hub (god) nodes, and restructures flat→domain past
-  30 modules. Deletes the .stale flag on success.
+  30 modules. Also syncs external dependency nodes (external-api, database, message-bus,
+  shared-library, upstream-app, downstream-app, storage, identity-provider) from
+  architecture-integrations.md, architecture-data.md, and architecture-deployment.md —
+  enabling ICEA to skip those doc reads and use the graph instead (token saving).
+  Deletes the .stale flag on success.
   Triggered by /ai-assisted-development:graph-sync.
   Also triggers on: "refresh knowledge graph", "update graph", "graph is stale",
   "sync the graph", "knowledge graph stale".
@@ -138,6 +142,126 @@ Step 3 fingerprint comparison is always authoritative. It is deleted in Step 9.
 
 ---
 
+## Step 2x — Sync external dependency nodes from architecture docs
+
+Parse the three architecture docs that record cross-system boundaries and upsert
+external dependency nodes into the in-memory graph. This step runs after Step 2
+(state loaded) and before Step 3 (fingerprint check) so external nodes participate
+in the same stale/unchanged accounting.
+
+**No source scanning.** External nodes are derived from architecture docs only —
+never from source imports. The `graph-extract-edges.js` extractor (Step 8a) does
+not touch external nodes or their edges.
+
+### 2x-a — Parse `architecture-integrations.md` → external-api, upstream-app, downstream-app
+
+```bash
+cat .claude/architecture/architecture-integrations.md 2>/dev/null || echo "NOT_FOUND"
+```
+
+For each named external service / upstream / downstream found:
+- Determine type: `external-api` (this app calls it) · `upstream-app` (it feeds data in) · `downstream-app` (this app feeds data out)
+- Set `direction`: `outbound` for external-api/downstream-app · `inbound` for upstream-app
+- Build a stable `id`: kebab-case of the service name (e.g. `payments-api`, `notifications-svc`)
+- Fingerprint = `sha1(doc-entry-text)` — changes when the entry in the doc changes
+
+**Locally-cloned dependency detection (merge-map).** Also parse the optional
+`## Locally-Cloned Dependency Repos` table in the same file. For each row:
+
+1. Resolve the `Local path` cell relative to the repo root to an absolute, forward-slashed path.
+2. Check whether any root in `additionalDirectories` (`.claude/settings.local.json`) resolves to
+   that same absolute path (compare normalised, case-insensitive on Windows).
+3. **If matched** — add to the **in-memory `localPathMeta` map** (keyed by the normalised
+   `additionalDirectories` absolute path). Entry shape:
+   ```json
+   { "direction": "<Direction cell>", "type": "<tier→type mapping below>", "label": "<Repo name cell>" }
+   ```
+   **Do not** create a stub external node for this row — the real node comes from source
+   scanning in Step 4 / 7 (see Step 2x-d).
+4. **If not matched** (path in doc but absent from `additionalDirectories`) — log:
+   `⚠ architecture-integrations.md references Local path "{path}" but it is not in additionalDirectories — creating stub node`
+   and create a stub node as normal.
+
+Tier → `type` mapping applied when building the `localPathMeta` entry:
+
+| Tier value | Node `type` |
+|---|---|
+| `service` | `service` |
+| `ui` | `ui` |
+| `repository` | `repository` |
+| `shared-library` | `shared-library` |
+| `datastore` | `datastore` |
+| `domain` | `domain` |
+
+`localPathMeta` is in-memory only for this graph-sync run — never written to disk.
+
+### 2x-b — Parse `architecture-data.md` → database nodes
+
+```bash
+cat .claude/architecture/architecture-data.md 2>/dev/null || echo "NOT_FOUND"
+```
+
+For each named data store (SQL Server, Redis, CosmosDB, etc.):
+- Type: `database`
+- Direction: `bidirectional` (most databases are read+write; set `outbound` if read-only)
+- `tech`: the database engine/protocol
+
+### 2x-c — Parse `architecture-deployment.md` → message-bus, storage, identity-provider nodes
+
+```bash
+cat .claude/architecture/architecture-deployment.md 2>/dev/null || echo "NOT_FOUND"
+```
+
+For each named message bus / queue / topic, blob store, or identity provider:
+- Type: `message-bus` · `storage` · `identity-provider`
+- Direction: infer from context (publishes → outbound; subscribes → inbound; both → bidirectional)
+
+### 2x-d — Upsert nodes and derive edges
+
+**Skip merge-map entries first.** Before upserting any parsed external dependency, check if its
+entry was added to `localPathMeta` in Step 2x-a. If so, skip the upsert and edge derivation
+entirely — the real node with full source detail is built in Steps 4/7 and enriched from
+`localPathMeta` in Step 7a. No stub node, no stub edges.
+
+For each remaining (non-merge-map) external dependency:
+
+1. **Find existing node** by `id`. If found and fingerprint matches → UNCHANGED (skip). If fingerprint differs → STALE (regenerate detail file in Step 8b). If not found → NEW external node.
+
+2. **Write/update node fields** in memory:
+   ```json
+   {
+     "id": "{kebab-id}",
+     "module": "{DisplayName}",
+     "domain": "external",
+     "type": "{type}",
+     "external": true,
+     "tech": "{tech}",
+     "direction": "{direction}",
+     "source": "{source-doc-filename}",
+     "detailFile": "graph/{kebab-id}.md",
+     "entryPoint": "",
+     "paths": [],
+     "fingerprint": "{doc-entry-sha1}",
+     "hub": false
+   }
+   ```
+
+3. **Derive edges** (INFERRED confidence — architecture doc is authoritative but not source-extracted):
+   - `external-api`, `upstream-app`, `downstream-app`: find internal module nodes whose detail file's Dependencies or Patterns sections mention this dependency → add typed edge. Edge type from direction: outbound external-api → `calls`; upstream-app (inbound) → `fed-by`; downstream-app (outbound) → `feeds`.
+   - `database`: modules mentioning the DB in Dependencies → `reads` and/or `writes` edges (check detail file text for read-only vs read-write).
+   - `message-bus`: modules mentioning the bus → `publishes` and/or `subscribes` (infer from "producer"/"consumer" language in the detail file).
+   - `shared-library`: modules whose package manifest lists the library → `uses`.
+   - `identity-provider`: modules whose detail file mentions auth/token → `calls`.
+
+4. **Remove stale external nodes**: if a node has `external: true` and its `source` doc no longer mentions it → propose removal (same confirm/skip flow as Step 5).
+
+Include external node counts in the Step 6 report line:
+```
+  External  : {N unchanged} unchanged, {N new} new, {N stale} stale, {N removed} removed
+```
+
+---
+
 ## Step 3 — Fingerprint check for all modules
 
 For each node, recompute its module-wide fingerprint over `node.paths` and compare to
@@ -186,6 +310,16 @@ find . -mindepth 2 -maxdepth 3 -type d \
 Cross-reference with `.claude/architecture/architecture.md` when a new module's
 purpose is unclear. Directories matched by no node become `NEW_MODULES` (Step 7b); a
 dependency-root directory becomes a `NEW_MODULES` entry carrying `sourceRoot`.
+
+**Unannotated dependency root warning.** For each `additionalDirectories` root processed
+in this step, check whether `localPathMeta` (built in Step 2x-a) has an entry for it.
+If not, emit this warning **once per root** in the Step 6 report (not as a hard stop):
+```
+⚠ {sourceRoot} is in additionalDirectories but has no direction/tier annotation
+  in architecture-integrations.md § Locally-Cloned Dependency Repos.
+  Run /update-arch --integrations to annotate it — using folder-based inference as fallback.
+```
+This warning is informational; graph-sync continues and classifies the module by inference.
 
 ---
 
@@ -244,6 +378,14 @@ Report the plan before writing:
 For each `STALE` and `NEW_MODULES` entry, update the in-memory node + its edges:
 
 ### 7a — Node fields
+
+**Merge-map lookup (`sourceRoot` nodes only).** When the node being built has `sourceRoot` set,
+look up `localPathMeta[node.sourceRoot]`:
+- **Found** → set `node.direction`, `node.type`, and (if not already curated) `node.module`
+  from the map entry. These fields are **not overwritten by inference below** — skip the
+  folder-based type/direction steps for this node.
+- **Not found** → apply normal inference (no behaviour change for unannotated repos).
+
 - `type` — classify from the entry point / folder role: `service`, `repository`,
   `ui`, `datastore`, `external-api`, `shared-lib`, or `domain`.
 - `fingerprint` — the recomputed value from Step 3.

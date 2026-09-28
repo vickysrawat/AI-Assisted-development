@@ -1037,6 +1037,54 @@ ls "$EXT_ARCH"
      open this project in Claude Code and run /architect.
 ```
 
+### 7b-x. Check the primary project's architecture-integrations.md for a matching row
+
+After seeding architecture docs for `DIR`, check whether the **primary project's**
+`architecture-integrations.md` has a `## Locally-Cloned Dependency Repos` row for this `DIR`.
+This is a separate check from the dependency repo's own architecture docs.
+
+```bash
+node -e "
+const fs=require('fs'), path=require('path'), root=process.cwd();
+const DIR='$DIR';
+const known=new Set();
+try {
+  const text=fs.readFileSync('.claude/architecture/architecture-integrations.md','utf8');
+  const idx=text.indexOf('## Locally-Cloned Dependency Repos');
+  if(idx!==-1){
+    const re=/\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|/g;
+    let m, section=text.slice(idx);
+    while((m=re.exec(section))!==null){
+      const lp=m[4].trim();
+      if(lp&&lp!=='Local path'&&!/^[-:\s]+\$/.test(lp))
+        try{known.add(path.resolve(root,lp).replace(/\\\\/g,'/').toLowerCase());}catch(e){}
+    }
+  }
+}catch(e){}
+const dirNorm=path.resolve(DIR).replace(/\\\\/g,'/').toLowerCase();
+console.log(known.has(dirNorm)?'ROW_EXISTS':'ROW_MISSING');
+"
+```
+
+If `ROW_MISSING`, ask the developer:
+```
+⚠ "{DIR}" was added to additionalDirectories but has no row in
+  architecture-integrations.md § Locally-Cloned Dependency Repos.
+  This metadata lets graph-sync classify it correctly without guessing.
+
+  Direction? [upstream / downstream / sibling]:
+  Tier?      [service / ui / repository / shared-library / datastore / domain]:
+  Repo name? (display label, e.g. TrackersPhase12):
+```
+
+After receiving answers, append a row to the `## Locally-Cloned Dependency Repos` table in the
+primary project's `architecture-integrations.md` (create the section from the
+`_shared/architecture-integrations.md` template block if absent). Write the file silently.
+
+If `ROW_EXISTS`, no action needed — continue.
+
+---
+
 ### 7c. Summary
 
 After all additional directories are processed:

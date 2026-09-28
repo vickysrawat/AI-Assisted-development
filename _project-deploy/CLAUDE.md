@@ -81,7 +81,7 @@ execute the skill immediately — priority over chat.
 | `SAVE PLAN ADO-{ID} CONFIRM` | Save plan with open questions — bypass warning |
 | `SAVE ICEA ADO-{ID}` | Run critic gate → save critic output → copy `temp/ADO-{ID}-icea.md` to permanent docs/ → delete temp → write Tech Spec to `temp/ADO-{ID}-tech.md` |
 | `SAVE ICEA ADO-{ID} ACCEPT` | Override critic REVISE verdict and save ICEA anyway (with audit note) |
-| `SAVE TECH ADO-{ID}` | Write Tech Spec to disk — hard blocks if open questions remain (no bypass) |
+| `SAVE TECH ADO-{ID}` | Write Tech Spec → auto-approve ICEA (runs icea-approve inline) → auto-generate test plan → prompt to IMPLEMENT |
 | `SAVE TECH ADO-{ID} ACCEPT` | Save Tech Spec despite critic REVISE verdict (override with audit note) |
 | `SAVE TEST ADO-{ID}` | Run test-plan skill — generate or refresh the QA test plan for any ADO (icea/upgrade/rewrite/replatform source auto-detected) |
 | `SAVE TEST ADO-{ID} --source {type}` | Run test-plan skill with explicit source override (icea · upgrade · rewrite · replatform) |
@@ -133,6 +133,12 @@ execute the skill immediately — priority over chat.
 | `GOVERNANCE REPORT --since {date}` | Same, scoped from a specific date. |
 | `GOVERNANCE REPORT --days {N}` | Same, for the last N days. |
 | `GOVERNANCE REPORT --sprint {N}` | Same, scoped to Sprint N (reads sprint dates from docs/). |
+| `SET GOVERNANCE full` | Read dream-init-state.json → set governance_mode="full" → write audit entry → confirm: ✅ governance_mode = full |
+| `SET GOVERNANCE lightweight` | Read dream-init-state.json → set governance_mode="lightweight" → write audit entry → confirm: ✅ governance_mode = lightweight |
+| `SET OUTPUT verbose` | Read dream-init-state.json → set output_mode="verbose" → confirm: ✅ output_mode = verbose (full details in chat — default) |
+| `SET OUTPUT compact` | Read dream-init-state.json → set output_mode="compact" → confirm: ✅ output_mode = compact (one-line summaries in chat; verbose → .claude/logs/) |
+| `SET GRAPH-SYNC-CI on` | Set ci_graph_sync=true in dream-init-state.json → show CI pipeline YAML snippet for the detected CI system (Azure Pipelines / GitHub Actions) → confirm: ✅ ci_graph_sync = on |
+| `SET GRAPH-SYNC-CI off` | Set ci_graph_sync=false in dream-init-state.json → confirm: ✅ ci_graph_sync = off |
 
 ## 0b. Shell & Git Configuration
 
@@ -173,10 +179,31 @@ Example: an internal error message containing a proprietary identifier →
 
 ## Feature Gate
 
-NEVER write implementation code for a new feature or capability without an approved ICEA on
-disk with `Status: ✅ Approved` at
-`docs/Release{R}/Sprint{S}/UserStory{ID}/ADO-{ID}-*.icea.md` (the folder is always
-`UserStory{ID}` for both STORY and EPIC — the type is recorded inside the ICEA).
+NEVER write implementation code without an approved artefact on disk.
+Required artefact depends on governance_mode in `.claude/dream-init-state.json`:
+- `full` (default): ICEA with `Status: ✅ Approved` at `docs/.../ADO-{ID}-*.icea.md`
+- `lightweight`: Plan with `Status: ✅ Approved` at `docs/.../ADO-{ID}-*.plan.md`
 
-If asked to implement something new and no approved ICEA exists: say so, run
-`/ai-assisted-development:icea-feature`, and do not proceed until `APPROVE ADO-{ID}`. Override: `/skip-icea` (warns once; not recommended).
+Approval is triggered automatically on `SAVE TECH` (full) or `SAVE PLAN` (lightweight).
+Enforced by bash gates in each relevant skill — not by LLM instruction.
+To switch modes: `SET GOVERNANCE lightweight` | `SET GOVERNANCE full`
+
+---
+
+## Output Mode
+
+Controls chat verbosity. Read from `output_mode` in `.claude/dream-init-state.json`.
+Default is `verbose` when the field is absent. Full rules: `skills/shared/output-mode-spec.md`.
+
+**verbose (default)** — all skill output shown in chat. Current behaviour unchanged.
+
+**compact** — one-line summaries per step in chat; verbose details written to
+`.claude/logs/ADO-{ID}-session-{YYYY-MM-DD}.md` via `scripts/output-log-write.cjs`.
+The unified diff is always shown in full so the developer can review before approving.
+
+**APPROVE prompt ordering — hard rule, applies to ALL modes:**
+The APPROVE prompt is always the last output in a write-gate sequence.
+Show the diff first, then the APPROVE prompt. Never stream content after the APPROVE prompt.
+
+Toggle: `SET OUTPUT compact` | `SET OUTPUT verbose`
+

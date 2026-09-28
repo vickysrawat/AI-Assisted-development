@@ -2,8 +2,11 @@
 name: update-arch
 description: >
   Targeted architecture-doc refresh — re-reads only changed parts of the codebase and
-  updates the prose architecture docs without a full re-scan; also re-runs the deployment
-  questionnaire via --deployment. Invoked by the /update-arch command.
+  updates ALL affected prose architecture docs (architecture.md, architecture-data.md,
+  architecture-integrations.md, architecture-security.md, architecture-deployment.md)
+  without a full re-scan. Classifies changed paths to the correct doc(s) automatically.
+  Individual flags (--data, --integrations, --security, --deployment, --decisions) target
+  a single doc. Invoked by the /update-arch command.
 ---
 
 # Update-Arch Skill — Targeted architecture doc refresh
@@ -26,24 +29,22 @@ docs are the only sources of truth; document what is actually there, never what 
 "expect" (subordinate to CLAUDE.md §3 / decision transparency). Never name the persona in the docs.
 See `$PLUGIN_DIR/skills/shared/personas-spec.md`.
 
-Refreshes the relevant sections of the prose `architecture.md` for areas that have
-changed since the last architect run, and (via `--deployment`) re-runs the
-deployment questionnaire. Costs 5–10% of a full architect skill run for incremental
-changes.
+Auto-detects which architecture docs are affected by recent code changes and refreshes
+only the relevant sections of each. Costs 5–10% of a full architect skill run for
+incremental changes.
 
 > **Orientation graph:** the codebase module graph (`.claude/graph/`) is refreshed
-> **separately** by `/graph-sync` — it is fingerprint-based and incremental
-> (ADR 0038). `/update-arch`
-> no longer touches orientation data (the former `domain-map.md` was retired in
-> v3.0.0). Run `/graph-sync` after structural changes; run `/update-arch` to keep
-> the prose docs current.
+> **separately** by `/graph-sync`. `/update-arch` writes `.claude/graph/.stale` after
+> updating docs so graph-sync knows to re-sync external dependency nodes. Run
+> `/graph-sync` after `/update-arch` for a fully consistent state.
 
 Use this after:
-- A change that alters the system overview or layer responsibilities in `architecture.md`
-- With `--deployment` to capture or re-capture the deployment questionnaire
+- Any code change — auto-detects which docs need updating
+- With `--data` / `--integrations` / `--security` / `--deployment` to force a single doc
+- With `--decisions` to append a new architecture decision
 
-For a complete re-scan of all architecture docs, use `setup-init` instead.
-For module/orientation refresh, use `/graph-sync`.
+For a complete re-scan of all architecture docs from scratch, use `/setup-init` instead.
+For module/orientation refresh only, use `/graph-sync`.
 
 ---
 
@@ -201,7 +202,7 @@ target subtree. Otherwise proceed to Step 2 to auto-detect changed areas.
 
 ---
 
-## Step 2 — Detect changed areas
+## Step 2 — Detect changed areas and classify affected docs
 
 Read the current prose docs and identify which source areas changed since the last refresh.
 
@@ -223,17 +224,32 @@ And stop.
 
 > The module orientation graph is **not** refreshed here — if `.claude/graph/.stale`
 > is present, tell the developer to run `/graph-sync` (it refreshes only stale
-> modules). `/update-arch` refreshes the prose `architecture.md` only.
+> modules).
 
 > **Dependency-repo changes.** A changed path may fall under a locally-cloned dependency
-> repo (`additionalDirectories`, an absolute path outside the repo root — see
-> `$PLUGIN_DIR/skills/shared/multi-root-scan.md`) rather than a repo-relative subtree. When
-> it does, update the integration/dependency prose (`architecture-integrations.md`) for that
-> dependency rather than a repo module section, and note the module lives outside the repo.
+> repo (`additionalDirectories`) rather than a repo-relative subtree. When it does,
+> update `architecture-integrations.md` for that dependency and note the module lives
+> outside the repo.
+
+**Classify each changed path to the doc(s) it affects:**
+
+| Path pattern | Affected doc(s) |
+|---|---|
+| `**/Migrations/**`, `**/migrations/**`, `**/Models/**`, `**/Entities/**`, `**/schema*`, `**/DbContext*` | `architecture-data.md` |
+| `**/HttpClient*`, `**/IHttp*`, `**/ExternalService*`, `**/ApiClient*`, `**/Integrations/**` | `architecture-integrations.md` |
+| `**/Auth/**`, `**/Authorization/**`, `**/Permissions/**`, `**/Identity/**`, `**/JWT*`, `**/Token*` | `architecture-security.md` |
+| `azure-pipelines*.yml`, `.github/workflows/**`, `*.pubxml`, `*web.config`, `*Dockerfile*`, `*docker-compose*` | `architecture-deployment.md` |
+| All other source paths (`**/Controllers/**`, `**/Services/**`, `**/Repositories/**`, etc.) | `architecture.md` |
+
+A single changed path may map to multiple docs (e.g. a service that calls an external API
+and also changes data models → both `architecture-integrations.md` and `architecture-data.md`).
+
+Build the set `AFFECTED_DOCS` — the union of all docs mapped from changed paths.
+Always include `architecture.md` when any source file outside the above specific patterns changed.
 
 If nothing relevant changed:
 ```
-✅ architecture.md is current — no structural changes detected. Nothing to update.
+✅ All architecture docs are current — no structural changes detected. Nothing to update.
    (For module orientation, run /graph-sync if the graph is stale.)
 ```
 And stop.
@@ -246,7 +262,12 @@ And stop.
 🔄 Architecture prose refresh scope
   Changed areas : {list of source areas whose files changed}
   Graph note    : {"graph is stale — run /graph-sync" | "graph current"}
-  architecture.md sections to touch : {list}
+  Docs to update: {list from AFFECTED_DOCS}
+    architecture.md          — sections: {list}
+    architecture-data.md     — (if in AFFECTED_DOCS)
+    architecture-integrations.md — (if in AFFECTED_DOCS)
+    architecture-security.md — (if in AFFECTED_DOCS)
+    architecture-deployment.md — (if in AFFECTED_DOCS)
 ```
 
 ---
@@ -276,34 +297,104 @@ read unrelated files.
 
 ---
 
-## Step 6 — Update architecture.md (changed sections only)
+## Step 6 — Update all affected docs
 
-Read `architecture.md`:
+For each doc in `AFFECTED_DOCS`, update only the sections whose source areas changed.
+Process in this order: `architecture.md` first, then specialist docs.
+
+**`architecture.md`** — update changed sections only (existing behaviour):
 ```bash
 cat .claude/architecture/architecture.md 2>/dev/null
 ```
+For each area refreshed in Step 4, update the corresponding section. Do not touch
+unrelated sections.
 
-For each area refreshed in Step 4, update the corresponding section in
-`architecture.md` if it references that area. Do not touch unrelated sections.
+**`architecture-data.md`** (if in `AFFECTED_DOCS`) — re-run the File 4 prompt from
+`$PLUGIN_DIR/skills/architect/prompts/<detected-stack>.md` scoped to the changed
+data-layer files. Overwrite only the sections that describe the changed entities/schema.
+Flag any undetectable field with `> ⚠ Could not determine — needs manual input`.
 
-Write back using the same Node.js pattern as Step 5.
+**`architecture-integrations.md`** (if in `AFFECTED_DOCS`) — re-run the File 5 prompt
+scoped to the changed integration files. Update the affected external-dependency entries
+(endpoints, resilience patterns, failure behaviour). Do not touch unrelated integrations.
+
+After writing `architecture-integrations.md`, check for unannotated `additionalDirectories` roots:
+
+```bash
+node -e "
+const fs = require('fs'), path = require('path'), root = process.cwd();
+let dirs = [];
+try { dirs = JSON.parse(fs.readFileSync('.claude/settings.local.json','utf8')).additionalDirectories || []; } catch(e) {}
+const known = new Set();
+try {
+  const text = fs.readFileSync('.claude/architecture/architecture-integrations.md','utf8');
+  const idx  = text.indexOf('## Locally-Cloned Dependency Repos');
+  if (idx !== -1) {
+    const re = /\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|/g;
+    let m, section = text.slice(idx);
+    while ((m = re.exec(section)) !== null) {
+      const lp = m[4].trim();
+      if (lp && lp !== 'Local path' && !/^[-:\s]+$/.test(lp))
+        try { known.add(path.resolve(root, lp).replace(/\\\\/g,'/').toLowerCase()); } catch(e) {}
+    }
+  }
+} catch(e) {}
+const unmatched = dirs.filter(d => { try { return !known.has(path.resolve(d).replace(/\\\\/g,'/').toLowerCase()); } catch(e){ return false; }});
+unmatched.length ? unmatched.forEach(d => console.log('UNMATCHED:' + d)) : console.log('ALL_MATCHED');
+"
+```
+
+For each `UNMATCHED:` line emitted, prompt the developer **once per root**:
+```
+⚠ "{path}" is in additionalDirectories but has no row in
+  § Locally-Cloned Dependency Repos of architecture-integrations.md.
+  Annotating it now ensures graph-sync classifies it correctly.
+
+  Direction? [upstream / downstream / sibling]:
+  Tier?      [service / ui / repository / shared-library / datastore / domain]:
+  Repo name? (display label, e.g. TrackersPhase12):
+```
+
+After receiving answers, append a row to the `## Locally-Cloned Dependency Repos` table
+(create the section if it does not exist, using the template content from
+`$PLUGIN_DIR/skills/architect/templates/_shared/architecture-integrations.md`).
+Write the file. Repeat for each unmatched root before continuing.
+
+If output is `ALL_MATCHED` — no action needed; continue.
+
+**`architecture-security.md`** (if in `AFFECTED_DOCS`) — re-run the File 6 prompt
+scoped to the changed auth/permission files. Update affected trust-zone and authorization
+entries. Do not touch unrelated sections.
+
+**`architecture-deployment.md`** (if in `AFFECTED_DOCS` due to CI/CD or config changes)
+— update the affected sections (pipeline, environment list, hosting). For a full
+questionnaire re-run use `--deployment` instead.
+
+After all docs are written, also trigger the stale marker for graph-sync:
+```bash
+touch .claude/graph/.stale 2>/dev/null || true
+```
+This signals that graph-sync should run next to keep external dependency nodes in sync
+with the updated architecture docs (Step 2x of graph-sync reads these docs).
 
 ---
 
 ## Step 7 — Confirm
 
 ```
-✅ architecture.md updated
+✅ Architecture docs updated
 
-  Updated sections : {list}
-  Generated        : {today's date}
+  Updated docs:
+    architecture.md          — sections: {list}
+    architecture-data.md     — (if updated)
+    architecture-integrations.md — (if updated)
+    architecture-security.md — (if updated)
+    architecture-deployment.md — (if updated)
 
-  Files written:
-    .claude/architecture/architecture.md
+  Generated : {today's date}
+  Graph     : {"⚠ stale — run /graph-sync to sync external dependency nodes" | "current"}
 
-  Graph: {"⚠ stale — run /graph-sync" | "current"}
-
-Next: run /setup-status to confirm the architecture checks are ✅ Green.
+Next: run /graph-sync to sync the knowledge graph, then /setup-status to confirm ✅ Green.
 ```
 
 ---
@@ -311,7 +402,8 @@ Next: run /setup-status to confirm the architecture checks are ✅ Green.
 ## Hard Rules
 
 - NEVER read source files for unchanged areas
-- NEVER touch the knowledge graph (`.claude/graph/`) — that is `/graph-sync`'s job
-- Update only the `architecture.md` sections whose source areas changed — leave the rest verbatim
-- If an entry-point file no longer exists, note it in the affected section rather than
-  silently removing content
+- NEVER touch the knowledge graph (`.claude/graph/`) directly — write `.stale` to signal graph-sync; that skill owns the graph
+- Update ALL docs in `AFFECTED_DOCS` — not just `architecture.md`. The no-flag auto-detect path updates every doc whose source area changed.
+- Update ONLY the sections within each doc whose source areas changed — leave unrelated sections verbatim
+- If an entry-point file no longer exists, note it in the affected section rather than silently removing content
+- The individual flags (`--data`, `--integrations`, `--security`, `--deployment`) are still valid for targeted single-doc updates; they override the AFFECTED_DOCS classification

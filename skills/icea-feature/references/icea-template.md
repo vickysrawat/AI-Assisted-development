@@ -172,7 +172,7 @@ Format per icea-decisions-spec.md. If none: "None."}
 | 2 | TBD | {what user can do after this ships} | {SP} | Yes | Story 1 live | ⏳ Pending |
 
 > Stories broken by logical completion — each story is a shippable slice
-> delivering user value independently (≤5 SP). Never broken by AC.
+> delivering user value independently (≤8 SP). Never broken by AC.
 > If Type = STORY, this table has one row only.
 
 ---

@@ -1,5 +1,435 @@
 # MEMORY.md — Project memory (dream-managed)
 
+### [2026-09-27] Task completed — Gap 6: sub-step checkpoint granularity
+
+Two SKILL.md edits. (1) Step 1.5: manifest_authored sub-step gate — skip guard before authoring (check-gate → exit 0 skips to intake-verify, exit 3 authors fresh), gate write after manifest written to disk, before intake-verify runs. (2) Step 2.5: 7 design_doc_{type}_written gates — table maps doc→gate, skip guard before each subagent spawn, sequential gate writes after each wave (matches cluster B2 pattern). All 7 gate names: design_doc_component/data/security/integration/infrastructure/deployment/feasibility_written. No new scripts. 63/63 tests passing.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-28] Task completed — 6 residual gaps fixed
+
+Gap A: options judge prompt extended with 4 coupling quality criteria (coverage, evidence specificity, consumer completeness for facade, factual consistency) with hallucination/incomplete/missing-coverage finding types. Gap B: ## Coupling pattern resolutions section template added to Step 2.5 for component/integration/security docs — DECISION format with alternatives rejected + specific evidence + lifecycle. Gap C: resolution_approach added to technology_couplings[] schema in research spec Section 2; agent skips retain/defer. Gap D: skip guard table updated — 3 docs show "## Coupling pattern resolutions" sentinel, 4 show "## ". Gap E: SP-1.5-1 after manifest_authored (before coupling scan), SP-1.5-2 after coupling_resolution_confirmed (before Step 2), SP-2.5 after each document wave. Gap F: design judge narrowed to consistency check — verifies resolution_approach in design docs matches options-approved decision, not quality re-check. 132/132 tests passing.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-28] Plan approved — 6 residual gaps fix pass
+
+Gap A: extend options judge prompt with coupling quality criteria (hallucination/incomplete/missing-coverage detection). Gap B: add ## Coupling pattern resolutions template to SKILL.md Step 2.5 for component/integration/security docs. Gap C: add resolution_approach to technology_couplings[] in research spec Section 2. Gap D: fix skip guard table sentinels for 3 docs (## → ## Coupling pattern resolutions). Gap E: Phase 4 safe points for Steps 1.5 (SP-1.5-1 after manifest, SP-1.5-2 after coupling gate) and 2.5 (SP-2.5 after each document wave). Gap F: design judge coupling consistency instruction (check design docs faithfully record options-approved decision, not re-check quality).
+Trigger: Plan approved  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-28] Task completed — Sub-problem 2: cloud component grounding
+
+migration-research-spec.md Section 3: CloudComponentRecommendation bundle entry (type="coupling_replacements", array per pattern with component/use_case/when_to_prefer/tier_guidance/coexistence_note/pattern_name/CitationEntry; resolution_approach drives replace vs facade recommendations; retain/defer skipped). Section 4.1: rendering rules for CloudComponentRecommendation inline (4 cases: replace high/medium, facade, UNKNOWN). Section 7: offline fallback table covering WCF/MSMQ/WindowsAuth/Java EE EJB/HttpContext.Current/Web Forms × Azure/AWS/GCP/stack-agnostic — confidence=medium, spec date. SKILL.md Step 2: extracts coupling_replacements entry from bundle, routes to recommendations or offline fallback, Section 4 rendering for "Coupling addressed" row. 132/132 tests passing.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-28] Plan approved — Sub-problem 2: cloud component grounding
+
+migration-research-spec.md: Section 3 gains CloudComponentRecommendation bundle entry type (type="coupling_replacements", array of per-pattern recommendation objects with component, use_case, when_to_prefer, tier_guidance, coexistence_note for facade, pattern_name, CitationEntry); Section 4.1 rendering rule for CloudComponentRecommendation; Section 7 offline fallback table (WCF/MSMQ/WindowsAuth/EJB/HttpContext.Current per AWS/Azure/GCP, confidence=medium, spec last-changed date). SKILL.md Step 2: after bundle received, read coupling_replacements entry and use it to populate "Coupling addressed" row per coupling per option. If agent returns UNKNOWN for a coupling → use offline fallback with stale signal.
+Trigger: Plan approved  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-28] Task completed — Coupling Resolution Gate + enforcement stack
+
+coupling-resolution-validate.cjs: validates resolution_approach set for critical/major, facade has external_dependencies[] with valid system_name+migration_status, decision_log has coupling entry. 26 tests. architectural-coupling-spec.md: resolution_approach (replace|facade|retain|defer), external_dependencies[], facade_note fields; Section 7 (Coupling Resolution Gate format — ALL approaches shown + rejected + evidence); Section 6 (options_judge_correction payload); Section 8 (updated scan sequence). SKILL.md Step 1.5: gate + script call + coupling_resolution_confirmed gate. SKILL.md Step 2: coupling_resolution_confirmed prerequisite check; options_judge_correction payload write before correction UI; RERUN-COUPLING-GATE + OPTIONS-CORRECT handlers with safe point before each; iteration cap 3. Step 2.5 sentinels: component/integration/security use "## Coupling pattern resolutions"; others keep "## ". migration-ledger-schema.md RESUME: checks options_judge_correction.pending step 2. 132/132 tests passing.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-28] Plan approved — Coupling Resolution Gate + Sub-problem 2 full scope
+
+Full implementation approved: (1) coupling-resolution-validate.cjs + tests — structural: resolution_approach set for critical/major, facade has external_dependencies[], decision_log has coupling entry; (2) architectural-coupling-spec.md extended: resolution_approach field (replace|facade|retain|defer), external_dependencies[], facade_note, decision-grade gate format with rejected alternatives; (3) SKILL.md Step 1.5 Coupling Resolution Gate: evidence-based proposals with ALL approaches shown + rejected + reason, constraint-gathering (not approach selection), coupling-resolution-validate.cjs call, coupling_resolution_confirmed gate; (4) SKILL.md Step 2: gate check at start, extended options judge prompt (coupling quality criteria), options_judge_correction payload (pending/completed per CP), safe point before each correction item, RERUN-COUPLING-GATE + OPTIONS-CORRECT handlers, iteration cap 3; (5) migration-ledger-schema.md RESUME: checks options_judge_correction.pending; (6) Step 2.5 sentinels: component/integration/security docs use "## Coupling pattern resolutions" sentinel.
+Trigger: Plan approved  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-27] Task completed — Sub-problem 1: source coupling analysis with hard boundary enforcement
+
+8 deliverables complete. New: coupling-boundary-validate.cjs (validates required_cluster_splits vs cluster-spec.json; primary error=UNMAPPED when concern has no matching cluster; VIOLATION when two concern strings normalise to same cluster); 34 tests. architectural-coupling-spec.md: 5 coupling types, CouplingPattern schema with concerns[] field, severity levels, required_cluster_splits derivation rule, 6-step coupling scan sequence. source-context-manifest-template.md gains ## Coupling Patterns table. SKILL.md Step 1.5: coupling scan + payload write (coupling_patterns, required_cluster_splits, technology_couplings); SKILL.md Step 3: cluster naming convention (must use concern vocabulary) + post-decompose validator call; SKILL.md Step 2 options table gains "Coupling addressed" row. migration-research-spec.md Section 2 gains technology_couplings[] input field. 106/106 tests passing.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-27] Plan approved — Sub-problem 1: source coupling analysis with hard boundary enforcement
+
+8 deliverables approved: coupling-boundary-validate.cjs + tests (hard enforcement script); architectural-coupling-spec.md (5 coupling types, CouplingPattern schema with concerns[] field, severity levels, required_cluster_splits derivation rule); source-context-manifest-template.md gains ## Coupling Patterns section; SKILL.md Step 1.5 adds coupling scan + checkpoint payload write; SKILL.md Step 3 adds cluster naming convention (must use concern vocabulary) + post-decompose validation script call; SKILL.md Step 2 options template gains "Coupling addressed" row; migration-research-spec.md Section 2 gains technology_couplings[] for Sub-problem 2. Naming alignment constraint: cluster names must match concern vocabulary so the validation script can compare.
+Trigger: Plan approved  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-27] Plan approved — Item 4: architectural grounding for options generation (scope)
+
+Two sub-problems scoped. Sub-problem 1 (start here): extend Step 1.5 intake to systematically identify architectural coupling patterns (domain, technology, data, deployment, integration coupling) that should be decoupled in the target — applies to both pure rewrite and replatform+rewrite. Sub-problem 2 (after): extend research agent with cloud component grounding (service selection + tier/config guidance) cited from WAF/Architecture Center docs, using CitationEntry schema. Both sub-problems in scope.
+Trigger: Plan approved  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-27] Task completed — Item 3: citation structure for cached research facts
+
+migration-research-spec.md: FactObject replaced with CitationEntry (adds source_type, cloud_provider, authority, applies_to, claim, canonical_url, additional_sources[], conflict_note, reason). Section 4 restructured into 4.1 inline rendering (4 tiers + stale signal + additional_sources + conflict_note), 4.2 source_type validation rules (community max=medium, multi-vendor requires ≥2 sources, cloud expects additional_sources), 4.3 Citations block template. Section 6 gains source_type mapping table. SKILL.md Step 2: 4-line rendering rule replaced with reference to Section 4.1-4.3; options template gains ## Research Citations block. 72/72 tests passing.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-27] Architecture decision — Item 3: CitationEntry schema with source_type + cloud_provider
+
+Final CitationEntry schema: source_type ("vendor"|"cloud"|"multi-vendor"|"community") drives validation rules; cloud_provider ("aws"|"gcp"|"azure"|null) is specific identifier used when source_type="cloud". additional_sources[] (role: corroborates|supplements|announcement|context) covers fragmented sources (AWS/GCP/Java JDK vendors). conflict_note added for disagreeing sources. Validation: multi-vendor+confidence=high+additional_sources=[] → error; community+confidence=high → auto-downgrade to medium; cloud+additional_sources=[] → warning. Changes: migration-research-spec.md (CitationEntry schema + Section 4 rendering + Section 6 provider table) + SKILL.md Step 2 (inline rendering + Citations block template). No new scripts, 72/72 tests unchanged.
+Trigger: Architecture decision  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-27] Plan approved — Item 3: citation structure for cached research facts
+
+Three-layer citation design: (1) Bundle schema — each fact carries CitationEntry (fact_type, authority, applies_to, claim, source_url, canonical_url, retrieved_date, confidence, reason). (2) Inline rendering — 4 confidence tiers + stale signal ([⚠ cached Nd ago]) when cache age > 30d. (3) Document-level Citations block (## Research Citations table with cache key + age). Changes: migration-research-spec.md + SKILL.md Step 2 only. No new scripts, 72/72 tests unchanged. If agent returns fact without source_url/authority, treat as confidence=UNKNOWN.
+Trigger: Plan approved  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-27] Task completed — Phase 3: dirty-stop protocol (B+C combined)
+
+New `dirty-stop` CLI op in checkpoint-ledger.cjs: accepts --data-file (avoids shell quoting on arrays), validates 4 required fields (stopped_at, stopped_before, at, reason), writes dirty_stop to payload[skill] atomically, exits 5 on missing checkpoint. 9 new test assertions (payload stored, clusters_completed preserved, missing file no-mutation, invalid JSON, missing fields no-mutation, cleared to null). SKILL.md Step 3 has dirty-stop protocol block with 4-step sequence (data file → dirty-stop CLI → tracker 🔴 → developer message). dirty_stop cleared at SP-4 via set-payload null. migration-ledger-schema.md RESUME step 2 checks dirty_stop: if present shows stopped_at/stopped_before/cluster status, requires CONFIRMED or RESTART WAVE N before continuing. 72/72 tests passing.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-27] Plan approved — Phase 3: dirty-stop protocol (Option B+C combined)
+
+New `dirty-stop` CLI operation in checkpoint-ledger.cjs (Option B): accepts `--data-file` (avoids shell quoting on arrays), validates required fields (stopped_at, stopped_before, at, reason), writes `payload[skill].dirty_stop` atomically. SKILL.md dirty-stop block calls this command (Option C). 7 new test assertions. `dirty_stop` cleared after SP-4 via set-payload with null. RESUME handler in migration-ledger-schema.md checks dirty_stop before "Run Status" — surfaces summary if present. Cluster names sourced from payload.rewrite.clusters (Gap 5 wiring).
+Trigger: Plan approved  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-27] Task completed — Phase 2: safe points SP-1 through SP-4 in Step 3
+
+4 safe point blockquotes added to SKILL.md Step 3 (proactive layer). SP-1 after cluster payload writes (before wave 1); SP-2 after B2 checkpoint updates (before Write Gate); SP-3 after Step E fragment appends (before Step F tracker update); SP-4 after wave gate write (before next wave). Each follows same pattern: conditional stop (no mandatory CONTINUE), writes active-task.json with step3-spN identifier, updates tracker, surfaces resume message. 63/63 tests still passing.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-27] Plan approved — Gap 6: sub-step checkpoint granularity (Option D)
+
+Sub-step gates for Step 1.5 (manifest_authored) and Step 2.5 (design_doc_{type}_written × 7). Step 3 already protected by Gap 2 worktree guard; Step 1/2 acceptable without sub-step gates. Gate written by orchestrator AFTER subagent returns, not inside subagent (sequential writer). Skip guard checks gate before spawning subagent — if PASS, read existing file, skip re-authoring. SKILL.md-only changes; no new scripts; tests remain 63/63.
+Trigger: Plan approved  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-27] Task completed — Gap 5: SKILL.md wiring (artifact gates + payload completeness + RESUME validation)
+
+7 edits to skills/rewrite/SKILL.md: (1) Step 1 adds source_version+target_stack+target_version to payload; (2) intake_context gate gets --artifact-path+--sentinel+--min-bytes; (3) Step 2 stores research_cache_key after cache block; (4) options_approved gate gets artifact metadata + selected_option_label payload; (5) design_approved gate gets artifact metadata; (6) Step 3 stores cluster_count + clusters array (id/name/worktree) after decompose; (7) merge_gate gets artifact metadata. 1 edit to migration-ledger-schema.md: RESUME handler (d) now calls validate-artifacts after status=ok, branches on exit 0/2 with structured recovery message. 63/63 tests passing. Gap 5 fully complete.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-27] Task completed — Gap 5: artifact-disk consistency + gate schema 1.1 extension
+
+`setGate` now accepts optional `artifactMeta` (artifact_path, sentinel, min_bytes); stores gate as object when metadata provided, flat string otherwise — backward compatible. `check-gate` tolerant reader handles both formats. New `validate-artifacts` CLI op: iterates PASS object-gates, verifies file exists + size >= min_bytes + sentinel present; exit 0=ok, exit 2=invalid (structured JSON listing gate, path, status: missing|empty|truncated). 13 new assertions, 28/28 checkpoint-ledger + 35/35 research-cache = 63 total passing. Payload completeness (Item 2 of Gap 5) captured in SKILL.md set-payload call sites — implement in Phase 3 dirty-stop work.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-27] Plan approved — Gap 5: artifact-disk consistency + checkpoint state completeness
+
+Two combined schema changes approved. (1) Gate object format (schema 1.1 extension): `set-gate` accepts optional `--artifact-path`, `--sentinel`, `--min-bytes`; stores gate as object `{verdict, at, artifact_path, sentinel, min_bytes}` when metadata provided, flat string otherwise — backward compatible. `check-gate` handles both formats (tolerant reader). `validate-artifacts` new op reads checkpoint, iterates PASS object-gates, checks exists + size + sentinel; exit 0=ok, exit 2=one or more invalid. (2) Payload completeness: `set-payload` call sites in SKILL.md updated to capture all resume-critical state (source/target stack+version, research_cache_key, selected_option, cluster names, worktree paths) so REWRITE RESUME reads one file and orients without re-reading generated docs.
+Trigger: Plan approved  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-27] Task completed — Gap 2: worktree idempotency guard in rewrite SKILL.md Step 3
+
+Replaced single `git worktree add` with a 3-case checkpoint-aware guard: Case 1 (cluster_N_merged gate = PASS) skips the cluster entirely, Case 2 (worktree exists, no gate) cleans with `git checkout . && git clean -fd` and reuses, Case 3 creates fresh. Added `cluster_{N}_merged` gate write at Step C after Write Gate APPROVE to make Case 1 fire on future re-runs.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-27] Architecture decision — machine-level research cache + citation structure requirement
+
+Research-agent bundle cache must be machine-level (not project-level) at ~/.claude/migration-research-cache/ so all projects on the machine share stack facts. Cache key: {source_stack}-{source_version}-to-{target_stack}-{target_version}.json. Two-tier TTL: warn at 30 days, hard-expire at 90 days. Because cache is unversioned, every document using a cached fact must embed a complete citation (fact type, vendor/authority, applies-to version, claim, source URL, retrieved date, confidence, reason cited). Citation structure design is Item 3 on the work list — design after Gap 4 so cache structure and citation format are designed together.
+Trigger: Architecture decision  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-27] Task completed — Gap 3: migration log fragment double-append gate
+
+Added checkpoint-gated block to Step E in rewrite SKILL.md. Gate (cluster_{N}_fragment_appended) is written BEFORE the append — a detectable omission is safer than an undetectable duplicate. On re-run, if gate is PASS the re-created fragment file is discarded without appending. Pre-append guard also verifies migration-log.md exists before any append.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-27] Task completed — Gap 4: options file pre-write guard + machine-level research cache
+
+Two-part fix for Step 2 idempotency. Part 1: pre-write guard checks options_approved gate before writing the options file — if gate not set and file exists, overwrites from scratch (never reads partial file). Part 2: new scripts/research-cache.cjs + tests/research-cache.test.cjs — machine-level bundle cache at OS cache dir, shared across all projects. Cache key: {source_stack}-{version}-to-{target_stack}-{version}.json. Two-tier TTL: warn 30d, expire 90d. Atomic writes. Corrupt entries self-heal. 35/35 tests pass, 50 total across both scripts.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-27] Error resolved — research-cache.test.cjs fixture/cache dir collision
+
+Two test failures: (1) writeBundleFile used JSON.stringify on the "invalid JSON" string making it valid — fixed by writing raw bytes directly with fs.writeFileSync. (2) expire swept fixture files because they were in the same CACHE_DIR — fixed by adding separate FIXTURES_DIR for bundle input files. Pattern: always write test input fixtures to a dir outside the dir being scanned/tested.
+Trigger: Error resolved  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-27] Plan approved — dirty-stop developer message design
+
+Dirty-stop message shows ✅/⬜ per cluster by NAME (not index), states "will not be repeated on resume" explicitly, offers both /compact and new session paths, shows tracker path for VS Code review. Tracker uses 🔴 (unexpected stop) not 🔄 (in-progress by choice). Cluster names sourced from cluster-spec.json; falls back to "Cluster N" by index if missing. Implement as Phase 2 after all gaps closed.
+Trigger: Plan approved  Confidence: 0.92  Source: auto-capture
+
+### [2026-09-27] Architecture decision — context exhaustion: two-layer graceful stop system
+
+Gap fixes (1–6) are idempotency infrastructure prerequisites. After gaps are closed, add: (1) Proactive layer — explicit safe points within Step 3 (after cluster-spec write, after each cluster's B2 payload, after each fragment append, after each wave gate) where the conservative bias rule can stop cleanly. (2) Reactive layer — dirty-stop protocol: write structured dirty_stop payload to checkpoint, update tracker with exact stopped-before state, surface developer message with literal resume command, then STOP. REWRITE RESUME reads dirty_stop and skips completed operations. Four phases: Phase 1 gap audit, Phase 2 safe points in Step 3, Phase 3 dirty-stop protocol + CLAUDE.md resume handler update, Phase 4 extend to Steps 1.5 and 2.5.
+Trigger: Architecture decision  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-27] Plan approved — Gap 2: worktree idempotency guard in rewrite SKILL.md Step 3
+
+Option B chosen: three-branch checkpoint-aware guard before git worktree add. Case 1 (cluster_N_merged gate = PASS) skips the subagent entirely. Case 2 (worktree exists, no gate) cleans and reuses. Case 3 (no worktree) creates fresh. Also adds cluster_{N}_merged gate write at Step C after Write Gate APPROVE so case 1 fires correctly on any future re-run.
+Trigger: Plan approved  Confidence: 0.92  Source: auto-capture
+
+### [2026-09-27] Task completed — Gap 1: checkpoint-ledger.cjs fail-closed on missing file
+
+Added `missingCheckpointMessage()` helper and made `set-gate` / `set-payload` fail with exit 5 when the checkpoint file does not exist, instead of silently creating an empty envelope. Message uses two-scenario split (fresh start vs deleted file) with git recovery steps. 4 new test assertions added. 15/15 passing.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-27] Plan approved — Gap 1 error message design for checkpoint-ledger.cjs
+
+Error messages for missing-checkpoint failures must: (1) state the concrete consequence first, (2) split into two named scenarios with the scenario label before the action, (3) explain what each command does before showing it, (4) use technical language freely but no plugin-internal jargon ("checkpoint" OK, "gate verdicts/stage_gates/init" not OK). "Do NOT run the command in Scenario A" is the correct reference — not "Do NOT run init". Exit code 5 = checkpoint absent at write time.
+Trigger: Plan approved  Confidence: 0.92  Source: auto-capture
+
+### [2026-09-27] Architecture decision — rewrite skill integrity audit over token reduction
+
+Pivoted from splitting skills/rewrite/SKILL.md (1,243 lines) into step files to auditing context exhaustion integrity gaps in the monolithic skill. Token reduction (Option C — extract 2 templates to references/) is parked as a followup. The real ROI is fixing 6 identified mid-step recovery failures: silent checkpoint resurrection, no worktree idempotency, migration log double-append, partial artifact re-encounter, artifact-disk consistency gap, and no sub-step checkpoint granularity. Audit proceeds one gap at a time with full 7-section analysis per item.
+Trigger: Architecture decision  Confidence: 0.92  Source: auto-capture
+
+### [2026-09-27] Task completed — governance-gate-precommit.cjs wired and documented
+
+Added governance-gate-precommit.cjs to HOOK_FILES in setup-init-bootstrap.cjs so setup-init deploys it to .claude/hooks/ in target projects. Updated _project-deploy/hooks/README.md to document it as "manual chain" (vs findings-gate-precommit which is "auto-installed"). Git only supports one pre-commit file — findings-gate-precommit owns that slot; governance-gate is chained manually by teams that want both.
+Trigger: Task completed  Confidence: 0.90  Source: auto-capture
+
+### [2026-09-27] Task completed — governance-report schema normalisation
+
+Added normalizeEvent() + normalizeEventType() to governance-report.cjs. Maps both audit schemas (audit-write SCREAMING_SNAKE + audit-append dot.notation) to a single canonical shape before any analysis runs. Applied via raw_events.map(normalizeEvent) in loadAuditEvents(). All three field mismatches fixed: event type, actor, ado_id. Removed now-redundant inline e.ts||e.timestamp in modelDistribution.
+Trigger: Task completed  Confidence: 0.93  Source: auto-capture
+
+### [2026-09-27] Plan approved — governance-report schema normalisation
+
+Fix three HIGH issues in governance-report.cjs: (1) ado field mismatch (ado_id vs ado), (2) actor field mismatch (actor vs os_user/git_email), (3) event type mismatch (APPROVE_ADO vs gate.approve). Approach: add a normalizeEvent() function applied after loadAuditEvents() that maps both audit-write and audit-append schemas to a unified shape before any analysis runs.
+Trigger: Plan approved  Confidence: 0.90  Source: auto-capture
+
+### [2026-09-27] Task completed — audit ADO linkage gap (audit-append.cjs)
+
+Added `resolveActiveAdo()` to `audit-append.cjs` (both plugin and deploy template). It reads `.claude/active-task.json` and auto-populates `ado` on every audit event when a skill is active. Caller-provided `ado` still wins. No changes needed to individual hooks — single-point fix. Also removed `ado` from the generic field loop since it is now handled explicitly before the loop.
+Trigger: Task completed  Confidence: 0.92  Source: auto-capture
+
+### [2026-09-27] Architecture decision — ADO linkage in audit events
+
+Rejected per-hook ADO extraction (fragile, each hook would need its own filename parsing). Chose reading `active-task.json` in the shared `appendEvent` helper — skills already write this at every step boundary, so it's always populated during skill execution and empty between skills (correct behaviour in both cases).
+Trigger: Architecture decision  Confidence: 0.88  Source: auto-capture
+
+### [2026-09-27] Task completed — audit file accumulation fix (audit-append.cjs)
+
+Changed audit shard key from `YYYY-MM-DD-{PID}` to `YYYY-MM-DD` in both `.claude/hooks/audit-append.cjs` and `_project-deploy/hooks/audit-append.cjs`. Created `.gitattributes` with `merge=union` for `*.jsonl` files. Root cause: each hook fires as a new node process (new PID), so every event created its own file. Fix: date-only shard = one file per day; appendFileSync with O_APPEND is atomic for small writes on NTFS/ext4.
+Trigger: Task completed  Confidence: 0.92  Source: auto-capture
+
+### [2026-09-27] Architecture decision — audit shard strategy
+
+Rejected per-PID sharding (unbounded file accumulation) and date+branch sharding (requires git subprocess per event). Chose date-only shard + `.gitattributes merge=union`. Union merge is safe for append-only JSONL because each line is a self-contained record; git auto-combines lines from both branches without a conflict marker.
+Trigger: Architecture decision  Confidence: 0.88  Source: auto-capture
+
+### [2026-09-27] Task completed — citation capture at WebFetch call site (migration-research-agent)
+
+Updated `skills/migration-research-agent/SKILL.md` to bind `source_url` immediately at each WebFetch call site in Step 2 (not deferred to Step 3 assembly). Added citation-capture rule preamble to both rewrite/upgrade and replatform Step 2 sections, annotated each substep with `Immediately bind source_url`, reframed Step 3 as "completeness check only", and added a "Citation at fetch site" invariant to Constraints. Prevents URL drift where the recorded URL diverges from the page that produced the fact.
+Trigger: Task completed  Confidence: 0.90  Source: auto-capture
+
+### [2026-09-27] Task completed — active-task.json stale state cleared at skill completion (Issue 8)
+
+Added `> Write .claude/active-task.json: {}` at confirmed-completion point in all 5 skills: icea-implement (after confirm block, before Step 6a), icea-feature (after SAVE TECH confirm block, before Step 10a), upgrade (after step_8a checkpoint flush), replatform (after step_r5a checkpoint flush), rewrite (after final Hard Rules line). No hook change needed — hook already exits 0 when skill/step absent. Residual: crash/context-exhaust during a skill leaves the file intact (correct — preserves resume point).
+Trigger: Task completed  Confidence: 0.93  Source: auto-capture
+
+### [2026-09-27] Task completed — setup-status checks context-guard.cjs (Issue 11)
+
+Added context-guard.cjs to setup-status SKILL.md hook presence list (line 621) and added UserPromptSubmit wired check (mirrors memory-capture pattern). Now projects upgraded without context-guard will surface it as MISSING/NOT_WIRED in setup-status health report.
+Trigger: Task completed  Confidence: 0.90  Source: auto-capture
+
+### [2026-09-27] Task completed — wrong hook path fixed + deployment assertions in test (Issue 10)
+
+Fixed context-budget-spec.md Wiring section: `.claude-plugin/hooks/context-guard.cjs` → `.claude/hooks/context-guard.cjs` (source dir vs deployed dir). Extended context-budget-wiring.test.cjs with `── Deployment wiring ──` section: asserts context-guard.cjs in HOOK_FILES, wiring block present in bootstrap, and .claude/settings.json UserPromptSubmit wired. Test now 16 assertions — deployment regressions are self-enforcing.
+Trigger: Task completed  Confidence: 0.93  Source: auto-capture
+
+### [2026-09-27] Task completed — context-guard.cjs universally deployed (Issue 9)
+
+Added context-guard.cjs to HOOK_FILES in setup-init-bootstrap.cjs + added UserPromptSubmit wiring block (mirrors audit-prompt pattern, always node). Updated console.log summary. Copied to .claude/hooks/ for plugin dev session. Added to .claude/settings.json UserPromptSubmit. Updated context-budget-spec.md wiring section — removed "migration skills detected" condition, now universal. The entire context guard system is now live end-to-end.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-09-27] Plan approved — context-guard.cjs universal deployment (Issue 9)
+
+Three changes to setup-init-bootstrap.cjs: add context-guard.cjs to HOOK_FILES, add UserPromptSubmit wiring block (mirrors audit-prompt — always node, no shell variant), update console.log summary. ALSO wire in plugin's own .claude/settings.json (not just _project-deploy). Update context-budget-spec.md wiring section — remove "migration skills detected" condition, replace with "deployed universally".
+Trigger: Plan approved  Confidence: 0.92  Source: auto-capture
+
+### [2026-09-27] Plan approved — active-task.json stale state fix (Issue 8)
+
+Each skill writes `{}` to active-task.json at its confirmed-completion point — hook already exits 0 when skill/step fields absent, so no hook change needed. 5 SKILL.md additions: icea-implement Step 6 confirm block, icea-feature Step 10 SAVE TECH completion, rewrite Step 5 completion gate, upgrade Step 8a, replatform Step R5 flush. Test extended to assert clear instruction presence.
+Trigger: Plan approved  Confidence: 0.91  Source: auto-capture
+
+### [2026-09-26] Task completed — context-budget-wiring test + icea-implement resume_cmd (Issue 7)
+
+Created tests/context-budget-wiring.test.cjs: validates all declared budget steps have active-task.json writes (both inline JSON and bash node-e formats), non-migration skills include resume_cmd, and context-guard.cjs supports the field. Test immediately caught missing resume_cmd in icea-implement — fixed. Pattern: write the test before declaring "done"; tests enforce what reviews miss.
+Trigger: Task completed  Confidence: 0.93  Source: auto-capture
+
+### [2026-09-26] Task completed — context-budget-spec.md updated for resume_cmd (Issue 6)
+
+Added resume_cmd optional field to active-task.json schema in context-budget-spec.md. Updated "How to add a new skill" step 2 example to include resume_cmd and added a note: include it when recovery keyword doesn't follow `{SKILL} RESUME ADO-{ID}`, omit for migration skills. Spec now matches implementation — no future maintainer drift.
+Trigger: Task completed  Confidence: 0.90  Source: auto-capture
+
+### [2026-09-26] Task completed — icea-feature context budget protection + resume_cmd fix (Issue 5)
+
+Added active-task.json writes to icea-feature/SKILL.md at Step 3 end (step4-draft-icea, resume_cmd=PLAN ADO-{ID}) and Step 8 (step8-draft-tech, resume_cmd=TECH ADO-{ID}). Added icea-feature entries to context-budgets.json (80K/100K). Fixed context-guard.cjs to use `activeTask.resume_cmd` when present — backwards-compatible, one-line change. Pattern: resume_cmd field in active-task.json overrides the generic `{SKILL} RESUME ADO-{ID}` construction for skills with non-standard recovery keywords.
+Trigger: Task completed  Confidence: 0.93  Source: auto-capture
+
+### [2026-09-26] Plan approved — icea-feature context budget protection + resume_cmd fix (Issue 5)
+
+Three-file fix: (1) context-guard.cjs: add `resume_cmd` optional field — falls back to `{SKILL} RESUME ADO-{ID}` if absent; (2) context-budgets.json: add icea-feature step4-draft-icea=80K, step8-draft-tech=100K; (3) icea-feature/SKILL.md: active-task.json writes at end of Step 3 (before SAVE PLAN prompt) and at Step 8 before inline check. Both deployed copies of context-guard.cjs (.claude/hooks/ and _project-deploy/hooks/) need the fix.
+Trigger: Plan approved  Confidence: 0.92  Source: auto-capture
+
+### [2026-09-26] Task completed — icea-implement active-task.json format standardised
+
+icea-implement Step 3d now has both the canonical `> Write .claude/active-task.json: {...}` inline line (matched by tooling/scanning regex) AND the explicit bash `node -e writeFileSync` block. Other skills use inline-only. Future skills should use both when the write is inside a bash code block — the inline line is what the cross-check test scans.
+Trigger: Task completed  Confidence: 0.90  Source: auto-capture
+
+### [2026-09-26] Architecture decision — icea-implement mid-story context exhaustion: rework not corruption
+
+Decided NOT to add per-AC temp writes now (deferred follow-up). Recovery path is: tracker is implicit checkpoint (✅ Done skipped, ⏳ Pending regenerated on re-run) → rework only, never corruption. Documented in Hard Rules: "Mid-story context exhaustion produces REWORK, not corruption." Per-AC temp writes (`temp/ADO-{ID}-AC-{N}.draft.md`) noted as follow-up to reduce rework to one AC.
+Trigger: Architecture decision  Confidence: 0.90  Source: auto-capture
+
+### [2026-09-26] Task completed — rewrite active-task.json wiring completed (Fix 4)
+
+Added active-task.json writes to rewrite/SKILL.md for steps 1.5, 2, 3, and 5 (steps 1 and 2.5 were already wired). All 6 declared budget entries in context-budgets.json now have matching writes. Context budget protection is now fully wired across all 4 skills: icea-implement (step4-start), rewrite (6 steps), upgrade (step1/3/5), replatform (R1–R5).
+Trigger: Task completed  Confidence: 0.93  Source: auto-capture
+
+### [2026-09-26] Task completed — upgrade/replatform active-task.json wiring (Fix 3)
+
+Added `active-task.json` write instruction to 3 STEP BUNDARYs in upgrade/SKILL.md (step1, step3, step5) and 5 in replatform/SKILL.md (R1, R2, R3, R4, R5) — matching exactly the keys declared in context-budgets.json. Pattern: one line `> Write .claude/active-task.json: {...}` immediately after the STEP BOUNDARY header, before "The checkpoint is flushed". Hook was already deployed and budgets declared — missing writes were the only gap.
+Trigger: Task completed  Confidence: 0.93  Source: auto-capture
+
+### [2026-09-26] Task completed — icea-implement context budget protection (Fix 2)
+
+Added Step 3d to icea-implement/SKILL.md: counts pending ACs from tracker, writes `.claude/active-task.json` (`skill:icea-implement,step:step4-start`), runs inline context-budget-check (threshold_medium=10, threshold_high=20 ACs), shows STEP BOUNDARY prompt before Step 4. Added `icea-implement.step4-start=60000` to context-budgets.json. Pattern: inline check warns early; active-task.json write enables the OS hook on the developer's CONTINUE reply.
+Trigger: Task completed  Confidence: 0.92  Source: auto-capture
+
+### [2026-09-26] Plan approved — context budget multi-issue fix (structured review)
+
+Approved structured review of context budget gaps: (1) model_windows set to 200K for 1M-context models — causes premature hook blocks; (2) icea-implement has zero protection (no STEP BUNDARYs, not in budgets.json); (3) upgrade/replatform write active-task.json nowhere — declared budget entries are dead config; (4) rewrite only wires 2 of 6 STEP BUNDARYs. Fix order: model window first, then icea-implement, then upgrade/replatform/rewrite wiring. Option C chosen: inline check at session start + per-story active-task.json writes for icea-implement.
+Trigger: Plan approved  Confidence: 0.92  Source: auto-capture
+
+### [2026-09-26] Plan approved — graph cross-repo metadata enforcement (3 layers)
+
+Approved: (1) deterministic script check in graph-sync-deterministic.cjs — emits WARN_UNMATCHED_DEP for any additionalDirectories root missing from the Locally-Cloned table; (2) checkin advisory block surfacing those warnings at commit time; (3) LLM instructions in update-arch, architect Step 7b, and graph-sync Step 4. Script layer is bypass-proof; checkin layer makes it visible at highest friction point; LLM instructions catch it early in happy path.
+Trigger: Plan approved  Confidence: 0.88  Source: auto-capture
+
+### [2026-09-26] Task completed — graph cross-repo metadata: 5 files written
+
+graph-sync SKILL.md (Steps 2x-a/2x-d/7a), multi-root-scan.md, graph-json-schema.md, and both architecture-integrations.md templates updated. Pattern: `## Locally-Cloned Dependency Repos` table in architecture-integrations.md is the committed source of direction/tier; graph-sync builds an in-memory `localPathMeta` merge-map from it in Step 2x-a and applies it to sourceRoot nodes in Step 7a instead of creating duplicate stubs.
+Trigger: Task completed  Confidence: 0.88  Source: auto-capture
+
+### [2026-09-26] Architecture decision — Graph cross-repo direction/tier metadata source
+
+Use `architecture-integrations.md` (Option C Extended) as the single source of truth for direction/tier metadata of locally-cloned dependency repos in `additionalDirectories`. A new `## Locally-Cloned Dependency Repos` table with a `Local path:` column triggers graph-sync to build an in-memory `localPathMeta` merge-map instead of creating a stub external node; Step 7a applies direction/type from the map to the real `sourceRoot` node before fallback inference. Options A (companion key in settings.local.json — not committed, machine-local) and B (dir-meta.json — new file, new concept) were rejected because architectural classification of upstream/downstream relationships is a team-level decision that belongs in version-controlled architecture docs, not in machine-local config.
+Trigger: Architecture decision  Confidence: 0.88  Source: auto-capture
+
+### 2026-09-26 — Task completed — test plan gap fixes implemented (4 gaps, Gap 2 was pre-existing)
+
+Gap 1 (icea-implement): Step 6a now checks audit file for gate.test-plan-skip before hard-blocking; if bypass found, soft warn and continue. Lightweight mode auto-generates test plan after code write using SAVE TEST --subagent (auto-detects --source plan). Gap 3 (hook): .plan.md added to stale marker condition alongside .icea.md and .techspec.md. Gap 4 (test-plan SKILL.md): new Step 9x REFRESH TEST with smart merge — cross-cutting/stub/generated suites regenerated; expanded suites (developer-written) get revision notice block with changed AC list, never overwritten. Gap 5 (icea-revise): stale marker only deleted on confirmed REFRESH TEST success. Gap 2 was already implemented (--source plan existed in skill auto-detect).
+Trigger: Task completed  Confidence: 0.90  Source: auto-capture
+
+### 2026-09-26 — Plan approved — test plan lifecycle gap fixes (5 gaps)
+
+Approved plan: (1) audit-file check for skip-test-gate bypass in icea-implement hard gate; (2) --source plan mode added to test-plan skill for lightweight mode — reads Must Have items as AC-F{N}; (3) hook adds .plan.md to stale marker condition; (4) REFRESH TEST smart merge — cross-cutting regenerated, expanded story suites get revision-notice block, stubs regenerated; (5) stale marker only cleared on REFRESH TEST success in icea-revise. 5 files change: hook, test-plan SKILL.md, icea-implement SKILL.md, icea-revise SKILL.md.
+Trigger: Plan approved  Confidence: 0.88  Source: auto-capture
+
+### 2026-09-26 — Task completed — test plan lifecycle fixes: stale marker + gates hardened
+
+5 changes: (1) icea-revision-signal.cjs writes test-plan-stale-ADO-{ID}.json to .claude/signals/ whenever ICEA or Tech Spec is revised (hook or chat edit); (2) icea-revise runs REFRESH TEST after writing revised files and deletes the stale marker; (3) icea-approve Step 3a added stale-marker check — hard blocks if stale before existing test-plan-exists check; (4) icea-implement Step 6a changed from warn-and-continue to hard gate when test plan missing; also checks stale marker and auto-refreshes before stub expansion; (5) icea-feature now generates test plan draft into temp/ immediately after Tech Spec draft so developer reviews both together before SAVE TECH — Step 10b just moves the temp file to permanent. Pattern: stale marker file in .claude/signals/ as the mechanism, deleted by icea-revise + icea-implement + SAVE TECH.
+Trigger: Task completed  Confidence: 0.90  Source: auto-capture
+
+### 2026-09-26 — Task completed — automated graph freshness: checkin gate (Option 3) + CI flag (Option 1)
+
+New script `scripts/graph-sync-deterministic.cjs`: no-LLM graph refresh — recomputes fingerprints, re-derives EXTRACTED edges via graph-extract-edges.js, syncs external nodes from architecture docs, regenerates graph-index.md, deletes .stale. Exit code 1 = new modules detected (need /graph-sync). Wired into checkin SKILL.md as Step 1c (runs only when .stale exists, zero overhead otherwise). CI option: `ci_graph_sync` flag in dream-init-state.json (default false); `SET GRAPH-SYNC-CI on/off` keyword handlers added to both CLAUDE.md files; seeded in setup-init-bootstrap.cjs. Key pattern: separate deterministic parts (fingerprints, EXTRACTED edges, external nodes — automatable, zero tokens) from LLM parts (new module classification — manual /graph-sync once).
+Trigger: Task completed  Confidence: 0.90  Source: auto-capture
+
+### 2026-09-26 — Architecture decision — graph as primary dependency source; arch docs as fallback
+
+Graph extended to represent all cross-system boundaries: external-api, database, message-bus, shared-library, upstream-app, downstream-app, storage, identity-provider. graph-sync populates these from architecture docs (integrations.md→external-api/apps, data.md→database, deployment.md→bus/storage/identity). ICEA reads graph first; skips architecture doc reads when graph has the data (token saving). Architecture docs remain the source-of-truth that populate the graph, not the runtime read source. New edge types: writes, subscribes, publishes, uses, fed-by, feeds. New fields on nodes: external, tech, direction, source.
+Trigger: Architecture decision  Confidence: 0.92  Source: auto-capture
+
+### 2026-09-26 — Task completed — icea-feature graph orientation gaps fixed (6 gaps)
+
+Enhanced Codebase Orientation in icea-feature SKILL.md to close 6 graph usage gaps: (1) detail file always read (not lazy); (2a) patterns/dependencies/reverse-edges extracted from detail file; (2b) graph.json queried for hub flag and typed edges with edge-type→AC obligation mapping table; (2c) dependency chain traversed 2 hops for multi-layer features; (7) orientation summary consolidated with patterns/chain/downstream/edge-ACs; Step 1 orientation declaration expanded to 4 lines (ORIENTATION/CHAIN/DOWNSTREAM/EDGE-ACs). schema reference line also updated to include graph-json-schema.md.
+Trigger: Task completed  Confidence: 0.88  Source: auto-capture
+
+### 2026-09-26 — Architecture decision — Epic/Story SP threshold raised from 5 to 8
+
+Epic threshold changed from `> 5 SP` to `> 8 SP`; story slice cap changed from `≤ 5 SP` to `≤ 8 SP`. Rationale: AI compresses implementation time so the 5 SP limit created unnecessary friction (extra ICEAs, approve cycles, PRs); 8 SP keeps individual PRs reviewable by humans while giving AI room to implement meaningful features in one pass. 13 SP was considered and rejected — too large for human review. Updated in 4 files: SKILL.md (3 lines), icea-template.md, techspec-base.md, techspec-epic-level.md (2 lines).
+Trigger: Architecture decision  Confidence: 0.90  Source: auto-capture
+
+### 2026-09-26 — Task completed — output_mode compact/verbose toggle + APPROVE ordering fix
+
+Added output verbosity control to the plugin. Key pattern: `output_mode` field in `dream-init-state.json` (seeded as "verbose"); toggled via `SET OUTPUT verbose/compact` keyword handlers (added to both CLAUDE.md and _project-deploy/CLAUDE.md §0a). Compact mode shows one-line step summaries in chat; verbose details go to `.claude/logs/ADO-{ID}-session-{YYYY-MM-DD}.md` via new `scripts/output-log-write.cjs`. Hard ordering rule added to both CLAUDE.md Output Mode sections and `skills/shared/output-mode-spec.md`: APPROVE prompt is always the last output — diff goes before it, never after. `.claude/logs/` added to GITIGNORE_BASE. Pattern mirrors SET GOVERNANCE lightweight/full exactly.
+Trigger: Task completed  Confidence: 0.85  Source: auto-capture
+
+### 2026-09-26 — Task completed — signal-write.cjs optional ADO + hook simplified + icea-implement signal
+
+Three changes shipped: (1) signal-write.cjs --ado-id now optional; emits ado_id:null when absent; filename uses UNKNOWN suffix; (2) icea-revision-signal.cjs simplified — removed all ppid/session-file logic; always captures, passes null ADO when not in filename or branch; (3) icea-implement SKILL.md Step 6 adds signal-write call post-write with ADO always in context. Verified: with-ADO and null-ADO signals both write correctly.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### 2026-09-26 — Architecture decision — gap signals don't require ADO ID; ado_id is optional traceability
+
+Key insight: Dream uses signals for PATTERN learning (category tallies → project-knowledge.md), not for ADO attribution. The ado_id is useful context when available but never a gate. Making --ado-id optional in signal-write.cjs removes all complex session-ADO mapping machinery. Hook captures with null ADO when not determinable; skills capture with ADO (always in context). Abandoned: active-ado.json, session-ado.json, ppid-chain walking — all unnecessary once ADO is optional.
+Trigger: Architecture decision  Confidence: 0.95  Source: auto-capture
+
+### 2026-09-26 — Plan approved — branch gate at icea-feature Step 1 (not at Write Gate)
+
+Decision: branch gate fires at icea-feature Step 1 immediately after ADO_ID is collected — before any drafting, not at the Write Gate in icea-implement. Rationale: developer picks up a story → gets a branch immediately → ICEA, tech spec, and code all land on the same branch; multiple parallel stories each get their own branch from day 1; no mid-implementation friction. Branch slug derived from the feature description at Step 1. If AI creates the branch, record in audit trail. Option C (skip) still allowed but logged.
+Trigger: Plan approved  Confidence: 0.95  Source: auto-capture
+
+### 2026-09-26 — Task completed — icea-revision-signal PostToolUse hook implemented
+
+New hook `.claude/hooks/icea-revision-signal.cjs` fires on every Write|Edit PostToolUse event. Matches: ADO docs (icea.md, techspec.md, plan.md, test-plan.md) → revision signal with inferred category; source code on feature/ADO-* branch → scope-changed. Excludes: tracker.md, ai-audit.md, critic files. Wired in settings.json + setup-init-bootstrap.cjs (HOOK_FILES + PostToolUse wiring + deploy-template copy). Path bug fixed: relative `docs/` path vs absolute `/docs/` — check both forms with `fp.startsWith('docs/')`.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### 2026-09-26 — Task completed — all 3 icea-implement guard rails applied
+
+Three guard rails written to skills/icea-implement/SKILL.md: (1) Step 4b deferred goal-loop criterion test-suite-{N} (percentDone < 100% until expansion confirmed); (2) Step 6a mandatory test suite expansion post-write with status:stub/generated metadata check; (3) Step 4 hard rule block — gap analysis runs for ALL story types, SKILL.md/doc-only are NOT exempt, plus 2 hard rules added to the global Hard Rules section. 3 retrospective gap signals written to .claude/signals/ for ADO-9006 Examples E3/E4/E5.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### 2026-09-26 — Error resolved — icea-implement Example gap analysis skipped for SKILL.md-only stories
+
+Step 4 of icea-implement requires checking every ICEA Example to verify it can produce a real assertion. For SKILL.md-only stories I skipped this — rationalised as "no compiled code, no assertions." Wrong: gap categories (return-shape-unspecified, test-data-unspecified, edge-case-missing) apply equally to manual scenario tests. ADO-9006 had 3 gaps (E3: return shape unspecified, E4: test data unspecified, E5: edge case missing) that should have been written to .claude/signals/ via signal-write.cjs. Fix: add explicit hard rule to Step 4 — gap analysis runs for ALL story types, "no compiled code" never skips it.
+Trigger: Error resolved  Confidence: 0.95  Source: auto-capture
+
+### 2026-09-26 — Task completed — icea-implement Step 6a + rubric fix written to SKILL.md
+
+Two insertions applied to skills/icea-implement/SKILL.md: (1) Step 4b goal-loop rubric extended with deferred criterion test-suite-{STORY_N} — percentDone < 100% until Step 6a audit row is written; (2) Step 6a added between Step 6 and Step 7 — reads test-plan-state metadata, runs EXPAND TEST --subagent on status:stub suites, appends audit row. Both changes are in the checked-in SKILL.md (not the installed plugin copy — setup-sync needed to propagate to target projects).
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### 2026-09-26 — Architecture decision — icea-implement Step 6a + goal-loop rubric fix
+
+Two-part fix approved: (1) New mandatory Step 6a after Step 6 in icea-implement SKILL.md — reads test-plan-state metadata block, auto-expands the story's suite via EXPAND TEST --subagent, audits the result; (2) goal-loop rubric extended with a "test-suite-{N} status:generated" deferred criterion so percentDone < 100% until Step 6a confirms expansion. The rubric change is the stronger enforcement — it makes the LLM's own goal-loop enforce expansion, not just procedural sequence. Root cause: step was simply absent from SKILL.md, not bypassed by APPROVE ALL.
+Trigger: Architecture decision  Confidence: 0.95  Source: auto-capture
+
+### 2026-09-26 — Error resolved — icea-implement missed test expansion for SKILL.md-only stories
+
+When all stories are SKILL.md-only (no compiled code), icea-implement must still: (1) note manual verification scenarios in the tracker "Tests added" section, and (2) run EXPAND TEST immediately after implementation to expand all stub suites in the test plan. I skipped both — test plan stubs remained as stubs and tracker showed "Verified by design" without concrete TCs. Fix: always expand test plan stubs after IMPLEMENT completes, even for Markdown-only stories. Manual scenario verifications count as tests.
+Trigger: Error resolved  Confidence: 0.90  Source: auto-capture
+
+### 2026-09-26 — Task completed — ADO-9006 all 5 stories complete
+
+ADO-9006 fully implemented: migration-research-agent/SKILL.md (both modes), migration-research-spec.md, personas-spec.md ([SA] extended), rewrite+upgrade+replatform calling skill modifications. Key patterns: (1) [SA] was EXTENDED not duplicated — new ID would break existing migration skill references; (2) canonical_url vs source_url distinction in UNKNOWN facts — source_url=null when UNKNOWN, canonical_url is "check here" link; (3) agent preamble goes BEFORE options file write (rewrite) / report assembly (upgrade) / step 7 options (replatform) — grounding precedes content; (4) Retire/Retain postures get abbreviated PO sections marked "Not applicable".
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### 2026-09-26 — Task completed — ADO-9006 Story 1: migration-research-agent SKILL.md written
+
+`skills/migration-research-agent/SKILL.md` created (342 lines). Key patterns: (1) discriminated union on `migration_type` with validation guard at top of execution; (2) sequential WebFetch per-layer (not parallel) to preserve single-invocation bound AC-NF3; (3) UNKNOWN fallback uses `canonical_url` not `source_url` — this distinction lets calling skills render "not found" honestly without implying a URL was actually fetched; (4) CVE exposure is qualitative only (high/medium/low) — never a raw count. GCP /docs/deprecations achieves confidence=high without auth; AWS lifecycle is medium-high by design.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### 2026-09-26 — Task completed — ADO-9006 SAVE TECH complete, all 13 files in permanent docs/
+
+SAVE TECH ADO-9006 succeeded: epic techspec + 5 story specs + tracker + test plan skeleton + tech critic file all saved to docs/Release1/Sprint1/UserStory9006/. ICEA auto-approved (Status: Approved · EPIC · 16 SP). Temp cleaned. Test plan is Epic skeleton — expand suites per story via EXPAND TEST ADO-9006 Suite-N after each story merges.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### 2026-09-26 — Task completed — ADO-9006 epic tech spec package drafted (TECH recovery)
+
+TECH ADO-9006 cross-session recovery produced: epic spec (16 SP, 5 stories), 5 per-story specs, and tracker in temp/. Stack: plugin-only (nodejs + dotnet_framework detected but no overlay matched — base-only used). Sizing: AC-F1/NF=3SP (Story 1), AC-F2=3SP (Story 2), AC-F7+F8=3SP (Story 3), AC-F3+F4+F5=4SP (Story 4), AC-F3+F6=3SP (Story 5). ICEA auto-approved inline. Pattern: for SKILL.md-only plugin stories with no framework overlay, base-only template is appropriate — do not use dotnet_framework overlay when nodejs is also present.
+Trigger: Task completed  Confidence: 0.90  Source: auto-capture
+
+### 2026-09-26 — Approach abandoned — BigQuery MCP for GCP lifecycle data
+
+BigQuery public dataset (google_cloud_release_notes) requires a billing-enabled GCP project and bigquery.jobs.create permission even for free queries. Developers on non-GCP migrations have no GCP project — the MCP server fails immediately with a permissions error. Abandoned in favour of WebFetch-only. Never assume BigQuery or any cloud-account-specific MCP for the migration-research-agent.
+Trigger: Approach abandoned  Confidence: 0.95  Source: auto-capture
+
+### 2026-09-26 — Architecture decision — migration-research-agent cloud provider scope and confidence matrix
+
+All three cloud providers (Azure, AWS, GCP) are in scope — no exclusions. WebFetch-only (no MCP, no IAM, no cloud account). Confirmed confidence matrix: Azure = high all fact types (centralized lifecycle portal); AWS = high pricing/SLA/compliance + medium-high lifecycle (RSS + service docs pages, no central EoL portal); GCP = high all fact types — lifecycle via cloud.google.com/{product}/docs/deprecations structured markdown tables (Feature | Deprecated date | Shutdown date) + RSS fallback. GCP lifecycle is high not medium because the /docs/deprecations URL pattern gives structured, BigQuery-backed data via WebFetch without any authentication.
+Trigger: Architecture decision  Confidence: 0.95  Source: auto-capture
+
+### 2026-09-25 — Plan approved — ADO-9006 migration-research-agent + options PO framework
+
+Plan saved at docs/Release1/Sprint1/UserStory9006/ADO-9006-migration-research-agent.plan.md. Five Must Haves: (1) migration-research-agent/SKILL.md with discriminated union input — rewrite/upgrade mode uses {source_layers[], target_layers[]} for stack lifecycle/CVE/ecosystem research; replatform mode uses {source_environment, target_environment.components[]} for cloud pricing/SLA/compliance research; (2-4) all three migration skills options sections restructured with PO framework; (5) shared migration-research-spec.md + [SA] Solution Architect migration specialist persona added to personas-spec.md. Won't Have: GCP/AWS (Azure only), project-specific TCO, real-time CVE count.
+Trigger: Plan approved  Confidence: 0.95  Source: auto-capture
+
+### 2026-09-25 — Plan approved — migration-research-agent design
+
+Agreed: create `migration-research-agent` (same isolation model as bc-searcher — no codebase access, structured JSON output, single responsibility). Scope: grounds all externally observable migration facts — lifecycle (EoL dates, CVE exposure), TCO benchmarks (public cloud pricing + IDC/Gartner ROI studies), ecosystem health (adoption trends, hiring signal, community activity), tooling landscape. Returns one structured bundle per invocation with source URL + retrieved date per fact. Project-internal facts (current infra costs, team size, codebase complexity) stay as flagged placeholders. This agent is the data layer for the migration options phase PO-framework restructure — the two ship together as one ADO. Name chosen over "migration-facts-searcher" to reflect broader scope.
+Trigger: Plan approved  Confidence: 0.92  Source: auto-capture
+
+### 2026-09-25 — Architecture decision — PO analysis framework in migration options phase
+
+Agreed: the Options section of rewrite/replatform/upgrade skills should be restructured using the PO analysis framework (what happens if not resolved · tradeoffs · solution options · what we need to do · whether it can remain · how to verify). Rationale: the options phase is the last human gate before significant effort is committed; the current matrix (assurance × effort × TCO) is descriptive but not decision-grade. Priority order: rewrite first (options span genuinely different architectural approaches), replatform second (residual-risk "whether it can remain" is most underserved here), upgrade third (options more constrained). The "state validation / no-silent-repair" principle was scoped to migration family only — NOT icea family — because the icea goal-loop is intentional bounded auto-repair on in-context unwritten content, not silent overwrite of persistent history. These are two separate initiatives.
+Trigger: Architecture decision  Confidence: 0.90  Source: auto-capture
+
+### 2026-09-25 — Task completed — Lightweight Governance Mode + Auto-Approve on Save (ADO-9005)
+
+Implemented across 9 files in 3 parallel phases. Key patterns: (1) governance bash snippet is always node -e try/catch reading dream-init-state.json, defaulting to "full" on any error — fail-safe design; (2) Edit tool requires unique old_string — use surrounding context lines to disambiguate similar blocks; (3) for goal-loop Step 0 restructure, replacing "Announce..." paragraph + code fence was sufficient to be unique without capturing entire step; (4) critic/SKILL.md plan mode spec inserted before "## The REVISE loop" using the unique CODE mode output sample as anchor; (5) test-plan auto-detect prepended `plan` check before `icea` in the ordered list inside Step 1 — both edits in one pass; (6) checkin governance gate added as new "Step 1b" section between Step 1 report and Step 2 load-context. `APPROVE ALL ADO-9005` not used — standard per-batch approval with user confirming once.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### 2026-09-25 — Plan approved — Lightweight Governance Mode + Auto-Approve on Save
+
+Approach: add `governance_mode` key (`"full"|"lightweight"`) to `.claude/dream-init-state.json`. Lightweight path: `goal-loop` → draft plan → `SAVE PLAN` (write + critic/plan mode + auto-stamp ✅ + auto-test-plan) → `IMPLEMENT` → `APPROVE` (Write Gate only) → checkin. Full path change: `SAVE TECH` now auto-approves ICEA inline + auto-generates test plan, eliminating the separate `APPROVE ADO-{ID}` and `SAVE TEST` steps. Enforcement is bash-deterministic (each skill reads `governance_mode` via node -e snippet). Nine files affected: both CLAUDE.md files, icea-feature, goal-loop, critic (new plan mode), icea-approve, icea-implement, test-plan, checkin. Key constraint: default absent = "full" (fail-safe). SET GOVERNANCE keyword handler writes to dream-init-state.json + audit entry.
+Trigger: Plan approved  Confidence: 0.95  Source: auto-capture
+
 ### 2026-09-25 — Error resolved — Mermaid HTML inline corruption + garbage content after </html>
 
 Root cause: when inlining mermaid.min.js via a line-by-line filter, lines inside the mermaid library that contained the target string ("mermaid.min.js") were deleted, corrupting the library. A subsequent re-injection left ~2.1MB of orphaned content after `</html>` which contained broken `<script>` tags the browser executed, causing `SyntaxError: Unexpected token ')'`. Fix: (1) replace corrupted script tag by byte-position using `indexOf('<script>')` + `indexOf('</script>')` — never use string matching on minified JS; (2) truncate file at `</html>` using position arithmetic to remove garbage; (3) when removing markup from an HTML file that has large embedded scripts, only operate on `html.substring(0, html.indexOf('</main>'))` — never line-filter the full file. Gotcha: never use line-by-line filtering on HTML files containing inlined minified JS; always operate by structural position.

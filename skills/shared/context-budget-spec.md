@@ -42,13 +42,19 @@ the file on the developer's next reply.
 {
   "skill": "rewrite",
   "step":  "step2.5",
-  "ado":   "9000"
+  "ado":   "9000",
+  "resume_cmd": "REWRITE RESUME ADO-9000"
 }
 ```
 
 - `skill`: matches a key in `context-budgets.json → skills`
 - `step`: matches a key in `context-budgets.json → skills[skill]`
 - `ado`: used to build the resume command shown in the block message
+- `resume_cmd` _(optional)_: overrides the default resume command (`{SKILL} RESUME ADO-{ado}`)
+  used in the hook's block message. Required for skills whose recovery keyword does not
+  follow the `{SKILL} RESUME ADO-{ID}` pattern — e.g. `icea-feature` uses `PLAN ADO-{ID}`
+  or `TECH ADO-{ID}` depending on which step was interrupted. Omit for migration skills
+  where `{SKILL} RESUME ADO-{ID}` is the correct recovery keyword.
 
 ### Location
 
@@ -80,12 +86,16 @@ line:
 ```
 > 📊 **STEP BOUNDARY — Step N: ...**
 > Write `.claude/active-task.json`:
->   `{"skill":"my-skill","step":"step1","ado":"{ADO}"}`
+>   `{"skill":"my-skill","step":"step1","ado":"{ADO}","resume_cmd":"MY-SKILL RESUME ADO-{ADO}"}`
 > The checkpoint is flushed — resuming here is safe.
 > **Reply `CONTINUE` to proceed with this step.**
 > ...
 > _(Do not proceed past this prompt without a reply.)_
 ```
+
+Include `resume_cmd` when your skill's recovery keyword does not follow `{SKILL} RESUME ADO-{ID}`
+(e.g. `icea-feature` writes `"resume_cmd":"PLAN ADO-{ADO}"` at the ICEA-drafting boundary).
+Omit it for migration skills where `UPGRADE/REWRITE/REPLATFORM RESUME ADO-{ID}` is correct.
 
 The AI writes the file, then waits for the developer's reply. When the reply arrives, the
 hook fires and measures context before the message is processed.
@@ -118,13 +128,15 @@ Add to `.claude/settings.json` in the target project:
 {
   "hooks": {
     "UserPromptSubmit": [
-      { "matcher": "", "hooks": [{ "type": "command", "command": "node .claude-plugin/hooks/context-guard.cjs" }] }
+      { "hooks": [{ "type": "command", "command": "node .claude/hooks/context-guard.cjs" }] }
     ]
   }
 }
 ```
 
-`setup-init` deploys this automatically when migration skills are detected in the project.
+`setup-init` deploys this universally — every project receives the hook regardless of whether
+migration skills are in use, because `icea-feature` and `icea-implement` also participate.
+The hook command is `node .claude/hooks/context-guard.cjs` (always Node — not shell-dependent).
 
 ## What the guard does NOT cover
 

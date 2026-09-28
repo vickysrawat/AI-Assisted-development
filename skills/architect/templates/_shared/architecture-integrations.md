@@ -51,3 +51,23 @@ flowchart LR
 > `business-context-severity.md`). Flag PII / privileged data leaving the system.
 
 > ⚠ Could not determine — needs manual input
+
+## Locally-Cloned Dependency Repos
+
+> Repos listed in `additionalDirectories` that graph-sync scans for source-level detail.
+> Define direction and tier here — graph-sync uses these values to classify graph nodes
+> instead of inferring from folder structure. This table is the committed, team-shared
+> source of truth for cross-repo relationship metadata.
+>
+> **How to populate:** run `/update-arch` after adding a new entry to `additionalDirectories`,
+> or add a row manually. The architect skill prompts for direction and tier when it detects
+> a new `additionalDirectories` root with no matching row here.
+
+| Repo name | Direction | Tier | Local path |
+|-----------|-----------|------|------------|
+
+<!-- Direction : upstream (feeds data into this app) · downstream (this app feeds data out) · sibling (peer service, no clear feed direction) -->
+<!-- Tier      : service · ui · repository · shared-library · datastore · domain -->
+<!-- Local path: path relative to THIS repo root pointing to the cloned dependency repo  -->
+<!--             graph-sync resolves this at runtime against additionalDirectories entries -->
+<!--             Example row: | TrackersPhase12 | upstream | service | ../KE.KMS.Trackers.Phase12 | -->

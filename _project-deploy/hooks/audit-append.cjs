@@ -2,10 +2,19 @@
 // hooks/audit-append.cjs — shared governance-audit append helper (pure Node.js)
 //
 // Single choke point for the governance audit trail. Writes ONE JSON event per line to a
-// per-day, per-process shard: .claude/audit/<YYYY-MM-DD>-<pid>.jsonl. Sharding avoids
-// cross-branch git merge conflicts and concurrent-append corruption (several hooks may fire
-// on one tool call). Best-effort and NON-BLOCKING: every failure is swallowed so auditing
-// can never break a gate or a commit.
+// per-day shard: .claude/audit/<YYYY-MM-DD>.jsonl. One file per calendar day — all events
+// for that day are visible in one file, making governance review trivial.
+//
+// Git merge strategy: .gitattributes marks .claude/audit/*.jsonl as merge=union so that
+// branch merges auto-combine lines without a conflict. Since each line is a self-contained
+// JSON record, union merge is safe and lossless.
+//
+// Concurrent-append safety: appendFileSync with O_APPEND is atomic for writes under ~4 KB
+// on both NTFS and ext4. Each JSON event line is well under that limit. The existing
+// try/catch ensures auditing can never break a gate or a commit even on write failure.
+//
+// Previous design used per-process sharding (YYYY-MM-DD-<pid>.jsonl) which created one
+// file per hook invocation — unbounded accumulation with no readable daily view.
 //
 // Two entry points:
 //   • module:  require('./audit-append').appendEvent({ event, action, ... })
@@ -62,6 +71,18 @@ function readSessionContext() {
   return {};
 }
 
+// Read the ADO ID from the active skill task if available.
+// Written by skills at each step boundary — present during any active skill execution.
+// Returns null between skills or when the active task has no ado field.
+function resolveActiveAdo() {
+  try {
+    const p = path.join('.claude', 'active-task.json');
+    if (!fs.existsSync(p)) return null;
+    const t = JSON.parse(fs.readFileSync(p, 'utf8'));
+    return t && t.ado ? String(t.ado) : null;
+  } catch (e) { return null; }
+}
+
 function osUser() {
   try {
     const name   = os.userInfo().username || process.env.USERNAME || process.env.USER || '';
@@ -108,12 +129,19 @@ function appendEvent(evt) {
   try {
     if (!evt || typeof evt !== 'object') return false;
     const ts    = new Date().toISOString();
-    const shard = ts.slice(0, 10) + '-' + process.pid;
+    const shard = ts.slice(0, 10);   // YYYY-MM-DD — one file per day, not per process
     const id    = resolveIdentity();
 
     const record = { ts, event: evt.event || 'unknown' };
+
+    // ADO linkage: caller-provided value wins; fall back to the active skill task so that
+    // every gate event is automatically connected to the in-progress ADO without each hook
+    // needing to pass it explicitly.
+    const adoValue = evt.ado != null ? String(evt.ado) : resolveActiveAdo();
+    if (adoValue) record.ado = adoValue;
+
     // Optional, only-if-present event fields (keeps lines lean and queryable).
-    for (const k of ['action', 'ado', 'result', 'source', 'path', 'repo', 'vote']) {
+    for (const k of ['action', 'result', 'source', 'path', 'repo', 'vote']) {
       if (evt[k] != null) record[k] = String(evt[k]);
     }
     if (evt.pr_id    != null) record.pr_id    = evt.pr_id;
