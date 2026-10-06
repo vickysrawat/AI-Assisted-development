@@ -165,6 +165,7 @@ Recognised globally, no /command needed. ADO ID is case-insensitive (`ADO-1847`,
 - Use `C:\Program Files\Git\mingw64\bin\git.exe` for git and `C:\Program Files\Git\usr\bin\bash.exe` as the shell. Run git/shell via the Bash tool
   only — never `mcp__ide__executeCode` or Python subprocess.
 - Never rely on `HEAD` as a symbolic ref — resolve with `git rev-parse HEAD` first.
+- **Never use `/dev/stdin` to pipe data into `node -e`.** On Windows, `/dev/stdin` resolves to `C:\dev\stdin` (ENOENT). Instead, write the data to a temp file and pass the path: `echo "$DATA" > tmp.json && node -e "... readFileSync('tmp.json') ..." && rm tmp.json`.
 
 > `C:\Program Files\Git\mingw64\bin\git.exe`/`C:\Program Files\Git\usr\bin\bash.exe` are written by `/setup-init`; run `/setup-sync` if unresolved.
 

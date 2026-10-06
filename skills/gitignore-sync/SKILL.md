@@ -68,6 +68,12 @@ Write the script below to `.claude/_gi-vcs.cjs`, run `node .claude/_gi-vcs.cjs`,
 capture the `VCS=` and `IGNORE_FILE=` lines, then delete `.claude/_gi-vcs.cjs`.
 
 ```javascript
+// SCRIPT REVIEW
+// What it does:        Detects the VCS in the current directory (git or TFVC) and prints VCS= and IGNORE_FILE= lines to stdout.
+// What it touches:     Nothing — read-only. Runs git rev-parse and tf vc status probes; checks for .tf/.tfignore sentinel files.
+// What it does NOT do: Does not write or modify any files; no network calls; no git state changes.
+// APIs / commands:     child_process.execSync (git rev-parse --is-inside-work-tree, tf vc status), fs.existsSync
+// How to verify:       Output contains exactly one VCS= line (git | tfvc | none) and one IGNORE_FILE= line.
 // Written to .claude/_gi-vcs.cjs and executed as: node .claude/_gi-vcs.cjs
 const { execSync } = require('child_process');
 const fs = require('fs');
@@ -98,6 +104,12 @@ The script reads the managed-block entries from `$PLUGIN_DIR/_project-deploy/.gi
 Capture the output, then delete `.claude/_gi-write.cjs`.
 
 ```javascript
+// SCRIPT REVIEW
+// What it does:        Reads plugin managed-block entries from $PLUGIN_DIR/_project-deploy/.gitignore, removes any existing managed block from .gitignore/.tfignore, then appends a fresh block containing only entries not already present outside the block.
+// What it touches:     .gitignore (git) or .tfignore (TFVC) — replaces the managed block only; all other lines are preserved in their original order.
+// What it does NOT do: Does not remove or reorder developer-owned lines; does not write any other files; no network calls.
+// APIs / commands:     fs.readFileSync, fs.writeFileSync, fs.existsSync, path.join
+// How to verify:       Output line starts with CREATED or UPDATED; WROTE= array lists added entries; managed block delimiters visible in the ignore file.
 // Written to .claude/_gi-write.cjs and executed as: node .claude/_gi-write.cjs <vcs>
 const fs = require('fs');
 const path = require('path');
@@ -162,6 +174,12 @@ Write the script below to `.claude/_gi-tfvc.cjs`, run `node .claude/_gi-tfvc.cjs
 capture the output, then delete `.claude/_gi-tfvc.cjs`.
 
 ```javascript
+// SCRIPT REVIEW
+// What it does:        Checks whether .claude/settings.local.json is already tracked under TFVC — a tracked credential file is not protected by a .tfignore entry and requires an explicit tf vc delete.
+// What it touches:     Nothing — read-only. Runs tf vc status on a single path; no file writes.
+// What it does NOT do: Does not modify any files, ignore entries, or TFVC metadata.
+// APIs / commands:     child_process.execSync (tf vc status), fs.existsSync
+// How to verify:       Output is exactly one of: NO_CREDENTIAL_FILE, SETTINGS_NOT_TRACKED, or SETTINGS_TRACKED with remediation instruction.
 // Written to .claude/_gi-tfvc.cjs and executed as: node .claude/_gi-tfvc.cjs
 const { execSync } = require('child_process');
 const fs = require('fs');
@@ -216,6 +234,12 @@ Write the script below to `.claude/_gi-verify.cjs`, run
 capture the output, then delete `.claude/_gi-verify.cjs`.
 
 ```javascript
+// SCRIPT REVIEW
+// What it does:        Reads .gitignore or .tfignore and checks that every required plugin managed-block entry is present; exits non-zero and lists missing entries if any are absent.
+// What it touches:     Nothing — read-only; no file writes.
+// What it does NOT do: Does not modify any files; only reads the ignore file.
+// APIs / commands:     fs.existsSync, fs.readFileSync
+// How to verify:       Output is VERIFY_OK with entry count, or VERIFY_FAIL with a JSON array of missing entries.
 // Written to .claude/_gi-verify.cjs and executed as: node .claude/_gi-verify.cjs <vcs>
 const fs = require('fs');
 const VCS = process.argv[2] || 'git';

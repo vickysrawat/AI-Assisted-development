@@ -24,6 +24,7 @@
     { "path": "refs/strategies/python.md", "versions": "Python 3.12", "last_verified": "2026-09-08" },
     { "path": "refs/strategies/angular.md", "versions": "Angular 17", "last_verified": "2026-09-08" },
     { "path": "refs/strategies/react.md", "versions": "React 18", "last_verified": "2026-09-08" },
-    { "path": "refs/shared/ef6-to-efcore.md", "source": "EF6", "target": "EF Core 8", "last_verified": "2026-09-08" }
+    { "path": "refs/shared/ef6-to-efcore.md", "source": "EF6", "target": "EF Core 8", "last_verified": "2026-09-08" },
+    { "path": "lookup-urls.json", "description": "WebFetch URL lookup tables for migration-research-agent (rewrite/upgrade/replatform modes). Single source of truth — all stack and provider URLs live here. Validate with /knowledge-freshness check.", "last_verified": "2026-10-01" }
   ]
 }

@@ -1164,6 +1164,10 @@ function stepSeedStateFiles(manifest) {
     // ICEA quality signal promotion threshold — number of occurrences before Dream proposes
     // adding a pattern to project-knowledge.md. Default 2; increase for larger teams.
     gap_promotion_threshold:   2,
+    // ICEA gate mode — "full" requires an approved ICEA before code generation;
+    // "lightweight" requires an approved plan. Default: full.
+    // Toggle with: SET GOVERNANCE full | SET GOVERNANCE lightweight
+    governance_mode:           'full',
     // Chat verbosity — "verbose" (default) shows full skill output in chat;
     // "compact" shows one-line summaries and writes verbose detail to .claude/logs/.
     // Toggle with: SET OUTPUT verbose | SET OUTPUT compact
@@ -2110,8 +2114,85 @@ function frameworkGlobsFromState(state) {
 
 // ─────────────────────────────────────────────────────────────────────────────────
 
-main().catch(err => {
-  console.error('  ✗ Bootstrap fatal: ' + err.message);
-  if (process.env.DEBUG) console.error(err.stack);
-  process.exit(1);
-});
+/**
+ * Deploys migration gate hooks to a target project.
+ *
+ * Copies approval-capture.cjs and migration-gate.cjs from the plugin's
+ * _project-deploy/hooks/ into the target project's .claude/hooks/, then
+ * registers both hooks in the target's .claude/settings.json if not already
+ * present. Running this twice produces identical output (idempotent).
+ *
+ * @param {string} targetDir  - Absolute path to the target project root
+ * @param {string} pluginDir  - Absolute path to this plugin's root
+ */
+function deployHooks(targetDir, pluginDir) {
+  const hooksSource  = path.join(pluginDir, '_project-deploy', 'hooks');
+  const hooksDest    = path.join(targetDir, '.claude', 'hooks');
+  const settingsPath = path.join(targetDir, '.claude', 'settings.json');
+
+  // Step 1: copy hook files to the target project
+  const hookFiles = ['approval-capture.cjs', 'migration-gate.cjs'];
+  if (!fs.existsSync(hooksDest)) fs.mkdirSync(hooksDest, { recursive: true });
+  for (const file of hookFiles) {
+    const src = path.join(hooksSource, file);
+    // DECISION: exit 1 on missing source — a partial deploy would leave the hook
+    // system in an inconsistent state; the caller must fix the plugin install first.
+    if (!fs.existsSync(src)) {
+      process.stderr.write(`setup-init: hook source not found: ${src}\n`);
+      process.exit(1);
+    }
+    fs.copyFileSync(src, path.join(hooksDest, file));
+    process.stdout.write(`  deployed: .claude/hooks/${file}\n`);
+  }
+
+  // Step 2: load (or create) settings.json; merge hook entries without overwriting existing content.
+  // DECISION: JSON parse+merge (not string replacement) — avoids whitespace fragility
+  // and preserves any project-local settings already present in the file.
+  let settings = {};
+  if (fs.existsSync(settingsPath)) {
+    try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); }
+    catch (e) {
+      process.stderr.write(`setup-init: cannot parse ${settingsPath}: ${e.message}\n`);
+      process.exit(1);
+    }
+  }
+  if (!settings.hooks) settings.hooks = {};
+
+  // Step 3: register approval-capture.cjs under UserPromptSubmit (idempotent)
+  if (!settings.hooks.UserPromptSubmit) settings.hooks.UserPromptSubmit = [];
+  if (!settings.hooks.UserPromptSubmit.some(e => e.command && e.command.includes('approval-capture.cjs'))) {
+    settings.hooks.UserPromptSubmit.push({ matcher: '.*', command: 'node .claude/hooks/approval-capture.cjs' });
+    process.stdout.write('  registered: approval-capture.cjs in UserPromptSubmit\n');
+  } else {
+    process.stdout.write('  already registered: approval-capture.cjs (skipped)\n');
+  }
+
+  // Step 4: register migration-gate.cjs under PreToolUse (idempotent)
+  if (!settings.hooks.PreToolUse) settings.hooks.PreToolUse = [];
+  if (!settings.hooks.PreToolUse.some(e => e.command && e.command.includes('migration-gate.cjs'))) {
+    settings.hooks.PreToolUse.push({ matcher: '.*', command: 'node .claude/hooks/migration-gate.cjs' });
+    process.stdout.write('  registered: migration-gate.cjs in PreToolUse\n');
+  } else {
+    process.stdout.write('  already registered: migration-gate.cjs (skipped)\n');
+  }
+
+  // Step 5: write the merged settings back to disk
+  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+  process.stdout.write('  settings.json updated.\n');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────
+// Module boundary: run main() only when executed directly (not when require()'d by tests).
+// DECISION: require.main guard added in Story 4 (ADO-9007) to allow unit tests to import
+// deployHooks() without triggering the full setup wizard; previously there was no guard
+// because no exported function existed.
+
+if (require.main === module) {
+  main().catch(err => {
+    console.error('  ✗ Bootstrap fatal: ' + err.message);
+    if (process.env.DEBUG) console.error(err.stack);
+    process.exit(1);
+  });
+}
+
+module.exports = { deployHooks };

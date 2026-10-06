@@ -164,7 +164,7 @@ W('.claude/migration/9000.checkpoint.json', JSON.stringify({
   stage_gates: { intake_context: 'PASS' },
   source_context: { manifest_path: path.join(ROOT, 'manifest.md'), roots_expected: [ROOT], modules_mapped: 1, modules_out_of_scope: 1 },
 }));
-const gate = run(['check-gate', '--ado=9000']);
+const gate = run(['check-gate', '--ado=9000', '--skill=rewrite']);
 assert('check-gate valid -> exit 0', gate.code === 0 && gate.json.gate === 'PASS', `code=${gate.code} ${JSON.stringify(gate.json)}`);
 
 // NOTE: The stored-counter accounting mismatch check (modules_mapped + modules_out_of_scope != graph
@@ -178,7 +178,7 @@ W('.claude/migration/9002.checkpoint.json', JSON.stringify({
   stage_gates: { intake_context: 'PASS' },
   source_context: { manifest_path: path.join(ROOT, 'nocc.md'), roots_expected: [ROOT], modules_mapped: 1, modules_out_of_scope: 1, skill: 'rewrite' },
 }));
-const noccGate = run(['check-gate', '--ado=9002']);
+const noccGate = run(['check-gate', '--ado=9002', '--skill=rewrite']);
 assert('check-gate missing cross-cutting -> exit 11', noccGate.code === 11, `code=${noccGate.code} ${JSON.stringify(noccGate.json)}`);
 
 // 3 — A18: no ## Migration roots section at all
@@ -216,6 +216,20 @@ W('.claude/bad-root.settings.json', JSON.stringify({ migrationRoots: [ROOT, nonE
 const badRoot = run(['verify', '--manifest=manifest.md', '--skill=upgrade', '--settings=.claude/bad-root.settings.json']);
 assert('root-missing -> exit 3', badRoot.code === 3, `code=${badRoot.code} ${JSON.stringify(badRoot.json)}`);
 assert('root-missing -> reason field', badRoot.json.reason === 'root-missing', `reason=${badRoot.json.reason}`);
+
+// check-gate without --skill → exit 10 (skill-required)
+// Uses the 9000 ledger (intake_context=PASS, written above) — reaches the skill check
+const noSkill = run(['check-gate', '--ado=9000']);
+assert('check-gate no --skill -> exit 10', noSkill.code === 10, `code=${noSkill.code}`);
+assert('check-gate no --skill -> reason=skill-required', noSkill.json.reason === 'skill-required', `reason=${noSkill.json.reason}`);
+
+// check-gate with object-form intake_context ({ verdict: 'PASS', ... }) from set-gate --artifact-path
+W('.claude/migration/9003.checkpoint.json', JSON.stringify({
+  stage_gates: { intake_context: { verdict: 'PASS', at: '2026-10-02', artifact_path: 'manifest.md' } },
+  source_context: { manifest_path: path.join(ROOT, 'manifest.md'), roots_expected: [ROOT], modules_mapped: 1, modules_out_of_scope: 1 },
+}));
+const objGate = run(['check-gate', '--ado=9003', '--skill=rewrite']);
+assert('check-gate object-form gate -> exit 0', objGate.code === 0, `code=${objGate.code} ${JSON.stringify(objGate.json)}`);
 
 // --- cleanup + summary ----------------------------------------------------------
 try { fs.rmSync(ROOT, { recursive: true, force: true }); } catch (_) {}

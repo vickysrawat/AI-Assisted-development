@@ -40,6 +40,16 @@ function emit(obj, humanLines, code) {
   process.exit(code);
 }
 
+// Reads a gate value tolerantly — checkpoint-ledger.cjs set-gate writes a flat
+// string 'PASS' when no --artifact-path is given, but an object
+// { verdict: 'PASS', at: '...', artifact_path: '...' } when --artifact-path is
+// supplied. Both forms must evaluate to the same result.
+function gateVerdict(val) {
+  if (!val) return null;
+  if (typeof val === 'object') return val.verdict || null;
+  return val;
+}
+
 // Resolve a cited path against the repo and every scan root. Returns {ok, file, line}.
 // A citation is `path#anchor`; a numeric `#L<n>` anchor is line-checked, a `#section` anchor is not.
 function resolveCitation(token, roots) {
@@ -253,12 +263,18 @@ function opCheckGate() {
   if (!fs.existsSync(ledgerPath)) emit({ reason: 'ledger-absent', ledger: ledgerPath }, [`❌ No ledger for ADO ${ado} — intake not run. STOP.`], 10);
 
   const led = JSON.parse(fs.readFileSync(ledgerPath, 'utf8'));
-  if ((led.stage_gates || {}).intake_context !== 'PASS')
-    emit({ reason: 'gate-not-pass', gate: (led.stage_gates || {}).intake_context || null }, [`❌ stage_gates.intake_context is not PASS — run intake-verify.cjs verify first. STOP.`], 10);
+  if (gateVerdict((led.stage_gates || {}).intake_context) !== 'PASS')
+    emit({ reason: 'gate-not-pass', gate: gateVerdict((led.stage_gates || {}).intake_context) || null }, [`❌ stage_gates.intake_context is not PASS — run intake-verify.cjs verify first. STOP.`], 10);
 
   // Re-validate using the same opVerify() code path — no parallel weaker implementation (A15).
-  // Use led.skill (top-level, always set by coreEnvelope) not sc.skill (never stored — A16).
-  const skill = led.skill || 'upgrade';
+  // DECISION: exit 10 (not exit 1) to distinguish "missing --skill argument" from
+  // "gate check failed". The hook that calls this script can act on the specific exit code.
+  const skill = arg('skill');
+  if (!skill) {
+    emit({ check: 'check-gate', verdict: 'ERROR', reason: 'skill-required',
+      message: '--skill is required on check-gate; no fallback' },
+      ['--skill is required on check-gate; no fallback'], 10);
+  }
   // source_context is written via set-payload into payload[skill], not the root envelope.
   // Check the skill payload first; fall back to a root-level field for forward-compat.
   const sc = (led.payload && led.payload[skill] && led.payload[skill].source_context)

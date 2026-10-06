@@ -236,3 +236,212 @@
 
 ### [capture] [2026-09-28] Task completed — 6 residual gaps fixed
 ### [capture] [2026-09-28] Plan approved — 6 residual gaps fix pass
+
+### [capture] [2026-09-30] Error resolved — migration-research-agent not registered as agent
+### [capture] [2026-09-30] Error resolved — setup-sync not seeding governance_mode and output_mode
+
+### [capture] [2026-09-30] Error resolved — gitignore-sync temp scripts blocked by script-review-gate hook
+### [capture] [2026-09-30] Error resolved — setup-sync not seeding governance_mode and output_mode
+
+### [capture] [2026-09-30] Error resolved — /dev/stdin pipe fails on Windows (ENOENT C:\dev\stdin)
+### [capture] [2026-09-30] Error resolved — gitignore-sync temp scripts blocked by script-review-gate hook
+
+### [capture] [2026-10-01] Task completed — Architecture flow templates updated to Mermaid sequence diagrams
+### [capture] [2026-09-30] Error resolved — /dev/stdin pipe fails on Windows (ENOENT C:\dev\stdin)
+
+### [capture] [2026-10-01] Task completed — architecture-data.md templates updated with Mermaid ERD
+### [capture] [2026-10-01] Task completed — Architecture flow templates updated to Mermaid sequence diagrams
+
+### [capture] [2026-10-01] Task completed — migration-research-agent URL tables centralized into lookup-urls.json
+### [capture] [2026-09-30] Error resolved — migration-research-agent not registered as agent
+
+### [capture] [2026-10-01] Architecture decision — LLM instructions in SKILL.md are advisory only; enforcement must be at consumption boundary
+### [capture] [2026-10-01] Task completed — lookup-urls.json gaps filled: CVE, ecosystem_health, tooling_availability URLs added for all stacks
+### [capture] [2026-10-01] Task completed — migration-research-agent URL tables centralized into lookup-urls.json
+
+### [capture] [2026-10-01] Task completed — bundle integrity check added to migration-research-spec.md Section 5 Step 3
+### [capture] [2026-10-01] Architecture decision — LLM instructions in SKILL.md are advisory only; enforcement must be at consumption boundary
+
+### [capture] [2026-10-01] Task completed — 7 second-pass gaps fixed in migration-research-agent system
+### [capture] [2026-10-01] Task completed — bundle integrity check added to migration-research-spec.md Section 5 Step 3
+
+### [capture] [2026-10-01] Task completed — 10 third-pass gaps fixed; migration-research-agent system complete
+### [capture] [2026-10-01] Task completed — 7 second-pass gaps fixed in migration-research-agent system
+
+### [capture] [2026-10-01] Task completed — 7 fourth-pass gaps fixed; migration-research-agent system at 0 remaining issues
+### [capture] [2026-10-01] Task completed — 10 third-pass gaps fixed; migration-research-agent system complete
+
+### [capture] [2026-10-01] Approach abandoned — upgrade/SKILL.md research cache deferred as separate feature task
+### [capture] [2026-10-01] Task completed — 7 fourth-pass gaps fixed; migration-research-agent system at 0 remaining issues
+
+### [capture] [2026-10-01] Plan approved — upgrade/SKILL.md research bundle cache (Issue #1)
+### [capture] [2026-10-01] Approach abandoned — upgrade/SKILL.md research cache deferred as separate feature task
+
+### [capture] [2026-10-01] Task completed — upgrade/SKILL.md research bundle cache added (Issue #1)
+### [capture] [2026-10-01] Plan approved — upgrade/SKILL.md research bundle cache (Issue #1)
+
+### [capture] [2026-10-01] Architecture decision — Issue #2: breaking-changes as committed plugin documents, not machine cache
+### [capture] [2026-10-01] Plan approved — upgrade/SKILL.md research bundle cache (Issue #1)
+
+### [capture] [2026-10-01] Architecture decision — Issue #2: breaking-changes dual-write: project .claude/ + plugin machine cache
+### [capture] [2026-10-01] Architecture decision — Issue #2: breaking-changes as committed plugin documents, not machine cache
+
+### [capture] [2026-10-01] Plan approved — Issue #2: breaking-changes agent + dual-write document pattern
+### [capture] [2026-10-01] Architecture decision — Issue #2: breaking-changes dual-write: project .claude/ + plugin machine cache
+
+### [capture] [2026-10-01] Task completed — Issue #2 implementation approved and written (5 files)
+### [capture] [2026-10-01] Plan approved — Issue #2: breaking-changes agent + dual-write document pattern
+
+### [capture] [2026-10-01] Approach abandoned — B6: stripping judge output from migration log was wrong
+### [capture] [2026-10-01] Architecture decision — Issue #2: breaking-changes dual-write: project .claude/ + plugin machine cache
+
+### [capture] [2026-10-01] Plan approved — B6: migration log two-gap fix (lessons.md + resume instruction)
+### [capture] [2026-10-01] Approach abandoned — B6: stripping judge output from migration log was wrong
+
+### [capture] [2026-10-01] Task completed — B6: migration log two-gap fix implemented (4 files)
+### [capture] [2026-10-01] Plan approved — B6: migration log two-gap fix (lessons.md + resume instruction)
+
+### [capture] [2026-10-01] Plan approved — C5: upgrade migration log write discipline (7 gaps, 5 edits)
+### [capture] [2026-10-01] Task completed — B6: migration log two-gap fix implemented (4 files)
+
+### [capture] [2026-10-01] Task completed — C5: upgrade migration log write discipline (5 edits to upgrade/SKILL.md)
+### [capture] [2026-10-01] Plan approved — C5: upgrade migration log write discipline (7 gaps, 5 edits)
+
+### [capture] [2026-10-01] Architecture decision — cluster judge independence: accept self-judging as known limitation
+### [capture] [2026-10-01] Error resolved — intake-verify.cjs gate read always fails (Fix 1)
+### [capture] [2026-10-01] Error resolved — judge gates never written; APPROVE DESIGN unreachable (Fix 4)
+### [capture] [2026-10-01] Architecture decision — judge_verdicts field: stop requiring population, not remove
+### [capture] [2026-10-01] Task completed — skill-loader-architecture.md fully rewritten with revised approach
+### [capture] [2026-10-01] Task completed — upgrade/SKILL.md research bundle cache added (Issue #1)
+
+### [capture] [2026-10-02] Approach abandoned — skipping ICEA flow to go direct to implementation
+
+### [capture] [2026-10-02] Plan approved — ADO-9007 hook-enforced migration gates
+
+### [capture] [2026-10-02] Task completed — ADO-9007 ICEA draft written to temp/
+### [capture] [2026-10-02] Plan approved — ADO-9007 hook-enforced migration gates
+
+### [capture] [2026-10-02] Task completed — ADO-9007 ICEA saved to docs/
+### [capture] [2026-10-02] Error resolved — D-block missing Recommendation with repo evidence (ICEA critic REVISE)
+### [capture] [2026-10-02] Task completed — ADO-9007 ICEA draft written to temp/
+
+### [capture] [2026-10-02] Task completed — ADO-9007 all 4 story tech specs + tracker drafted
+### [capture] [2026-10-02] Task completed — ADO-9007 ICEA saved to docs/
+
+### [capture] [2026-10-02] Architecture decision — D-1 resolved: PreToolUse fires in subagents (Option A)
+### [capture] [2026-10-02] Task completed — ADO-9007 all 4 story tech specs + tracker drafted
+
+### [capture] [2026-10-02] Task completed — Phase 0 spike: PreToolUse fires in subagents confirmed
+### [capture] [2026-10-02] Architecture decision — D-1 resolved: PreToolUse fires in subagents (Option A)
+
+### [capture] [2026-10-02] Task completed — ADO-9007 SAVE TECH complete: ICEA approved, test plan generated
+### [capture] [2026-10-02] Task completed — ADO-9007 all 4 story tech specs + tracker drafted
+
+### [capture] [2026-10-02] Task completed — ADO-9007 Story 1 implemented and tests green
+### [capture] [2026-10-02] Task completed — ADO-9007 SAVE TECH complete: ICEA approved, test plan generated
+
+### [capture] [2026-10-02] Task completed — ADO-9007 Story 2: approval-capture + migration-gate hooks
+### [capture] [2026-10-02] Task completed — Phase 0 spike: PreToolUse fires in subagents confirmed
+
+### [capture] [2026-10-02] Task completed — ADO-9007 Story 3: cluster-merge.cjs + APPROVE CLUSTERS + row 3
+### [capture] [2026-10-02] Task completed — ADO-9007 Story 2: approval-capture + migration-gate hooks
+
+### [capture] [2026-10-02] Task completed — ADO-9007 Story 4 (final): SKILL.md preflight + deployHooks + approval grammar
+### [capture] [2026-10-02] Task completed — ADO-9007 Story 3: cluster-merge.cjs + APPROVE CLUSTERS + row 3
+
+### [capture] [2026-10-03] Architecture decision — upgrade skill: gate reduction + runbook document
+### [capture] [2026-10-03] Architecture decision — upgrade skill: intake redesign (three-pass risk detection)
+
+### [capture] [2026-10-03] Architecture decision — upgrade skill: intake redesign (three-pass risk detection)
+### [capture] [2026-10-03] Architecture decision — upgrade skill: intake section rendering rule + stack-agnostic design
+
+### [capture] [2026-10-03] Architecture decision — upgrade skill: 12-section intake structure (final)
+
+### [capture] [2026-10-03] Architecture decision — upgrade skill: Step 4.5 design ceremony replaced with decision log
+### [capture] [2026-10-03] Architecture decision — upgrade skill: gate reduction + runbook document
+
+### [capture] [2026-10-03] Architecture decision — upgrade skill: resolve-migration-roots.cjs removed from upgrade
+### [capture] [2026-10-03] Architecture decision — upgrade skill: Step 4.5 design ceremony replaced with decision log
+
+### [capture] [2026-10-03] Architecture decision — upgrade skill: upgrade-checkpoint.cjs role clarified
+### [capture] [2026-10-03] Architecture decision — upgrade skill: resolve-migration-roots.cjs removed from upgrade
+
+### [capture] [2026-10-03] Architecture decision — upgrade/rewrite skills: research-cache.cjs exit code redesign
+### [capture] [2026-10-03] Architecture decision — upgrade skill: resolve-migration-roots.cjs removed from upgrade
+
+### [capture] [2026-10-03] Architecture decision — upgrade skill: Steps 8/8a/9 CONTINUE gates removed
+### [capture] [2026-10-03] Architecture decision — upgrade skill: resolve-migration-roots.cjs removed from upgrade
+
+### [capture] [2026-10-03] Architecture decision — upgrade skill: migration log per-fix entries scoped down
+### [capture] [2026-10-03] Architecture decision — upgrade skill: resolve-migration-roots.cjs removed from upgrade
+
+### [capture] [2026-10-03] Task completed — ADO-9012 ICEA + Tech Spec fully drafted and saved
+### [capture] [2026-10-03] Architecture decision — upgrade skill: Step 4.5 design ceremony replaced with decision log
+
+### [capture] [2026-10-03] Task completed — ADO-9012 Story 1: Gate Reduction and Runbook approved, writing to disk
+### [capture] [2026-10-03] Architecture decision — upgrade skill: upgrade-checkpoint.cjs role clarified
+
+### [capture] [2026-10-03] Task completed — ADO-9012 Story 1 fully delivered (3 SP)
+### [capture] [2026-10-03] Task completed — ADO-9012 Story 1: Gate Reduction and Runbook approved, writing to disk
+
+### [capture] [2026-10-03] Task completed — ADO-9012 Story 2 fully delivered (3 SP)
+### [capture] [2026-10-03] Task completed — ADO-9012 Story 1 fully delivered (3 SP)
+
+### [capture] [2026-10-03] Task completed — ADO-9012 Story 3 fully delivered (8 SP)
+### [capture] [2026-10-03] Task completed — ADO-9012 Story 2 fully delivered (3 SP)
+
+### [capture] [2026-10-03] Architecture decision — upgrade-checkpoint.cjs cannot replace checkpoint-ledger.cjs for general set-payload calls
+### [capture] [2026-10-03] Task completed — ADO-9012 Story 3 fully delivered (8 SP)
+
+### [capture] [2026-10-03] Task completed — ADO-9012 Story 4 delivered (5 SP, partial AC-F15 Known Gap)
+### [capture] [2026-10-03] Architecture decision — upgrade-checkpoint.cjs cannot replace checkpoint-ledger.cjs for general set-payload calls
+
+### [capture] [2026-10-03] Task completed — ADO-9012 Story 5 + EPIC complete (22/22 SP)
+### [capture] [2026-10-03] Task completed — ADO-9012 Story 4 delivered (5 SP, partial AC-F15 Known Gap)
+
+### [capture] [2026-10-03] Error resolved — FU-1: upgrade-checkpoint.cjs set-gate report=PASS exited 10 without writing
+### [capture] [2026-10-03] Task completed — ADO-9012 Story 5 + EPIC complete (22/22 SP)
+
+### [capture] [2026-10-03] Error resolved — FU-2/FU-3: migration-specs banned token + strategy-resolve A8 false positive
+### [capture] [2026-10-03] Error resolved — FU-1: upgrade-checkpoint.cjs set-gate report=PASS exited 10 without writing
+
+### [capture] [2026-10-03] Error resolved — FU-4/FU-5/FU-6: test suite timeout root cause
+### [capture] [2026-10-03] Error resolved — FU-2/FU-3: migration-specs banned token + strategy-resolve A8 false positive
+
+### [capture] [2026-10-03] Task completed — ADO-9012 all 6 follow-up defects resolved; full suite green
+### [capture] [2026-10-03] Error resolved — FU-4/FU-5/FU-6: test suite timeout root cause
+
+### [capture] [2026-10-04] Task completed — per-stack upgrade knowledge files created for all stacks
+### [capture] [2026-10-04] Architecture decision — per-stack upgrade knowledge file format
+### [capture] [2026-10-03] Task completed — ADO-9012 all 6 follow-up defects resolved; full suite green
+
+### [capture] [2026-10-04] Task completed — AC-F15 full consolidation: upgrade-checkpoint.cjs generic key/value
+### [capture] [2026-10-04] Architecture decision — AC-F15 implementation approach
+### [capture] [2026-10-04] Task completed — per-stack upgrade knowledge files created for all stacks
+
+### [capture] [2026-10-04] Task completed — signal-write.cjs + icea-revision-signal.cjs: signal noise fix
+### [capture] [2026-10-04] Architecture decision — signal capture filter: Edit-only, doc-artifacts-only
+### [capture] [2026-10-04] Task completed — AC-F15 full consolidation: upgrade-checkpoint.cjs generic key/value
+
+### [capture] [2026-10-04] Plan approved — icea-implement stop-point redesign
+
+### [capture] [2026-10-04] Plan approved — icea-implement stop-point redesign (final)
+### [capture] [2026-10-04] Architecture decision — BUDGET_WARN/STOP: no override escape hatch
+
+### [capture] [2026-10-04] Plan approved — icea-implement fix-loop ceiling: diagnostic report + gap signal + REVISE flow
+### [capture] [2026-10-04] Architecture decision — 🔄 Revised tracker status (new)
+### [capture] [2026-10-04] Architecture decision — gap signal timing: ceiling-hit not REVISE
+### [capture] [2026-10-04] Plan approved — icea-implement stop-point redesign (final)
+
+### [capture] [2026-10-05] Error resolved — context-budget-tech-write.cjs false positive on SKILL.md instruction tokens
+### [capture] [2026-10-04] Plan approved — icea-implement fix-loop ceiling: diagnostic report + gap signal + REVISE flow
+
+### [capture] [2026-10-05] Error resolved — Write Gate bypassed during Auto-mode session resumption
+
+### [capture] [2026-10-05] Task completed — ADO-9013 icea-implement flow redesign delivered
+
+### [capture] [2026-10-05] Task completed — ADO-129853 lessons integrated into dotnet-upgrade.md
+### [capture] [2026-10-05] Task completed — ADO-9013 icea-implement flow redesign delivered
+
+### [capture] [2026-10-05] Plan approved — cross-stack lesson integration for upgrade mapping files
+### [capture] [2026-10-05] Task completed — ADO-129853 lessons integrated into dotnet-upgrade.md

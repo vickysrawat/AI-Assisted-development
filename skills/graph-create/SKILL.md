@@ -187,18 +187,13 @@ g.directoryCatalog = { generatedAt: TODAY, reviewed: false,
 ## Step 4 — Write graph.json then run graph-extract-edges.js
 
 Write `graph.json` deterministically (nodes sorted by `id`, edges sorted by `(from, to,
-type)`, stable key order per `graph-json-schema.md`, 2-space indent, trailing newline):
+type)`, stable key order per `graph-json-schema.md`, 2-space indent, trailing newline).
 
-```bash
-node -e '
-  const fs=require("fs"), p=".claude/graph/graph.json";
-  const g=JSON.parse(fs.readFileSync(process.argv[1]||p,"utf8"));
-  g.nodes.sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);
-  g.edges.sort((a,b)=>(a.from+a.to+a.type).localeCompare(b.from+b.to+b.type));
-  g.meta.moduleCount=g.nodes.length;
-  fs.writeFileSync(p, JSON.stringify(g,null,2)+"\n");
-'
-```
+**Use the Write tool — never `node -e` with embedded data.** Embedding the assembled graph
+into a shell command causes `unexpected EOF` quoting errors on real-world graphs. Steps:
+1. Sort `g.nodes` by `id` (ascending) and `g.edges` by `(from + to + type)`.
+2. Set `g.meta.moduleCount = g.nodes.length`.
+3. Use the Write tool to write the formatted JSON to `.claude/graph/graph.json`.
 
 Then derive EXTRACTED edges (ADR 0041 — deterministic, offline, never hand-written):
 

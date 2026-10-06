@@ -96,7 +96,7 @@ assert('lookup fresh entry has bundle', hit.json.entry?.bundle?.layers?.length =
 const cacheFile = wr.json.cache_file;
 backdateEntry(cacheFile, daysAgo(31));
 const stale = run(['lookup', `--key=${KEY}`]);
-assert('lookup stale exits 0 (still usable)', stale.code === 0, `code=${stale.code}`);
+assert('lookup stale exits 2 (stale)', stale.code === 2, `code=${stale.code}`);
 assert('lookup stale status=hit', stale.json.status === 'hit', stale.json.status);
 assert('lookup stale staleness=stale', stale.json.staleness === 'stale', stale.json.staleness);
 assert('lookup stale age_days > 30', stale.json.age_days > 30, `age=${stale.json.age_days}`);

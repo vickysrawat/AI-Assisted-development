@@ -1,0 +1,194 @@
+{
+  "schema_version": 1,
+  "description": "Single source of truth for all migration-research-agent WebFetch URL lookup tables. Edit here — never in agents/migration-research-agent.md or skills/migration-research-agent/SKILL.md. The knowledge-freshness skill validates and refreshes stale entries (run /knowledge-freshness check). URL patterns use {stack}, {version}, {service}, {product} as substitution placeholders — the agent fills these at runtime from the input payload; never embed project-specific identifiers.",
+  "last_updated": "2026-10-01",
+  "rewrite_upgrade": {
+    "_comment": "Lookup table for migration_type: rewrite | upgrade. Keyed by stack token (lowercase, matches input payload stack field).",
+    "stacks": [
+      {
+        "stack": "dotnet",
+        "facts": [
+          { "type": "eol_lifecycle",        "primary": "https://learn.microsoft.com/lifecycle/products/?terms=.NET",          "fallback": null,                                         "confidence": "high" },
+          { "type": "cve_exposure",         "primary": "https://learn.microsoft.com/security/updates",                        "fallback": null,                                         "confidence": "high" },
+          { "type": "ecosystem_health",     "primary": "https://www.nuget.org/packages/Microsoft.NETCore.App",                "fallback": "https://github.com/dotnet/runtime/releases", "confidence": "high" },
+          { "type": "tooling_availability", "primary": "https://learn.microsoft.com/dotnet/core/tools/",                      "fallback": null,                                         "confidence": "high" },
+          { "type": "breaking_changes",     "primary": "https://learn.microsoft.com/en-us/dotnet/core/compatibility/{target_version}.0", "fallback": null, "confidence": "high", "confidence_note": "Official Microsoft breaking-changes catalogue per .NET target version. Substitute {target_version} with the major version number at runtime (e.g. '10' → '/compatibility/10.0'). For multi-hop upgrades fetch each intermediate version page and merge." }
+        ]
+      },
+      {
+        "stack": "angular",
+        "facts": [
+          { "type": "eol_lifecycle",        "primary": "https://angular.dev/reference/releases",                              "fallback": null,                                         "confidence": "high" },
+          { "type": "cve_exposure",         "primary": "https://github.com/angular/angular/security/advisories",              "fallback": null,                                         "confidence": "high" },
+          { "type": "ecosystem_health",     "primary": "https://www.npmjs.com/package/@angular/core",                         "fallback": null,                                         "confidence": "high" },
+          { "type": "tooling_availability", "primary": "https://angular.dev/tools",                                           "fallback": null,                                         "confidence": "high" },
+          { "type": "breaking_changes",     "primary": "https://update.angular.io/",                                          "fallback": "https://github.com/angular/angular/blob/main/CHANGELOG.md", "confidence": "high", "confidence_note": "Angular Update Guide at update.angular.io is the authoritative interactive guide for breaking changes between versions. Fallback: GitHub CHANGELOG.md for raw release notes." }
+        ]
+      },
+      {
+        "stack": "react",
+        "facts": [
+          { "type": "eol_lifecycle",        "primary": "https://react.dev/blog",                                              "fallback": "https://github.com/facebook/react/releases", "confidence": "high" },
+          { "type": "cve_exposure",         "primary": "https://github.com/facebook/react/security/advisories",               "fallback": null,                                         "confidence": "high" },
+          { "type": "ecosystem_health",     "primary": "https://www.npmjs.com/package/react",                                 "fallback": null,                                         "confidence": "high" },
+          { "type": "tooling_availability", "primary": "https://react.dev/learn/editor-setup",                                "fallback": null,                                         "confidence": "high" },
+          { "type": "breaking_changes",     "primary": "https://github.com/facebook/react/releases/tag/v{target_version}.0.0", "fallback": "https://react.dev/blog",                     "confidence": "high", "confidence_note": "GitHub Releases page for the target React major version. Substitute {target_version} at runtime (e.g. '19'). Fallback: react.dev/blog lists official upgrade guide posts (e.g. 'React 19 Upgrade Guide')." }
+        ]
+      },
+      {
+        "stack": "java",
+        "facts": [
+          { "type": "eol_lifecycle",        "primary": "https://endoflife.date/java",                                         "fallback": null,                                         "confidence": "high" },
+          { "type": "cve_exposure",         "primary": "https://www.oracle.com/java/technologies/javase/java-security-alerts.html", "fallback": null,                                  "confidence": "high" },
+          { "type": "ecosystem_health",     "primary": "https://adoptium.net/temurin/releases/",                           "fallback": "https://endoflife.date/java",                 "confidence": "medium", "confidence_note": "JDK-level signal (Temurin release cadence). For framework-level health (Spring Boot, Quarkus etc.) the calling skill should include the framework as a separate source_layer." },
+          { "type": "tooling_availability", "primary": "https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-pack", "fallback": null,                               "confidence": "high" },
+          { "type": "breaking_changes",     "primary": "https://www.oracle.com/java/technologies/javase/{target_version}-relnotes.html", "fallback": "https://github.com/openjdk/jdk/releases", "confidence": "medium", "confidence_note": "JDK-level breaking changes. Substitute {target_version} at runtime (e.g. '21'). For Spring Boot framework breaking changes use the spring-boot stack entry instead." }
+        ]
+      },
+      {
+        "stack": "python",
+        "facts": [
+          { "type": "eol_lifecycle",        "primary": "https://devguide.python.org/versions/",                               "fallback": "https://endoflife.date/python",               "confidence": "high" },
+          { "type": "cve_exposure",         "primary": "https://www.python.org/news/security/",                               "fallback": null,                                         "confidence": "high" },
+          { "type": "ecosystem_health",     "primary": "https://github.com/python/cpython/releases",                          "fallback": null,                                         "confidence": "medium" },
+          { "type": "tooling_availability", "primary": "https://marketplace.visualstudio.com/items?itemName=ms-python.python", "fallback": null,                                        "confidence": "high" },
+          { "type": "breaking_changes",     "primary": "https://docs.python.org/{target_version}/whatsnew/index.html",        "fallback": "https://docs.python.org/3/whatsnew/changelog.html", "confidence": "high", "confidence_note": "Official Python What's New doc per version. Substitute {target_version} at runtime (e.g. '3.12')." }
+        ]
+      },
+      {
+        "stack": "nodejs",
+        "facts": [
+          { "type": "eol_lifecycle",        "primary": "https://nodejs.org/en/about/releases",                                "fallback": "https://endoflife.date/nodejs",               "confidence": "high" },
+          { "type": "cve_exposure",         "primary": "https://nodejs.org/en/blog/vulnerability",                            "fallback": null,                                         "confidence": "high" },
+          { "type": "ecosystem_health",     "primary": "https://github.com/nodejs/node/releases",                             "fallback": null,                                         "confidence": "medium" },
+          { "type": "tooling_availability", "primary": "https://nodejs.org/en/download/",                                     "fallback": null,                                         "confidence": "high" },
+          { "type": "breaking_changes",     "primary": "https://nodejs.org/en/blog/release/v{target_version}.0.0",            "fallback": "https://github.com/nodejs/node/blob/main/doc/changelogs/CHANGELOG_V{target_version}.md", "confidence": "high", "confidence_note": "Official Node.js release blog and changelog per major version. Substitute {target_version} at runtime (e.g. '22')." }
+        ]
+      },
+      {
+        "stack": "spring-boot",
+        "_comment": "Separate token for Spring Boot framework facts (vs 'java' which covers JDK-level). Use 'spring-boot' when the source/target layer is specifically Spring Boot.",
+        "facts": [
+          { "type": "eol_lifecycle",        "primary": "https://spring.io/projects/spring-boot#support",                      "fallback": "https://endoflife.date/spring-boot",          "confidence": "high" },
+          { "type": "cve_exposure",         "primary": "https://spring.io/security",                                          "fallback": null,                                         "confidence": "high" },
+          { "type": "ecosystem_health",     "primary": "https://mvnrepository.com/artifact/org.springframework.boot/spring-boot", "fallback": "https://github.com/spring-projects/spring-boot/releases", "confidence": "high" },
+          { "type": "tooling_availability", "primary": "https://start.spring.io/",                                            "fallback": null,                                         "confidence": "high" },
+          { "type": "breaking_changes",     "primary": "https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-{target_version}-Release-Notes", "fallback": "https://github.com/spring-projects/spring-boot/releases", "confidence": "high", "confidence_note": "Official Spring Boot release notes wiki page per target version. Substitute {target_version} with the major.minor version at runtime (e.g. '3.3')." }
+        ]
+      }
+    ],
+    "cloud_hosted": {
+      "_comment": "Runtime support lookups when cloud_hosted is non-null in a source_layer.",
+      "azure":  { "type": "runtime_support", "primary": "https://learn.microsoft.com/azure/app-service/configure-language-{stack}",       "fallback": null,                                                                       "confidence": "high",        "confidence_note": "Authoritative Microsoft documentation." },
+      "aws":    { "type": "runtime_support", "primary": "https://docs.aws.amazon.com/{service}/latest/dg/{runtime-support-page}",        "fallback": "https://aws.amazon.com/new/feed/",                                         "confidence": "medium-high", "confidence_note": "No central EoL portal. Fallback: What's New RSS with exact-phrase filter '{stack} {version} end of support'." },
+      "gcp":    { "type": "runtime_support", "primary": "https://cloud.google.com/{service}/docs/deprecations",                         "fallback": "https://cloudblog.withgoogle.com/rss/",                                    "confidence": "high",        "confidence_note": "Structured Feature/Deprecated-date/Shutdown-date table. RSS fallback is medium-high." }
+    },
+    "hiring_trend": {
+      "_comment": "Best-effort — no authoritative single source. Use canonical_url as the UNKNOWN fallback hint.",
+      "canonical_url": "https://survey.stackoverflow.co/",
+      "confidence": "low"
+    },
+    "fallback_universal": {
+      "_comment": "Applied when stack has no matching row above and no vendor-specific page is found.",
+      "type": "eol_lifecycle",
+      "primary": "https://endoflife.date/{stack}",
+      "confidence": "UNKNOWN",
+      "confidence_note": "Used only when stack is unknown or niche. Returns UNKNOWN if the page does not exist."
+    },
+    "cve_fallback_universal": {
+      "_comment": "Applied for cve_exposure when stack has no cve_exposure entry in stacks[]. GitHub Advisory Database is the best generic fallback — filter by ecosystem and package name.",
+      "type": "cve_exposure",
+      "primary": "https://github.com/advisories?query=ecosystem%3A{ecosystem}+{stack}",
+      "confidence": "UNKNOWN",
+      "confidence_note": "Substitute {ecosystem} with 'npm' for JS stacks, 'maven' for Java, 'pip' for Python, 'nuget' for .NET. Returns UNKNOWN if no results found for the stack."
+    }
+  },
+  "replatform": {
+    "_comment": "Lookup table for migration_type: replatform. Keyed by cloud provider (azure | aws | gcp). URL patterns use {service} or {product} substitution — derive the slug from slug_map first, then apply fallback rule.",
+    "slug_map": {
+      "_comment": "Maps common component display-name substrings (lowercase) to their URL slug for each provider. Agent: lowercase the component name, then find the longest matching key. Fallback when no match: lowercase + replace spaces with hyphens + strip provider prefix.",
+      "azure": {
+        "app service":              "app-service",
+        "sql managed instance":     "sql-managed-instance",
+        "sql database":             "sql-database",
+        "sql server":               "sql-database",
+        "cosmos db":                "cosmos-db",
+        "service bus":              "service-bus",
+        "blob storage":             "storage",
+        "azure storage":            "storage",
+        "functions":                "functions",
+        "container apps":           "container-apps",
+        "kubernetes service":       "kubernetes-service",
+        "aks":                      "kubernetes-service",
+        "api management":           "api-management",
+        "event hub":                "event-hubs",
+        "event grid":               "event-grid",
+        "cache for redis":          "cache",
+        "redis cache":              "cache",
+        "application gateway":      "application-gateway",
+        "front door":               "frontdoor",
+        "key vault":                "key-vault"
+      },
+      "aws": {
+        "lambda":                   "lambda",
+        "rds":                      "rds",
+        "aurora":                   "rds",
+        "ec2":                      "ec2",
+        "s3":                       "s3",
+        "sqs":                      "sqs",
+        "sns":                      "sns",
+        "api gateway":              "apigateway",
+        "ecs":                      "ecs",
+        "eks":                      "eks",
+        "elastic beanstalk":        "elasticbeanstalk",
+        "dynamodb":                 "dynamodb",
+        "dynamo":                   "dynamodb",
+        "cloudfront":               "cloudfront",
+        "elasticache":              "elasticache",
+        "secrets manager":          "secretsmanager",
+        "kinesis":                  "kinesis",
+        "step functions":           "step-functions",
+        "eventbridge":              "eventbridge"
+      },
+      "gcp": {
+        "cloud run":                "run",
+        "app engine":               "appengine",
+        "gke":                      "container",
+        "kubernetes engine":        "container",
+        "cloud sql":                "sql",
+        "cloud functions":          "functions",
+        "pub/sub":                  "pubsub",
+        "pubsub":                   "pubsub",
+        "bigtable":                 "bigtable",
+        "firestore":                "firestore",
+        "spanner":                  "spanner",
+        "cloud storage":            "storage",
+        "cloud cdn":                "cdn",
+        "cloud armor":              "armor",
+        "memorystore":              "memorystore",
+        "artifact registry":        "artifact-registry",
+        "cloud build":              "cloud-build"
+      }
+    },
+    "providers": {
+      "azure": [
+        { "type": "pricing",     "primary": "https://azure.microsoft.com/pricing/{service}/",                    "fallback": null, "confidence": "high" },
+        { "type": "sla",         "primary": "https://azure.microsoft.com/support/legal/sla/{service}/",          "fallback": null, "confidence": "high" },
+        { "type": "compliance",  "primary": "https://learn.microsoft.com/azure/compliance/",                     "fallback": null, "confidence": "high" },
+        { "type": "ga_lifecycle","primary": "https://learn.microsoft.com/lifecycle/",                            "fallback": null, "confidence": "high" }
+      ],
+      "gcp": [
+        { "type": "pricing",     "primary": "https://cloud.google.com/{service}/pricing",                        "fallback": null,                                        "confidence": "high" },
+        { "type": "sla",         "primary": "https://cloud.google.com/{service}/sla",                            "fallback": null,                                        "confidence": "high" },
+        { "type": "compliance",  "primary": "https://cloud.google.com/security/compliance",                      "fallback": null,                                        "confidence": "high" },
+        { "type": "lifecycle",   "primary": "https://cloud.google.com/{product}/docs/deprecations",             "fallback": "https://cloudblog.withgoogle.com/rss/",      "confidence": "high", "confidence_fallback": "medium-high", "confidence_note": "Structured Feature/Deprecated-date/Shutdown-date table is authoritative. RSS fallback is medium-high." }
+      ],
+      "aws": [
+        { "type": "pricing",     "primary": "https://aws.amazon.com/{service}/pricing",                          "fallback": null,                                        "confidence": "high" },
+        { "type": "sla",         "primary": "https://aws.amazon.com/legal/service-level-agreements/",            "fallback": null,                                        "confidence": "high" },
+        { "type": "compliance",  "primary": "https://aws.amazon.com/compliance/services-in-scope/",              "fallback": null,                                        "confidence": "high" },
+        { "type": "lifecycle",   "primary": "https://docs.aws.amazon.com/{service}/latest/dg/{runtime-support-page}", "fallback": "https://aws.amazon.com/new/feed/",   "confidence": "medium-high", "confidence_note": "No central AWS EoL portal. Fallback: What's New RSS with exact-phrase filter '{component} end of support'." }
+      ]
+    }
+  }
+}

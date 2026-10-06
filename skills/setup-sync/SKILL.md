@@ -440,6 +440,10 @@ node -e "
   try { state = JSON.parse(fs.readFileSync(statePath, 'utf8')); } catch(e) {}
   state.dream_init_plugin_version = '$INSTALLED_VERSION';   // re-affirm (idempotent)
   state.dream_sync_last_run = new Date().toISOString().slice(0, 10);
+  // Backfill fields added in later plugin versions — only set when absent so developer
+  // overrides (e.g. SET GOVERNANCE lightweight) are never clobbered.
+  if (state.governance_mode === undefined) { state.governance_mode = 'full'; console.log('  ✓ governance_mode backfilled: full'); }
+  if (state.output_mode    === undefined) { state.output_mode    = 'verbose'; console.log('  ✓ output_mode backfilled: verbose'); }
   fs.mkdirSync('.claude', { recursive: true });
   fs.writeFileSync(statePath, JSON.stringify(state, null, 2));
   console.log('  ✓ dream_sync_last_run recorded (state already at v$INSTALLED_VERSION)');

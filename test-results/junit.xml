@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="36" failures="0" errors="0" time="600.13">
+  <testsuite name="Unit suite" errors="0" failures="0" skipped="0" timestamp="2026-10-05T00:40:02" time="598.189" tests="36">
+    <testcase classname="Unit suite" name="approval-capture.test.cjs" time="19.072">
+    </testcase>
+    <testcase classname="Unit suite" name="check-tone.test.cjs" time="7.746">
+    </testcase>
+    <testcase classname="Unit suite" name="checkpoint-ledger.test.cjs" time="33.606">
+    </testcase>
+    <testcase classname="Unit suite" name="cluster-merge.test.cjs" time="77.834">
+    </testcase>
+    <testcase classname="Unit suite" name="context-budget-tech-write.test.cjs" time="12.731">
+    </testcase>
+    <testcase classname="Unit suite" name="context-budget-wiring.test.cjs" time="1.656">
+    </testcase>
+    <testcase classname="Unit suite" name="coupling-boundary-validate.test.cjs" time="12.164">
+    </testcase>
+    <testcase classname="Unit suite" name="coupling-resolution-validate.test.cjs" time="12.1">
+    </testcase>
+    <testcase classname="Unit suite" name="generation-resolve.test.cjs" time="2.088">
+    </testcase>
+    <testcase classname="Unit suite" name="graph-derive-documents.test.cjs" time="9.367">
+    </testcase>
+    <testcase classname="Unit suite" name="graph-extract-edges-single-read.test.cjs" time="15.133">
+    </testcase>
+    <testcase classname="Unit suite" name="graph-multiroot.test.cjs" time="9.438">
+    </testcase>
+    <testcase classname="Unit suite" name="intake-verify.test.cjs" time="30.869">
+    </testcase>
+    <testcase classname="Unit suite" name="knowledge-freshness.test.cjs" time="10.911">
+    </testcase>
+    <testcase classname="Unit suite" name="migration-gate.test.cjs" time="21.566">
+    </testcase>
+    <testcase classname="Unit suite" name="migration-retirement.test.cjs" time="1.022">
+    </testcase>
+    <testcase classname="Unit suite" name="migration-source-detect.test.cjs" time="41.404">
+    </testcase>
+    <testcase classname="Unit suite" name="migration-specs.test.cjs" time="2.461">
+    </testcase>
+    <testcase classname="Unit suite" name="replatform-nfr-assess.test.cjs" time="11.944">
+    </testcase>
+    <testcase classname="Unit suite" name="replatform-plan.test.cjs" time="22.31">
+    </testcase>
+    <testcase classname="Unit suite" name="repo-detect.test.cjs" time="15.682">
+    </testcase>
+    <testcase classname="Unit suite" name="research-cache.test.cjs" time="14.618">
+    </testcase>
+    <testcase classname="Unit suite" name="resolve-migration-roots.test.cjs" time="14.989">
+    </testcase>
+    <testcase classname="Unit suite" name="rewrite-bal.test.cjs" time="9.791">
+    </testcase>
+    <testcase classname="Unit suite" name="rewrite-decompose.test.cjs" time="12.379">
+    </testcase>
+    <testcase classname="Unit suite" name="rule-deploy.test.cjs" time="20.812">
+    </testcase>
+    <testcase classname="Unit suite" name="setup-init-bootstrap.test.cjs" time="26.678">
+    </testcase>
+    <testcase classname="Unit suite" name="stack-signals.test.cjs" time="5.009">
+    </testcase>
+    <testcase classname="Unit suite" name="strategy-resolve.test.cjs" time="12.788">
+    </testcase>
+    <testcase classname="Unit suite" name="substrate-drift.test.cjs" time="24.526">
+    </testcase>
+    <testcase classname="Unit suite" name="upgrade-checkpoint.test.cjs" time="20.038">
+    </testcase>
+    <testcase classname="Unit suite" name="upgrade-classify.test.cjs" time="7.945">
+    </testcase>
+    <testcase classname="Unit suite" name="upgrade-knowledge-cache.test.cjs" time="19.011">
+    </testcase>
+    <testcase classname="Unit suite" name="upgrade-orchestrate.test.cjs" time="7.62">
+    </testcase>
+    <testcase classname="Unit suite" name="upgrade-tool-preflight.test.cjs" time="7.791">
+    </testcase>
+    <testcase classname="Migration validators" name="migration-validation/run-selftest.cjs" time="11.703">
+    </testcase>
+  </testsuite>
+</testsuites>

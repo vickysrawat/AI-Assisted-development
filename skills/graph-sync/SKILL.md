@@ -514,16 +514,15 @@ Sort `nodes` by `id`, `edges` by `(from, to, type)`; keep key order per
 `graph-json-schema.md`; 2-space indent; trailing newline. Recompute `meta`
 (`generatedAt`, `generator: "graph-sync"`, `structure`, `moduleCount = nodes.length`).
 
-```bash
-node -e '
-  const fs=require("fs"), p=".claude/graph/graph.json";
-  const g=JSON.parse(fs.readFileSync(process.argv[1]||p,"utf8"));  // in-memory model handed in
-  g.nodes.sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);
-  g.edges.sort((a,b)=>(a.from+a.to+a.type).localeCompare(b.from+b.to+b.type));
-  g.meta.moduleCount=g.nodes.length;
-  fs.writeFileSync(p, JSON.stringify(g,null,2)+"\n");
-'
-```
+**Write `graph.json` using the Write tool — never via `node -e` with embedded data.**
+Embedding the assembled graph into a shell command causes `unexpected EOF` quoting errors
+on graphs with more than a handful of nodes. The Write tool has no shell quoting constraints.
+
+Steps:
+1. Sort `g.nodes` by `id` (ascending) and `g.edges` by `(from + to + type)`.
+2. Set `g.meta.moduleCount = g.nodes.length`.
+3. Use the Write tool to write the formatted JSON to `.claude/graph/graph.json`
+   (2-space indent, trailing newline).
 Then derive the source-visible `EXTRACTED` edges **deterministically** (offline, Node stdlib;
 parses imports/usings/requires/ProjectReferences locally — raw source never enters context).
 Resolve `$PLUGIN_DIR` (see `$PLUGIN_DIR/skills/shared/plugin-path-resolution.md` §1a) and run:

@@ -135,6 +135,14 @@ Read the tracker file. Determine tracker type:
 - Read the Story Breakdown from the ICEA to find the logical scope for Story {N}
 - Check tracker row for Story {N}: `✅ Done` → skip, `⏳ Pending` → implement
 
+**If tracker Story status is `🔄 Revised`:**
+Reset all ACs for this story: change `✅ Done` → `⏳ Pending` in the tracker before proceeding. Display:
+```
+🔄 Story {story_n} marked Revised — resetting all ACs to ⏳ Pending for re-implementation.
+   Prior code on disk will be overwritten at the Write Gate.
+```
+Continue to Step 4 (code generation) — do not skip any AC.
+
 Display:
 ```
 📋 IMPLEMENTATION PLAN — ADO #{ADO_ID}
@@ -150,12 +158,25 @@ Blocked:       {list or "none"}
 Bugs open:     {list or "none"}
 ```
 
-If there are open bugs, ask:
+If EPIC type AND no Story-N argument was given — store `EPIC_AUTO_FLOW = true` and display:
 ```
-⚠ {N} open bug(s) exist for this ADO ID.
-  Reply CONTINUE to implement remaining ACs anyway, or
-  STATUS ADO-{ADO_ID} to review bugs first.
+📋 EPIC MODE — {total_stories} stories to implement.
+   Batch-approve all Write Gate diffs:  APPROVE ALL ADO-{ADO_ID}
+   Stop after any story:  reply PAUSE
+   Resume command:        IMPLEMENT ADO-{ADO_ID} Story-{next_story_n}
+   (PAUSE reminder shown before each story advance.)
 ```
+
+If EPIC type AND Story-N argument was given — store `EPIC_AUTO_FLOW = false`.
+
+If there are open `🐛 Bug` rows in the tracker — HARD STOP:
+```
+⛔ {bug_count} open bug(s) must be resolved before Story {story_n} can start.
+   Tracker: {TRACKER} — rows marked 🐛 Bug
+   Fix each bug and mark ✅ Done, then re-run:
+     IMPLEMENT ADO-{ADO_ID}{if Epic: ' Story-{story_n}'}
+```
+No CONTINUE option. Skill does not proceed to Step 4.
 
 ---
 
@@ -258,16 +279,30 @@ Read $PLUGIN_DIR/skills/shared/context-budget-check.md and execute it with:
   ]
   saved_context = "ICEA, Tech Spec, and tracker at docs/.../UserStory{ADO_ID}/ — nothing on disk is lost"
 
-**⛔ BUDGET_WARN / BUDGET_STOP — HARD STOP:**
-Do NOT proceed to Step 4 until the developer replies.
-BUDGET_WARN is identical to BUDGET_STOP here — both block code generation.
-
-On `BUDGET_OK` or `BUDGET_SKIPPED` or `IMPLEMENT ADO-{ADO_ID} CONTINUE` or `IMPLEMENT ADO-{ADO_ID} FORCE`:
+**On BUDGET_OK or BUDGET_SKIPPED** — proceed directly to Step 4. `active-task.json` is already written. No developer reply required.
 
 > 📊 **STEP BOUNDARY — Step 4: Code generation**
-> `active-task.json` is written — resuming here after `/compact` or a new session is safe.
-> **Reply `CONTINUE` to generate code for: {comma-separated list of pending AC IDs}**
-> _(Do not proceed past this prompt without a reply.)_
+> `active-task.json` written — safe to resume here after `/compact` or a new session.
+> Proceeding to code generation for: {pending_ac_ids}
+
+**⛔ BUDGET_WARN / BUDGET_STOP — HARD STOP. No override.**
+
+Continuing will produce truncated code (partial ACs, missing layers, false critic pass).
+There is no FORCE or CONTINUE option — the context window is a hard limit.
+
+```
+⛔ CONTEXT BUDGET — continuing will produce truncated code.
+
+   Recover (context still warm — recommended):
+     1. Run /compact
+     2. Re-run: IMPLEMENT ADO-{ADO_ID}
+        active-task.json is written — resumes at Step 4, skips Done ACs.
+
+   Start fresh (cold context, maximum room):
+     1. Open a new Claude Code session
+     2. Run: IMPLEMENT ADO-{ADO_ID}
+```
+Do NOT proceed to Step 4 under any BUDGET_WARN or BUDGET_STOP condition. No escape hatch.
 
 ---
 
@@ -752,8 +787,26 @@ Confirm:
    If bugs are found during testing, log them:
    BUG ADO-{ADO_ID} — {description}
 
-   {If Epic and more stories remain:}
-   Next story: IMPLEMENT ADO-{ADO_ID} Story-{N+1}
+   {If EPIC_AUTO_FLOW = true AND more stories remain:}
+   Display:
+     ▶ Story {story_n} complete. Advancing to Story {next_story_n} of {total_stories}.
+       Reply PAUSE to stop here. Resume: IMPLEMENT ADO-{ADO_ID} Story-{next_story_n}
+
+   If developer replies PAUSE:
+     ⏸ Epic paused after Story {story_n}.
+        Story {story_n}: ✅ Done
+        Story {next_story_n}: ⏳ Pending
+        Resume: IMPLEMENT ADO-{ADO_ID} Story-{next_story_n}
+     Stop. Do not start Story {next_story_n}.
+
+   If no PAUSE reply:
+     Proceed to IMPLEMENT ADO-{ADO_ID} Story-{next_story_n} (loop back to Step 3).
+
+   {If EPIC_AUTO_FLOW = false (explicit Story-N targeted):}
+   Display:
+     ✅ Story {story_n} complete.
+        Next: IMPLEMENT ADO-{ADO_ID} Story-{next_story_n}
+   Stop. Do not auto-advance.
 
    {If all ACs done:}
    All ACs complete. ICEA marked COMPLETE.
@@ -799,17 +852,34 @@ Append audit row and continue to Step 7:
 | {next #} | {TS} | {actor} | implementation | test-plan-skipped | Story {N} | ADO #{ADO_ID} | - | No test plan — skip-test-gate bypass recorded at approval |
 ```
 
-**If `SKIP_GATE = 0`** — Hard gate:
-```
-⛔ NO TEST PLAN — no test plan found for ADO #{ADO_ID}.
+**If `SKIP_GATE = 0`** — Auto-generate (full mode parity with lightweight):
+Display: `⚠ No test plan found for ADO #{ADO_ID} — generating now.`
 
-   The test plan must exist before implementation can be expanded and marked Done.
-   Run: SAVE TEST ADO-{ADO_ID}
+Execute:
+```
+Read $PLUGIN_DIR/skills/test-plan/SKILL.md and run:
+  SAVE TEST ADO-{ADO_ID} --subagent
+```
+
+On success:
+```bash
+rm -f ".claude/signals/test-plan-stale-ADO-${ADO_ID}.json"
+```
+Display: `✅ Test plan generated — continuing.`
+Append audit row and continue to Step 7:
+```
+| {next #} | {TS} | {actor} | implementation | test-plan-generated | Story {N} | ADO #{ADO_ID} | - | Auto-generated test plan (none existed at implementation time) |
+```
+
+On failure (non-zero exit or error from test-plan skill):
+```
+⛔ Test plan generation failed for ADO #{ADO_ID}.
+   Run manually: SAVE TEST ADO-{ADO_ID}
    Then re-run: IMPLEMENT ADO-{ADO_ID} Story-{N}
 ```
 Append audit row and stop:
 ```
-| {next #} | {TS} | {actor} | implementation | test-plan-missing | Story {N} | ADO #{ADO_ID} | - | BLOCKED — no test plan on disk; run SAVE TEST ADO-{ADO_ID} |
+| {next #} | {TS} | {actor} | implementation | test-plan-gen-failed | Story {N} | ADO #{ADO_ID} | - | BLOCKED — test plan auto-generation failed; run SAVE TEST ADO-{ADO_ID} |
 ```
 
 **Lightweight mode — auto-generate after code write instead of blocking:**
@@ -881,58 +951,162 @@ time). Append audit row:
 
 ---
 
-## Step 7 — Post-write gate: stage written files, then checkin (advisory)
+## Step 7 — Post-write gate: bounded fix loop
 
-Run the pre-commit gate on the just-written code while context is fresh. This composes the
-`checkin` skill — do not reimplement its checks.
+Ceiling: 3 cycles per loop invocation. Each invocation (initial or Option A guided) gets a fresh 3-cycle budget.
 
-1. **Stage the written set first (critical).** The files just written include NEW files,
-   which are untracked and therefore invisible to checkin's `git diff` scope. Stage exactly
-   the set from Step 5 (the Write-Gate file list) so every new + modified file is scanned:
-   ```bash
-   git add {file 1} {file 2} … {test files}   # the exact Write-Gate set — never `git add -A`
-   ```
-2. **Invoke checkin:**
-   ```
-   Read .claude/plugin-path.txt to get PLUGIN_DIR (if absent, use §1a resolver), then
-   Read $PLUGIN_DIR/skills/checkin/SKILL.md and execute it in full against the staged set.
-   ```
-3. **Advisory only — NEVER auto-commit.** checkin only *suggests* a commit command;
-   icea-implement must not run it (Write-Gate philosophy — the developer commits):
-   - checkin ✅ / ⚠ → surface its verdict + the suggested commit command, then stop.
-   - checkin ❌ FAIL → do NOT hard-block (there is no commit to block yet). Enter a
-     generate→gate→fix loop: fix the flagged findings (re-enter Step 4 → 4a → 5 Write Gate
-     for the fix), re-stage, re-run checkin. Report each pass.
-
-Complementary to the pre-write gates: 4a (critic) checks intent-alignment and 4b
-(goal-loop) checks AC completeness — both PRE-write; checkin checks defects / secrets /
-findings POST-write. Keep all three.
-
-**Audit logging and tracker follow-ups — build gate:**
-
+**Step 7.0 — Detect test command (once, before loop):**
 ```bash
-AUDIT_FILE=$(find docs -path "*UserStory${ADO_ID}*" -name "ADO-${ADO_ID}-*.ai-audit.md" 2>/dev/null | head -1)
-TRACKER=$(find docs -path "*UserStory${ADO_ID}*" -name "ADO-${ADO_ID}-*.tracker.md" 2>/dev/null | head -1)
+TEST_CMD=""
+TEST_CMD=$(node -e "try{const s=JSON.parse(require('fs').readFileSync('.claude/dream-init-state.json','utf8'));process.stdout.write(s.test_command||'')}catch(e){}" 2>/dev/null)
+if [ -z "$TEST_CMD" ]; then
+  TEST_CMD=$(node -e "try{const p=JSON.parse(require('fs').readFileSync('package.json','utf8'));process.stdout.write(p.scripts&&p.scripts.test||'')}catch(e){}" 2>/dev/null)
+fi
+if [ -z "$TEST_CMD" ]; then
+  echo "⚠ No test command found — fix loop runs checkin only."
+fi
 ```
 
-On checkin ✅ or ⚠ (first pass or after all fixes):
-```
-| {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | build | checkin-pass | {Story N \| ADO #{ADO_ID}} | {build_issue_count} fixes applied | checkin: {verdict} |
+**Step 7.1 — Stage the written set:**
+```bash
+git add {file_1} {file_2} ... {test_files}   # exact Write-Gate set — never git add -A
 ```
 
-For each checkin ❌ FAIL + fix cycle:
-1. Increment `build_issue_count`. Append audit row:
+**Step 7.2 — Fix loop (up to 3 cycles):**
+
+For each cycle N (1, 2, 3):
+
+1. Run checkin:
    ```
-   | {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | build | build-issue | {Story N \| ADO #{ADO_ID}} | {build_issue_count} | {finding category}: {one-line description} |
+   Read $PLUGIN_DIR/skills/checkin/SKILL.md and execute against the staged set.
    ```
-2. After fix is written and re-staged, increment `follow_up_count`. Append Follow-ups row to the tracker under the correct story/implementation section:
+
+2. Run test suite (if TEST_CMD non-empty):
+   ```bash
+   $TEST_CMD 2>&1   # capture exit code and output
    ```
-   | {follow_up_count} | {issue description — root cause in one line} | {fix applied — one line} | {file(s) changed} |
+
+3. **If checkin ✅/⚠ AND (test suite passes OR TEST_CMD empty):**
+   Loop exits clean. Append audit row and proceed to story summary:
    ```
-3. After re-checkin passes, append audit row:
+   | {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | build | checkin-pass | {Story N \| ADO #{ADO_ID}} | {fix_count} fixes applied | checkin: ✅ |
    ```
-   | {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | build | build-fixed | {Story N \| ADO #{ADO_ID}} | {build_issue_count} | Fix verified — checkin passed |
+
+4. **If any failure:**
+   Display: `🔁 Fix cycle {N}: {category} at {file}:{line} — fixing`
+   Apply targeted fix. Re-stage fixed file: `git add {file}`
+   Append audit row:
    ```
+   | {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | build | build-issue | {Story N \| ADO #{ADO_ID}} | {N} | {category}: {one-line description} at {file}:{line} |
+   ```
+   Append tracker Follow-ups row (under correct story/implementation section):
+   ```
+   | {follow_up_count} | {issue at file:line — root cause one line} | {fix applied one line} | {file} |
+   ```
+   Continue to next cycle.
+
+**Step 7.3 — On ceiling-hit (cycle 3 failed):**
+
+**7.3a — Write gap signal (best-effort, before diagnostic — exits 0 always):**
+```bash
+PLUGIN_DIR=$(cat .claude/plugin-path.txt 2>/dev/null || echo "")
+[ -n "$PLUGIN_DIR" ] && node "$PLUGIN_DIR/scripts/signal-write.cjs" \
+  --type gap \
+  --category "{most-specific: dependency-contract-missing|return-shape-unspecified|edge-case-missing|test-data-unspecified|mock-contract-missing}" \
+  --ado-id "${ADO_ID}" \
+  --detail "Fix loop ceiling: {specific unresolvable contract/value} after 3 cycles" \
+  2>/dev/null || true
+```
+
+**7.3b — Append audit row:**
+```
+| {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | build | fix-loop-ceiling | {Story N \| ADO #{ADO_ID}} | 3 | {category} at {file}:{line} — ceiling hit; gap signal written |
+```
+
+**7.3c — Surface diagnostic:**
+```
+⛔ FIX LOOP CEILING — 3 cycles completed, issue not resolved.
+
+FAILING FINDING
+  Category : {e.g. null reference / assertion mismatch / missing return}
+  File     : {exact/path/to/file.ext}:{line_number}
+  Error    : {verbatim error text — not paraphrased}
+
+WHAT WAS TRIED
+  Cycle 1: Changed {what} at {file}:{line} → still failed: {exact error after change}
+  Cycle 2: Changed {what} at {file}:{line} → still failed: {exact error after change}
+  Cycle 3: Changed {what} at {file}:{line} → still failed: {exact error after change}
+
+ROOT CAUSE ASSESSMENT
+  {1–2 sentences on the underlying blocker the fix loop cannot resolve alone}
+
+YOUR OPTIONS
+  A) Provide guidance — reply with the correct fix, e.g.:
+       "The mock for IFoo.Bar should return: new FooDto { Id = 1, Name = 'test' }"
+       A new 3-cycle loop will run with your guidance applied.
+
+  B) Revise the ICEA — the spec is missing information needed to fix this:
+       REVISE ADO-{ADO_ID}
+
+  C) Halt — stop this story. Prior stories in this Epic are unaffected:
+       HALT ADO-{ADO_ID}
+```
+
+**Step 7.4 — On developer reply:**
+
+**Option A — Guidance provided:**
+Start a new 3-cycle loop (fresh ceiling, cycle count resets to 1):
+- Apply guidance to the identified file+line
+- Run Step 7.2 loop with guidance as directive for each cycle
+- Each cycle: display `🔁 Guided cycle {N}: ...`; append build-issue + Follow-ups rows as normal
+- On clean pass: story summary + auto-advance (if EPIC_AUTO_FLOW = true)
+- On second ceiling: surface new diagnostic with GUIDANCE APPLIED section:
+  ```
+  GUIDANCE APPLIED
+    Your instruction: "{developer_guidance_text}"
+    Applied at: {file}:{line}
+
+  WHAT HAPPENED UNDER GUIDANCE
+    Guided cycle 1: {what changed} → still failed: {exact error}
+    Guided cycle 2: {what changed} → still failed: {exact error}
+    Guided cycle 3: {what changed} → still failed: {exact error}
+
+  UPDATED ASSESSMENT
+    {updated 1–2 sentence root cause incorporating what was tried under guidance}
+
+  YOUR OPTIONS
+    A) Refine guidance — {specific gap that still cannot be resolved without more info}
+    B) REVISE ADO-{ADO_ID}
+    C) HALT ADO-{ADO_ID}
+  ```
+
+**Option B — REVISE ADO-{ADO_ID}:**
+1. Set tracker Story status to `🔄 Revised`:
+   Find the correct story section → change `**Status:** ✅ Done` or `**Status:** 🔄 In Progress` → `**Status:** 🔄 Revised`
+2. Append audit row:
+   ```
+   | {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | build | fix-loop-revise | {Story N \| ADO #{ADO_ID}} | - | Tracker set to Revised; icea-revise initiated with diagnostic context |
+   ```
+3. Run REVISE ADO-{ADO_ID} — pass ceiling diagnostic (specific gap, what was tried) as input context.
+
+**Option C — HALT ADO-{ADO_ID}:**
+1. Append audit row:
+   ```
+   | {next #} | {YYYY-MM-DDTHH:MM:SS} | {actor} | build | fix-loop-halt | {Story N \| ADO #{ADO_ID}} | - | Developer halted — Story {story_n} left on disk unresolved |
+   ```
+2. Display:
+   ```
+   Story {story_n} halted. Prior stories in this Epic are unaffected.
+   To resume: IMPLEMENT ADO-{ADO_ID} Story-{story_n}
+   ```
+3. Stop. Do not auto-advance.
+
+**Hard rules for Step 7:**
+- NEVER skip the fix loop — not under APPROVE ALL, not under time pressure
+- NEVER auto-commit — checkin suggests the git command; the developer runs it
+- NEVER proceed to story summary while any failure remains (checkin ❌ or test suite ❌)
+- ALWAYS write the gap signal before surfacing the ceiling diagnostic — never after
+- ALWAYS show exact file+line in every fix cycle display and audit row
 
 ---
 

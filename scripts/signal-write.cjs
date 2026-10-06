@@ -41,12 +41,12 @@
 //     --category context-incomplete \  ← no --ado-id: still useful for pattern learning
 //     --detail "ICEA edited outside formal skill flow"
 //
-// --ado-id is OPTIONAL. Dream uses signals for pattern learning (category tallies →
-// project-knowledge.md), not for ADO attribution. Capture with null ADO when the
-// ADO is not in context — the pattern is still recorded and promoted.
+// --ado-id is OPTIONAL for gap and story-quality signals (pattern still learned without attribution).
+// Revision signals without an ADO ID are dropped — they cannot be attributed to any ICEA.
 //
-// Output file: .claude/signals/{ms-timestamp}-{type}-ADO-{ID}.json
-//              or  .claude/signals/{ms-timestamp}-{type}-UNKNOWN.json when no ADO
+// Output: .claude/signals/ADO-{ID}-signals.jsonl    (one append-only file per ADO)
+//         .claude/signals/unattributed-signals.jsonl (gap/story-quality without ADO ID)
+//         Each line is one compact JSON object (JSON Lines format).
 // Always exits 0 — never blocks skill flows.
 
 'use strict';
@@ -72,11 +72,15 @@ if (!type || !category) {
 }
 
 try {
+  // Revision signals without an ADO ID cannot be attributed to any ICEA — not useful.
+  // gap and story-quality signals are still valuable for category-level pattern learning without attribution.
+  if (!adoId && type === 'revision') process.exit(0);
+
   const entry = {
     timestamp:  new Date().toISOString(),
     type,
     category,
-    ado_id:     adoId || null,   // null when ADO not in context — pattern still captured by Dream
+    ado_id:     adoId || null,
     detail:     detail || null,
     count:      count ? parseInt(count, 10) : null,
   };
@@ -84,12 +88,12 @@ try {
   const signalsDir = path.join(process.cwd(), '.claude', 'signals');
   fs.mkdirSync(signalsDir, { recursive: true });
 
-  // Filename: include ADO ID when available, use 'UNKNOWN' otherwise
-  const adoTag = adoId ? 'ADO-' + adoId : 'UNKNOWN';
-  const filename = Date.now() + '-' + type + '-' + adoTag + '.json';
-  fs.writeFileSync(
+  // Append-only JSONL: one file per ADO groups all signals for Dream to read in one pass.
+  // gap/story-quality without ADO goes to unattributed-signals.jsonl for aggregate pattern learning.
+  const filename = adoId ? 'ADO-' + adoId + '-signals.jsonl' : 'unattributed-signals.jsonl';
+  fs.appendFileSync(
     path.join(signalsDir, filename),
-    JSON.stringify(entry, null, 2) + '\n',
+    JSON.stringify(entry) + '\n',
     'utf8'
   );
 } catch (e) {

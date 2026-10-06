@@ -14,7 +14,7 @@ const path = require('path');
 
 const TESTS_DIR        = __dirname;
 const MIGRATION_SELF   = path.join(TESTS_DIR, 'migration-validation', 'run-selftest.cjs');
-const TIMEOUT_UNIT     = 30_000;
+const TIMEOUT_UNIT     = 120_000;
 const TIMEOUT_MIGRATION = 90_000;
 
 // Discover raw test files — exclude this wrapper

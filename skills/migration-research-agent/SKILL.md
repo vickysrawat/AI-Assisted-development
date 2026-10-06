@@ -5,13 +5,14 @@ description: >
   (source/target stack layers) or replatform mode (source environment + cloud components).
   Returns a structured JSON bundle per layer/component with EoL status, CVE exposure,
   ecosystem health, pricing, SLA, compliance — each with source URL, retrieved date,
-  and confidence level. WebFetch-only; no MCP, no IAM, no codebase access.
+  and confidence level. Uses WebFetch (external facts) and Read (lookup-urls.json config);
+  no MCP, no IAM, no project codebase access.
   Invoked as a subagent from migration skills (rewrite, upgrade, replatform).
 ---
 
 # migration-research-agent
 
-_Skill version: 1.0 · Last changed: 2026-09-26 · Plugin compatibility: >=3.25.0 · Consent: C_
+_Skill version: 1.1 · Last changed: 2026-10-01 · Plugin compatibility: >=3.25.0 · Consent: C_
 
 ## Purpose
 
@@ -59,6 +60,7 @@ The `migration_type: "replatform"` branch is defined in Story 2 (added to this f
 ```json
 {
   "migration_type": "rewrite | upgrade",
+  "plugin_dir": "<absolute path to the plugin root — passed by the calling skill from $PLUGIN_DIR>",
   "source_layers": [
     {
       "stack": "<technology name — e.g. angular, dotnet, react, java, python, nodejs>",
@@ -96,6 +98,7 @@ on-premises or unknown hosting.
 ```json
 {
   "migration_type": "rewrite",
+  "plugin_dir": "/home/user/.claude/plugins/ai-assisted-development",
   "source_layers": [
     { "stack": "angular", "version": "15", "cloud_hosted": null },
     { "stack": "dotnet", "version": "6", "cloud_hosted": null }
@@ -109,35 +112,17 @@ on-premises or unknown hosting.
 
 ## Per-Stack Lookup Strategy — rewrite/upgrade mode
 
-For each layer, find the matching row(s) below. Construct the WebFetch URL using only the
-stack name and version — never embed internal project identifiers.
+**URL tables are stored in `$PLUGIN_DIR/skills/shared/migration-knowledge/lookup-urls.json`.**
+Read that file at Step 1 (before processing layers) and use its `rewrite_upgrade.stacks[]` and
+`rewrite_upgrade.cloud_hosted` entries as the lookup table for this mode. Never hardcode URLs here —
+edit `lookup-urls.json` to add or update a URL. The `knowledge-freshness` skill validates and
+refreshes stale entries.
 
-| Stack | Fact type | Primary URL pattern | Fallback | Confidence |
-|---|---|---|---|---|
-| dotnet (any version) | EoL / lifecycle | `https://learn.microsoft.com/lifecycle/products/?terms=.NET` | — | high |
-| dotnet (any version) | CVE exposure | `https://learn.microsoft.com/security/updates` (filter by .NET {version}) | — | high |
-| angular (any version) | EoL / lifecycle | `https://angular.dev/reference/releases` | — | high |
-| angular (any version) | Ecosystem health | `https://www.npmjs.com/package/@angular/core` (weekly download trend) | — | high |
-| react (any version) | EoL / lifecycle | `https://react.dev/blog` + `https://github.com/facebook/react/releases` | — | high |
-| react (any version) | Ecosystem health | `https://www.npmjs.com/package/react` (weekly download trend) | — | high |
-| java (any version) | EoL / lifecycle | `https://endoflife.date/java` | — | high |
-| python (any version) | EoL / lifecycle | `https://devguide.python.org/versions/` | `https://endoflife.date/python` | high |
-| nodejs (any version) | EoL / lifecycle | `https://nodejs.org/en/about/releases` | `https://endoflife.date/nodejs` | high |
-| azure-hosted | Runtime support | `https://learn.microsoft.com/azure/app-service/configure-language-{stack}` | — | high |
-| aws-hosted | Runtime support | `https://docs.aws.amazon.com/{service}/latest/dg/{runtime-support-page}` | AWS What's New RSS (`https://aws.amazon.com/new/feed/`) — exact-phrase filter: "{stack} {version} end of support" | medium-high |
-| gcp-hosted | Runtime support | `https://cloud.google.com/{service}/docs/deprecations` (structured Feature / Deprecated date / Shutdown date table) | GCP blog RSS (`https://cloudblog.withgoogle.com/rss/`) — keyword filter | medium-high |
-| unknown / niche | any | `https://endoflife.date/{stack}` | — | UNKNOWN if not found |
-
-**Confidence notes:**
-- **Azure:** Authoritative Microsoft documentation. confidence=high for all fact types.
-- **AWS:** No central EoL portal exists. Runtime support comes from service-specific docs or
-  What's New RSS with exact-phrase filtering. confidence=medium-high for lifecycle.
-  pricing/SLA/compliance pages remain confidence=high (replatform mode, Story 2).
-- **GCP:** The `/docs/deprecations` page is a structured, authoritative table
-  (Feature | Deprecated date | Shutdown date). confidence=high via WebFetch without
-  authentication. RSS fallback is confidence=medium-high.
-  BigQuery MCP is excluded — requires a billing-enabled GCP project + bigquery.jobs.create
-  IAM. WebFetch on /docs/deprecations achieves equivalent confidence without any auth.
+Lookup structure in `lookup-urls.json`:
+- `rewrite_upgrade.stacks[]` — keyed by `stack` token; each has `facts[]` with `type`, `primary`, `fallback`, `confidence`
+- `rewrite_upgrade.cloud_hosted` — keyed by provider (`azure` | `aws` | `gcp`)
+- `rewrite_upgrade.hiring_trend.canonical_url` — UNKNOWN fallback canonical URL
+- `rewrite_upgrade.fallback_universal` — applied when stack has no matching row
 
 ## Output Schema — per-layer bundle (rewrite/upgrade mode)
 
@@ -217,9 +202,13 @@ Return a JSON array. One entry per layer, covering all layers in `source_layers[
 >      respects the single-invocation bound, and is sufficient given that WebFetch is
 >      fast relative to LLM thinking time.
 
-**Step 1 — Validate input**
+**Step 1 — Load URL config, then validate input**
 
-Parse the input JSON. Apply the validation rules in the Input Schema section.
+Read `$PLUGIN_DIR/skills/shared/migration-knowledge/lookup-urls.json` using the Read tool.
+This is the single source of truth for all WebFetch URLs used in Steps 2b–2g. If the file
+cannot be read, return `{ "error": "lookup-urls.json not found — run /setup-sync to restore." }` and stop.
+
+Then parse the input JSON. Apply the validation rules in the Input Schema section.
 Return the appropriate error JSON and stop if validation fails.
 
 **Step 2 — Process each layer sequentially**
@@ -234,7 +223,7 @@ For each layer in `source_layers[]` (role="source"), then each in `target_layers
 > URL is used, rebind `source_url` to the fallback URL actually fetched. If both fail,
 > set `source_url=null` and populate `canonical_url` with the primary URL pattern.
 
-  a. Extract `stack` (lowercase) and `version`. Find matching rows in the lookup table.
+  a. Extract `stack` (lowercase) and `version`. Find matching rows in `lookup-urls.json` (`rewrite_upgrade.stacks[]`).
 
   b. **EoL / lifecycle:**
      - Construct the WebFetch URL from the primary URL pattern. Use only `{stack}` and
@@ -251,8 +240,11 @@ For each layer in `source_layers[]` (role="source"), then each in `target_layers
        to the primary URL pattern.
 
   c. **CVE exposure:**
-     - WebFetch the security/updates URL for this stack. **Immediately bind**
-       `cve_source_url = <URL just fetched>`.
+     - Find the `cve_exposure` fact entry for this stack in `lookup-urls.json` (`rewrite_upgrade.stacks[]`).
+       If absent, use `rewrite_upgrade.cve_fallback_universal` — substitute `{stack}` with the stack name
+       and `{ecosystem}` using: `dotnet`→`nuget` · `java`→`maven` · `spring-boot`→`maven` · `python`→`pip` ·
+       `nodejs`/`angular`/`react`→`npm` · unknown stack → omit the ecosystem filter.
+     - WebFetch the resolved URL. **Immediately bind** `cve_source_url = <URL just fetched>`.
      - Search for advisories referencing the specific version. Return a qualitative level based
        on volume and severity: "high" (actively exploited or many unpatched), "medium" (some
        CVEs, patches available), "low" (minimal known exposure). Do not return a raw count.
@@ -260,9 +252,9 @@ For each layer in `source_layers[]` (role="source"), then each in `target_layers
        `confidence="UNKNOWN"`.
 
   d. **Ecosystem health:**
-     - WebFetch the ecosystem health URL (e.g. npmjs.com package page for weekly downloads,
-       GitHub repository for recent release activity). **Immediately bind**
-       `ecosystem_source_url = <URL just fetched>`.
+     - Find the `ecosystem_health` fact entry for this stack in `lookup-urls.json`. WebFetch
+       the primary URL (npm page, NuGet page, GitHub releases, or PyPI as applicable).
+       **Immediately bind** `ecosystem_source_url = <URL just fetched>`.
      - Return a descriptive `signal` string including the metric and the date of retrieval,
        e.g. "Weekly downloads: ~3.5M, stable (npm, 2026-09-26)".
      - If no data found: `ecosystem_source_url = null`, `signal="UNKNOWN"`,
@@ -275,19 +267,19 @@ For each layer in `source_layers[]` (role="source"), then each in `target_layers
        `hiring_source_url = <URL just fetched>` if the fetch succeeds.
      - Return a descriptive signal if found.
      - If no authoritative data found within this invocation: `hiring_source_url = null`;
-       use the UNKNOWN shape with `canonical_url="https://survey.stackoverflow.co/"`.
-       Never fabricate a trend figure.
+       use the UNKNOWN shape with `canonical_url` set to `rewrite_upgrade.hiring_trend.canonical_url`
+       from the loaded `lookup-urls.json`. Never fabricate a trend figure.
 
   f. **Tooling availability:**
-     - WebFetch the stack's official documentation homepage or IDE marketplace page for
-       tooling/IDE support signals. **Immediately bind**
+     - Find the `tooling_availability` fact entry for this stack in `lookup-urls.json`.
+       WebFetch the URL (official docs page or IDE marketplace). **Immediately bind**
        `tooling_source_url = <URL just fetched>`.
      - Return a descriptive signal, e.g. "First-class support in VS Code, JetBrains. Official
        CLI maintained. No deprecation signals found."
      - If no data found: `tooling_source_url = null`, `confidence="UNKNOWN"`.
 
   g. **Cloud-hosted runtime support (when `cloud_hosted` is non-null):**
-     - Look up the cloud-hosted row in the lookup table for the given provider.
+     - Look up the cloud-hosted entry in `lookup-urls.json` (`rewrite_upgrade.cloud_hosted[provider]`).
      - Construct and WebFetch the provider-specific runtime support URL. **Immediately bind**
        `cloud_source_url = <URL just fetched>`.
      - Return a `cloud_runtime_support` field on this layer entry using the same
@@ -380,6 +372,7 @@ above.
 ```json
 {
   "migration_type": "replatform",
+  "plugin_dir": "<absolute path to the plugin root — passed by the calling skill from $PLUGIN_DIR>",
   "source_environment": {
     "type": "on-prem | cloud",
     "runtime": "<description — e.g. 'IIS/.NET 4.8', 'EC2/Node.js 18'>",
@@ -412,6 +405,7 @@ above.
 ```json
 {
   "migration_type": "replatform",
+  "plugin_dir": "/home/user/.claude/plugins/ai-assisted-development",
   "source_environment": { "type": "on-prem", "runtime": "IIS/.NET 4.8", "cloud_provider": null },
   "target_environment": {
     "cloud": "azure",
@@ -426,43 +420,18 @@ above.
 
 ## Per-Provider Lookup Strategy — replatform mode
 
-> DECISION: WebFetch-only for all providers (no BigQuery MCP)
-> Options considered:
->   A) BigQuery MCP for GCP lifecycle data — rejected: requires a billing-enabled GCP project
->      + bigquery.jobs.create IAM; cannot be assumed for a developer running a migration
->      evaluation with no GCP account. Fails immediately for non-GCP shops.
->   B) WebFetch on cloud.google.com/{product}/docs/deprecations — chosen: the /docs/deprecations
->      page is a structured Feature / Deprecated date / Shutdown date table that is authoritative,
->      BigQuery-backed, and publicly accessible without any authentication. Achieves equivalent
->      confidence (high) without any cloud account dependency.
+**URL tables are stored in `$PLUGIN_DIR/skills/shared/migration-knowledge/lookup-urls.json`.**
+Use the file already read in Step 1. Use its `replatform.providers` object, keyed by provider
+(`azure` | `aws` | `gcp`), each containing `facts[]` with `type`, `primary`, `fallback`,
+`confidence`. Use `replatform.slug_map[cloud]` to derive the `{service}` URL slug from the
+component display name (lowercase match on display-name keys; fallback: lowercase + replace
+spaces with hyphens + strip provider prefix — e.g. "Azure App Service Standard S2" → "app-service").
+Never hardcode URLs here — edit `lookup-urls.json` to add or update a URL.
 
-For each component in `target_environment.components[]`, find the matching provider row below.
-Construct WebFetch URLs using only the component name and cloud provider name — no internal
+For each component in `target_environment.components[]`, find the matching provider entry in
+`replatform.providers[target_environment.cloud]`, derive the slug from `replatform.slug_map`,
+and construct WebFetch URLs using only the component name and cloud provider name — no internal
 project identifiers.
-
-| Provider | Fact type | Primary URL pattern | Fallback | Confidence |
-|---|---|---|---|---|
-| Azure | Pricing | `https://azure.microsoft.com/pricing/{service}/` | — | high |
-| Azure | SLA | `https://azure.microsoft.com/support/legal/sla/{service}/` | — | high |
-| Azure | Compliance | `https://learn.microsoft.com/azure/compliance/` | — | high |
-| Azure | GA / lifecycle | `https://learn.microsoft.com/lifecycle/` | — | high |
-| GCP | Pricing | `https://cloud.google.com/{service}/pricing` | — | high |
-| GCP | SLA | `https://cloud.google.com/{service}/sla` | — | high |
-| GCP | Compliance | `https://cloud.google.com/security/compliance` | — | high |
-| GCP | Lifecycle / deprecations | `https://cloud.google.com/{product}/docs/deprecations` (structured Feature / Deprecated date / Shutdown date table) | GCP blog RSS (`https://cloudblog.withgoogle.com/rss/`) — keyword filter | high (table); medium-high (RSS fallback) |
-| AWS | Pricing | `https://aws.amazon.com/{service}/pricing` | — | high |
-| AWS | SLA | `https://aws.amazon.com/legal/service-level-agreements/` | — | high |
-| AWS | Compliance | `https://aws.amazon.com/compliance/services-in-scope/` | — | high |
-| AWS | Lifecycle | `https://docs.aws.amazon.com/{service}/latest/dg/{runtime-support-page}` | AWS What's New RSS (`https://aws.amazon.com/new/feed/`) — exact-phrase filter: "{component} end of support" | medium-high (no central EoL portal) |
-
-**Confidence notes:**
-- **Azure:** Authoritative Microsoft documentation for all four fact types. confidence=high.
-- **GCP:** The `/docs/deprecations` table (Feature / Deprecated date / Shutdown date) is the
-  authoritative structured source. confidence=high via WebFetch without authentication. BigQuery
-  MCP is excluded. RSS fallback is confidence=medium-high.
-- **AWS:** Pricing, SLA, and compliance have authoritative pages (confidence=high). AWS has no
-  central lifecycle portal — lifecycle data comes from service-specific docs or What's New RSS
-  with exact-phrase filtering (confidence=medium-high).
 
 ## Output Schema — per-component bundle (replatform mode)
 
@@ -517,7 +486,12 @@ Return a JSON array. One entry per component in `target_environment.components[]
 
 ## Execution Steps — replatform mode
 
-**Step 1 — Validate input**
+**Step 1 — Load URL config, then validate input**
+
+Read `$PLUGIN_DIR/skills/shared/migration-knowledge/lookup-urls.json` using the Read tool.
+Each migration mode reads it independently — there is no shared state between the rewrite/upgrade
+and replatform branches within a single invocation. If the file cannot be read, return
+`{ "error": "lookup-urls.json not found — run /setup-sync to restore." }` and stop.
 
 Parse the input JSON. Confirm `migration_type` is "replatform". Apply the replatform validation
 rules above. Return the appropriate error JSON and stop if validation fails.
@@ -534,7 +508,11 @@ For each component in `target_environment.components[]` in order:
 > set `source_url=null` and populate `canonical_url` with the primary URL pattern.
 
   a. Extract the component `name` and `type`. Determine the provider from
-     `target_environment.cloud`. Find the matching rows in the per-provider lookup table above.
+     `target_environment.cloud`. Find the matching rows in `lookup-urls.json`
+     (`replatform.providers[cloud]`). Derive the `{service}` URL slug from the component name
+     using `replatform.slug_map[cloud]` — lowercase the component name and find the longest
+     matching key. If not in the map, apply the fallback rule: lowercase + replace spaces with
+     hyphens + strip the cloud provider prefix (e.g. "Azure App Service Standard S2" → "app-service").
 
   b. **Pricing range:**
      - Construct the WebFetch URL using the provider's pricing URL pattern. Substitute the

@@ -224,6 +224,7 @@ developer once. YES → merge patterns + confirm; NO → continue without writin
    ```json
    {
      "migration_type": "replatform",
+     "plugin_dir": "$PLUGIN_DIR",
      "source_environment": {
        "type": "{on-prem or cloud}",
        "runtime": "{detected source runtime — e.g. 'IIS/.NET 4.8'}",
@@ -239,8 +240,9 @@ developer once. YES → merge patterns + confirm; NO → continue without writin
    }
    ```
 
-   Invoke the Agent tool with this JSON as the task. Receive the per-component bundle. Apply the
-   confidence rendering rules from `migration-research-spec.md` Section 4:
+   Invoke the Agent tool with this JSON as the task. Receive the per-component bundle.
+   **Run the Section 5 Step 3 integrity check from `migration-research-spec.md` before using the
+   bundle.** Then apply the confidence rendering rules from `migration-research-spec.md` Section 4:
    - `confidence=high` → state as fact: `{value} [{source_url}, {retrieved_date}]`
    - `confidence=medium` → `(industry benchmark as of {retrieved_date})`
    - `confidence=low` → `WARNING: {claim} — unverified, check: {canonical_url or source_url}`

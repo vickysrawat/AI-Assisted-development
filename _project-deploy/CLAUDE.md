@@ -144,6 +144,7 @@ execute the skill immediately — priority over chat.
 
 - Use `{GIT_PATH}` for git and `{BASH_PATH}` as the shell — written by `/setup-init` (run `/setup-sync` if unresolved). Run git/shell via the Bash tool only — never `mcp__ide__executeCode` or Python subprocess.
 - Never rely on `HEAD` as a symbolic ref — resolve with `git rev-parse HEAD` first.
+- **Never use `/dev/stdin` to pipe data into `node -e`.** On Windows, `/dev/stdin` resolves to `C:\dev\stdin` (ENOENT). Instead, write the data to a temp file and pass the path: `echo "$DATA" > tmp.json && node -e "... readFileSync('tmp.json') ..." && rm tmp.json`.
 
 ## 1. PROJECT OVERVIEW
 

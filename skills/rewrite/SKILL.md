@@ -223,12 +223,19 @@ Future migrations of similar apps: read the ## Lessons section.
 
 LOGEOF
 head -1 docs/migrations/{ADO}/migration-log.md && \
-grep -c "## Decisions summary" docs/migrations/{ADO}/migration-log.md
+grep -c "## Decisions summary" docs/migrations/{ADO}/migration-log.md && \
+cat > docs/migrations/{ADO}/lessons.md << 'LESSONSEOF'
+# Lessons — {AppName} Rewrite (ADO-{ID})
+_Parallel index to `migration-log.md ## Lessons`. Every `[LESSON]` entry is simultaneously appended here._
+_Read by the skill at Step 5 for TP generation — the full migration log is never read for this purpose._
+
+LESSONSEOF
+head -1 docs/migrations/{ADO}/lessons.md
 ```
 
 If the chain exits non-zero (directory creation failed, write failed, `head` returns wrong first
-line, or `grep` count is 0): **stop immediately** — do not proceed to tracker or checkpoint
-creation. Report the exact shell output to the developer.
+line, `grep` count is 0, or `lessons.md` write failed): **stop immediately** — do not proceed to
+tracker or checkpoint creation. Report the exact shell output to the developer.
 Recovery is a separate, explicitly approved action — never automatic:
 ```bash
 # Recovery only — do not run automatically:
@@ -243,7 +250,50 @@ Phase headings, Decisions summary, Risks accepted, and Lessons sections are pre-
 **2. Initialize the checkpoint ledger (script interop only).**
 ```bash
 node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" init --skill=rewrite --ado={ADO}
+# Record the developer-provided target folder so the migration gate can validate cluster writes.
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-payload \
+  --skill=rewrite --ado={ADO} --key=target_root --value="{developer-provided-target-folder}"
 ```
+
+**Hook preflight — verify both migration gate hooks are deployed and registered.**
+Without these hooks the skill cannot enforce human-gate requirements at write time. Check both
+file existence AND `settings.json` registration — a file-only check would miss a registered-but-deleted
+hook; a settings-only check would miss a hook that exists but is not wired.
+```bash
+# Hook preflight — verify both hooks deployed + registered before proceeding.
+# Without these hooks the skill cannot enforce human-gate requirements.
+
+APPROVAL_HOOK=".claude/hooks/approval-capture.cjs"
+GATE_HOOK=".claude/hooks/migration-gate.cjs"
+SETTINGS=".claude/settings.json"
+HOOK_OK=true
+
+if [ ! -f "$APPROVAL_HOOK" ]; then
+  echo "STOP: approval-capture.cjs not found. Run setup-init or setup-sync."
+  HOOK_OK=false
+fi
+if [ ! -f "$GATE_HOOK" ]; then
+  echo "STOP: migration-gate.cjs not found. Run setup-init or setup-sync."
+  HOOK_OK=false
+fi
+if ! grep -q "approval-capture" "$SETTINGS" 2>/dev/null; then
+  echo "STOP: approval-capture.cjs not registered in settings.json."
+  HOOK_OK=false
+fi
+if ! grep -q "migration-gate" "$SETTINGS" 2>/dev/null; then
+  echo "STOP: migration-gate.cjs not registered in settings.json."
+  HOOK_OK=false
+fi
+
+if [ "$HOOK_OK" != "true" ]; then
+  echo "Rewrite skill halted. Deploy and register both hooks before starting."
+  exit 1
+fi
+echo "Hook preflight passed."
+```
+If this block exits 1, **STOP** — surface the output to the developer and do not continue to Step 1.
+Deploy the hooks via `setup-init` or `setup-sync`, then resume.
+
 This creates `.claude/migration/{ADO}.checkpoint.json` — a **git-ignored, machine-readable** file
 used exclusively for inter-script state sharing (`intake-verify.cjs`, `rewrite-bal.cjs`,
 `checkpoint-ledger.cjs`). It is the **primary resume record** — machine-written and script-validated.
@@ -285,9 +335,9 @@ committed resume point. Use this template (fill in what is known; mark the rest 
 
 _Last updated: {date} · Phase: 0 — Initialize · Step: 0_
 
-> **Resume instruction:** open this file + `migration-log.md` + `{ADO}-options.md` (once created)
-> in VS Code, then type `REWRITE RESUME {ADO}` in Claude Code.
-> Claude reads this file to orient — no re-analysis needed.
+> **Resume instruction:** type `REWRITE RESUME {ADO}` in Claude Code.
+> Claude reads the checkpoint ledger and this file to orient — no re-analysis needed.
+> Open `migration-log.md` and `{ADO}-options.md` in VS Code for your own reference.
 
 ---
 
@@ -376,13 +426,13 @@ developer once. YES → merge patterns + confirm; NO → continue without writin
 
 ```bash
 # Flush checkpoint before next step
-node scripts/checkpoint-ledger.cjs set-gate --skill=rewrite --ado={ADO_ID} --gate=step_1_intake_complete --verdict=PASS
+node scripts/checkpoint-ledger.cjs set-gate --skill=rewrite --ado={ADO} --gate=step_1_intake_complete --verdict=PASS
 # Store all stack + version facts — resume reads these directly instead of re-reading generated files
-node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=source_stack --value={SOURCE_STACK}
-node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=source_version --value={SOURCE_VERSION}
-node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=target_stack --value={TARGET_STACK}
-node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=target_version --value={TARGET_VERSION}
-node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=posture --value={POSTURE}
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key=source_stack --value={SOURCE_STACK}
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key=source_version --value={SOURCE_VERSION}
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key=target_stack --value={TARGET_STACK}
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key=target_version --value={TARGET_VERSION}
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key=posture --value={POSTURE}
 ```
 
 ---
@@ -634,42 +684,15 @@ across all projects on this machine) and is never committed to any repo.
 For each source→target stack pair you need facts for:
 ```bash
 CACHE_KEY="{source_stack}-{source_version}-to-{target_stack}-{target_version}"
-BUNDLE_FILE="$(mktemp).json"
-
-# Check the machine-level cache first
-CACHE_RESULT=$(node "$PLUGIN_DIR/scripts/research-cache.cjs" lookup \
-  --key="$CACHE_KEY" --json 2>/dev/null)
-CACHE_STATUS=$(echo "$CACHE_RESULT" | node -e \
-  "try{process.stdout.write(JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).status)}catch(_){process.stdout.write('miss')}")
-
-if [ "$CACHE_STATUS" = "hit" ]; then
-  CACHE_STALENESS=$(echo "$CACHE_RESULT" | node -e \
-    "try{process.stdout.write(JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).staleness)}catch(_){process.stdout.write('')}")
-  CACHE_AGE=$(echo "$CACHE_RESULT" | node -e \
-    "try{process.stdout.write(String(JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).age_days))}catch(_){process.stdout.write('?')}")
-  if [ "$CACHE_STALENESS" = "stale" ]; then
-    echo "⚠ Research cache hit (${CACHE_AGE} days old) — facts may have changed."
-    echo "  To force a refresh: delete the cache entry and re-run Step 2."
-  else
-    echo "Research cache hit (${CACHE_AGE} days old) — skipping agent invocation"
-  fi
-  # Extract bundle from cache result and use it directly — skip agent invocation
-  echo "$CACHE_RESULT" | node -e \
-    "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));require('fs').writeFileSync('$BUNDLE_FILE',JSON.stringify(d.entry.bundle,null,2))"
-else
-  echo "Research cache miss — invoking migration-research-agent for $CACHE_KEY"
-  # Invoke the Agent tool with the migration-research-agent (see invocation pattern below)
-  # Write the returned bundle to a temp file IMMEDIATELY after receiving it — before any analysis:
-  #   echo '{...bundle JSON...}' > "$BUNDLE_FILE"
-  # Then write to the machine-level cache:
-  node "$PLUGIN_DIR/scripts/research-cache.cjs" write \
-    --key="$CACHE_KEY" \
-    --bundle-file="$BUNDLE_FILE" \
-    --source-stack="{source_stack}" --source-version="{source_version}" \
-    --target-stack="{target_stack}" --target-version="{target_version}"
-  echo "Research bundle cached for future use."
+CACHE_BUNDLE="temp/cache-bundle-{ADO}.json"
+node "$PLUGIN_DIR/scripts/research-cache.cjs" lookup \
+  --key="$CACHE_KEY" --extract-bundle-to="$CACHE_BUNDLE"
+CACHE_EXIT=$?
+# 0=fresh, 1=miss, 2=stale
+if [ "$CACHE_EXIT" -eq 2 ]; then
+  echo "⚠ Research cache is stale (30-90 days). Using cached data — consider refreshing."
 fi
-# BUNDLE_FILE now contains the research bundle — use it for options analysis below
+# CACHE_BUNDLE now contains the research bundle on hit; empty/absent on miss — use it for options analysis below
 # Store cache key in checkpoint so resume can locate the bundle without re-deriving
 node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-payload \
   --skill=rewrite --ado={ADO} --key=research_cache_key --value="$CACHE_KEY"
@@ -679,7 +702,7 @@ node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-payload \
 The bundle may contain a `{ "type": "coupling_replacements", ... }` entry — find it:
 ```bash
 COUPLING_REPLACEMENTS=$(node -e "
-  const b = JSON.parse(require('fs').readFileSync('$BUNDLE_FILE','utf8'));
+  const b = JSON.parse(require('fs').readFileSync('$CACHE_BUNDLE','utf8'));
   const arr = Array.isArray(b) ? b : [];
   const entry = arr.find(e => e.type === 'coupling_replacements');
   process.stdout.write(JSON.stringify(entry || null));
@@ -969,7 +992,7 @@ After all corrections complete: clear `options_judge_correction` (set to null) a
 > Type: `I ACKNOWLEDGE COUPLING JUDGE ITERATION 4 — [one sentence: what you accept and why]`
 > Do NOT re-run the judge without this acknowledgement.
 
-On receipt: record `set-gate --gate=options_judge_acknowledged --verdict=ACKNOWLEDGED`,
+On receipt: record `set-gate --gate=options_judge_acknowledged --verdict=PASS`,
 then display the APPROVE OPTIONS or PROCEED prompt.
 Do NOT display `APPROVE OPTIONS` or `PROCEED` without this acknowledgement.
 
@@ -980,7 +1003,7 @@ Do NOT display `APPROVE OPTIONS` or `PROCEED` without this acknowledgement.
 > To proceed, type exactly:
 > `APPROVER: [full name] REASON: [written justification]`
 >
-> On receipt: record `set-gate --gate=options_judge_block_override --verdict=BLOCK_OVERRIDE`
+> On receipt: record `set-gate --gate=options_judge_block_override --verdict=PASS`
 > with approver and reason in the payload, then display the APPROVE OPTIONS prompt.
 > Do NOT display `APPROVE OPTIONS` without this override.
 
@@ -988,6 +1011,11 @@ Do NOT display `APPROVE OPTIONS` or `PROCEED` without this acknowledgement.
 
 {If the PARTIAL integration rows table above is **empty** (zero PARTIAL rows):}
 _To proceed: `APPROVE OPTIONS ADO-{ID} [A | B | C]` with answers to the pre-design questions above._
+
+Reply: `APPROVE OPTIONS ADO-{ADO} A`   (replace A with the chosen option letter)
+The session will not advance to Step 2.5 until `APPROVE OPTIONS` is received — the
+`approval-capture.cjs` hook records the approval and `migration-gate.cjs` enforces the gate at
+write time.
 
 {If the PARTIAL integration rows table above contains **one or more rows**:}
 > ⚠ **{N} PARTIAL integration row(s) remain — advisory now, hard block at APPROVE DESIGN.**
@@ -1079,12 +1107,12 @@ DAG feeds Step 3 (code generation).
 
 ```bash
 # Flush checkpoint before next step
-node scripts/checkpoint-ledger.cjs set-gate --skill=rewrite --ado={ADO_ID} --gate=options_approved --verdict=PASS \
-  --artifact-path="docs/migrations/{ADO_ID}/{ADO_ID}-options.md" --sentinel="## Option " --min-bytes=200
+node scripts/checkpoint-ledger.cjs set-gate --skill=rewrite --ado={ADO} --gate=options_approved --verdict=PASS \
+  --artifact-path="docs/migrations/{ADO}/{ADO}-options.md" --sentinel="## Option " --min-bytes=200
 # Store option selection and human-readable label — resume reads these instead of re-reading options file
-node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=selected_option --value={SELECTED_OPTION}
-node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=selected_option_label --value="{SELECTED_OPTION_LABEL}"
-node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=committed_dag_path --value={COMMITTED_DAG_PATH}
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key=selected_option --value={SELECTED_OPTION}
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key=selected_option_label --value="{SELECTED_OPTION_LABEL}"
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key=committed_dag_path --value={COMMITTED_DAG_PATH}
 ```
 
 ## Step 2.5 — Target design documents (new)
@@ -1099,9 +1127,9 @@ node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --
 >      (The resume restarts at this step — the flush above ensures no rework.)
 > _(Do not proceed past this prompt without a reply.)_
 
-<!-- Checkpoint already flushed in this step. -->
+<!-- Checkpoint holds options_approved=PASS from APPROVE OPTIONS (previous step) — this step boundary is safe to resume from. Each document's gate is written immediately after its subagent returns; resume skips documents with PASS gates via the sub-step skip guard. -->
 
-**Context check.** Main-session orchestration cost for Step 2.5: ~10–20K (see budget table above). Per-document drafting runs in isolated subagents (~8–15K each × 7 docs = ~56–105K in subagents, not counted against the main session). The context guard requires 100K headroom before this step starts — if it blocked your reply, run /compact then `REWRITE RESUME ADO-{ID}`. This step cannot be split mid-document.
+**Context check.** Main-session orchestration cost for Step 2.5: ~10–20K (see budget table above). Per-document drafting runs in isolated subagents (~8–15K each × 7 docs = ~56–105K in subagents, not counted against the main session). The context guard requires 100K headroom before this step starts — if it blocked your reply, run /compact then `REWRITE RESUME ADO-{ID}`. Each document gate is written immediately when its subagent returns — resume reads sub-step gates and skips already-authored documents.
 
 Runs after `APPROVE OPTIONS`, before any code generation. The selected option's **inferred** target-space
 DAG (from Step 2) is the working baseline the component architecture document is authored against; the
@@ -1132,11 +1160,12 @@ node "$PLUGIN_DIR/scripts/graph-derive-documents.cjs" \
 This graph orders which of the 7 design documents to author first (a *document* DAG, not the target
 component DAG). Exit 1 (cycle) or exit 2 (parse error) → fix the template before proceeding.
 
-**2. Author all 7 design documents** via `document-orchestrator.md` (wave-scheduled, parallel
-subagents). Each agent receives only the context it needs — never the full source codebase. The
-Integration Inventory is shared state passed to all agents.
+**2. Author all 7 design documents** — one at a time, in DAG order from step 1. Each subagent receives
+only the context it needs — never the full source codebase. The Integration Inventory is shared state
+passed to all agents. Documents within the same DAG level (same wave) are authored sequentially, not
+in parallel — this ensures each gate is written and validated before the next document begins.
 
-All 7 documents are documentation artifacts — **not subject to the Write Gate** — write them to
+All 7 documents are documentation artifacts — **not subject to the Write Gate** — written to
 `docs/migrations/{ADO}/` immediately as they are drafted:
 
 | # | File | Gate | Required section | Content |
@@ -1169,64 +1198,200 @@ was rejected and why (with specific evidence), what the impact is on this docume
 
 _If no critical/major couplings affect this document's domain: write `## Coupling pattern resolutions\n_No coupling decisions affect this document's domain._`_
 
+**Orphaned-document detection — run once before the authoring loop (on both fresh start and resume).**
+For each document in the table above, check whether the file exists on disk with the required sentinel
+but no corresponding gate in the checkpoint. This catches the case where a previous session wrote the
+document but crashed before the gate was recorded. Substitute `{file}`, `{gate}`, and `{sentinel}` per
+the table for each of the 7 documents:
+```bash
+ARTIFACT="docs/migrations/{ADO}/{file}"
+SENTINEL="{sentinel}"   # "## Coupling pattern resolutions" for docs 1/3/4; "## " for docs 2/5/6/7
+GATE="{gate}"
+
+gate_exit=$(node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" check-gate \
+  --skill=rewrite --ado={ADO} --gate="$GATE" 2>/dev/null; echo $?)
+
+if [ "$gate_exit" = "3" ] && [ -f "$ARTIFACT" ] && grep -q "$SENTINEL" "$ARTIFACT"; then
+  echo "⚠ Orphaned document detected."
+  echo "  File : $ARTIFACT"
+  echo "  Gate : $GATE"
+  echo "  The document exists on disk with the required section but the checkpoint gate is not set."
+  echo "  This happened because the previous session wrote the document but stopped before recording the gate."
+  echo ""
+  echo "  Steps:"
+  echo "    1. Open the file in VS Code and review its content:"
+  echo "         $ARTIFACT"
+  echo "    2. If the document looks complete and correct, reply:"
+  echo "         RECOVER $GATE"
+  echo "       The script will re-validate the file and write the gate."
+  echo "    3. If the document looks wrong or incomplete, reply:"
+  echo "         REAUTHOR $(basename $ARTIFACT .md)"
+  echo "       The subagent will be re-spawned and will rewrite the document from scratch."
+  exit 1   # halt — do not proceed until the developer replies RECOVER or REAUTHOR
+fi
+```
+**On `RECOVER {gate}`:** run the `set-gate` command for that gate (see per-document gate commands below). If exit 0 → gate written → continue the loop. If non-zero → show the appropriate failure message below.
+**On `REAUTHOR {file-without-.md}`:** proceed to spawn the subagent for that document as normal.
+
 **Sub-step skip guard — check each document's gate before spawning its subagent:**
 ```bash
 node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" check-gate \
   --skill=rewrite --ado={ADO} --gate={gate} 2>/dev/null
 ```
-- **Exit 0 (PASS):** Document was authored in a previous run — skip subagent spawn, use the existing file.
-- **Exit 3 (no verdict):** Spawn the document subagent as normal per `document-orchestrator.md`.
+- **Exit 0 (PASS):** Document was authored and gate recorded — skip subagent spawn, use the existing file.
+- **Exit 3 (no verdict):** Spawn the document subagent per `document-orchestrator.md`.
 
-If all 7 gates are already PASS (context exhausted after all docs were authored but before `APPROVE DESIGN`),
+If all 7 gates are already PASS (session exhausted after all docs were authored but before `APPROVE DESIGN`),
 skip all subagents and proceed directly to the judge verdict gate below.
 
-> ⚓ **Safe point SP-2.5 — after each document wave, before next wave**
-> Applied after each wave of document subagents returns and their sub-step gates are written.
+**Per-document gate write — immediately after each subagent returns, before starting the next document.**
+Run the `set-gate` command for the document that just returned. Do not batch — write each gate as soon
+as its subagent's output is processed:
+
+```bash
+# target-component-architecture.md (sentinel: ## Coupling pattern resolutions)
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
+  --skill=rewrite --ado={ADO} --gate=design_doc_component_written --verdict=PASS \
+  --artifact-path="docs/migrations/{ADO}/target-component-architecture.md" \
+  --sentinel="## Coupling pattern resolutions" --min-bytes=200
+
+# target-data-architecture.md (sentinel: ## )
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
+  --skill=rewrite --ado={ADO} --gate=design_doc_data_written --verdict=PASS \
+  --artifact-path="docs/migrations/{ADO}/target-data-architecture.md" \
+  --sentinel="## " --min-bytes=200
+
+# target-security-architecture.md (sentinel: ## Coupling pattern resolutions)
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
+  --skill=rewrite --ado={ADO} --gate=design_doc_security_written --verdict=PASS \
+  --artifact-path="docs/migrations/{ADO}/target-security-architecture.md" \
+  --sentinel="## Coupling pattern resolutions" --min-bytes=200
+
+# target-integration-architecture.md (sentinel: ## Coupling pattern resolutions)
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
+  --skill=rewrite --ado={ADO} --gate=design_doc_integration_written --verdict=PASS \
+  --artifact-path="docs/migrations/{ADO}/target-integration-architecture.md" \
+  --sentinel="## Coupling pattern resolutions" --min-bytes=200
+
+# target-infrastructure-architecture.md (sentinel: ## )
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
+  --skill=rewrite --ado={ADO} --gate=design_doc_infrastructure_written --verdict=PASS \
+  --artifact-path="docs/migrations/{ADO}/target-infrastructure-architecture.md" \
+  --sentinel="## " --min-bytes=200
+
+# target-deployment-architecture.md (sentinel: ## )
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
+  --skill=rewrite --ado={ADO} --gate=design_doc_deployment_written --verdict=PASS \
+  --artifact-path="docs/migrations/{ADO}/target-deployment-architecture.md" \
+  --sentinel="## " --min-bytes=200
+
+# migration-feasibility.md (sentinel: ## )
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
+  --skill=rewrite --ado={ADO} --gate=design_doc_feasibility_written --verdict=PASS \
+  --artifact-path="docs/migrations/{ADO}/migration-feasibility.md" \
+  --sentinel="## " --min-bytes=200
+```
+
+**If `set-gate` exits non-zero, STOP immediately — do not start the next document.** The failure mode
+determines the message shown. Substitute `{gate}`, `{file}`, `{N}`, and `{sentinel}` with the values
+for the document that just failed:
+
+_File not found (subagent did not write the document to disk):_
+```
+⛔ Document validation failed — gate NOT written.
+
+  Gate   : {gate}
+  File   : docs/migrations/{ADO}/{file}
+  Issue  : File not found. The subagent did not write the document to disk.
+
+  Steps:
+    1. Scroll up in this session — if the subagent's full document output is visible in the chat,
+       copy it and save it manually to this exact path:
+         docs/migrations/{ADO}/{file}
+    2. Confirm the file now exists by running in a terminal:
+         ls "docs/migrations/{ADO}/{file}"
+    3. Reply:
+         RETRY {gate}
+       The validation script will re-run set-gate and write the gate if the file is valid.
+
+    — or, if the output is lost or truncated —
+
+    4. Reply:
+         REAUTHOR {file-without-.md}
+       The subagent will be re-spawned and will rewrite the document from scratch.
+```
+
+_Required section missing (file exists but sentinel absent — applies to component, security, integration docs):_
+```
+⛔ Document validation failed — gate NOT written.
+
+  Gate   : {gate}
+  File   : docs/migrations/{ADO}/{file}
+  Issue  : Required section "{sentinel}" is missing from the document.
+           The subagent produced an incomplete draft.
+
+  Steps:
+    1. Open the file in VS Code:
+         docs/migrations/{ADO}/{file}
+    2. Add the missing "{sentinel}" section. Use this format — one entry per critical/major
+       coupling that affects this document's domain:
+
+         ## Coupling pattern resolutions
+
+         ### CP-{N} — {coupling name} ({resolution approach, e.g. facade | replace | retain})
+         **Decision:** {what was decided}
+         **Alternatives rejected:**
+         - {approach}: {reason, citing integration-inventory.md row numbers as evidence}
+         **Impact on this document:** {what component/layer/boundary this creates or changes}
+         **Lifecycle:** {for facade — when it will be removed; for replace — none}
+
+       If no critical/major couplings affect this document's domain, write:
+         ## Coupling pattern resolutions
+         _No coupling decisions affect this document's domain._
+
+    3. Save the file, then reply:
+         RETRY {gate}
+       The validation script will re-check the section and write the gate if it is present.
+
+    — or, if the draft is too incomplete to fix manually —
+
+    4. Reply:
+         REAUTHOR {file-without-.md}
+       The subagent will be re-spawned and will rewrite the document from scratch.
+```
+
+_Document too small (file exists but below 200 bytes — likely a stub):_
+```
+⛔ Document validation failed — gate NOT written.
+
+  Gate   : {gate}
+  File   : docs/migrations/{ADO}/{file}
+  Issue  : File is {N} bytes — below the 200-byte minimum. The subagent produced a stub
+           or the session truncated the output before the document was fully written.
+
+  Steps:
+    1. Open the file in VS Code to inspect the content:
+         docs/migrations/{ADO}/{file}
+    2. If it is a stub (headings only, no real content), reply:
+         REAUTHOR {file-without-.md}
+       The subagent will be re-spawned and will rewrite the document from scratch.
+    3. If it has real content but was cut short, complete the document manually,
+       save it, then reply:
+         RETRY {gate}
+       The validation script will re-check size and sentinel, and write the gate if valid.
+```
+
+**On `RETRY {gate}`:** re-run the `set-gate` command for that gate. Exit 0 → gate written → continue to next document. Non-zero → show the same failure message again.
+**On `REAUTHOR {file-without-.md}`:** re-spawn the subagent for that document, then re-run `set-gate` when it returns.
+
+> ⚓ **Safe point SP-2.5 — after each DAG wave (all documents at the same dependency level are authored and gated)**
 > Apply the conservative bias rule — if the session is nearing the context limit:
 > 1. Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step2.5-sp","ado":"{ADO}"}`
 > 2. Update `migration-tracker.md` — mark completed documents ✅, "Next action: `REWRITE RESUME {ADO}`"
 > 3. Surface this and STOP:
 >    > Progress saved. Type `REWRITE RESUME {ADO}` — resume reads sub-step gates and skips
 >    > already-authored documents. Only remaining documents will be re-spawned.
-> If context is healthy, continue to the next document wave without pausing.
-
-**After all subagents in a wave return, record sub-step gates sequentially** (never from inside
-a subagent — matches the cluster B2 pattern: sequential writer prevents concurrent JSON corruption).
-Three documents require the `## Coupling pattern resolutions` section — use the stronger sentinel
-for those; the other four documents use the general `## ` sentinel:
-```bash
-# component, integration, security — must have ## Coupling pattern resolutions section
-node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
-  --skill=rewrite --ado={ADO} --gate=design_doc_component_written --verdict=PASS \
-  --artifact-path="docs/migrations/{ADO}/target-component-architecture.md" \
-  --sentinel="## Coupling pattern resolutions" --min-bytes=200
-node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
-  --skill=rewrite --ado={ADO} --gate=design_doc_integration_written --verdict=PASS \
-  --artifact-path="docs/migrations/{ADO}/target-integration-architecture.md" \
-  --sentinel="## Coupling pattern resolutions" --min-bytes=200
-node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
-  --skill=rewrite --ado={ADO} --gate=design_doc_security_written --verdict=PASS \
-  --artifact-path="docs/migrations/{ADO}/target-security-architecture.md" \
-  --sentinel="## Coupling pattern resolutions" --min-bytes=200
-
-# data, infrastructure, deployment, feasibility — standard sentinel
-node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
-  --skill=rewrite --ado={ADO} --gate=design_doc_data_written --verdict=PASS \
-  --artifact-path="docs/migrations/{ADO}/target-data-architecture.md" \
-  --sentinel="## " --min-bytes=200
-node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
-  --skill=rewrite --ado={ADO} --gate=design_doc_infrastructure_written --verdict=PASS \
-  --artifact-path="docs/migrations/{ADO}/target-infrastructure-architecture.md" \
-  --sentinel="## " --min-bytes=200
-node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
-  --skill=rewrite --ado={ADO} --gate=design_doc_deployment_written --verdict=PASS \
-  --artifact-path="docs/migrations/{ADO}/target-deployment-architecture.md" \
-  --sentinel="## " --min-bytes=200
-node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
-  --skill=rewrite --ado={ADO} --gate=design_doc_feasibility_written --verdict=PASS \
-  --artifact-path="docs/migrations/{ADO}/migration-feasibility.md" \
-  --sentinel="## " --min-bytes=200
-```
+> If context is healthy, continue to the next wave without pausing.
 
 After `APPROVE DESIGN`, record the gate in the checkpoint ledger:
 ```bash
@@ -1234,8 +1399,8 @@ node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
   --skill=rewrite --ado={ADO} --gate=design_approved --verdict=PASS \
   --artifact-path="docs/migrations/{ADO}/target-component-architecture.md" \
   --sentinel="## Coupling pattern resolutions" --min-bytes=200
-node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=committed_dag_path --value={COMMITTED_DAG_PATH}
-node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=design_doc_paths --value={DESIGN_DOC_PATHS}
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key=committed_dag_path --value={COMMITTED_DAG_PATH}
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key=design_doc_paths --value={DESIGN_DOC_PATHS}
 ```
 
 **3. Developer reviews and the feedback loop runs** via `design-revision-spec.md`:
@@ -1261,20 +1426,30 @@ REVISE finding — the developer chose an option based on a specific coupling st
 must implement what was agreed, not re-open the decision.
 
 ```bash
+# Record the judge verdict so check-gate can evaluate it.
+# Without this write, check-gate always returns "absent" and APPROVE DESIGN is unreachable.
+JUDGE_VERDICT="PASS"  # set from subagent return: PASS | REVISE | BLOCK
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
+  --skill=rewrite --ado={ADO} --gate=design_judge --verdict=$JUDGE_VERDICT
 node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" check-gate \
   --skill=rewrite --ado={ADO} --gate=design_judge --json
 ```
 - **Exit 0 (PASS):** display inline: `✅ Judge verdict (design_judge): PASS — [one-line summary from the judge's review of the design documents]` then proceed to APPROVE DESIGN.
 - **Exit 1 (REVISE):** **DO NOT display APPROVE DESIGN.** Show the full judge output and require:
   `I ACKNOWLEDGE THE JUDGE VERDICT: design_judge — [one sentence stating what you accept]`
-  On receipt: record `set-gate --gate=design_judge_acknowledged --verdict=ACKNOWLEDGED`; then display APPROVE DESIGN.
+  On receipt: record `set-gate --gate=design_judge_acknowledged --verdict=PASS`; then display APPROVE DESIGN.
 - **Exit 2 (BLOCK):** **DO NOT display APPROVE DESIGN.** Show the full judge output and require:
   `APPROVER: [full name] REASON: [written justification]`
-  On receipt: record `set-gate --gate=design_judge_block_override --verdict=BLOCK_OVERRIDE`.
+  On receipt: record `set-gate --gate=design_judge_block_override --verdict=PASS`.
 - **Exit 3 (no verdict):** the judge has not assessed the design documents. Show: `⚠ Judge has not run for gate design_judge — complete the judge pass before APPROVE DESIGN.` Do not display APPROVE DESIGN.
 
 **4. APPROVE DESIGN** — all 7 documents must reach `Status: APPROVED` with no PARTIAL/UNVERIFIED
 integration rows remaining. Records `payload.rewrite.gate_verdicts.design_approved = true`.
+
+Reply: `APPROVE DESIGN ADO-{ADO}`
+The session will not advance to Step 3 until `APPROVE DESIGN` is received — the
+`approval-capture.cjs` hook records the approval and `migration-gate.cjs` enforces the gate at
+write time.
 
 **5. Re-derive the committed target-space DAG.** Now that `target-component-architecture.md` is APPROVED,
 project its finalized component inventory + dependencies into a target graph and re-run `decompose` to
@@ -1430,15 +1605,15 @@ Record the spec path and cluster inventory in the checkpoint — resume reads th
 instead of re-parsing cluster-spec.json:
 ```bash
 node scripts/checkpoint-ledger.cjs set-payload \
-  --skill=rewrite --ado={ADO_ID} \
+  --skill=rewrite --ado={ADO} \
   --key=cluster_spec_path \
   --value=docs/migrations/{ADO}/cluster-spec.json
 
 # Store cluster count and name+worktree inventory for resume orientation
 CLUSTER_COUNT=$(node -e "const d=JSON.parse(require('fs').readFileSync('docs/migrations/{ADO}/cluster-spec.json','utf8'));process.stdout.write(String(d.clusters?.length||0))")
 CLUSTER_META=$(node -e "const d=JSON.parse(require('fs').readFileSync('docs/migrations/{ADO}/cluster-spec.json','utf8'));process.stdout.write(JSON.stringify((d.clusters||[]).map((c,i)=>({id:i+1,name:c.name||'cluster-'+(i+1),worktree:'.claude/worktrees/{ADO}-cluster-'+(i+1)}))))")
-node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=cluster_count --value="$CLUSTER_COUNT"
-node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} \
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key=cluster_count --value="$CLUSTER_COUNT"
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} \
   --payload-json="{\"clusters\":$CLUSTER_META}"
 ```
 
@@ -1569,20 +1744,38 @@ Never run checkpoint updates from inside the cluster subagent — sequential upd
 >    > Progress saved. Type `REWRITE RESUME {ADO}` — resume reads cluster verdicts from checkpoint and continues from the Write Gate for this wave.
 > If context is healthy, continue without pausing — no developer reply required.
 
-**Step C — Present diffs for Write Gate approval.** For each PASS cluster, show the diff and prompt:
-```
-📁 WRITE PENDING — Cluster {N}: {name}
-   Diff: {diff_path}
-   Reply APPROVE ADO-{ADO} to write, or SKIP to discard.
-```
-The Write Gate lives in the orchestrator (main session), not in the subagent. Only on APPROVE does
-the orchestrator commit the worktree files to the target folder.
+**Step C — Prepare cluster branches and present for developer approval.**
 
-After committing, record the cluster as merged so the worktree guard skips it on any future re-run:
+For each PASS cluster, commit the worktree branch and record its SHA in `pending-approval.json`:
 ```bash
-node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
-  --skill=rewrite --ado={ADO} --gate=cluster_{N}_merged --verdict=PASS
+node "$PLUGIN_DIR/scripts/cluster-merge.cjs" prepare \
+  --ado={ADO} --clusters={N1},{N2},...
 ```
+This command: commits each cluster's worktree branch, records the branch SHA, and writes
+`.claude/migration/{ADO}.pending-approval.json` — the file the approval hook reads on `APPROVE CLUSTERS`.
+
+After `prepare` completes, surface the cluster summary to the developer and prompt:
+```
+Cluster preparation complete for ADO-{ADO}.
+Clusters prepared: {N1} ({name1}), {N2} ({name2}), ...
+
+Reply with one of:
+  APPROVE CLUSTERS ADO-{ADO}   — approves all prepared clusters (reads pending-approval.json, records per-cluster approvals, deletes pending file)
+  SKIP CLUSTER ADO-{ADO} N     — marks cluster N as skipped without merging
+```
+
+The Write Gate lives in the orchestrator (main session), not in the subagent. Only after
+`APPROVE CLUSTERS` does the `approval-capture.cjs` hook record the per-cluster approvals. The
+`migration-gate.cjs` hook then allows writes to `worktrees/cluster-N/` paths.
+
+After clusters are approved, merge each cluster into the target branch:
+```bash
+node "$PLUGIN_DIR/scripts/cluster-merge.cjs" merge \
+  --ado={ADO} --cluster={N}
+```
+This performs a 4-gate check (idempotency → approval → SHA match → clean target) and merges with
+`--no-ff`. The idempotency marker (`cluster_{N}_commit_started`) is written before the merge so a
+crash cannot produce a double-merge on re-run.
 
 **Step D — Handle REVISE / BLOCK.**
 - REVISE: re-spawn the subagent with the findings appended to the prompt. Cap at 3 iterations. On
@@ -1683,10 +1876,10 @@ fi
 
 ```bash
 # Flush checkpoint before next step
-node scripts/checkpoint-ledger.cjs set-gate --skill=rewrite --ado={ADO_ID} --gate=step_3_wave_N_complete --verdict=PASS
-node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=wave_N_cluster_paths --value={WAVE_N_CLUSTER_PATHS}
+node scripts/checkpoint-ledger.cjs set-gate --skill=rewrite --ado={ADO} --gate=step_3_wave_N_complete --verdict=PASS
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key=wave_N_cluster_paths --value={WAVE_N_CLUSTER_PATHS}
 # Clear any dirty_stop entry from this wave — wave is complete, clean state
-node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --payload-json='{"dirty_stop":null}'
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --payload-json='{"dirty_stop":null}'
 ```
 
 > ⚓ **Safe point SP-4 — wave N complete, before wave N+1 (or Step 5)**
@@ -1742,8 +1935,8 @@ Every gate records an independent **judge** verdict (`$PLUGIN_DIR/skills/shared/
 and is persisted to the shared ledger via `scripts/checkpoint-ledger.cjs` (`set-gate` / `set-payload`).
 
 **Populate Transferable Patterns (completion gate only).** When the completion gate passes,
-review every `[LESSON]` entry in `docs/migrations/{ADO}/migration-log.md` and generate a
-`TP-{N}` entry for each one in the `## Transferable Patterns` section. Strip all
+read `docs/migrations/{ADO}/lessons.md` (the compact parallel index — never the full migration log)
+and generate a `TP-{N}` entry for each `[LESSON]` entry found there in the `## Transferable Patterns` section. Strip all
 application-specific detail (app names, internal hostnames, firm-specific package names,
 internal paths, team names). State the pattern generically so it is usable by a future team
 with no knowledge of this project. Write the TP entries to the migration log immediately —
@@ -1754,9 +1947,9 @@ and remove any residual project-specific detail before closing the migration."
 
 ```bash
 # Flush checkpoint before next step
-node scripts/checkpoint-ledger.cjs set-gate --skill=rewrite --ado={ADO_ID} --gate=merge_gate --verdict=PASS \
-  --artifact-path="docs/migrations/{ADO_ID}/{ADO_ID}-assurance-summary.md" --sentinel="## " --min-bytes=100
-node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO_ID} --key=assurance_summary_path --value={ASSURANCE_SUMMARY_PATH}
+node scripts/checkpoint-ledger.cjs set-gate --skill=rewrite --ado={ADO} --gate=merge_gate --verdict=PASS \
+  --artifact-path="docs/migrations/{ADO}/{ADO}-assurance-summary.md" --sentinel="## " --min-bytes=100
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key=assurance_summary_path --value={ASSURANCE_SUMMARY_PATH}
 ```
 
 ## Step 5a — Collect test plans and assemble combined document (orchestrator)

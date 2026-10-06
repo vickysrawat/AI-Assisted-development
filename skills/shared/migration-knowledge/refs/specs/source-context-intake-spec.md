@@ -45,7 +45,7 @@ Rules:
 | upgrade | Step 3 (inside gap/risk analysis) | `upgrade-checkpoint.cjs set-gate --gate=report` refuses unless PASS |
 
 ## The gate — `scripts/intake-verify.cjs`
-`verify` produces the verdict (exits 0/2–8); the skill records `stage_gates.intake_context=PASS` +
+`verify` produces the verdict (exits 0/2–8); the skill records the `intake_context` gate as PASS +
 `core.source_context` on exit 0. `check-gate` re-validates from the ledger (manifest exists,
 citations ≥ expected roots, `modules_mapped + out_of_scope == modules_total`) so a hand-set gate is
 not trusted. See the script's SCRIPT REVIEW header for the exit-code contract.

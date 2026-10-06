@@ -25,11 +25,18 @@ rendering rules. They never reimplement either inline.
 
 The agent accepts a single JSON input with a mandatory `migration_type` discriminator.
 
+> **`plugin_dir` — required in every task payload.**
+> The agent runs in an isolated subagent context where `$PLUGIN_DIR` shell variables are not
+> available. The calling skill MUST include the resolved absolute path as `plugin_dir` in the
+> JSON so the agent can locate `lookup-urls.json` via the Read tool. Set it from the bash
+> context where `$PLUGIN_DIR` is already expanded: `"plugin_dir": "$PLUGIN_DIR"`.
+
 **Mode 1 — rewrite / upgrade:**
 
 ```json
 {
   "migration_type": "rewrite | upgrade",
+  "plugin_dir": "<absolute path to the plugin root — e.g. /home/user/.claude/plugins/ai-assisted-development>",
   "source_layers": [
     {
       "stack": "<generic technology name — e.g. angular, dotnet, react, java, python, nodejs>",
@@ -66,6 +73,7 @@ scan). This enables cloud component grounding without the calling skill re-scann
 ```json
 {
   "migration_type": "replatform",
+  "plugin_dir": "<absolute path to the plugin root>",
   "source_environment": {
     "type": "on-prem | cloud",
     "runtime": "<description — e.g. 'IIS/.NET 4.8'>",
@@ -255,6 +263,7 @@ The `¹` resolves to the Citations block entry for the architectural guidance, s
 
 The agent enforces these rules before returning the bundle. Calling skills re-check on receipt
 and degrade confidence when violations are detected rather than silently accepting them.
+See Section 5 Step 3 for the full integrity check table and the exact violation format to use.
 
 | `source_type` | `additional_sources=[]` + `confidence=high` | `confidence=high` achievable? |
 |---|---|---|
@@ -313,6 +322,11 @@ the calling skill:
 Use only generic technology names and cloud provider names. Never include internal project
 identifiers, class names, file paths, or org-specific terms.
 
+Always include `"plugin_dir": "$PLUGIN_DIR"` in the task JSON. The `$PLUGIN_DIR` variable is
+available in the calling skill's bash context and resolves to the plugin root absolute path.
+The agent needs this to locate `lookup-urls.json` via the Read tool — shell variables are not
+available inside an isolated subagent context.
+
 **Step 2 — Invoke the Agent tool (exactly ONE call)**
 
 ```
@@ -326,10 +340,40 @@ Do NOT invoke the agent multiple times for different fact types within the same 
 Do NOT chain multiple agent calls to compensate for UNKNOWN results — they are correct
 terminal states, not errors to retry.
 
-**Step 3 — Receive and validate the bundle**
+**Step 3 — Receive and validate the bundle (integrity check)**
 
-Validate the returned bundle is a non-empty JSON array. If the agent returned an error object
-(validation failure), surface the error to the developer and stop the options/report phase.
+> **Applies to both live and cached bundles.** When the rewrite skill loads a bundle from the
+> machine-level cache (cache hit path), it bypasses Step 2. The integrity check below MUST
+> still run — load the bundle from cache, then immediately apply this step before any analysis.
+
+**Error check first:** if the returned object has an `error` field (agent validation failure or
+missing lookup-urls.json), surface the message to the developer and stop — do not proceed.
+
+**Integrity check — run on every entry in the returned array.** This step compensates for the
+fact that SKILL.md instructions are advisory (the LLM may skip steps under token pressure).
+Enforcement happens here, at the consumption boundary. Surface any violation as a
+`⚠ Research integrity warning` *before* using the bundle — do not silently accept a bad bundle.
+
+| Check | On violation |
+|---|---|
+| All required fields present per Section 3 schema (mode-specific) | Flag missing field — treat entry as UNKNOWN for that field |
+| All `retrieved_date` values equal today's ISO date (`YYYY-MM-DD`) | Flag as stale — append `[⚠ stale — retrieved_date mismatch]` to every affected fact |
+| Every `confidence=high` or `confidence=medium` fact has non-null `source_url` | Degrade to UNKNOWN — render using UNKNOWN rules (Section 4); do not present as grounded |
+| Every non-null `source_url` starts with `https://` | Degrade to `confidence=low` — suspect URL shape signals a hallucinated or incorrectly bound value |
+| Every `confidence=UNKNOWN` fact has non-null `canonical_url` | Flag as incomplete UNKNOWN — note "no check URL available" in the rendered warning |
+| `source_type="multi-vendor"` entries have `additional_sources[]` with ≥ 2 distinct vendor entries | Degrade to `confidence=medium` — a single-vendor claim on a multi-vendor technology is not authoritative |
+| `source_type="community"` entries do not have `confidence=high` | Degrade to `confidence=medium` — community packages have no formal support policy (Section 4.2) |
+
+**Violation format** — inline before the affected fact in the options/report output:
+
+```
+⚠ Research integrity warning — [{layer or component}] {field}: {violation description}
+   Action: {what was done — e.g. "confidence degraded to UNKNOWN", "rendered with UNKNOWN rules"}
+```
+
+Do not stop the workflow for integrity violations — surface them and continue with degraded
+confidence for affected facts. A partial bundle is more useful than no bundle, provided every
+degraded fact is visibly flagged.
 
 **Step 4 — Apply confidence rendering (Section 4) — mandatory**
 
@@ -347,9 +391,11 @@ For each PO framework section in the calling skill's options output:
 
 ## Section 6 — Per-Provider Lookup Strategy (calling skill reference)
 
-This table summarises the confidence levels calling skills should expect. It mirrors the
-authoritative lookup strategy in `skills/migration-research-agent/SKILL.md` — both must stay
-in sync. If they diverge, the agent SKILL.md is the authoritative source.
+This table summarises the confidence levels calling skills should expect per provider. The
+authoritative URL lookup table is `$PLUGIN_DIR/skills/shared/migration-knowledge/lookup-urls.json`
+— edit that file to add or update URLs; do not hardcode them here. Confidence levels in this
+table must stay in sync with the `confidence` fields in `lookup-urls.json`. If they diverge,
+`lookup-urls.json` is the authoritative source.
 
 **Source type by technology** — reference when constructing CitationEntry:
 

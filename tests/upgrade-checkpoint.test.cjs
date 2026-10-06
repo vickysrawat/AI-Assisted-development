@@ -130,6 +130,23 @@ assert('TOLERANT set-payload on foreign checkpoint succeeds', tol.code === 0 && 
 const tolAfter = JSON.parse(fs.readFileSync(FILE, 'utf8'));
 assert('TOLERANT foreign field preserved', tolAfter.foreign?.keep === 'me', JSON.stringify(tolAfter.foreign));
 
+// set-payload --key/--value — generic single key (AC-F15)
+reset();
+const kv = run(['set-payload', '--ado=9000', '--key=stack', '--value=dotnet', '--now=2026-09-08']);
+assert('SET-PAYLOAD --key/--value written to upgrade payload', kv.json.payload?.stack === 'dotnet', JSON.stringify(kv.json.payload));
+
+// set-payload --payload-json — JSON patch (AC-F15)
+const pj = run(['set-payload', '--ado=9000', '--payload-json={"intake_pass":1,"intake_progress_index":5}', '--now=2026-09-08']);
+assert('SET-PAYLOAD --payload-json merges all keys', pj.json.payload?.intake_pass === 1 && pj.json.payload?.intake_progress_index === 5, JSON.stringify(pj.json.payload));
+
+// set-payload --payload-json with invalid JSON exits 1
+const pjBad = run(['set-payload', '--ado=9000', '--payload-json={not-json}', '--now=2026-09-08']);
+assert('SET-PAYLOAD --payload-json invalid JSON exits 1', pjBad.code === 1, `code=${pjBad.code}`);
+
+// A13: unknown flag on set-payload still exits 1 (key/value/payload-json are now allowed; bad flags still rejected)
+const a13 = run(['set-payload', '--ado=9000', '--unknown-flag=bad', '--now=2026-09-08']);
+assert('A13: unknown flag rejected on set-payload (exit 1)', a13.code === 1, `code=${a13.code}`);
+
 // get on a missing checkpoint -> absent, exit 7
 reset();
 const g = run(['get', '--ado=9000']);

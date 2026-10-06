@@ -114,32 +114,20 @@ function main() {
     process.exit(2);
   }
 
-  // A8: validate token bodies — empty body or unsubstituted placeholder both exit 2.
-  // Lookbehind excludes shell ${VAR} expansions; matches {BUILD}, {build}, {Build}, etc.
-  const PLACEHOLDER_RE = /(?<!\$)\{[A-Za-z][A-Za-z0-9_]*\}/g;
+  // A8: validate token bodies — empty body exits 2. Profiles use {Name}/{Cluster}/etc. as
+  // intentional template syntax for the migration skill to substitute; those are NOT authoring
+  // placeholders and must not be flagged. Only a completely empty section body is an error.
   const emptyBodies = [];
-  const unfilledPlaceholders = {};
   for (const tok of required) {
     const body = tokenBody(content, tok).trim();
-    if (!body) {
-      emptyBodies.push(tok);
-    } else {
-      const matches = body.match(PLACEHOLDER_RE);
-      if (matches) unfilledPlaceholders[tok] = [...new Set(matches)];
-    }
+    if (!body) emptyBodies.push(tok);
   }
-  if (emptyBodies.length > 0 || Object.keys(unfilledPlaceholders).length > 0) {
+  if (emptyBodies.length > 0) {
     emit(args.json,
       { target: args.target, resolved: false, reason: 'incomplete-bodies',
-        empty_tokens: emptyBodies,
-        unfilled_placeholders: unfilledPlaceholders,
-        profile_path: profilePath },
-      [`❌ Profile "${args.target}" has incomplete token bodies:`,
-       emptyBodies.length ? `   Empty bodies (blank sections): ${emptyBodies.join(', ')}` : null,
-       Object.keys(unfilledPlaceholders).length
-         ? `   Unfilled placeholders: ${JSON.stringify(unfilledPlaceholders)}` : null,
-       `   Open the profile at ${profilePath}, complete each listed section, then re-run.`,
-      ].filter(Boolean));
+        empty_tokens: emptyBodies, profile_path: profilePath },
+      [`❌ Profile "${args.target}" has empty token bodies: ${emptyBodies.join(', ')}`,
+       `   Open the profile at ${profilePath}, complete each listed section, then re-run.`]);
     process.exit(2);
   }
 

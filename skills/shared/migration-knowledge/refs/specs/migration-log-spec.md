@@ -80,6 +80,20 @@ Future migrations of similar apps: read the ## Lessons section.
 
 Create `docs/migrations/{ADO}/` if the directory does not exist. Phase headings are pre-populated empty so events can be appended without a separate create step. The Decisions summary, Risks accepted, and Lessons sections are pre-populated so they are ready to receive rows as decisions are made — never pre-fill them with placeholder data.
 
+**Parallel `lessons.md` — created in the same Bash chain as `migration-log.md`.** Every migration initializes both files together. `lessons.md` is the compact index read by the skill at Step 5 for TP generation; the skill never reads the full migration log for this purpose:
+
+```
+docs/migrations/{ADO}/lessons.md
+```
+
+Header template:
+
+```markdown
+# Lessons — {AppName} {Skill} (ADO-{ID})
+_Parallel index to `migration-log.md ## Lessons`. Every `[LESSON]` entry is simultaneously appended here._
+_Read by the skill at Step 5 for TP generation — the full migration log is never read for this purpose._
+```
+
 ---
 
 ---
@@ -254,6 +268,7 @@ developer's behalf — it proposes; the developer decides.
 **Who writes:** skill writes all fields in teaching voice, derived from the migration's findings, decisions, and lessons encountered. Developer reviews for accuracy.
 **Voice:** teaching voice — explain the wrong approach first, then the right one, as if to a future developer who doesn't know this yet.
 **Location:** consolidated in the `## Lessons` section at the bottom of the log.
+**Dual-write (mandatory):** every `[LESSON]` entry appended to `migration-log.md` MUST also be appended to `docs/migrations/{ADO}/lessons.md` in the same Bash chain. Both appends must succeed; if either fails, halt and report. The pre-append guard runs against `migration-log.md`; add a matching guard for `lessons.md` before appending to it.
 
 ```markdown
 ### [LESSON] {title}
@@ -407,6 +422,13 @@ forms the WCF rewrite playbook without requiring per-project context.
   before the migration proceeds. The skill proposes; the developer accepts.
 - `[LESSON]` entries use teaching voice — explain the wrong approach first, then the right one.
 - `[LESSON]` entries live at the bottom regardless of which phase they occurred in.
+- EVERY `[LESSON]` append to `migration-log.md` MUST simultaneously append the same entry to
+  `docs/migrations/{ADO}/lessons.md` in the same Bash chain — atomic: both succeed or the chain
+  fails. The skill reads only `lessons.md` at the completion gate (Step 5) for TP generation;
+  it never reads the full `migration-log.md` for this purpose.
+- `lessons.md` is a developer-readable audit convenience AND the skill's TP input source. It is
+  NOT a resume input for Claude — the checkpoint ledger (`checkpoint-ledger.cjs`) is the resume
+  state. Never load `migration-log.md` into Claude context as a required resume input.
 - NEVER leave placeholder text (`{developer to fill in}`, `{developer adds}`, `{TBD}`, etc.) in
   any log entry — the skill writes all content at the moment the event occurs, using available
   evidence. If a field cannot be inferred, state the gap explicitly (e.g. "Accepted by: to be

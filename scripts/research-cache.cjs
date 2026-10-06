@@ -7,7 +7,7 @@
 //                      context-exhaustion re-runs and across separate migrations that share
 //                      the same source→target stack pair.
 //                      Three operations:
-//                        lookup — exits 0 (usable hit: fresh or stale-warn), 1 (miss/expired)
+//                        lookup — exits 0 (fresh hit ≤30d), 1 (miss/expired), 2 (stale hit 30-90d)
 //                        write  — stores a bundle from a file; atomic temp→rename
 //                        expire — removes entries older than N days
 //                      Two-tier staleness: warn at 30 days (still usable), hard-expire at 90 days.
@@ -87,8 +87,8 @@ if (require.main === module) {
     let result, exit = 0;
 
     if (OP === 'lookup') {
-      // Exits 0 = usable hit (fresh or stale-warn); 1 = miss (not found, corrupt, or expired).
-      // On stale hit (30–90 days): exits 0 with staleness='stale' — caller should warn the developer.
+      // Exits 0 = fresh hit (≤30d); 1 = miss (not found, corrupt, or expired); 2 = stale hit (30-90d).
+      // On stale hit (30–90 days): exits 2 — caller should warn the developer but may still use the bundle.
       // On expired hit (>90 days): deletes the cache file and exits 1 with reason='expired'.
       const key = arg('key');
       if (!key) throw new Error('lookup requires --key');
@@ -117,7 +117,26 @@ if (require.main === module) {
             result = { op: 'lookup', status: 'hit', key, staleness, age_days: age,
                        warn_threshold: WARN_AGE_DAYS, expire_threshold: EXPIRE_AGE_DAYS,
                        cache_file: file, cache_dir: CACHE_DIR, entry: data };
+            // DECISION: Use distinct exit codes for fresh vs stale hits (AC-F4)
+            // Options considered:
+            //   A) Exit 0 for both — rejected: callers cannot branch on staleness without
+            //      parsing JSON output; leads to fragile inline node -e shell blocks
+            //   B) Exit 0 (fresh), 2 (stale) — chosen: callers branch on exit code directly;
+            //      no JSON parsing needed; 1=miss is preserved; AC-F4 compliant
+            exit = staleness === 'stale' ? 2 : 0;
           }
+        }
+      }
+
+      // Write bundle to file if --extract-bundle-to is set and lookup hit (AC-F5)
+      const extractTo = arg('extract-bundle-to');
+      if (extractTo && result && result.status === 'hit') {
+        try {
+          fs.writeFileSync(extractTo, JSON.stringify(result.entry.bundle, null, 2) + '\n', 'utf8');
+        } catch (e) {
+          process.stderr.write(`error: could not write bundle to ${extractTo}: ${e.message}\n`);
+          result = { op: 'lookup', status: 'miss', key, reason: 'extract-bundle-to-failed', cache_dir: CACHE_DIR };
+          exit = 1;
         }
       }
 

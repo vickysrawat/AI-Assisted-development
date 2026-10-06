@@ -3,10 +3,12 @@
 // What it does:        Upgrade-skill checkpoint CLI — now a THIN ADAPTER over the shared ledger
 //                      (scripts/checkpoint-ledger.cjs), extracted in Story 2 (rule-of-three: Upgrade
 //                      + Rewrite are the two consumers). It maps the upgrade-specific flags
-//                      (--baseline-tag, --hops, --gate/--verdict) onto the shared core + the
-//                      `payload.upgrade` namespace, preserving the EXACT on-disk shape + CLI that
-//                      Story 1 shipped (the unchanged upgrade-checkpoint.test.cjs is the
-//                      behavior-preservation proof). Ops: init | get | set-gate | set-payload.
+//                      (--baseline-tag, --hops, --gate/--verdict, --key/--value, --payload-json)
+//                      onto the shared core + the `payload.upgrade` namespace, preserving the EXACT
+//                      on-disk shape + CLI that Story 1 shipped. The generic --key/--value and
+//                      --payload-json flags (AC-F15 full consolidation) allow all upgrade-skill
+//                      set-payload calls to route here, eliminating direct checkpoint-ledger.cjs
+//                      calls from the skill. Ops: init | get | set-gate | set-payload.
 // What it touches:     Reads/writes ONE JSON checkpoint (default
 //                      .claude/migration/<ado>.checkpoint.json, override with --file) via the shared
 //                      ledger library. Nothing else.
@@ -48,7 +50,7 @@ if (require.main === module) {
       'init':        new Set(['ado', 'file', 'now', 'json', 'stack', 'from', 'to']),
       'get':         new Set(['ado', 'file', 'json']),
       'set-gate':    new Set(['ado', 'file', 'now', 'json', 'gate', 'verdict']),
-      'set-payload': new Set(['ado', 'file', 'now', 'json', 'baseline-tag', 'hops', 'gate', 'verdict']),
+      'set-payload': new Set(['ado', 'file', 'now', 'json', 'baseline-tag', 'hops', 'gate', 'verdict', 'key', 'value', 'payload-json']),
     };
     const allowedForOp = ALLOWED_FLAGS[OP];
     if (allowedForOp) {
@@ -82,7 +84,7 @@ if (require.main === module) {
         // not the default CWD-relative .claude/graph/graph.json (which could be a different project's graph).
         const ledForGuard = ledger.load(FILE) || {};
         const scForGuard  = (ledForGuard.payload && ledForGuard.payload['upgrade'] && ledForGuard.payload['upgrade'].source_context) || {};
-        const guardArgs = [`--ado=${ADO}`, `--file=${FILE}`, `--settings=${settingsPath}`];
+        const guardArgs = [`--ado=${ADO}`, `--file=${FILE}`, `--settings=${settingsPath}`, `--skill=${SKILL}`];
         if (scForGuard.graph_path) guardArgs.push(`--graph=${scForGuard.graph_path}`);
         const r = spawnSync(process.execPath, [intakeVerify, 'check-gate', ...guardArgs, '--json'], { encoding: 'utf8' });
         if (r.status !== 0) {
@@ -101,12 +103,22 @@ if (require.main === module) {
       const patch = {};
       if (arg('baseline-tag') !== undefined) patch.baseline_tag = arg('baseline-tag');
       if (arg('hops') !== undefined) patch.hops = arg('hops').split(',').map(h => h.trim()).filter(Boolean);
+      // Generic JSON patch — merges all keys from the supplied JSON object (AC-F15).
+      const payloadJson = arg('payload-json');
+      if (payloadJson !== undefined) {
+        let parsed;
+        try { parsed = JSON.parse(payloadJson); } catch (e) { throw new Error(`--payload-json is not valid JSON: ${e.message}`); }
+        Object.assign(patch, parsed);
+      }
+      // Generic single key-value pair — writes patch[key]=value into the upgrade payload (AC-F15).
+      const keyName = arg('key');
+      if (keyName !== undefined) patch[keyName] = arg('value') !== undefined ? arg('value') : '';
       ledger.setPayload(cp, SKILL, patch, NOW);
       if (arg('gate') !== undefined && arg('verdict') !== undefined) { cp.payload.upgrade.gate_verdicts[arg('gate')] = arg('verdict'); ledger.save(FILE, cp); }
       else ledger.save(FILE, cp);
       result = { op: 'set-payload', status: 'ok', file: FILE, payload: cp.payload.upgrade, checkpoint: cp };
     } else {
-      process.stderr.write('usage: upgrade-checkpoint.cjs <init|get|set-gate|set-payload> --ado=<id> [--stack --from --to] [--gate --verdict] [--baseline-tag --hops] [--file --now]\n');
+      process.stderr.write('usage: upgrade-checkpoint.cjs <init|get|set-gate|set-payload> --ado=<id> [--stack --from --to] [--gate --verdict] [--baseline-tag --hops] [--key=<k> --value=<v>] [--payload-json=<json>] [--file --now]\n');
       process.exit(1);
     }
     if (JSON_OUT) process.stdout.write(JSON.stringify(result, null, 2) + '\n');

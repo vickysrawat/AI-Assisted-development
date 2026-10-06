@@ -40,6 +40,27 @@
 ## Backing Store (if any)
 
 > Complete this section only if the add-in talks to an external database or store.
+> If no database: delete this section and the ERD below.
+
+### Entity Relationship Diagram
+
+```mermaid
+erDiagram
+    EntityA {
+        int Id PK "Primary key"
+        nvarchar Name "NOT NULL"
+        int EntityBId FK "References EntityB.Id"
+        datetime2 CreatedAt "UTC — set on insert"
+    }
+    EntityB {
+        int Id PK "Primary key"
+        nvarchar Code "UNIQUE NOT NULL"
+    }
+
+    EntityB ||--o{ EntityA : "has many"
+```
+
+> ⚠ Replace the example entities above with the actual backing store schema, or delete this section if there is no database.
 
 | Entity / Table | Store | Owner module | Key columns | Purpose |
 |----------------|-------|--------------|-------------|---------|

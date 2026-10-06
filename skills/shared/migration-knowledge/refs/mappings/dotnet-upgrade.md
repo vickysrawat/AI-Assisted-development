@@ -35,6 +35,45 @@ The further back the source version, the more breaking changes accumulate. Each 
 
 ---
 
+## Pre-hop blockers — check BEFORE running the tool
+
+These items block a safe upgrade and must be resolved before running `dotnet upgrade-assistant`.
+
+### HintPath DLL compatibility
+
+If any `.csproj` contains `<Reference><HintPath>` entries pointing to pre-compiled DLLs, verify
+each DLL's CLR version before upgrading:
+
+```powershell
+[System.Reflection.Assembly]::LoadFile("path\to\Assembly.dll").ImageRuntimeVersion
+# v4.0.30319 = .NET Framework 4.x — must be eliminated before hop 1
+# v4.0.30319 with target .NET Standard = may be OK, but verify the API surface
+```
+
+The .NET 8 framework compatibility shim loads .NET Fx 4.x binaries silently. .NET 9/10 narrows
+the compat surface and these binaries will cause runtime failures. Fix: identify which types are
+actually used, inline them into a shared project or NuGet, and remove all `<Reference><HintPath>`
+entries from the `.csproj`.
+
+### ASP.NET Core types in non-Web class libraries
+
+A `Microsoft.NET.Sdk` (non-Web) class library that uses `IHttpContextAccessor`, `HttpContext`, or
+`RequestDelegate` must NOT pin `Microsoft.AspNetCore.Http.Abstractions` via a versioned
+`PackageReference` — the explicit version pin becomes incompatible with each new .NET target
+(e.g. `2.2.0` fails on .NET 9+).
+
+```xml
+<!-- Remove -->
+<PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
+<!-- Add -->
+<FrameworkReference Include="Microsoft.AspNetCore.App" />
+```
+
+No `.cs` changes required — using directives remain valid. The `FrameworkReference` resolves to
+the correct SDK version automatically and never needs an explicit version pin.
+
+---
+
 ## GREEN — Migrates Cleanly (all versions)
 
 | Component | Notes |
@@ -110,7 +149,7 @@ Packages most commonly needing major version bumps:
 | Package | Common upgrade notes |
 |---|---|
 | `Microsoft.EntityFrameworkCore.*` | EF Core's target framework is a **minimum, not a match** — pick an EF Core major whose min-TFM ≤ your target TFM (and ≥ your current). EF Core major need **not** equal the .NET major — e.g. **EF Core 9 runs on net8**. Support-matrix: **EF Core 8 → net8.0 (LTS)** · **EF Core 9 → net8.0 (STS)** · **EF Core 10 → net10.0 (LTS)**. Check breaking changes per major crossed — see `shared/ef6-to-efcore.md`. |
-| `Swashbuckle.AspNetCore` | v6 → v7 has breaking config changes. Alternatively migrate to `Microsoft.AspNetCore.OpenApi` (.NET 9+). |
+| `Swashbuckle.AspNetCore` | **v6 → v10 is a code change, not just a version bump** — budget 30–60 min for any project with custom Swagger configuration. `Microsoft.OpenApi` 2.x introduced 5 specific breaking changes: (1) **Namespace collapsed** — `using Microsoft.OpenApi.Models` → `using Microsoft.OpenApi`; (2) **Security scheme reference** — `new OpenApiSecurityScheme { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" } }` → `new OpenApiSecuritySchemeReference("Bearer")`; (3) **AddSecurityRequirement signature** — `c.AddSecurityRequirement(requirement)` → `c.AddSecurityRequirement(_ => requirement)`; (4) **Parameter collection interface** — `new List<OpenApiParameter>()` → `new List<IOpenApiParameter>()`; (5) **Schema type enum** — `Schema = new OpenApiSchema { Type = "string" }` → `Schema = new OpenApiSchema { Type = JsonSchemaType.String }`. Also: `Scheme = "Bearer"` (capital B) in `AddSecurityDefinition` causes Swagger UI to drop the Authorization header — change to `Scheme = "bearer"` (lowercase). Alternatively, migrate to `Microsoft.AspNetCore.OpenApi` (.NET 9+). See [Swashbuckle v10 migration guide](https://github.com/domaindrivendev/Swashbuckle.AspNetCore/blob/master/docs/migrating-to-v10.md). |
 | `Microsoft.AspNetCore.Authentication.JwtBearer` | Package version must match SDK version. |
 | `Serilog.AspNetCore` | Generally backward-compatible; check changelog. |
 | `AutoMapper` | v12+ has breaking changes from v10/11. |
@@ -132,6 +171,47 @@ Packages most commonly needing major version bumps:
 
 **.NET 10 removals:**
 - Review [learn.microsoft.com — Breaking changes in .NET 10](https://learn.microsoft.com/en-us/dotnet/core/compatibility/10.0) before migrating.
+
+### NU1605 — Stale explicit version pins
+
+After each hop, run `dotnet restore` (not `--no-restore`) and check for `NU1605` errors.
+These occur when upgrade-assistant bumps a Microsoft.* package and its transitive graph now
+requires a higher version than an **explicit pin** you have in a `.csproj`.
+
+**Fix:** Remove the explicit `<PackageReference>` entry — NuGet resolves it transitively at the
+correct version. Only re-add an explicit pin if you need a version *higher* than the transitive
+graph provides.
+
+```xml
+<!-- Remove the stale pin — let NuGet resolve transitively -->
+<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.0.2" />  <!-- REMOVE -->
+```
+
+Common stale-pin families: `System.IdentityModel.Tokens.Jwt`, `Serilog.Settings.Configuration`
+(when you upgrade `Serilog.AspNetCore` without bumping sibling packages), any `Microsoft.Extensions.*`
+version locked before the upgrade.
+
+### upgrade-assistant WCF package mapping — client vs server
+
+`dotnet upgrade-assistant` may incorrectly map `System.ServiceModel.*` packages to `CoreWCF.*`.
+These serve **opposite roles**:
+
+- `System.ServiceModel.*` (dotnet/wcf) = WCF **client** — calls a WCF service hosted elsewhere
+- `CoreWCF.*` = WCF **server** — hosts a WCF service endpoint inside your process
+
+Before accepting any WCF package changes from upgrade-assistant, verify the project's role.
+Also check whether the packages are actually used — dead package references from earlier
+development are common:
+
+```bash
+grep -r "using System.ServiceModel" src/ProjectName/
+grep -r "using CoreWCF" src/ProjectName/
+# If no results — the packages are dead weight; remove them entirely
+```
+
+After every major upgrade, audit each project's packages against actual `using` imports.
+A project with only in-box SDK types (e.g. `System.Security.Cryptography`, `System.Text`)
+should have zero `<PackageReference>` entries.
 
 ### EF Core version-specific breaking changes
 
@@ -193,3 +273,53 @@ Unlike major migrations, this can be done in fewer, larger slices:
 | U2 | Third-party packages | Update third-party NuGets, fix breaking API changes |
 | U3 | Behavioral regressions | Fix any test failures from EF Core / ASP.NET changes |
 | U4 | New feature adoption | Optional: Nullable, OpenAPI, TimeProvider, etc. |
+
+---
+
+---
+
+## Post-hop audit checklist
+
+Run after EACH `dotnet upgrade-assistant` hop before committing:
+
+```
+[ ] dotnet restore (not --no-restore) → check for NU1605 errors (stale explicit pins)
+[ ] dotnet build --no-restore → surfaces CS compile errors cleanly without NU noise
+[ ] dotnet build (with restore) → surfaces NU1605 / feed auth issues
+[ ] Review every package upgrade-assistant ADDED — verify it serves the correct role
+      (CoreWCF = WCF server; System.ServiceModel.* = WCF client — do not accept a swap)
+[ ] Review every package upgrade-assistant REPLACED — verify the replacement is correct family
+[ ] Manually review community packages (not auto-upgraded):
+      [ ] Serilog + Serilog.AspNetCore + Serilog.Settings.Configuration + Serilog.Sinks.*
+            (bump all together — they version as a family; stale sibling causes NU1605)
+      [ ] AspNetCore.HealthChecks.* — bump to compatible major version
+      [ ] Swashbuckle.AspNetCore — check major version migration guide (code changes required)
+      [ ] MediatR — verify .NET target-version compat
+      [ ] Dapper — typically version-agnostic; verify latest
+      [ ] Microsoft.Data.SqlClient — must be 7.0+ for .NET 10 (manual — not tool-handled)
+[ ] Projects using only in-box SDK types should have zero PackageReferences after cleanup
+[ ] HintPath <Reference> DLLs — verify CLR version (see Pre-hop blockers section above)
+```
+
+---
+
+## behavioral_changes
+
+Patterns for **Pass 3** codebase scan — grep each; flag files where found.
+
+| Pattern | Changed In | Description | Required Action |
+|---|---|---|---|
+| `BinaryFormatter` | .NET 8 | Removed entirely at runtime | Replace with `System.Text.Json`, Protobuf, or MessagePack |
+| `Encoding.Default` | .NET 9 (non-Windows) | Changed to UTF-8 on non-Windows | Specify `Encoding.UTF8` explicitly; do not rely on `Encoding.Default` |
+| `DateTime.Now` | .NET 8+ intent | Not removed; `TimeProvider` now preferred | Consider migrating to `TimeProvider` for deterministic testing |
+| `UseExceptionHandler(app =>` | .NET 8 | Callback-style works but `IExceptionHandler` is the new pattern | Optional: migrate to `IExceptionHandler` registration |
+| `IRequest<` | MediatR v12 | `IRequest`/`IRequestHandler` interface contract changed in v12 | Follow MediatR v12 migration guide before bumping package |
+| `AbstractValidator` | FluentValidation v11 | Sync `.Validate()` removed from `AbstractValidator` | Replace sync `Validate()` calls with `ValidateAsync()` |
+| `CascadeTiming` | EF Core 7 | Cascade delete default timing changed | Review EF Core 7 cascade delete behavior; add explicit config if needed |
+| `BlobContainerClient` | Azure SDK v12 restructure | Azure Blob SDK namespace moved in some versions | Check `Azure.Storage.Blobs` changelog for target version |
+| `Microsoft.Data.SqlClient` | v5.x → 7.0+ for .NET 10 | v5.x does not support .NET 10; `dotnet upgrade-assistant` does NOT upgrade this automatically | Manually upgrade the DAL project to `Microsoft.Data.SqlClient` 7.0+ before completing hop 2 |
+| `AspNetCore.HealthChecks.UI` | HealthChecks.UI 9.x / EF Core 10 | HealthChecks.UI 9.x references EF Core 9; .NET 10 loads EF Core 10, causing `MissingMethodException` at startup | Monitor [Xabaril/AspNetCore.Diagnostics.HealthChecks](https://github.com/Xabaril/AspNetCore.Diagnostics.HealthChecks) for a 10.x-compatible release; use the JSON `/health` endpoint as fallback if UI fails to initialize |
+| Community packages — Serilog.*, Xabaril HealthChecks.*, MediatR, Dapper, Swashbuckle | All versions | **upgrade-assistant only auto-upgrades `Microsoft.*` packages.** All community packages are left at their pre-upgrade versions. After each hop, manually bump: `Serilog` + `Serilog.AspNetCore` + `Serilog.Settings.Configuration` + `Serilog.Sinks.*` (match major to .NET major — they ship as a coordinated family, stale sibling pins cause NU1605); `AspNetCore.HealthChecks.*`; `Swashbuckle.AspNetCore` (see above); `MediatR`; `Dapper`. **Note:** `Serilog` 4.x ships a `buildTransitive` MSBuild targets file that injects `global using Serilog;` into all consuming projects transitively — removing Serilog from the package graph silently breaks compilation with no obvious error message. | Manual post-hop review required for every community package family |
+| `OpenApiDocument` / `OpenApiSchema` / `OpenApiSecurityScheme` | Swashbuckle v7+ / OpenAPI.NET v2 | 5 breaking changes in `Microsoft.OpenApi` 2.x — namespace collapsed, security scheme reference type changed, `AddSecurityRequirement` uses Func signature, parameter collection uses `IOpenApiParameter` interface, schema type is `JsonSchemaType` enum not string. See Swashbuckle row in Package compatibility above for all 5 patterns. | Replace all 5 patterns in every file that imports `Microsoft.OpenApi.Models` |
+| `IConfiguration["SectionName"]` used as `Bind()` argument | .NET 10 / Microsoft.Identity.Web 3.x | `IConfiguration["key"]` returns `null` for section nodes (not leaf values); passing it to `Bind(null ?? "")` binds the **root** of configuration, silently skipping all section values. Hidden on older runtimes where env vars flatten to root. | Always use `configuration.GetSection("SectionName").Bind(options)` — never use `["key"]` as a section name argument to `Bind()` |
+| `Scheme = "Bearer"` in Swagger `AddSecurityDefinition` | Swashbuckle 10.x | Swagger UI silently drops the Authorization header when `Scheme` is `"Bearer"` (capital B) — must be lowercase `"bearer"` | Change to `Scheme = "bearer"` in every `AddSecurityDefinition` call that configures Bearer auth |
