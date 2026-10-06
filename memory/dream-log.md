@@ -445,3 +445,6 @@
 
 ### [capture] [2026-10-05] Plan approved — cross-stack lesson integration for upgrade mapping files
 ### [capture] [2026-10-05] Task completed — ADO-129853 lessons integrated into dotnet-upgrade.md
+
+### [capture] [2026-10-05] Plan approved — rewrite skill CONTINUE prompt removal (Option A)
+### [capture] [2026-10-05] Plan approved — cross-stack lesson integration for upgrade mapping files

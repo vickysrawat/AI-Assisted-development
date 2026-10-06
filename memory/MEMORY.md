@@ -1,5 +1,10 @@
 # MEMORY.md — Project memory (dream-managed)
 
+### [2026-10-05] Plan approved — rewrite skill CONTINUE prompt removal (Option A)
+
+Approach agreed: replace all 8 CONTINUE step-boundary prompts in `skills/rewrite/SKILL.md` with the upgrade skill's auto-advance pattern. Changes: (1) add "Developer reply gates" section upfront listing 5 real gates, (2) strip CONTINUE/COMPACT blocks from all step boundaries leaving only the checkpoint marker, (3) convert passive context-cost notes into conditional inline checks that stop only when near capacity. Real gates unchanged: oracle mode, APPROVE COUPLING, APPROVE OPTIONS, APPROVE DESIGN, APPROVE CLUSTERS. Rationale: CONTINUE prompts are pre-computation pauses with nothing to review — artifact review is already enforced by post-generation APPROVE gates. Developer approved Option A; implementation pending explicit "Approved for implementation" trigger.
+Trigger: Plan approved  Confidence: 0.95  Source: auto-capture
+
 ### [2026-10-05] Plan approved — cross-stack lesson integration for upgrade mapping files
 
 Approach agreed: integrate ADO-129853 .NET upgrade lessons into all 5 stack mapping files (angular, java, nodejs, python, react). Web search completed first to verify all claims. Key tool: each file gets a Pre-hop blockers section, community-packages-not-auto-upgraded callout, stale-pin / peer-dep equivalent, post-hop audit checklist, and build-order tip — all with VERIFIED/INFERRED source tags. Confirmed: ng update scope via angular.dev; Spring BOM stale override via Baeldung/spring.io; javap major version check via mkyong; OpenRewrite limits via openrewrite docs; Node.js ABI via electron/zylos; fetch stable Node 21 / WebSocket stable Node 22 via nodejs.org; Python wheel check via realpython; tomllib PEP 680 via peps.python.org; react-codemod scope via react.dev.

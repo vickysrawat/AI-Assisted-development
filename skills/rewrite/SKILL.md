@@ -58,6 +58,20 @@ gates. The persona sets *what to scrutinise* — never licenses assumption. See
   `${CRITIC_MODEL_MAX:-claude-opus-4-8}` (max effort) for high-risk / B-series → different-family
   panel for top-risk. See `$PLUGIN_DIR/skills/shared/judge.md` + `model-routing-spec.md`.
 
+## Developer reply gates
+
+Developer reply gates (5 on a clean run — all other steps auto-proceed):
+  Oracle mode selection              — Step 1.5 (explicit developer choice from 4 modes; assurance ceiling depends on this)
+  APPROVE COUPLING ADO-{ID}          — Step 1.5 (after coupling resolution gate)
+  APPROVE OPTIONS ADO-{ID} [A|B|C]   — Step 2 (after reviewing the options file; append PARTIAL-ACKNOWLEDGED if PARTIAL rows present)
+  APPROVE DESIGN ADO-{ID}            — Step 2.5 (after reviewing all 7 design documents)
+  APPROVE CLUSTERS ADO-{ID}          — Step 3 (after reviewing generated code diffs — per wave)
+
+All artifact-review gates fire after generation, not before. Steps between gates auto-proceed.
+BLOCK overrides and REVISE acknowledgements are additional pauses when judge verdicts fire.
+
+---
+
 ## Resolve PLUGIN_DIR — before any step
 
 ```
@@ -144,12 +158,6 @@ When the conservative bias rule says stop:
 
 > 📊 **STEP BOUNDARY — Step 0: Initialize artifacts**
 > The checkpoint is flushed — resuming here is safe.
-> **Reply `CONTINUE` to proceed with this step.**
-> Reply `COMPACT` if the context window is near capacity:
->   1. Run `/compact`
->   2. Resume with `REWRITE RESUME ADO-{ID}`
->      (The resume restarts at this step — the flush above ensures no rework.)
-> _(Do not proceed past this prompt without a reply.)_
 
 <!-- Checkpoint already flushed in this step. -->
 
@@ -393,14 +401,15 @@ condition. If the tracker is missing: **stop and report** — do not proceed to 
 > 📊 **STEP BOUNDARY — Step 1: Intake & posture**
 > Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step1","ado":"{ADO}"}`
 > The checkpoint is flushed — resuming here is safe.
-> **Reply `CONTINUE` to proceed with this step.**
-> Reply `COMPACT` if the context window is near capacity:
->   1. Run `/compact`
->   2. Resume with `REWRITE RESUME ADO-{ID}`
->      (The resume restarts at this step — the flush above ensures no rework.)
-> _(Do not proceed past this prompt without a reply.)_
 
-**Context check.** Expected cost for Step 1: ~25–40K tokens (see budget table above). Apply the conservative bias rule — if the previous step consumed significantly more than expected, stop and compact before continuing.
+**Context budget check.** Expected cost for Step 1: ~25–40K tokens.
+If the session feels slow, responses are truncated, or Step 0 consumed significantly more than expected:
+  1. Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step1","ado":"{ADO}"}`
+  2. Update `migration-tracker.md` — "Next action: `REWRITE RESUME {ADO}`"
+  3. Surface this and STOP:
+     > Context may be near capacity. Step 0 artifacts are saved (migration-log.md, migration-tracker.md, checkpoint ledger created).
+     > Type `REWRITE RESUME {ADO}` in a new session — resumes at Step 1 source detection, no rework.
+If context is healthy: proceed.
 
 **Friction reduction (once per session).** Before the first Bash call, run the offer per
 `$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/friction-reduction-spec.md` — check
@@ -442,16 +451,17 @@ node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key
 > 📊 **STEP BOUNDARY — Step 1.5: Integration verification + oracle mode detection**
 > Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step1.5","ado":"{ADO}"}`
 > The checkpoint is flushed — resuming here is safe.
-> **Reply `CONTINUE` to proceed with this step.**
-> Reply `COMPACT` if the context window is near capacity:
->   1. Run `/compact`
->   2. Resume with `REWRITE RESUME ADO-{ID}`
->      (The resume restarts at this step — the flush above ensures no rework.)
-> _(Do not proceed past this prompt without a reply.)_
 
 <!-- Checkpoint already flushed in this step. -->
 
-**Context check.** Expected cost for Step 1.5: ~15–25K tokens (depends on integration count). Stop and surface tracker if < 40K remaining.
+**Context budget check.** Expected cost for Step 1.5: ~15–25K tokens (depends on integration count).
+If the session feels slow, responses are truncated, or < 40K remaining:
+  1. Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step1.5","ado":"{ADO}"}`
+  2. Update `migration-tracker.md` — "Next action: `REWRITE RESUME {ADO}`"
+  3. Surface this and STOP:
+     > Context is near capacity. Step 1 complete (step_1_intake_complete gate PASS — source stack, posture, and version recorded in checkpoint).
+     > Type `REWRITE RESUME {ADO}` in a new session — resumes at Step 1.5 integration verification, no rework.
+If context is healthy: proceed.
 
 Run before options are presented. Produces two outputs that feed the options presentation.
 
@@ -649,12 +659,6 @@ Coupling Resolution Gate: {approach per CP-N, e.g. "CP-2 facade (System A, B out
 > 📊 **STEP BOUNDARY — Step 2: Options**
 > Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step2","ado":"{ADO}"}`
 > The checkpoint is flushed — resuming here is safe.
-> **Reply `CONTINUE` to proceed with this step.**
-> Reply `COMPACT` if the context window is near capacity:
->   1. Run `/compact`
->   2. Resume with `REWRITE RESUME ADO-{ID}`
->      (The resume restarts at this step — the flush above ensures no rework.)
-> _(Do not proceed past this prompt without a reply.)_
 
 **Prerequisite gate check — run before any Step 2 work:**
 ```bash
@@ -768,7 +772,14 @@ fi
 
 **Structure:**
 
-**Context check.** Expected cost for Step 2 options analysis: ~15–25K tokens. Stop and surface tracker if < 40K remaining before options analysis begins.
+**Context budget check.** Expected cost for Step 2 options analysis: ~15–25K tokens.
+If the session feels slow, responses are truncated, or < 40K remaining:
+  1. Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step2","ado":"{ADO}"}`
+  2. Update `migration-tracker.md` — "Next action: `REWRITE RESUME {ADO}`"
+  3. Surface this and STOP:
+     > Context is near capacity. Step 1.5 complete (coupling_resolution_confirmed gate PASS — intake manifest, integration inventory, and coupling decisions saved in checkpoint).
+     > Type `REWRITE RESUME {ADO}` in a new session — resumes at Step 2 options analysis, no rework.
+If context is healthy: proceed.
 
 ```markdown
 # Rewrite Options — {AppName} ({ADO})
@@ -1120,16 +1131,18 @@ node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key
 > 📊 **STEP BOUNDARY — Step 2.5: Target design documents**
 > Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step2.5","ado":"{ADO}"}`
 > The checkpoint is flushed — resuming here is safe.
-> **Reply `CONTINUE` to proceed with this step.**
-> Reply `COMPACT` if the context window is near capacity:
->   1. Run `/compact`
->   2. Resume with `REWRITE RESUME ADO-{ID}`
->      (The resume restarts at this step — the flush above ensures no rework.)
-> _(Do not proceed past this prompt without a reply.)_
 
 <!-- Checkpoint holds options_approved=PASS from APPROVE OPTIONS (previous step) — this step boundary is safe to resume from. Each document's gate is written immediately after its subagent returns; resume skips documents with PASS gates via the sub-step skip guard. -->
 
-**Context check.** Main-session orchestration cost for Step 2.5: ~10–20K (see budget table above). Per-document drafting runs in isolated subagents (~8–15K each × 7 docs = ~56–105K in subagents, not counted against the main session). The context guard requires 100K headroom before this step starts — if it blocked your reply, run /compact then `REWRITE RESUME ADO-{ID}`. Each document gate is written immediately when its subagent returns — resume reads sub-step gates and skips already-authored documents.
+**Context budget check.** Main-session orchestration cost for Step 2.5: ~10–20K. Per-document drafting runs in isolated subagents (~8–15K each × 7 docs — not counted against the main session). Subagent spawning requires ~100K headroom in the main session.
+If the session feels slow, responses are truncated, or < 100K remaining:
+  1. Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step2.5","ado":"{ADO}"}`
+  2. Update `migration-tracker.md` — "Next action: `REWRITE RESUME {ADO}`"
+  3. Surface this and STOP:
+     > Context is near capacity. Step 2 complete (options_approved gate PASS — selected option, DAG path, and oracle mode saved in checkpoint).
+     > Run /compact in this session, then type `REWRITE RESUME {ADO}` — resumes at Step 2.5 design documents.
+     > Each document's gate is written immediately on subagent return — already-authored documents are skipped on resume.
+If context is healthy: proceed.
 
 Runs after `APPROVE OPTIONS`, before any code generation. The selected option's **inferred** target-space
 DAG (from Step 2) is the working baseline the component architecture document is authored against; the
@@ -1471,12 +1484,6 @@ loop wave) per `migration-log-spec.md`.
 > 📊 **STEP BOUNDARY — Step 3: Resolve execution profile + generate per cluster**
 > Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step3","ado":"{ADO}"}`
 > The checkpoint is flushed — resuming here is safe.
-> **Reply `CONTINUE` to proceed with this step.**
-> Reply `COMPACT` if the context window is near capacity:
->   1. Run `/compact`
->   2. Resume with `REWRITE RESUME ADO-{ID}`
->      (The resume restarts at this step — the flush above ensures no rework.)
-> _(Do not proceed past this prompt without a reply.)_
 
 ### Dirty-stop protocol — applies throughout Step 3
 
@@ -1912,12 +1919,6 @@ Include: all clusters, their BAL grade (from `bal_grade` in Step B return values
 > 📊 **STEP BOUNDARY — Step 5: Two-gate model**
 > Write `.claude/active-task.json`: `{"skill":"rewrite","step":"step5","ado":"{ADO}"}`
 > The checkpoint is flushed — resuming here is safe.
-> **Reply `CONTINUE` to proceed with this step.**
-> Reply `COMPACT` if the context window is near capacity:
->   1. Run `/compact`
->   2. Resume with `REWRITE RESUME ADO-{ID}`
->      (The resume restarts at this step — the flush above ensures no rework.)
-> _(Do not proceed past this prompt without a reply.)_
 
 The `<provisional>` BAL grade comes from each cluster subagent's `bal_grade` return value (collected in Step B). Run the merge gate for each cluster using that value:
 ```bash
@@ -1956,12 +1957,6 @@ node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key
 
 > 📊 **STEP BOUNDARY — Step 5a: Collect test plans + assemble combined document**
 > The checkpoint is flushed — resuming here is safe.
-> **Reply `CONTINUE` to proceed with this step.**
-> Reply `COMPACT` if the context window is near capacity:
->   1. Run `/compact`
->   2. Resume with `REWRITE RESUME ADO-{ID}`
->      (The resume restarts at this step — the flush above ensures no rework.)
-> _(Do not proceed past this prompt without a reply.)_
 
 <!-- Checkpoint already flushed in this step. -->
 

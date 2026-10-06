@@ -363,13 +363,16 @@ This is a documentation artifact — not subject to the Write Gate.
 The `docs/migrations/{ADO_ID}/ADO-{ADO_ID}-upgrade-intake.md` is generated automatically by a
 3-pass detection sequence. No hand-authoring required.
 
-**Context budget check (AC-NF1).** Before starting Pass 1:
-```
-Estimate context usage for Pass 1 (N packages × ~200 tokens per query result).
-If context is near capacity:
-  → Offer developer: COMPACT path (UPGRADE RESUME ADO-{ADO_ID} to resume after compaction)
-  → Do NOT start Pass 1 until developer confirms or context is compact
-```
+**Context budget check (AC-NF1).** Before starting Pass 1.
+N = number of packages in the dependency manifest.
+If N > 30 or the session feels slow / responses are truncated:
+  1. Write `.claude/active-task.json`: `{"skill":"upgrade","step":"step3-pass1","ado":"{ADO_ID}"}`
+  2. Surface this and STOP:
+     > Context may be near capacity for a {N}-package Pass 1 registry scan.
+     > What is saved: Step 2 tool preflight complete (step_2_tool_available gate PASS).
+     > Type `UPGRADE RESUME ADO-{ADO_ID}` in a new session — Pass 1 starts from package 0.
+     > — or — run /compact in this session, then type `UPGRADE RESUME ADO-{ADO_ID}`.
+If context is healthy: proceed.
 
 **Create upgrade-intake.md** (migration artefact — exempt from the Write Gate):
 ```
@@ -423,6 +426,15 @@ DEVELOPER REVIEW (registry unavailable). Passes 2 and 3 still run.
 `intake_progress_index` from the checkpoint ledger. Skip packages with index <
 `intake_progress_index`; resume from the next unprocessed package.
 
+> ⚓ **Safe point SP-Pass1 — Pass 1 complete, before Pass 2**
+> Checkpoint flushed: `intake_pass=1`, `intake_progress_index={N}` (all {N} packages queried).
+> If the session feels slow, responses are truncated, or < 30K remaining:
+>   1. Write `.claude/active-task.json`: `{"skill":"upgrade","step":"step3-pass2","ado":"{ADO_ID}"}`
+>   2. Surface this and STOP:
+>      > Pass 1 complete — {N} packages queried, results written to Section 5 of upgrade-intake.md.
+>      > Type `UPGRADE RESUME ADO-{ADO_ID}` in a new session — resumes at Pass 2 (knowledge cache mapping). No registry re-queries needed.
+> If context is healthy: proceed to Pass 2.
+
 **Pass 2 — Knowledge cache replacement mapping.** Read
 `$PLUGIN_DIR/skills/shared/migration-knowledge/refs/mappings/{stack}-upgrade.md` for the target hop.
 Extract replacement mappings (SDK renames, namespace changes, merged packages). Write results to
@@ -436,6 +448,15 @@ node scripts/upgrade-checkpoint.cjs set-payload \
 
 If the per-stack knowledge file does not exist, write to affected sections:
 `Not applicable — evidence: no per-stack knowledge file for {stack} (follow-up F-1 work).`
+
+> ⚓ **Safe point SP-Pass2 — Pass 2 complete, before Pass 3**
+> Checkpoint flushed: `intake_pass=2`.
+> If the session feels slow, responses are truncated, or < 30K remaining:
+>   1. Write `.claude/active-task.json`: `{"skill":"upgrade","step":"step3-pass3","ado":"{ADO_ID}"}`
+>   2. Surface this and STOP:
+>      > Passes 1 and 2 complete — package compatibility and knowledge cache mapping done.
+>      > Type `UPGRADE RESUME ADO-{ADO_ID}` in a new session — resumes at Pass 3 (codebase grep). No re-queries or re-mapping needed.
+> If context is healthy: proceed to Pass 3.
 
 **Pass 3 — Codebase grep.** For each behavioral change pattern in the per-stack knowledge file:
 - Grep the codebase for the pattern.
