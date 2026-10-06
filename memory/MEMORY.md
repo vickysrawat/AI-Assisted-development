@@ -1,5 +1,30 @@
 # MEMORY.md — Project memory (dream-managed)
 
+### [2026-10-06] Task completed — HTML guides updated for migration skill refactors
+
+Updated `guides/plugin-user-guide.html`: upgrade/rewrite/replatform feature cards and command table rows now state real gate counts (3/5/4) and auto-advance behaviour; upgrade card explains skill-generated intake. Updated `guides/plugin-developer-guide.html`: "Key skill changes" paragraph extended with CONTINUE gate elimination, intake redesign, research cache exit codes, and ICEA signal scope changes (ADRs 0070–0075); ADR section card updated to reference both `docs/adr/` and `docs/adrs/`; "Add a command" section adds a STUB_FILES/HOOK_FILES sync step and warning.
+Trigger: Task completed  Confidence: 0.99  Source: auto-capture
+
+### [2026-10-06] Error resolved — setup-init missing 7 command stubs + 3 hook files
+
+Root cause: `STUB_FILES` and `HOOK_FILES` arrays in `setup-init-bootstrap.cjs` were never updated when upgrade/rewrite/replatform/goal-loop/go-live/operations/articulate-as-human stubs and approval-capture/manifest-read-guard/migration-gate hooks were added to `_project-deploy/`. The `.hashes` file was missing the 3 hook entries because unhashed hooks are never written to `.hashes`. Fix: added all 7 stubs to `STUB_FILES` (now 47 total) and all 3 hooks to `HOOK_FILES` (now 31 total). Pattern: whenever a new stub or hook is added to `_project-deploy/`, always add it to the matching array in `setup-init-bootstrap.cjs` in the same commit — the test suite verifies count consistency.
+Trigger: Error resolved  Confidence: 0.99  Source: auto-capture
+
+### [2026-10-06] Task completed — README, DEVELOPER-GUIDE, CHANGELOG updated for migration skill refactors
+
+Updated CHANGELOG.md `[Unreleased]` with full entry for CONTINUE gate elimination, upgrade intake redesign, design ceremony right-sizing, research cache exit codes, migration log scoping, and ICEA signal noise fix. Updated README.md version blurb and the `/upgrade`, `/rewrite`, `/replatform` command rows (both command table and skills auto-invoked table) to reflect 3/5/4 real gates and auto-advance. Updated DEVELOPER-GUIDE.md multi-stage orchestrator rules section: added Rules 6 (no boilerplate CONTINUE gates — real artifact-review gates only) and 7 (tool-missing = hard BLOCK); added gate hygiene checklist to "Adding a stage."
+Trigger: Task completed  Confidence: 0.99  Source: auto-capture
+
+### [2026-10-06] Task completed — ADRs 0070-0075 written for migration family refactors
+
+Six ADRs written to `docs/adr/` covering the architectural decisions from the migration skill refactoring sprint: (0070) CONTINUE gate elimination pattern across upgrade/rewrite/replatform; (0071) upgrade intake redesign from hand-authored manifest to skill-generated three-pass document; (0072) upgrade design ceremony right-sizing — decision log vs Rewrite ceremony; (0073) research cache semantic exit codes (0/1/2) + --extract-bundle-to flag; (0074) migration log entry scoping to unanticipated finds only; (0075) ICEA revision signal scope to Edit-only on doc artifacts + JSONL format. README.md updated with all 6 entries.
+Trigger: Task completed  Confidence: 0.99  Source: auto-capture
+
+### [2026-10-06] Architecture decision — _bootstrap-manifest.json must be gitignored
+
+`_bootstrap-manifest.json` is a machine-local setup-init checkpoint that stores absolute local paths (`scriptsDir`, `pluginPath`, `externalPaths`, `gitPath`, `bashPath`). Fix: added `.claude/_bootstrap-manifest.json` to both `GITIGNORE_BASE` in `setup-init-bootstrap.cjs` and the plugin's own `.gitignore`. Do not attempt to move these paths to `settings.local.json` — the whole file is ephemeral, not just individual fields.
+Trigger: Architecture decision  Confidence: 0.85  Source: auto-capture
+
 ### [2026-10-06] Plan approved — upgrade skill friction reduction (2 issues)
 
 Approach agreed: (1) add conditional context budget checks at Step 4 (before research agent + report assembly, ~25–40K tokens) and Step 7 (before residual remediation, variable but heavy on large codebases); (2) add 6 safe point blocks — SP-Step3 (after intake_context=PASS), SP-Step4 (after report=PASS), SP-Step4.5 (after design_approved=PASS), SP-Step5 (after step_5_baseline_tagged=PASS), SP-Hop-N (after each hop in Step 6), SP-Step7 (after verify=PASS). Previous session already fixed: pre-Pass1 context check, SP-Pass1, SP-Pass2, Developer reply gates section.

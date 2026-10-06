@@ -46,6 +46,8 @@ testem.log
 tests/results/
 .claude/graph/graph.html
 tests/migration-validation/runs/
+# setup-init progress checkpoint — machine-local (contains absolute local paths)
+.claude/_bootstrap-manifest.json
 
 # .claude/settings.json is committed & team-shared — it holds only secret-free config
 # (hooks, customInstructions, non-secret env such as model routing). Secrets and machine-

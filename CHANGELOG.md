@@ -1,6 +1,63 @@
 ## [Unreleased]
 
-_Nothing yet._
+### Changed — Migration skill friction reduction (Upgrade · Rewrite · Replatform)
+
+**CONTINUE gate elimination (ADR 0070)**
+- Removed all boilerplate CONTINUE/COMPACT step-boundary gates from all three migration skills:
+  upgrade (11 removed → 3 real gates kept), rewrite (8 removed → 5 real gates kept),
+  replatform (7 removed → 4 real gates kept). Steps now auto-advance between boundaries;
+  the developer is only prompted at real artifact-review decision points.
+- Added a "Developer reply gates" section near the top of each SKILL.md listing all expected
+  interruptions upfront, so the developer knows the full set before starting a run.
+- Tool-missing condition (upgrade Step 2) is now a hard BLOCK with install instructions
+  written to the runbook — not a soft CONTINUE gate the developer can bypass.
+
+**Upgrade intake redesign (ADR 0071)**
+- Replaced hand-authored `source-context-manifest.md` with skill-generated
+  `ADO-{ID}-upgrade-intake.md` via three automated passes:
+  (1) live registry query for package compatibility,
+  (2) knowledge cache for replacement mappings (SDK merges, package renames),
+  (3) behavioral change grep from per-stack knowledge file patterns.
+- 12 sections always render — findings or "Not applicable — evidence: X." No silent skips.
+- Sections 0–2 (baseline/target, upgrade path, version coupling) anchor the document before risk.
+- Section 5 (behavioral changes) includes a test-coverage flag per finding.
+- Per-stack knowledge files: `skills/shared/migration-knowledge/refs/mappings/` — one file
+  per stack (dotnet, java, angular, react, nodejs, python). New stacks add a file; SKILL.md
+  is not modified.
+
+**Upgrade design ceremony right-sizing (ADR 0072)**
+- Replaced Rewrite-borrowed Step 4.5 ceremony (`target-design-spec.md`, `design-revision-spec.md`,
+  `graph-derive-documents.cjs`) with a lightweight `ADO-{ID}-upgrade-decisions.md` containing
+  one entry per RED/BLOCKER item that requires a migration pattern choice.
+- No RED/BLOCKER items → log states "no architectural decisions required" → APPROVE DESIGN is fast.
+- APPROVE DESIGN gate retained: one explicit developer confirmation before git operations begin.
+- Infeasibility path retained: RED/BLOCKER with no viable upgrade path routes to Rewrite.
+
+**Research cache semantic exit codes (ADR 0073)**
+- `research-cache.cjs lookup` redesigned: exit 0 = fresh hit, exit 1 = miss, exit 2 = stale hit.
+- New `--extract-bundle-to=<file>` flag writes the bundle on hit; miss writes nothing.
+- Both upgrade and rewrite SKILL.md cache blocks rewritten from ~30 lines to ~8 lines.
+  Fragile inline `node -e` JSON parsing eliminated.
+
+**Migration log entry scoping (ADR 0074)**
+- Migration log `[FINDING]`/`[DECISION]` entries required only for unanticipated finds and
+  non-obvious decisions (multiple viable approaches). Routine intake-matched fixes: Write Gate
+  diff is the record.
+- Single `[RESIDUAL SUMMARY]` entry written at end of Step 7 with anticipated vs unanticipated
+  fix counts.
+
+### Fixed — ICEA revision signal noise (ADR 0075)
+- `icea-revision-signal.cjs` scope tightened: now captures `Edit` events only on ADO doc
+  artifacts (`*.icea.md`, `*.techspec.md`, `*.plan.md`, `*.test-plan.md`). Source code edits,
+  plugin files (skills/, scripts/), and `Write` events (file creation = normal flow, not revision)
+  are dropped. Eliminates the 492-file signal explosion observed during plugin dev sessions.
+- `signal-write.cjs` changed from one-file-per-event to append-only JSONL (`ADO-{ID}-signals.jsonl`).
+  One file per ADO instead of one file per event; Git commits and Dream consolidation are
+  proportionate to actual signal volume.
+
+### Added — Architecture Decision Records 0070–0075
+- Six ADRs written to `docs/adr/` documenting the architectural decisions behind the migration
+  skill refactoring. See `docs/adr/README.md` for the full index.
 
 ## [3.25.0] — 2026-09-14
 

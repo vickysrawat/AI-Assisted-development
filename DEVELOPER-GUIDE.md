@@ -225,6 +225,17 @@ single SKILL.md genuinely cannot hold the work — most skills should stay flat.
    (registered in CLAUDE.md §0a) re-enters at the matching step; the orchestrator reads the checkpoint's
    `phase`/`stage_gates` to route. Read-only status projection lives in its **own** skill
    (`migration-status`) so the orchestrator keeps its single responsibility.
+6. **No boilerplate CONTINUE gates. Only real artifact-review gates.** Steps auto-advance between
+   boundaries unless the developer must review a generated artifact and make an explicit choice.
+   A "real gate" = the developer reads an output (intake document, gap/risk report, design log,
+   options list) and either approves or requests changes. A "boilerplate gate" = pausing before
+   computation with nothing to review — these must be removed (ADR 0070). Every skill must declare
+   its real gates in a "Developer reply gates" section near the top of SKILL.md so the developer
+   knows the full interruption set before starting a run.
+7. **Tool-missing is a hard BLOCK, not a gate.** If a required deterministic tool (e.g. `ng update`,
+   `dotnet upgrade-assistant`) is not found, the skill prints install steps, writes them to the runbook
+   document, and stops. The developer fixes the environment and re-invokes. There is no CONTINUE
+   path through a missing tool.
 
 > **Do not hardcode the schema version in prose.** The checkpoint schema evolves (it has bumped
 > several times — `SKILL.md` itself has lagged the real version before). Cite `checkpoint-schema.md`
@@ -236,6 +247,12 @@ single SKILL.md genuinely cannot hold the work — most skills should stay flat.
 Add `steps/stage-N-*.md`, a row to the orchestrator's dispatch table in `SKILL.md`, the gate keyword
 to CLAUDE.md §0a (and the `_project-deploy/CLAUDE.md` template), and the new `stage_gates.*` flag via a
 backward-safe merge; document the gate in `checkpoint-schema.md`. Then re-run `node tests/validate.js`.
+
+**Gate hygiene checklist for new stages:**
+- [ ] Is the new gate a *real* artifact-review decision? If not, remove it (Rule 6 above).
+- [ ] Does the "Developer reply gates" section at the top of SKILL.md list the new gate?
+- [ ] Does the step auto-advance from the previous stage, or does it re-introduce a CONTINUE gate?
+- [ ] If a tool must be present for this stage, is its absence a hard BLOCK (not a soft gate)?
 
 ---
 

@@ -457,3 +457,17 @@
 
 ### [capture] [2026-10-06] Plan approved — upgrade skill friction reduction (2 issues)
 ### [capture] [2026-10-06] Task completed — replatform skill friction reduction (all 5 issues)
+
+### [capture] [2026-10-06] Architecture decision — _bootstrap-manifest.json must be gitignored
+
+### [capture] [2026-10-06] Task completed — ADRs 0070-0075 written for migration family refactors
+### [capture] [2026-10-06] Architecture decision — _bootstrap-manifest.json must be gitignored
+
+### [capture] [2026-10-06] Task completed — README, DEVELOPER-GUIDE, CHANGELOG updated for migration skill refactors
+### [capture] [2026-10-06] Task completed — ADRs 0070-0075 written for migration family refactors
+
+### [capture] [2026-10-06] Error resolved — setup-init missing 7 command stubs + 3 hook files
+### [capture] [2026-10-06] Task completed — README, DEVELOPER-GUIDE, CHANGELOG updated for migration skill refactors
+
+### [capture] [2026-10-06] Task completed — HTML guides updated for migration skill refactors
+### [capture] [2026-10-06] Error resolved — setup-init missing 7 command stubs + 3 hook files

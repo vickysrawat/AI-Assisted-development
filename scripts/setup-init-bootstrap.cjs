@@ -145,18 +145,18 @@ const DIRS_TO_CREATE = [
 
 // All command stubs from _project-deploy/commands/ (one per command in plugin.json)
 const STUB_FILES = [
-  'ado-tasks.md',      'app-readiness.md', 'bug.md',           'checkin.md',
-  'code-review.md',    'critic.md',        'dismiss.md',        'dream.md',
-  'dream-audit.md',    'dream-health.md',  'setup-init.md',     'dream-rollback.md',
-  'setup-status.md',   'setup-sync.md',    'setup-teardown.md', 'dynamic-scan.md',   'explain.md',
-  'fix.md',            'gitignore-sync.md','graph-sync.md',     'graph-viz.md',
-  'icea-approve.md',   'icea-feature.md',  'icea-implement.md', 'icea-review.md',
-  'icea-revise.md',    'icea-status.md',   'plugin-readiness.md','pr-create.md',
-  'pr-describe.md',    'pr-spec-review.md','product-docs.md',   'security-review.md',
-  'session-start.md',  'sprint-metrics.md','sync-dirs.md',      'token-analysis.md',
-  'update-arch.md',
-  'governance-report.md',
-  'onboarding-guide.md',
+  'ado-tasks.md',           'app-readiness.md',    'articulate-as-human.md', 'bug.md',
+  'checkin.md',             'code-review.md',      'critic.md',              'dismiss.md',
+  'dream.md',               'dream-audit.md',      'dream-health.md',        'dream-rollback.md',
+  'dynamic-scan.md',        'explain.md',          'fix.md',                 'gitignore-sync.md',
+  'go-live.md',             'goal-loop.md',        'governance-report.md',   'graph-sync.md',
+  'graph-viz.md',           'icea-approve.md',     'icea-feature.md',        'icea-implement.md',
+  'icea-review.md',         'icea-revise.md',      'icea-status.md',         'onboarding-guide.md',
+  'operations.md',          'plugin-readiness.md', 'pr-create.md',           'pr-describe.md',
+  'pr-spec-review.md',      'product-docs.md',     'replatform.md',          'rewrite.md',
+  'security-review.md',     'session-start.md',    'setup-init.md',          'setup-status.md',
+  'setup-sync.md',          'setup-teardown.md',   'sprint-metrics.md',      'sync-dirs.md',
+  'token-analysis.md',      'update-arch.md',      'upgrade.md',
 ];
 
 // Legacy stub names replaced in v3.8.0 — removed from target projects on next sync
@@ -187,14 +187,17 @@ const HOOK_FILES = [
   'memory-capture.cjs',
   'memory-log.cjs',
   // Always-node (not shell-dependent)
-  'check-settings-secrets.cjs',
-  'context-budget-tech-write.cjs',
-  'script-review-gate.cjs',
-  'web-grounding-guard.cjs',
+  'approval-capture.cjs',
   'audit-append.cjs',
   'audit-prompt.cjs',
-  'icea-revision-signal.cjs',
+  'check-settings-secrets.cjs',
+  'context-budget-tech-write.cjs',
   'context-guard.cjs',
+  'icea-revision-signal.cjs',
+  'manifest-read-guard.cjs',
+  'migration-gate.cjs',
+  'script-review-gate.cjs',
+  'web-grounding-guard.cjs',
   // git pre-commit: governance gate (ICEA + secrets) — complements findings-gate-precommit.
   // Not auto-installed as .git/hooks/pre-commit (findings-gate-precommit owns that slot).
   // Deployed to .claude/hooks/ so teams can manually chain it via a pre-commit wrapper.
@@ -246,6 +249,9 @@ const GITIGNORE_BASE = [
   // Session logs written by output-log-write.cjs when output_mode="compact".
   // Developer-local; not team-shared. Cleared automatically by the developer.
   '.claude/logs/',
+  // setup-init progress checkpoint — machine-local (records absolute local paths such as
+  // scriptsDir, pluginPath, externalPaths, gitPath/bashPath). Never shared across developers.
+  '.claude/_bootstrap-manifest.json',
 ];
 
 // Required Dream sections in CLAUDE.md — checked by regex, sourced from plugin template
