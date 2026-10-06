@@ -1,5 +1,20 @@
 # MEMORY.md — Project memory (dream-managed)
 
+### [2026-10-06] Plan approved — upgrade skill friction reduction (2 issues)
+
+Approach agreed: (1) add conditional context budget checks at Step 4 (before research agent + report assembly, ~25–40K tokens) and Step 7 (before residual remediation, variable but heavy on large codebases); (2) add 6 safe point blocks — SP-Step3 (after intake_context=PASS), SP-Step4 (after report=PASS), SP-Step4.5 (after design_approved=PASS), SP-Step5 (after step_5_baseline_tagged=PASS), SP-Hop-N (after each hop in Step 6), SP-Step7 (after verify=PASS). Previous session already fixed: pre-Pass1 context check, SP-Pass1, SP-Pass2, Developer reply gates section.
+Trigger: Plan approved  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-06] Task completed — replatform skill friction reduction (all 5 issues)
+
+All 13 targeted edits applied to `skills/replatform/SKILL.md`: (1) 7 CONTINUE/COMPACT blocks removed from step boundaries (R1, R1.5, R2, R3, R4, R5, R5a) — replaced with checkpoint markers only; (2) 4 conditional context budget checks added (R1 before options, R1.5 before document authoring, R3 before IaC authoring, R5 before NFR assurance) — each with behaviour-based trigger, numbered actions, concrete developer stop message, copy-paste REPLATFORM RESUME command; (3) "Developer reply gates" section added at line 61 declaring 4 clean-run gates; (4) 5 safe point blocks added (SP-R1 through SP-R4) at each step transition; (5) human-handoff marker added at end of R3 flush block for R4 semantics fix. Verified: 0 CONTINUE prompts, 5 safe points, 4 context checks, gate declaration present.
+Trigger: Task completed  Confidence: 0.99  Source: auto-capture
+
+### [2026-10-06] Plan approved — replatform skill friction reduction (all 5 issues)
+
+Approach agreed: remove all 7 CONTINUE/COMPACT step-boundary prompts in `skills/replatform/SKILL.md`; add "Developer reply gates" upfront section (4 clean-run gates); add conditional context budget checks at R1, R1.5, R3, R5; add 5 safe point blocks (SP-R1 through SP-R4 + SP-R3 human-handoff marker); fix R4 step boundary by replacing CONTINUE with human-handoff marker at end of R3 (runbooks written → go execute → resume via REPLATFORM RESUME). Real gates unchanged: oracle mode, APPROVE OPTIONS, APPROVE DESIGN, Write Gate (APPROVE ADO-{ID}). Mirrors pattern applied to rewrite (8 prompts removed) and upgrade (context checks + safe points added).
+Trigger: Plan approved  Confidence: 0.95  Source: auto-capture
+
 ### [2026-10-05] Plan approved — rewrite skill CONTINUE prompt removal (Option A)
 
 Approach agreed: replace all 8 CONTINUE step-boundary prompts in `skills/rewrite/SKILL.md` with the upgrade skill's auto-advance pattern. Changes: (1) add "Developer reply gates" section upfront listing 5 real gates, (2) strip CONTINUE/COMPACT blocks from all step boundaries leaving only the checkpoint marker, (3) convert passive context-cost notes into conditional inline checks that stop only when near capacity. Real gates unchanged: oracle mode, APPROVE COUPLING, APPROVE OPTIONS, APPROVE DESIGN, APPROVE CLUSTERS. Rationale: CONTINUE prompts are pre-computation pauses with nothing to review — artifact review is already enforced by post-generation APPROVE gates. Developer approved Option A; implementation pending explicit "Approved for implementation" trigger.

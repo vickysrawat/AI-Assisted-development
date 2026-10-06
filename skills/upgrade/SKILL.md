@@ -520,10 +520,28 @@ Only proceed to Step 4 once this exits 0.
 node scripts/upgrade-checkpoint.cjs set-gate --ado={ADO_ID} --gate=intake_context --verdict=PASS
 ```
 
+> ⚓ **Safe point SP-Step3 — Intake confirmed, before Step 4 report assembly**
+> Checkpoint flushed: `intake_context=PASS` — Pass 1–3 complete, intake-verify gate confirmed.
+> If the session feels slow, responses are truncated, or < 30K remaining:
+>   1. Write `.claude/active-task.json`: `{"skill":"upgrade","step":"step4","ado":"{ADO_ID}"}`
+>   2. Update `docs/migrations/{ADO_ID}/ADO-{ADO_ID}-upgrade-runbook.md` — "Next action: `UPGRADE RESUME ADO-{ADO_ID}`"
+>   3. Surface this and STOP:
+>      > Intake confirmed — 3-pass analysis complete, upgrade-intake.md ready for report assembly.
+>      > Type `UPGRADE RESUME ADO-{ADO_ID}` in a new session — resumes at Step 4 gap/risk report. No re-queries needed.
+> If context is healthy: proceed to Step 4.
+
 ## Step 4 — Decision-grade Gap + Risk report (implemented — AC-F3)
 
 > 📊 **STEP BOUNDARY — Step 4: Decision-grade Gap + Risk report**
 > The checkpoint is flushed — resuming here is safe.
+
+**Context budget check.** Expected cost for Step 4: ~25–40K tokens (research agent + PO framework + judge + full report assembly).
+If the session feels slow, responses are truncated, or < 40K remaining:
+  1. Write `.claude/active-task.json`: `{"skill":"upgrade","step":"step4","ado":"{ADO_ID}"}`
+  2. Surface this and STOP:
+     > Context is near capacity. Intake complete (intake_context gate PASS — 3-pass analysis done, intake-verify confirmed).
+     > Type `UPGRADE RESUME ADO-{ADO_ID}` in a new session — resumes at Step 4 gap/risk report assembly. No rework needed.
+If context is healthy: proceed.
 
 **Invoke the migration-research-agent before assembling the report.** Ground the source stack
 lifecycle and CVE signals in cited external facts. Read `skills/shared/migration-research-spec.md`
@@ -670,6 +688,15 @@ node scripts/upgrade-checkpoint.cjs set-payload --ado={ADO_ID} --key=report_path
 node scripts/upgrade-checkpoint.cjs set-payload --ado={ADO_ID} --key=proceed_after_report --value={PROCEED_AFTER_REPORT}
 ```
 
+> ⚓ **Safe point SP-Step4 — Report approved, before Step 4.5 decisions doc**
+> Checkpoint flushed: `report=PASS`, `report_path` and `proceed_after_report` recorded.
+> If the session feels slow, responses are truncated, or < 30K remaining:
+>   1. Write `.claude/active-task.json`: `{"skill":"upgrade","step":"step4.5","ado":"{ADO_ID}"}`
+>   2. Surface this and STOP:
+>      > Report approved — gap/risk report saved to disk (report gate PASS).
+>      > Type `UPGRADE RESUME ADO-{ADO_ID}` in a new session — resumes at Step 4.5 decisions doc. No rework needed.
+> If context is healthy: proceed to Step 4.5.
+
 ## Step 4.5 — Decisions doc + APPROVE DESIGN (implemented — AC-F16)
 
 > 📊 **STEP BOUNDARY — Step 4.5: Decisions doc + APPROVE DESIGN**
@@ -710,6 +737,15 @@ node scripts/upgrade-checkpoint.cjs set-gate --ado={ADO_ID} --gate=design_approv
 node scripts/upgrade-checkpoint.cjs set-payload --ado={ADO_ID} --key=design_doc_path --value={DESIGN_DOC_PATH}
 ```
 
+> ⚓ **Safe point SP-Step4.5 — Design approved, before Step 5 baseline tag**
+> Checkpoint flushed: `design_approved=PASS`, `design_doc_path` recorded.
+> If the session feels slow, responses are truncated, or < 30K remaining:
+>   1. Write `.claude/active-task.json`: `{"skill":"upgrade","step":"step5","ado":"{ADO_ID}"}`
+>   2. Surface this and STOP:
+>      > Design approved — decisions doc reviewed and approved (design_approved gate PASS).
+>      > Type `UPGRADE RESUME ADO-{ADO_ID}` in a new session — resumes at Step 5 baseline tag + working branch. No rework needed.
+> If context is healthy: proceed to Step 5.
+
 ## Step 5 — Baseline tag + working branch (implemented — AC-F3 execution)
 
 > 📊 **STEP BOUNDARY — Step 5: Baseline tag + working branch**
@@ -747,6 +783,15 @@ node scripts/upgrade-checkpoint.cjs set-payload --ado={ADO_ID} --baseline-tag={B
 node scripts/upgrade-checkpoint.cjs set-payload --ado={ADO_ID} --hops={HOPS}
 ```
 
+> ⚓ **Safe point SP-Step5 — Baseline tagged, before Step 6 hop execution**
+> Checkpoint flushed: `step_5_baseline_tagged=PASS`, `baseline_tag` and `hops` recorded.
+> If the session feels slow, responses are truncated, or < 30K remaining:
+>   1. Write `.claude/active-task.json`: `{"skill":"upgrade","step":"step6","ado":"{ADO_ID}"}`
+>   2. Surface this and STOP:
+>      > Baseline tagged — oracle anchor and isolated branch created (step_5_baseline_tagged gate PASS).
+>      > Type `UPGRADE RESUME ADO-{ADO_ID}` in a new session — resumes at Step 6 hop 1. No rework needed.
+> If context is healthy: proceed to Step 6.
+
 ## Step 6 — Run the stack tool per hop (implemented — AC-F3 execution)
 
 > 📊 **STEP BOUNDARY — Step 6: Run the stack tool per hop**
@@ -769,10 +814,27 @@ node scripts/upgrade-checkpoint.cjs set-gate --ado={ADO_ID} --gate=step_6_hop_N_
 node scripts/upgrade-checkpoint.cjs set-payload --ado={ADO_ID} --key=completed_hops --value=N
 ```
 
+> ⚓ **Safe point SP-Hop-N — Hop N complete, before hop N+1 or Step 7**
+> Checkpoint flushed: `step_6_hop_N_complete=PASS`, `completed_hops=N` recorded.
+> If the session feels slow, responses are truncated, or < 30K remaining:
+>   1. Write `.claude/active-task.json`: `{"skill":"upgrade","step":"step6","ado":"{ADO_ID}"}`
+>   2. Surface this and STOP:
+>      > Hop N complete — N of {TOTAL} hops done, one commit per hop in the branch (step_6_hop_N_complete gate PASS).
+>      > Type `UPGRADE RESUME ADO-{ADO_ID}` in a new session — resumes at hop N+1 (or Step 7 if all hops done). No rework needed.
+> If context is healthy: proceed to next hop or Step 7.
+
 ## Step 7 — Residual remediation + verify vs baseline oracle (implemented — AC-F3 execution)
 
 > 📊 **STEP BOUNDARY — Step 7: Residual remediation + verify vs baseline oracle**
 > The checkpoint is flushed — resuming here is safe.
+
+**Context budget check.** Expected cost for Step 7: variable — ~10–30% of files need residual fixes. Each unanticipated fix adds a [FINDING] + Write Gate diff + [DECISION] entry.
+If the session feels slow, responses are truncated, or < 40K remaining before starting remediation:
+  1. Write `.claude/active-task.json`: `{"skill":"upgrade","step":"step7","ado":"{ADO_ID}"}`
+  2. Surface this and STOP:
+     > Context is near capacity. All hops complete (step_6_hop_N_complete gate PASS — {N} hops committed, bisectable history).
+     > Type `UPGRADE RESUME ADO-{ADO_ID}` in a new session — resumes at Step 7 residual remediation. No rework needed.
+If context is healthy: proceed.
 
 The tool leaves a residual (~10–30%, stack-dependent). Remediate it with the LLM, but **each fix
 passes the Write Gate** (`APPROVE ADO-{ID}`), and the baseline-oracle regression net catches drift.
@@ -852,6 +914,15 @@ Unanticipated fixes: {N} (each has a [FINDING] entry above)
 Non-obvious decisions: {N} (each has a [DECISION] entry above)
 ```
 If migration-log.md write fails: print `Cannot write [RESIDUAL SUMMARY] to migration-log.md. Free space and append manually.` and continue.
+
+> ⚓ **Safe point SP-Step7 — Verify passes, before Step 8a test plan**
+> Checkpoint flushed: `verify=PASS`, `verify_report_path` recorded.
+> If the session feels slow, responses are truncated, or < 30K remaining:
+>   1. Write `.claude/active-task.json`: `{"skill":"upgrade","step":"step8a","ado":"{ADO_ID}"}`
+>   2. Surface this and STOP:
+>      > Residual remediation complete and verified (verify gate PASS — baseline oracle regression passes).
+>      > Type `UPGRADE RESUME ADO-{ADO_ID}` in a new session — resumes at Step 8a test plan generation. No rework needed.
+> If context is healthy: proceed to Step 8a.
 
 ## Step 8a — Generate test plan (after verify passes)
 

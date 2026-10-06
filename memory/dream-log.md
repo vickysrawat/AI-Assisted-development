@@ -448,3 +448,12 @@
 
 ### [capture] [2026-10-05] Plan approved — rewrite skill CONTINUE prompt removal (Option A)
 ### [capture] [2026-10-05] Plan approved — cross-stack lesson integration for upgrade mapping files
+
+### [capture] [2026-10-06] Plan approved — replatform skill friction reduction (all 5 issues)
+### [capture] [2026-10-05] Plan approved — rewrite skill CONTINUE prompt removal (Option A)
+
+### [capture] [2026-10-06] Task completed — replatform skill friction reduction (all 5 issues)
+### [capture] [2026-10-06] Plan approved — replatform skill friction reduction (all 5 issues)
+
+### [capture] [2026-10-06] Plan approved — upgrade skill friction reduction (2 issues)
+### [capture] [2026-10-06] Task completed — replatform skill friction reduction (all 5 issues)

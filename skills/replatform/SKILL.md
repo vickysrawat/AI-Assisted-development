@@ -58,6 +58,17 @@ Read .claude/plugin-path.txt → PLUGIN_DIR
 (if absent: §1a resolver from $PLUGIN_DIR/skills/shared/plugin-path-resolution.md)
 ```
 
+## Developer reply gates
+
+Developer reply gates (4 on a clean run — all other steps auto-proceed):
+  Oracle mode selection              — R1 (explicit developer choice from 4 modes; NFR assurance ceiling depends on this)
+  APPROVE OPTIONS ADO-{ID}          — R1 (after reviewing 6R options with PO framework)
+  APPROVE DESIGN ADO-{ID}           — R1.5 (after reviewing all design documents)
+  APPROVE ADO-{ID}                  — Write Gate before R3 IaC/runbook writes
+
+All artifact-review gates fire after generation, not before. Steps between gates auto-proceed.
+Judge BLOCK overrides (`APPROVER: [name] REASON: [text]`) and reconciliation gate decisions are additional pauses when those conditions fire.
+
 ## Stage flow
 ```
 Detect source runtime topology
@@ -80,12 +91,6 @@ Detect source runtime topology
 > 📊 **STEP BOUNDARY — Step R1: Intake, posture, integration verification, NFR spec, options**
 > Write `.claude/active-task.json`: `{"skill":"replatform","step":"R1","ado":"{ADO_ID}"}`
 > The checkpoint is flushed — resuming here is safe.
-> **Reply `CONTINUE` to proceed with this step.**
-> Reply `COMPACT` if the context window is near capacity:
->   1. Run `/compact`
->   2. Resume with `REPLATFORM RESUME ADO-{ID}`
->      (The resume restarts at this step — the flush above ensures no rework.)
-> _(Do not proceed past this prompt without a reply.)_
 
 **Script preflight — verify all required plugin scripts exist before any execution:**
 ```bash
@@ -248,6 +253,15 @@ developer once. YES → merge patterns + confirm; NO → continue without writin
    - `confidence=low` → `WARNING: {claim} — unverified, check: {canonical_url or source_url}`
    - `confidence=UNKNOWN` → `WARNING: {fact type} not found — check: {canonical_url}`
 
+**Context budget check.** Expected cost for R1 to this point: ~30–50K tokens (integration verification + research agent + NFR spec).
+If the session feels slow, responses are truncated, or < 40K remaining:
+  1. Write `.claude/active-task.json`: `{"skill":"replatform","step":"R1-options","ado":"{ADO_ID}"}`
+  2. Update `migration-tracker.md` — "Next action: `REPLATFORM RESUME {ADO_ID}`"
+  3. Surface this and STOP:
+     > Context is near capacity. Integration verification and NFR spec complete (intake_context gate PASS — source stack, integration inventory, oracle mode, and NFR spec recorded in checkpoint).
+     > Type `REPLATFORM RESUME ADO-{ADO_ID}` in a new session — resumes at 6R options presentation. No rework needed.
+If context is healthy: proceed.
+
 7. Present cloud-target **OPTIONS** (IaaS VM / App Service / AKS / Container Apps / Functions) per
    **`options-insight-spec.md`**:
    - Each option carries a **capability summary** (count + list + estimated IaC/runbook effort) — compute
@@ -335,18 +349,31 @@ are blocked and redirected to `source_context.summary` in the ledger.
 
 ## Step R1.5 — Target design documents (new)
 
+> ⚓ **Safe point SP-R1 — Options approved, before R1.5 design authoring**
+> Checkpoint flushed: `intake_context=PASS`, `nfr_spec_path`, `selected_option` recorded.
+> If the session feels slow, responses are truncated, or < 30K remaining:
+>   1. Write `.claude/active-task.json`: `{"skill":"replatform","step":"R1.5","ado":"{ADO_ID}"}`
+>   2. Update `migration-tracker.md` — "Next action: `REPLATFORM RESUME {ADO_ID}`"
+>   3. Surface this and STOP:
+>      > Options approved — 6R posture selected, NFR spec captured, source context verified.
+>      > Type `REPLATFORM RESUME ADO-{ADO_ID}` in a new session — resumes at R1.5 design document authoring. No rework needed.
+> If context is healthy: proceed to R1.5.
+
 > 📊 **STEP BOUNDARY — Step R1.5: Target design documents**
 > The checkpoint is flushed — resuming here is safe.
-> **Reply `CONTINUE` to proceed with this step.**
-> Reply `COMPACT` if the context window is near capacity:
->   1. Run `/compact`
->   2. Resume with `REPLATFORM RESUME ADO-{ID}`
->      (The resume restarts at this step — the flush above ensures no rework.)
-> _(Do not proceed past this prompt without a reply.)_
 
 Runs after `APPROVE OPTIONS`, before R2 capability decomposition (R2 reads the infrastructure
 architecture document). The Replatform document mix: infrastructure + deployment are the **primary**
 deliverables; component-arch is **delta only** (same code, minimal structural change).
+
+**Context budget check.** Expected cost for R1.5: ~20–35K tokens (wave-scheduled document authoring — full design document set).
+If the session feels slow, responses are truncated, or < 40K remaining:
+  1. Write `.claude/active-task.json`: `{"skill":"replatform","step":"R1.5","ado":"{ADO_ID}"}`
+  2. Update `migration-tracker.md` — "Next action: `REPLATFORM RESUME {ADO_ID}`"
+  3. Surface this and STOP:
+     > Context is near capacity. R1 complete (intake_context gate PASS — options approved, NFR spec and source context in checkpoint).
+     > Type `REPLATFORM RESUME ADO-{ADO_ID}` in a new session — resumes at R1.5 design document authoring. No rework needed.
+If context is healthy: proceed.
 
 1. **Derive the dependency graph:** `graph-derive-documents.cjs` (exit 1 cycle / exit 2 parse → fix first).
 2. **Author the design documents** via `document-orchestrator.md` (wave-scheduled parallel subagents;
@@ -374,15 +401,19 @@ node scripts/checkpoint-ledger.cjs set-payload --skill=replatform --ado={ADO_ID}
 
 ## Step R2 — Cloud-capability decomposition (implemented — AC-F7)
 
+> ⚓ **Safe point SP-R1.5 — Design approved, before R2 decomposition**
+> Checkpoint flushed: `design_approved=PASS`, `design_doc_paths` recorded.
+> If the session feels slow, responses are truncated, or < 30K remaining:
+>   1. Write `.claude/active-task.json`: `{"skill":"replatform","step":"R2","ado":"{ADO_ID}"}`
+>   2. Update `migration-tracker.md` — "Next action: `REPLATFORM RESUME {ADO_ID}`"
+>   3. Surface this and STOP:
+>      > Design approved — all design documents generated and reviewed (design_approved gate PASS).
+>      > Type `REPLATFORM RESUME ADO-{ADO_ID}` in a new session — resumes at R2 cloud-capability decomposition. No rework needed.
+> If context is healthy: proceed to R2.
+
 > 📊 **STEP BOUNDARY — Step R2: Cloud-capability decomposition**
 > Write `.claude/active-task.json`: `{"skill":"replatform","step":"R2","ado":"{ADO_ID}"}`
 > The checkpoint is flushed — resuming here is safe.
-> **Reply `CONTINUE` to proceed with this step.**
-> Reply `COMPACT` if the context window is near capacity:
->   1. Run `/compact`
->   2. Resume with `REPLATFORM RESUME ADO-{ID}`
->      (The resume restarts at this step — the flush above ensures no rework.)
-> _(Do not proceed past this prompt without a reply.)_
 
 Decompose by cloud capability with the **landing zone as Tier-0** — see
 `references/cloud-capability-decomposition.md`. **Reads the approved `target-infrastructure-architecture.md`**
@@ -411,15 +442,28 @@ node scripts/checkpoint-ledger.cjs set-payload --skill=replatform --ado={ADO_ID}
 
 ## Step R3 — Author IaC + config + pipeline + runbooks (implemented — AC-F7)
 
+> ⚓ **Safe point SP-R2 — Decomposition complete, before R3 IaC authoring**
+> Checkpoint flushed: `step_r2_decomposition_complete=PASS`, `decomposition_path` recorded.
+> If the session feels slow, responses are truncated, or < 30K remaining:
+>   1. Write `.claude/active-task.json`: `{"skill":"replatform","step":"R3","ado":"{ADO_ID}"}`
+>   2. Update `migration-tracker.md` — "Next action: `REPLATFORM RESUME {ADO_ID}`"
+>   3. Surface this and STOP:
+>      > Decomposition complete — capability tiers and provisioning order recorded (step_r2_decomposition_complete gate PASS).
+>      > Type `REPLATFORM RESUME ADO-{ADO_ID}` in a new session — resumes at R3 IaC + runbook authoring. No rework needed.
+> If context is healthy: proceed to R3.
+
 > 📊 **STEP BOUNDARY — Step R3: Author IaC + config + pipeline + runbooks**
 > Write `.claude/active-task.json`: `{"skill":"replatform","step":"R3","ado":"{ADO_ID}"}`
 > The checkpoint is flushed — resuming here is safe.
-> **Reply `CONTINUE` to proceed with this step.**
-> Reply `COMPACT` if the context window is near capacity:
->   1. Run `/compact`
->   2. Resume with `REPLATFORM RESUME ADO-{ID}`
->      (The resume restarts at this step — the flush above ensures no rework.)
-> _(Do not proceed past this prompt without a reply.)_
+
+**Context budget check.** Expected cost for R3: ~25–40K tokens (IaC modules × capabilities + 4 runbooks). Scales with capability count from R2.
+If the session feels slow, responses are truncated, or < 40K remaining:
+  1. Write `.claude/active-task.json`: `{"skill":"replatform","step":"R3","ado":"{ADO_ID}"}`
+  2. Update `migration-tracker.md` — "Next action: `REPLATFORM RESUME {ADO_ID}`"
+  3. Surface this and STOP:
+     > Context is near capacity. R2 complete (step_r2_decomposition_complete gate PASS — capability tiers and provisioning order in checkpoint).
+     > Type `REPLATFORM RESUME ADO-{ADO_ID}` in a new session — resumes at R3 IaC + runbook authoring. No rework needed.
+If context is healthy: proceed.
 
 IaC is BOTH generated code AND a destructive action → two safety layers (R5 of the design):
 1. **Author-time quality:** Write Gate before write · design-quality (SRMT) · shared judge (separate
@@ -450,15 +494,21 @@ node scripts/checkpoint-ledger.cjs set-payload --skill=replatform --ado={ADO_ID}
 
 ## Step R4 — Human executes (implemented — AC-F7)
 
+> ⚓ **Safe point SP-R3 — IaC authored and written, before human execution**
+> Checkpoint flushed: `step_r3_iac_authored=PASS`, `iac_dir_path` recorded.
+> If the session feels slow, responses are truncated, or < 30K remaining:
+>   1. Write `.claude/active-task.json`: `{"skill":"replatform","step":"R4","ado":"{ADO_ID}"}`
+>   2. Update `migration-tracker.md` — "Next action: `REPLATFORM RESUME {ADO_ID}`"
+>   3. Surface this and STOP:
+>      > IaC and runbooks authored and written (step_r3_iac_authored gate PASS — IaC path recorded in checkpoint).
+>      > Type `REPLATFORM RESUME ADO-{ADO_ID}` in a new session — resumes at R4 reconciliation gate monitoring. No rework needed.
+> If context is healthy: proceed to R4.
+
+> ⚠ **Human-execution handoff.** IaC and runbooks are now written to disk. Execute the four runbooks in sequence (migration → reconciliation → cutover → rollback). When human execution is complete, type `REPLATFORM RESUME ADO-{ADO_ID}` to continue to the reconciliation gate.
+
 > 📊 **STEP BOUNDARY — Step R4: Human executes**
 > Write `.claude/active-task.json`: `{"skill":"replatform","step":"R4","ado":"{ADO_ID}"}`
 > The checkpoint is flushed — resuming here is safe.
-> **Reply `CONTINUE` to proceed with this step.**
-> Reply `COMPACT` if the context window is near capacity:
->   1. Run `/compact`
->   2. Resume with `REPLATFORM RESUME ADO-{ID}`
->      (The resume restarts at this step — the flush above ensures no rework.)
-> _(Do not proceed past this prompt without a reply.)_
 
 The LLM authors + rehearses; the HUMAN executes anything touching real infra/data, in ANY environment.
 Sequence: migration → **reconciliation gate** → cutover → rollback. The gate is mandatory pre-cutover;
@@ -488,15 +538,28 @@ node scripts/checkpoint-ledger.cjs set-payload --skill=replatform --ado={ADO_ID}
 
 ## Step R5 — NFR assurance + Well-Architected + behavioral regression (implemented — AC-F8)
 
+> ⚓ **Safe point SP-R4 — Reconciliation gate PASS, before R5 NFR assurance**
+> Checkpoint flushed: `reconciliation_gate=PASS`, `reconciliation_report_path` recorded.
+> If the session feels slow, responses are truncated, or < 30K remaining:
+>   1. Write `.claude/active-task.json`: `{"skill":"replatform","step":"R5","ado":"{ADO_ID}"}`
+>   2. Update `migration-tracker.md` — "Next action: `REPLATFORM RESUME {ADO_ID}`"
+>   3. Surface this and STOP:
+>      > Reconciliation gate passed — all runbook steps PASS, cutover complete (reconciliation_gate gate PASS).
+>      > Type `REPLATFORM RESUME ADO-{ADO_ID}` in a new session — resumes at R5 NFR assurance. No rework needed.
+> If context is healthy: proceed to R5.
+
 > 📊 **STEP BOUNDARY — Step R5: NFR assurance + Well-Architected + behavioral regression**
 > Write `.claude/active-task.json`: `{"skill":"replatform","step":"R5","ado":"{ADO_ID}"}`
 > The checkpoint is flushed — resuming here is safe.
-> **Reply `CONTINUE` to proceed with this step.**
-> Reply `COMPACT` if the context window is near capacity:
->   1. Run `/compact`
->   2. Resume with `REPLATFORM RESUME ADO-{ID}`
->      (The resume restarts at this step — the flush above ensures no rework.)
-> _(Do not proceed past this prompt without a reply.)_
+
+**Context budget check.** Expected cost for R5: ~15–25K tokens (NFR assessment × N + Well-Architected 8 domains + behavioral regression). Scales with NFR count.
+If the session feels slow, responses are truncated, or < 40K remaining:
+  1. Write `.claude/active-task.json`: `{"skill":"replatform","step":"R5","ado":"{ADO_ID}"}`
+  2. Update `migration-tracker.md` — "Next action: `REPLATFORM RESUME {ADO_ID}`"
+  3. Surface this and STOP:
+     > Context is near capacity. R4 complete (reconciliation_gate gate PASS — cutover complete, reconciliation report written).
+     > Type `REPLATFORM RESUME ADO-{ADO_ID}` in a new session — resumes at R5 NFR assurance. No rework needed.
+If context is healthy: proceed.
 
 Runs **after R4** (the human-executed cutover — the target is now deployed). This is where "done" is
 *proven, not asserted* — Replatform's PRIMARY oracle is non-functional. The LLM/human runs the drills;
@@ -575,12 +638,6 @@ node scripts/checkpoint-ledger.cjs set-payload --skill=replatform --ado={ADO_ID}
 
 > 📊 **STEP BOUNDARY — Step R5a: Generate test plan**
 > The checkpoint is flushed — resuming here is safe.
-> **Reply `CONTINUE` to proceed with this step.**
-> Reply `COMPACT` if the context window is near capacity:
->   1. Run `/compact`
->   2. Resume with `REPLATFORM RESUME ADO-{ID}`
->      (The resume restarts at this step — the flush above ensures no rework.)
-> _(Do not proceed past this prompt without a reply.)_
 
 After IaC authoring is complete and before the NFR gate, invoke the test-plan skill
 in subagent mode:

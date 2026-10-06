@@ -70,4 +70,4 @@ flowchart LR
 <!-- Tier      : service · ui · repository · shared-library · datastore · domain -->
 <!-- Local path: path relative to THIS repo root pointing to the cloned dependency repo  -->
 <!--             graph-sync resolves this at runtime against additionalDirectories entries -->
-<!--             Example row: | TrackersPhase12 | upstream | service | ../KE.KMS.Trackers.Phase12 | -->
+<!--             Example row: | TrackersPhase12 | upstream | service | ../Demo.Phase12 | -->
