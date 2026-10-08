@@ -1,5 +1,124 @@
 # MEMORY.md — Project memory (dream-managed)
 
+### [2026-10-08] Error resolved — ADO-9020 architectural review: 3 bugs fixed post-Story-5
+
+Bug 1 (reload blind spot): `getPendingAdoId()` only checks in-memory Maps — after window reload Maps are empty so "YES" (no adoId) returns null and the ledger restore is never reached. Fix: `participant.ts` detects `looksLikeGateResponse()` + null adoId → calls `listActiveAdoIds(context)` to scan ledger dir → shows specific "include ADO ID: YES ADO-XXXX" message to developer. Root cause: ledger restore in `checkAndResumePending` is gated on `effectiveAdoId` being non-null, which requires the adoId to be in the prompt or Maps. Bug 2 (stale checkpoint hijacks fresh run): when developer adds Anthropic key and retries same ADO, `checkAndResumePending` picks up stale ledger → re-streams WARN instead of running fresh. Fix: `hasExplicitCommand` guard in participant.ts — explicit command (upgrade/rewrite/replatform keyword) calls `clearPendingState(adoId)` on both handlers + `clearCheckpoint(context, adoId)` before pending check. Bug 3: misleading comment in rewriteHandler claiming Story 5 adds ledger persistence — corrected with explicit rationale for why OPTIONS_ACK_PENDING is in-memory only (V2). New exports: `clearPendingState(adoId)` on both handlers; `listActiveAdoIds(context)` on ledger.ts.
+Trigger: Error resolved  Confidence: 0.99  Source: architect-review
+
+### [2026-10-08] Task completed — ADO-9020 Story 5: Should-haves (judgeGate + ledger + multi-root)
+
+Three should-have components delivered. (1) `judgeGate.ts` — single `callJudge()` function replaces duplicate `callModel`/`generateViaAnthropic`/`generateViaCopilot` in all 3 handlers. (2) `ledger.ts` — thin wrapper around `checkpoint-ledger.cjs` using `context.globalStorageUri` for cross-session persistence; `writeCheckpoint`/`readCheckpoint`/`clearCheckpoint` typed API. upgradeHandler writes HIGH_RISK_ACK_PENDING to ledger on set, restores from ledger in `checkAndResumePending` if Map empty, clears on YES. (3) `workspaceRoots.ts` enhanced: optional `extensionUri` param triggers read of `migrationRoots` from `.claude/settings.local.json` (key populated by `resolve-migration-roots.cjs --write-to`); graceful fallback. Note: `resolve-migration-roots.cjs` cannot be `require()`'d (no `require.main` guard — all BFS runs at top level with `process.exit` calls). tsc --noEmit EXIT:0. ADO-9020 EPIC complete (5/5 stories, 21/21 SP).
+Trigger: Task completed  Confidence: 0.99  Source: auto-capture
+
+### [2026-10-08] Task completed — ADO-9020 Story 4: Replatform handler (replatformHandler.ts)
+
+`replatformHandler.ts` implements a single-turn state machine: INTAKE → 6R_CLASSIFY → NFR_SPEC → IaC_AUTHORING → WRITE_GATE → WRITE → COMPLETE. IaC format auto-detected from prompt ("terraform" keyword → Terraform; default → Bicep). Writes to `.migration/ADO-{id}-replatform/` — Bicep: main.bicep + runbook.md; Terraform: main.tf + variables.tf + runbook.md. No multi-turn acks needed (unlike Upgrade/Rewrite). tsc --noEmit EXIT:0.
+Trigger: Task completed  Confidence: 0.99  Source: auto-capture
+
+### [2026-10-08] Task completed — ADO-9020 Story 3: Rewrite handler (rewriteHandler.ts)
+
+`rewriteHandler.ts` implements 4-state machine: INTAKE+OPTIONS (same turn) → OPTIONS_ACK_PENDING (multi-turn) → ARCHITECTURE → COMPLETE. Both options.md and arch.md are gated by assertGateOpen. Explicit V2 deferral note on worktrees required by AC-F9. participant.ts chains rewriteHandler pending check after upgradeHandler. tsc --noEmit EXIT:0.
+Trigger: Task completed  Confidence: 0.99  Source: auto-capture
+
+### [2026-10-07] Task completed — ADO-9020 Story 2: Upgrade full stage machine (upgradeHandler.ts)
+
+`upgradeHandler.ts` implements the 6-state machine (INTAKE → TARGET_VERSION_PENDING → GAP_RISK → HIGH_RISK_ACK_PENDING → WRITE_GATE → REPORT_WRITE → COMPLETE). `participant.ts` wired with `getPendingAdoId()` + `checkAndResumePending()` called before routing on every turn. tsc --noEmit EXIT:0. All 11 ACs for Story 2 delivered: AC-F1 through AC-F7, AC-F15/F16/F17, and participant routing update.
+Trigger: Task completed  Confidence: 0.99  Source: auto-capture
+
+### [2026-10-07] Architecture decision — ADO-9020 Story 2: module-level Maps for Upgrade pending state
+
+In `upgradeHandler.ts`, `pendingTargetVersionMap` and `pendingHighRiskAckMap` are module-level Maps keyed by adoId. Rejected: `workspaceState` (requires ExtensionContext threading + can't serialize SourceDescriptor cleanly); rejected: closure in `createParticipantHandler` (breaks single responsibility). Story 5 layers `ledger.ts` checkpoint JSON on top for persistence across window reloads — the Maps remain for in-session state.
+Trigger: Architecture decision  Confidence: 0.97  Source: auto-capture
+
+### [2026-10-07] Task completed — ADO-9016 story COMPLETE (IaC Scan step, 22/22 ACs)
+
+All 22 ACs delivered and tracker updated to ✅ Done. Key patterns confirmed: (1) `_deploy-manifest.json` has no `stale_after_days` field — staleness gates must read metadata directly from the reference file header, not from the manifest schema. (2) P4 persona de-dup gates should be scoped to current scan session only — historical ledger rows are unaffected. (3) `active-task.json` holds cross-session resume state for latest ADO; do not overwrite if it already shows a newer ADO.
+Trigger: Task completed  Confidence: 0.99  Source: auto-capture
+
+### [2026-10-07] Task completed — ADO-9020 full planning phase complete (ICEA + Tech Spec + Test Plan approved)
+
+All planning artifacts for ADO-9020 (Copilot Migration Extension Phase 3) on disk and approved: Plan → ICEA (✅ Approved, 5-story EPIC, 21 SP) → Epic Tech Spec → Test Plan (9 suites, 35 TCs). Key design locked in: Upgrade has 6 states including TARGET_VERSION_PENDING and HIGH_RISK_ACK_PENDING; judgeGate.ts is the single LLM dispatch point; participant.ts checks pendingAck FIRST on every turn before any routing.
+Trigger: Task completed  Confidence: 0.99  Source: auto-capture
+
+### [2026-10-07] Task completed — IMPLEMENT ADO-9016 approved (IaC Scan step, 8 files)
+All 8 files for ADO-9016 written via APPROVE ADO-9016: SKILL.md Pre-Scan section, iac-scan.md rule catalog (19 rules), cloud-checks.md scope note, pass2-personas.md P4 de-dup gate, validate-iac-findings.cjs (all-or-nothing batch validator) + test, _deploy-manifest.json reference_files entry, setup-status/SKILL.md Section 1c-quad. Test framework in this repo: standalone Node.js `.test.cjs` files with custom `assert()` + `process.exit()` — never use Jest assertion syntax (expect/describe/it) directly in test files; tests are spawned as subprocesses by `tests/jest.suite.test.cjs`.
+Trigger: task-completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-07] Task completed — ADO-9020 ICEA drafted and saved (21 SP EPIC, 5 stories)
+
+ICEA for ADO-9020 (Copilot Migration Extension Phase 3) saved to `docs/Release3/Sprint13/UserStory9020/ADO-9020-copilot-migration-extension.icea.md`. Critic verdict: PASS WITH NOTES — 3 corrections applied: Story 1 split from 8→4+4 SP (Stories 1+2); AC-NF2 corrected for require() synchronous nature (no external timeout); AC-F5 HIGH-risk ack mechanism specified as ledger `pendingHighRiskAck` flag checked at start of next Chat turn. Tech Spec written to `temp/ADO-9020-tech.md`.
+Trigger: Task completed  Confidence: 0.99  Source: auto-capture
+
+### [2026-10-07] Architecture decision — ADO-9020: HIGH-risk ack across Chat turns uses ledger pendingHighRiskAck flag
+
+Chat participants are turn-based and cannot block mid-turn waiting for user input. To implement the HIGH-risk gate WARN+ack: end the current turn after streaming the WARN; write `pendingHighRiskAck=true` to the ledger checkpoint JSON; at the start of every subsequent turn, `participant.ts` calls `checkPendingAck(adoId)` BEFORE routing — if flag is set and prompt contains "YES", clear the flag and resume from the saved ledger stage. This is the correct pattern for multi-turn gated flows in VS Code Chat participants.
+Trigger: Architecture decision  Confidence: 0.97  Source: auto-capture
+
+### [2026-10-07] Architecture decision — ADO-9020: copilot-extension uses Option A (vendor) bundling
+
+Copilot extension (`copilot-extension/`) is a standalone product with no runtime or build-time dependency on the Claude Code plugin repo. Shared scripts (migration-source-detect.cjs, repo-detect.cjs, stack-signals.cjs, checkpoint-ledger.cjs, resolve-migration-roots.cjs) are vendored: copied once into `copilot-extension/scripts/`, committed, and maintained independently by the extension team. Options B (npm package) and C (monorepo) were rejected for Sprint 13: B requires private registry infrastructure; full C requires costly repo restructure; lightweight C assumes co-location which contradicts the standalone deployment intent.
+Trigger: Architecture decision  Confidence: 0.97  Source: auto-capture
+
+### [2026-10-07] Architecture decision — ADO-9020: HIGH-risk judge gates WARN + require acknowledgment when no Anthropic key
+
+When no Anthropic API key is configured, HIGH-risk gate decisions in the copilot-extension WARN the developer (do not silently degrade to Copilot model) and require explicit acknowledgment before continuing. VSIX distribution is sufficient for Sprint 13 but extension must be structured for Marketplace submission readiness (correct publisher, icon, categories, contributes schema).
+Trigger: Architecture decision  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-07] Task completed — ADO-9016 SAVE TECH: Tech Spec + Test Plan saved, ICEA approved
+
+Tech Spec saved to `docs/Release3/Sprint12/UserStory9016/ADO-9016-iac-scan-step.techspec.md` (8 files, 5 SP STORY, Critic: PASS). Test plan saved alongside (7 suites, 28 TCs). ICEA status set to ✅ Approved. Key correction from OQ-1 research: AC-F20 moved to `setup-status/SKILL.md` new Section 1c-quad — reads `Last-validated:` + `Stale-after:` from `iac-scan.md` header directly; `_deploy-manifest.json` does not support `stale_after_days`. Next: `IMPLEMENT ADO-9016`.
+Trigger: Task completed  Confidence: 0.99  Source: auto-capture
+
+### [2026-10-07] Task completed — Copilot migration spike Phase 1 validated end-to-end
+
+Spike ran successfully against KE.KMS.Trackers.Adapter (.NET 8, 9 projects). All 7 criteria passed: @migration participant registered, stack detection via require() works, Write Gate blocks then unblocks via migration.approve command, static stub report generated when no model available, full detect→classify→report→gate→write flow completed. Three bugs found and fixed during spike: (1) process.execPath = Electron in extension host — patched via resolveNodeExe(); (2) execFileAsync fails with null exit code on space-bearing paths on Windows — fixed by switching to require() + process.execPath patch; (3) stack-signals.cjs missing from bundle — all three scripts (migration-source-detect, repo-detect, stack-signals) must be copied. Pattern confirmed: require() is the correct invocation strategy for CJS scripts in VS Code extensions on Windows.
+Trigger: Task completed  Confidence: 0.99  Source: auto-capture
+
+### [2026-10-07] Architecture decision — Copilot spike: require() over execFile for CJS scripts in VS Code extensions
+
+On Windows, execFileAsync fails with null exit code (signal kill, no stderr) when the extension path contains spaces (OneDrive paths, "AI Learning" etc.) even though execFile bypasses the shell. The correct pattern for VS Code extensions on Windows: require() the CJS module directly in the extension host process, patch process.execPath to resolveNodeExe() for the duration of the call so any internal execFileSync calls inside the script use node.exe not Electron, then restore. This is faster, more reliable, and avoids all subprocess spawn mechanics.
+Trigger: Architecture decision  Confidence: 0.99  Source: auto-capture
+
+### [2026-10-07] Error resolved — Copilot spike stack detection returning null due to missing stack-signals.cjs
+
+`repo-detect.cjs` requires `./stack-signals.cjs` as a sibling at runtime. When bundling scripts into `copilot-migration-spike/scripts/`, only `migration-source-detect.cjs` and `repo-detect.cjs` were copied — `stack-signals.cjs` was omitted. `repo-detect.cjs` threw `MODULE_NOT_FOUND`, `migration-source-detect.cjs` caught it silently and returned `primary.token = null`. Fix: copy all three scripts. Rule: always run `node migration-source-detect.cjs --roots=<path> --json` directly against the bundle before testing in the extension to catch missing dependencies early.
+Trigger: Error resolved  Confidence: 0.99  Source: auto-capture
+
+### [2026-10-07] Architecture decision — ADO-9016 AC-F20: stale_after_days not in manifest; read iac-scan.md headers directly
+
+`_deploy-manifest.json` does NOT support `stale_after_days` (grep confirmed zero matches across all scripts and skills). `setup-status` has no staleness check for skill reference files — only `.claude/rules/.deploy-meta.json` for rule files via section 1c-ter. Decision: satisfy AC-F20 by adding a new setup-status check (Section 1c-quad) that reads `Last-validated:` + `Stale-after:` metadata directly from `skills/security/references/iac-scan.md` header — no manifest schema change needed. `_deploy-manifest.json` entry kept for `REFRESH RULES` tooling but without `stale_after_days` property.
+Trigger: Architecture decision  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-07] Error resolved — Copilot spike "no stack detected" due to wrong workspace in Dev Host
+
+When pressing F5, the Extension Development Host opens with the same workspace as the host VS Code window (the spike folder itself), not the target project. `vscode.workspace.workspaceFolders[0]` therefore points at `copilot-migration-spike/` which has no `.cs` files — detection returns null. Fix: in the Dev Host window, use `File → Open Folder` to open the target project before running `@migration`. Added "Scanning: `<path>`" as the first line of every participant response so path misconfiguration is immediately visible.
+Trigger: Error resolved  Confidence: 0.99  Source: auto-capture
+
+### [2026-10-07] Error resolved — process.execPath in VS Code extension host points to Electron not Node
+
+In the VS Code extension host, `process.execPath` resolves to `Code.exe` (the Electron binary), not `node.exe`. Using it as the executor for `.cjs` child processes silently fails. Fix: probe `where node` (Windows) / `which node` (Mac/Linux) with a cache variable, falling back to known install paths (`C:\Program Files\nodejs\node.exe`). Applied in `copilot-migration-spike/src/scriptRunner.ts` via `resolveNodeExe()`. Never use `process.execPath` to spawn Node scripts from a VS Code extension.
+Trigger: Error resolved  Confidence: 0.99  Source: auto-capture
+
+### [2026-10-07] Error resolved — VS Code launch.json preLaunchTask token not resolving
+
+`${defaultBuildTask}` in `launch.json` does not resolve to the correct task when the extension folder is opened directly (not as part of a multi-root workspace). Fix: replace with the explicit task label `"compile"` which matches the `tasks.json` label exactly. Always use explicit task labels in `preLaunchTask` for VS Code extension spike projects.
+Trigger: Error resolved  Confidence: 0.99  Source: auto-capture
+
+### [2026-10-07] Task completed — Copilot migration spike Phase 1 scaffold built
+
+`copilot-migration-spike/` created at repo root: VS Code extension with `@migration` Chat participant, `writeGate.ts` (workspaceState-backed, `migration.approve` command), `configManager.ts` (Anthropic SDK + SecretStorage for ADO PAT), `scriptRunner.ts` (child_process wrapper for `migration-source-detect.cjs`), and `upgradeIntake.ts` (Upgrade Stage 1 PoC). Rewrite and Replatform are stubs. TypeScript compiles clean (exit 0). Pattern: scripts bundled by copying from `scripts/` into `copilot-migration-spike/scripts/`; extension resolves them via `context.extensionUri`. Launch via F5 (`.vscode/launch.json` + `tasks.json` included).
+Trigger: Task completed  Confidence: 0.99  Source: auto-capture
+
+### [2026-10-07] Task completed — ADO-9016 Tech Spec + Test Plan drafted
+
+Tech Spec for ADO-9016 (IaC Scan step) written to `temp/ADO-9016-tech.md` (base-only — stack: dotnet_framework+nodejs+python, no angular, no overlay match). Test plan written to `temp/ADO-9016-testplan.md` (7 suites, 28 TCs). Critic: PASS WITH NOTES. Open question OQ-1: verify `setup-status` reads `stale_after_days` from `_deploy-manifest.json` (AC-F20 / Assumption 4 from ICEA — unverified). Developer must reply `SAVE TECH ADO-9016` after review.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-07] Task completed — ADO-9016 ICEA drafted and saved
+
+ICEA for ADO-9016 (Security Skill: Dedicated IaC Scan Step) saved to `docs/Release3/Sprint12/UserStory9016/ADO-9016-iac-scan-step.icea.md`; Status: DRAFT; Critic: PASS WITH NOTES. Key decisions locked: two IDs (SEC-CONTAINER for Dockerfile/compose, SEC-IAC for K8s/Terraform); IaC Scan step runs after .gitignore Pre-Scan, before Pass 1; `validate-iac-findings.cjs` mandatory no-partial-write guard; `iac-scan.md` requires source citations + coverage map + `Last-validated` governance metadata.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
 ### [2026-10-06] Task completed — HTML guides updated for migration skill refactors
 
 Updated `guides/plugin-user-guide.html`: upgrade/rewrite/replatform feature cards and command table rows now state real gate counts (3/5/4) and auto-advance behaviour; upgrade card explains skill-generated intake. Updated `guides/plugin-developer-guide.html`: "Key skill changes" paragraph extended with CONTINUE gate elimination, intake redesign, research cache exit codes, and ICEA signal scope changes (ADRs 0070–0075); ADR section card updated to reference both `docs/adr/` and `docs/adrs/`; "Add a command" section adds a STUB_FILES/HOOK_FILES sync step and warning.
@@ -24,6 +143,16 @@ Trigger: Task completed  Confidence: 0.99  Source: auto-capture
 
 `_bootstrap-manifest.json` is a machine-local setup-init checkpoint that stores absolute local paths (`scriptsDir`, `pluginPath`, `externalPaths`, `gitPath`, `bashPath`). Fix: added `.claude/_bootstrap-manifest.json` to both `GITIGNORE_BASE` in `setup-init-bootstrap.cjs` and the plugin's own `.gitignore`. Do not attempt to move these paths to `settings.local.json` — the whole file is ephemeral, not just individual fields.
 Trigger: Architecture decision  Confidence: 0.85  Source: auto-capture
+
+### [2026-10-07] Plan approved — Copilot deployment of migration family: approach agreed
+
+Deploying Upgrade · Rewrite · Replatform to GitHub Copilot as a VS Code Chat participant (`@migration`). Model routing: Anthropic API key in config for judge-gate escalation, fallback to single Copilot model when key absent. Write Gate: dedicated VS Code command (`migration.approve`) replaces keyword-based `APPROVE ADO-{ID}` pattern. All 3 skills in scope. Starting with a Phase 1 spike to validate the scaffold before full ICEA. Phase 1 spike scope: VS Code extension skeleton, Chat participant registration, workspaceState-backed Write Gate state machine, SecretStorage for PAT/API keys, PLUGIN_DIR → extensionUri path resolution, and one proof-of-concept skill invocation (Upgrade intake only).
+Trigger: Plan approved  Confidence: 0.92  Source: auto-capture
+
+### [2026-10-07] Plan approved — Security skill IaC scanning gap: Option E chosen
+
+Option E (dedicated IaC Scan step as sub-agent) was selected over Options A/B/C/D for fixing the three structural IaC gaps in the security skill. The three-pass architecture is left untouched; a new named step runs between Pre-Scan and Pass 1, delegates to a sub-agent with `iac-scan.md` + fingerprint-spec, and emits SEC-CONTAINER/SEC-IAC ledger entries. Governance requires: per-section source citations with version pins in `iac-scan.md`, `Last-validated` header, coverage map, registration in `_deploy-manifest.json` so `setup-status` and `REFRESH RULES iac-scan.md` work, and a `validate-iac-findings.cjs` script to guard against malformed sub-agent JSON output.
+Trigger: Plan approved  Confidence: 0.92  Source: auto-capture
 
 ### [2026-10-06] Plan approved — upgrade skill friction reduction (2 issues)
 

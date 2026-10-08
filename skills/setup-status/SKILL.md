@@ -177,6 +177,48 @@ If any file is ⚠️ or ❌, include in recommended actions:
 
 ---
 
+### 1c-quad — IaC scan rule catalog staleness
+
+Only run if `skills/security/references/iac-scan.md` exists.
+
+```bash
+node -e "
+  const fs = require('fs');
+  const file = 'skills/security/references/iac-scan.md';
+  if (!fs.existsSync(file)) { console.log('IAC_SCAN_MISSING'); process.exit(0); }
+  const content = fs.readFileSync(file, 'utf8');
+  const dateMatch  = content.match(/Last-validated:\s*(\d{4}-\d{2}-\d{2})/);
+  const staleMatch = content.match(/Stale-after:\s*(\d+)/);
+  if (!dateMatch) { console.log('NO_DATE'); process.exit(0); }
+  const lastValidated   = dateMatch[1];
+  const staleAfterDays  = staleMatch ? parseInt(staleMatch[1], 10) : 90;
+  const ageDays = Math.floor((Date.now() - Date.parse(lastValidated)) / 86400000);
+  console.log('LAST_VALIDATED=' + lastValidated + ' AGE_DAYS=' + ageDays + ' STALE_AFTER=' + staleAfterDays);
+" 2>/dev/null
+```
+
+Status:
+- `ageDays` < `staleAfterDays` → ✅ Green — rule catalog is current
+- `ageDays` >= `staleAfterDays` AND < `staleAfterDays * 2` → ⚠️ Amber — over 90 days since last validation:
+  ```
+  ⚠ skills/security/references/iac-scan.md last validated {N} days ago ({lastValidated}).
+    CIS Benchmarks release updated checks periodically — type: REFRESH RULES iac-scan.md
+  ```
+- `ageDays` >= `staleAfterDays * 2` → ❌ Red — over 180 days; rules are likely outdated:
+  ```
+  ❌ skills/security/references/iac-scan.md last validated {N} days ago.
+    IaC scan rules are likely outdated — type: REFRESH RULES iac-scan.md
+  ```
+- `IAC_SCAN_MISSING` → ⚠️ Amber — file not present; run `/setup-sync`
+- `NO_DATE` → ⚠️ Amber — `Last-validated:` header missing from file
+
+Include in output report line:
+```
+  iac-scan.md (rule catalog)         {✅ / ⚠️ / ❌}  {last validated: {date} ({N} days) | stale — REFRESH RULES iac-scan.md | missing — run /setup-sync}
+```
+
+---
+
 ### 1c-bis — .NET version detection freshness (v3.19.0)
 
 For .NET projects, verify the per-project version spread is present and not stale. `versions[]` is
@@ -1152,6 +1194,7 @@ Include in output report line:
   CLAUDE.md identity                 {✅ / ⚠️}       {§2 values filled | unresolved: Organization, Project, …}
   memory/                            {✅ / ❌}       {detail}
   .claude/rules/                     {✅ / ⚠️}       {N/4 files present}
+  iac-scan.md (rule catalog)         {✅ / ⚠️ / ❌}  {last validated: {date} ({N} days) | stale — REFRESH RULES iac-scan.md | missing — run /setup-sync}
   .claude/commands/                  {✅ / ⚠️}       {N/41 stubs deployed}
   .claude/architecture/              {✅ / ⚠️}       {N files, N populated}
   .claude/graph/graph-index.md       {✅ / ⚠️ / ❌}  {N modules | STALE — run /graph-sync | MISSING — run /setup-init}

@@ -1,5 +1,11 @@
 # Cloud Security Checks
 
+> **Scope note (AC-F18):** This file covers AWS/GCP/Azure cloud posture checks and IaC
+> (Terraform/CDK/CloudFormation) architectural misconfigurations. Per-rule Dockerfile,
+> docker-compose, and Kubernetes YAML checks are in
+> `skills/security/references/iac-scan.md` and run as a dedicated Pre-Scan step (IaC Scan).
+> Do not add container file rules here.
+
 ## AWS
 
 ### IAM

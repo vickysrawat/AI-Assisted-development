@@ -293,6 +293,97 @@ done
 
 ---
 
+## Pre-Scan — IaC Scan
+
+**This runs BEFORE Pass 1, regardless of scope flag.**
+
+### IaC File Detection (AC-F1, AC-F2, AC-F3, AC-NF1)
+
+Discover IaC files in the working tree:
+
+```bash
+IAC_FILES=$(find . \
+  \( -name "Dockerfile" \
+  -o -name "docker-compose*.yml" \
+  -o \( \( -path "*/k8s/*" -o -path "*/pipelines/*" \
+           -o -path "*/deploy/*" -o -path "*/manifests/*" \) \
+          -name "*.yaml" \) \) \
+  -not -path "*/node_modules/*" \
+  -not -path "*/.git/*" \
+  2>/dev/null)
+```
+
+If `IAC_FILES` is empty:
+```
+IaC Scan: skipped — no IaC files found in scope
+```
+Exit this Pre-Scan step immediately. Continue to Pass 1. Sub-agent is NOT invoked.
+
+If files found, announce scope:
+```
+IaC Scan: {N} file(s) detected
+  {list of matched file paths}
+```
+
+### IaC Scan Rule Catalog Gate (AC-F3 error state)
+
+```bash
+[ -f "skills/security/references/iac-scan.md" ] || echo "IAC_SCAN_MISSING"
+```
+
+If `IAC_SCAN_MISSING`:
+```
+⛔ IaC Scan blocked — iac-scan.md not found. Run /setup-sync to repair.
+```
+Skip sub-agent. Continue to Pass 1.
+
+### IaC Scan Sub-Agent Invocation (AC-F4, AC-F5, AC-F6, AC-F7)
+
+Delegate to a sub-agent. Provide ONLY these inputs — no source code files:
+1. The list of detected IaC file paths and their full contents
+2. Full content of `skills/security/references/iac-scan.md`
+3. Full content of `skills/shared/fingerprint-spec.md`
+4. The required JSON output schema:
+
+Each finding must be a JSON object with exactly these 8 fields:
+- `fingerprint` — string matching pattern `FP-[0-9a-f]{8}`
+- `id` — either `SEC-CONTAINER` (Dockerfile or docker-compose) or `SEC-IAC` (Kubernetes YAML)
+- `file` — relative path to the file containing the finding
+- `line` — integer line number
+- `severity` — one of: `Critical`, `High`, `Medium`, `Low`
+- `rule` — rule ID from iac-scan.md (e.g. `DOCKER-001`, `COMPOSE-004`, `K8S-001`)
+- `evidence` — verbatim code excerpt triggering the rule
+- `fix` — corrected code snippet that resolves the finding
+
+Sub-agent task: scan each IaC file against the rules in `iac-scan.md`. Emit only rules that fire.
+Return a JSON array of findings. Return `[]` if no rules fire.
+
+After sub-agent returns, validate output before any ledger write:
+
+```bash
+echo "$SUB_AGENT_OUTPUT" > /tmp/iac-findings-$$.json
+node scripts/validate-iac-findings.cjs --input-file=/tmp/iac-findings-$$.json
+VALID_EXIT=$?
+rm -f /tmp/iac-findings-$$.json
+```
+
+On exit 0 (valid): append each finding as a new row to `security/security-ledger.md`:
+```
+| {fingerprint} | {id} | Open | {severity} | {file} | {line} | {rule} | {evidence} | {fix} |
+```
+Announce:
+```
+IaC Scan: {M} finding(s) written to ledger
+```
+
+On exit 1 (invalid): do NOT write to ledger. Announce:
+```
+IaC Scan: output invalid — manual review required, see .claude/logs/iac-scan-{YYYY-MM-DD}.md
+```
+Pass 1 continues normally.
+
+---
+
 ## Pass 1 — Structured Rule-Based Scan
 
 Apply the deterministic security patterns from `$PLUGIN_DIR/skills/security/references/pass1-patterns.md`

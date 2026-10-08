@@ -120,17 +120,37 @@ Max findings: 5
 Lens: "What is misconfigured at the deployment and infrastructure level?"
 
 Looks for:
-- Cloud IAM over-privilege (wildcard actions, broad resource scope)
-- IaC misconfigurations (Terraform, CloudFormation, CDK, ARM)
-- Container security issues (running as root, exposed ports, no resource limits)
+- Cloud IAM over-privilege (wildcard actions, broad resource scope, cross-account trust)
+- IaC misconfigurations (Terraform, CloudFormation, CDK, ARM) — architectural cloud-provider
+  patterns only; per-file container rules are handled by the IaC Scan Pre-Scan step
 - CI/CD pipeline secrets exposure or injection
-- Network exposure (open security groups, public endpoints, missing WAF)
+- Network exposure (open security groups, unrestricted ingress, missing WAF, public endpoints)
 - TLS certificate issues (self-signed, expired, weak ciphers)
 - Missing deployment hardening (security headers, rate limiting, WAF rules)
 
 Does NOT look for:
 - Application-level configuration (covered by Pass 1 SEC-CONFIG)
 - Application-level secrets (covered by Pass 1 SEC-DATA)
+- Dockerfile, docker-compose, or Kubernetes YAML per-rule issues — these are owned by the
+  IaC Scan Pre-Scan step (Step 0e) which runs before Pass 2 and logs SEC-CONTAINER /
+  SEC-IAC findings to the security ledger
+
+**SEC-CONTAINER / SEC-IAC de-duplication gate (AC-F17):**
+
+The IaC Scan Pre-Scan step runs before Pass 2 and logs `SEC-CONTAINER` and `SEC-IAC`
+findings to the security ledger for the current scan session.
+
+Before raising any finding related to Dockerfile, docker-compose.yml, or Kubernetes YAML
+file content, check whether a `SEC-CONTAINER` or `SEC-IAC` ledger row already exists for
+that file from this session's scan run. If it does, suppress the finding.
+
+This gate suppresses only findings logged during the **current scan session** — existing
+historical ledger entries from prior runs are unaffected and remain queryable.
+
+P4's scope is narrowed to: architectural cloud IAM concerns, network topology
+misconfiguration, cross-service trust boundary weaknesses, and cloud-provider-specific
+misconfigurations. P4 does NOT review Dockerfile, docker-compose, or K8s YAML file content
+— that is the IaC Scan Pre-Scan step's responsibility.
 
 Activation gate: This persona ONLY activates if infrastructure files are
 detected in the scan scope:

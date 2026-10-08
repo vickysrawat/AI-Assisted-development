@@ -1,0 +1,88 @@
+{
+  "name": "copilot-migration-extension",
+  "displayName": "Migration Family",
+  "description": "AI-guided migration family for GitHub Copilot Chat: Upgrade · Rewrite · Replatform as the @migration Chat participant. Standalone — no Claude Code subscription required.",
+  "version": "0.1.0",
+  "publisher": "kirkland-platform",
+  "icon": "resources/icon.png",
+  "engines": { "vscode": "^1.90.0" },
+  "categories": ["AI", "Programming Languages", "Other"],
+  "keywords": ["migration", "upgrade", "rewrite", "replatform", "copilot", "dotnet", "angular"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "chatParticipants": [
+      {
+        "id": "migration",
+        "name": "migration",
+        "description": "AI-guided migration family: upgrade, rewrite, replatform.",
+        "isSticky": true,
+        "commands": [
+          { "name": "upgrade",    "description": "In-place same-stack version upgrade (e.g. .NET 8 → 10, Angular 17 → 19)" },
+          { "name": "rewrite",    "description": "Out-of-place generative stack translation (e.g. Angular → React)" },
+          { "name": "replatform", "description": "Hosting/topology migration — on-prem to cloud (IaC authored, human executes)" }
+        ]
+      }
+    ],
+    "commands": [
+      {
+        "command": "migration.approve",
+        "title": "Migration: Approve Write",
+        "category": "Migration"
+      },
+      {
+        "command": "migration.revokeApproval",
+        "title": "Migration: Revoke Approval",
+        "category": "Migration"
+      },
+      {
+        "command": "migration.setAdoPat",
+        "title": "Migration: Set ADO PAT",
+        "category": "Migration"
+      },
+      {
+        "command": "migration.clearAdoPat",
+        "title": "Migration: Clear ADO PAT",
+        "category": "Migration"
+      }
+    ],
+    "configuration": {
+      "title": "Migration Family",
+      "properties": {
+        "migration.anthropicApiKey": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Anthropic API key for judge-gate escalation (Upgrade · Rewrite · Replatform). When absent, the participant falls back to the active Copilot model. HIGH-risk gates display a WARN banner without this key.",
+          "scope": "machine-overridable"
+        },
+        "migration.judgeModel": {
+          "type": "string",
+          "default": "claude-opus-4-6",
+          "markdownDescription": "Anthropic model used for critic/judge gates when `migration.anthropicApiKey` is set.",
+          "scope": "machine-overridable"
+        },
+        "migration.copilotFamilyFallback": {
+          "type": "string",
+          "default": "gpt-4o",
+          "markdownDescription": "Copilot model family used when Anthropic key is absent.",
+          "scope": "machine-overridable"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile":           "tsc -p ./",
+    "watch":             "tsc -watch -p ./",
+    "vscode:prepublish": "npm run compile",
+    "package":           "vsce package"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.0"
+  },
+  "devDependencies": {
+    "@types/node":   "^20.0.0",
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce":  "^2.29.0",
+    "typescript":    "^5.4.0"
+  }
+}

@@ -471,3 +471,55 @@
 
 ### [capture] [2026-10-06] Task completed — HTML guides updated for migration skill refactors
 ### [capture] [2026-10-06] Error resolved — setup-init missing 7 command stubs + 3 hook files
+
+### [capture] [2026-10-07] Plan approved — Security skill IaC scanning gap: Option E chosen
+### [capture] [2026-10-06] Plan approved — upgrade skill friction reduction (2 issues)
+
+### [capture] [2026-10-07] Plan approved — Copilot deployment of migration family: approach agreed
+### [capture] [2026-10-07] Plan approved — Security skill IaC scanning gap: Option E chosen
+
+### [capture] [2026-10-07] Task completed — ADO-9016 ICEA drafted and saved
+### [capture] [2026-10-06] Task completed — HTML guides updated for migration skill refactors
+
+### [capture] [2026-10-07] Task completed — Copilot migration spike Phase 1 scaffold built
+### [capture] [2026-10-07] Task completed — ADO-9016 ICEA drafted and saved
+
+### [capture] [2026-10-07] Task completed — ADO-9016 Tech Spec + Test Plan drafted
+### [capture] [2026-10-07] Task completed — ADO-9016 ICEA drafted and saved
+
+### [capture] [2026-10-07] Error resolved — VS Code launch.json preLaunchTask token not resolving
+### [capture] [2026-10-07] Task completed — Copilot migration spike Phase 1 scaffold built
+
+### [capture] [2026-10-07] Error resolved — process.execPath in VS Code extension host points to Electron not Node
+### [capture] [2026-10-07] Error resolved — VS Code launch.json preLaunchTask token not resolving
+
+### [capture] [2026-10-07] Error resolved — Copilot spike "no stack detected" due to wrong workspace in Dev Host
+### [capture] [2026-10-07] Error resolved — process.execPath in VS Code extension host points to Electron not Node
+
+### [capture] [2026-10-07] Architecture decision — ADO-9016 AC-F20: stale_after_days not in manifest; read iac-scan.md headers directly
+### [capture] [2026-10-07] Error resolved — Copilot spike "no stack detected" due to wrong workspace in Dev Host
+
+### [capture] [2026-10-07] Error resolved — Copilot spike stack detection returning null due to missing stack-signals.cjs
+### [capture] [2026-10-07] Architecture decision — ADO-9016 AC-F20: stale_after_days not in manifest; read iac-scan.md headers directly
+
+### [capture] [2026-10-07] Task completed — ADO-9016 SAVE TECH: Tech Spec + Test Plan saved, ICEA approved
+### [capture] [2026-10-07] Task completed — Copilot migration spike Phase 1 validated end-to-end
+
+### [capture] [2026-10-07] Architecture decision — ADO-9020: copilot-extension uses Option A (vendor) bundling
+### [capture] [2026-10-07] Architecture decision — ADO-9020: HIGH-risk judge gates WARN + require acknowledgment when no Anthropic key
+### [capture] [2026-10-07] Task completed — ADO-9016 SAVE TECH: Tech Spec + Test Plan saved, ICEA approved
+
+### [capture] [2026-10-07] Task completed — ADO-9020 ICEA drafted and saved (21 SP EPIC, 5 stories)
+### [capture] [2026-10-07] Architecture decision — ADO-9020: HIGH-risk ack across Chat turns uses ledger pendingHighRiskAck flag
+### [capture] [2026-10-07] Architecture decision — ADO-9020: copilot-extension uses Option A (vendor) bundling
+
+### [capture] [2026-10-07] Task completed — IMPLEMENT ADO-9016 approved (IaC Scan step, 8 files)
+
+### [capture] [2026-10-07] Task completed — ADO-9020 full planning phase complete (ICEA + Tech Spec + Test Plan approved)
+### [capture] [2026-10-07] Task completed — IMPLEMENT ADO-9016 approved (IaC Scan step, 8 files)
+
+### [capture] [2026-10-07] Task completed — ADO-9016 story COMPLETE (IaC Scan step, 22/22 ACs)
+### [capture] [2026-10-07] Task completed — ADO-9020 full planning phase complete
+
+### [capture] [2026-10-07] Architecture decision — ADO-9020 Story 2: module-level Maps for Upgrade pending state
+### [capture] [2026-10-07] Task completed — ADO-9016 story COMPLETE (IaC Scan step, 22/22 ACs)

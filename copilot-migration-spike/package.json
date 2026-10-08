@@ -1,0 +1,84 @@
+{
+  "name": "copilot-migration-spike",
+  "displayName": "Migration Family (Copilot spike)",
+  "description": "Phase 1 spike — Upgrade · Rewrite · Replatform as a VS Code Copilot Chat participant (@migration).",
+  "version": "0.0.1",
+  "private": true,
+  "engines": { "vscode": "^1.90.0" },
+  "categories": ["AI", "Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "chatParticipants": [
+      {
+        "id": "migration",
+        "name": "migration",
+        "description": "AI-guided migration family: upgrade, rewrite, replatform.",
+        "isSticky": true,
+        "commands": [
+          { "name": "upgrade",    "description": "In-place same-stack version upgrade" },
+          { "name": "rewrite",    "description": "Out-of-place generative stack translation" },
+          { "name": "replatform", "description": "Hosting/topology migration (on-prem to cloud)" }
+        ]
+      }
+    ],
+    "commands": [
+      {
+        "command": "migration.approve",
+        "title": "Migration: Approve write gate for ADO",
+        "category": "Migration"
+      },
+      {
+        "command": "migration.revokeApproval",
+        "title": "Migration: Revoke write gate approval for ADO",
+        "category": "Migration"
+      },
+      {
+        "command": "migration.setAdoPat",
+        "title": "Migration: Set Azure DevOps PAT",
+        "category": "Migration"
+      },
+      {
+        "command": "migration.clearAdoPat",
+        "title": "Migration: Clear Azure DevOps PAT",
+        "category": "Migration"
+      }
+    ],
+    "configuration": {
+      "title": "Migration Family",
+      "properties": {
+        "migration.anthropicApiKey": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Anthropic API key for judge-gate escalation (Upgrade · Rewrite · Replatform). When absent, the participant falls back to the active Copilot model.",
+          "scope": "machine-overridable"
+        },
+        "migration.judgeModel": {
+          "type": "string",
+          "default": "claude-opus-4-6",
+          "markdownDescription": "Anthropic model used for critic/judge gates when `migration.anthropicApiKey` is set.",
+          "scope": "machine-overridable"
+        },
+        "migration.copilotFamilyFallback": {
+          "type": "string",
+          "default": "gpt-4o",
+          "markdownDescription": "Copilot model family used when Anthropic key is absent.",
+          "scope": "machine-overridable"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch":   "tsc -watch -p ./",
+    "vscode:prepublish": "npm run compile"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.0"
+  },
+  "devDependencies": {
+    "@types/node":   "^20.0.0",
+    "@types/vscode": "^1.90.0",
+    "typescript":   "^5.4.0"
+  }
+}
