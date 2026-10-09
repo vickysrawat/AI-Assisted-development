@@ -30,12 +30,20 @@ const STACK = (arg('stack') || '').trim().toLowerCase();
 // skill never runs them (LLM authors, human executes).
 const TOOL_TABLE = {
   dotnet: {
-    tool: 'dotnet upgrade-assistant', probeBin: 'dotnet', probeArgs: ['--version'], min: 6,
+    // DECISION: upgrade-assistant CLI deprecated by Microsoft (replaced by VS extension only).
+    // Options considered:
+    //   A) Keep upgrade-assistant — rejected: deprecated, breaks on .NET 9+, bad install UX
+    //   B) dotnet-outdated (community tool) — rejected: extra install, built-in covers the need
+    //   C) dotnet list package --outdated (built-in) + dotnet build — chosen: zero extra install,
+    //      honest coverage description, residual load moves to Med-High (matches Python/nodejs tier)
+    // No third-party tool to install — the dotnet SDK itself is the prerequisite.
+    // If missing/outdated, direct the developer to the official .NET SDK download page.
+    tool: 'dotnet list package --outdated', probeBin: 'dotnet', probeArgs: ['--version'], min: 6,
     install: {
-      windows: 'winget install Microsoft.DotNet.SDK.8 ; dotnet tool install -g upgrade-assistant',
-      macos:   'brew install --cask dotnet-sdk ; dotnet tool install -g upgrade-assistant',
-      linux:   'sudo apt-get install -y dotnet-sdk-8.0 ; dotnet tool install -g upgrade-assistant',
-      verify:  'dotnet tool list -g | grep upgrade-assistant',
+      windows: 'winget install Microsoft.DotNet.SDK.8   # or download from https://dot.net/download',
+      macos:   'brew install --cask dotnet-sdk          # or download from https://dot.net/download',
+      linux:   'sudo apt-get install -y dotnet-sdk-8.0  # or see https://dot.net/download',
+      verify:  'dotnet --version',
     },
   },
   angular: {

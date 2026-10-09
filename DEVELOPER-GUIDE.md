@@ -233,7 +233,7 @@ single SKILL.md genuinely cannot hold the work — most skills should stay flat.
    its real gates in a "Developer reply gates" section near the top of SKILL.md so the developer
    knows the full interruption set before starting a run.
 7. **Tool-missing is a hard BLOCK, not a gate.** If a required deterministic tool (e.g. `ng update`,
-   `dotnet upgrade-assistant`) is not found, the skill prints install steps, writes them to the runbook
+   `dotnet` CLI) is not found, the skill prints install steps, writes them to the runbook
    document, and stops. The developer fixes the environment and re-invokes. There is no CONTINUE
    path through a missing tool.
 

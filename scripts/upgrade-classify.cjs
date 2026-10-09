@@ -41,7 +41,7 @@ const LEGACY_SOURCES = new Set(['dotnet_framework', 'angularjs', 'webforms', 'py
 
 // Tool + coverage per supported stack (feeds the Gap/Risk report).
 const TOOLING = {
-  dotnet:  { tool: 'dotnet upgrade-assistant', coverage: 'good',      residualLoad: 'low-med' },
+  dotnet:  { tool: 'dotnet list package --outdated', coverage: 'modest', residualLoad: 'med-high' },
   angular: { tool: 'ng update',                coverage: 'excellent', residualLoad: 'low' },
   java:    { tool: 'OpenRewrite',              coverage: 'good',      residualLoad: 'med' },
   python:  { tool: 'pyupgrade / ruff',         coverage: 'modest',    residualLoad: 'med-high' },

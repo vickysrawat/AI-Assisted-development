@@ -1,5 +1,65 @@
 # MEMORY.md — Project memory (dream-managed)
 
+### [2026-10-09] Approach abandoned — REFRESH DOMAIN WEBSEARCH variant not needed
+
+Considered adding `REFRESH DOMAIN WEBSEARCH` as an explicit web-search refresh command, but the gate already added to `business-context-generation.md` Step 3 handles this: `REFRESH DOMAIN` prompts "Allow web search? A/Yes B/No" and A proceeds with grounding. No separate command or flag needed.
+Trigger: Approach abandoned  Confidence: 0.90  Source: auto-capture
+
+### [2026-10-09] Task completed — WebSearch gate narrowed to business-context grounding only
+
+Initial implementation gated all skills — revised to scope ONLY to `SET DOMAIN` / `REFRESH DOMAIN` Step 3. Migration, security, upgrade, knowledge-freshness search without prompting. Gate added to `business-context-generation.md` Step 3 (A=proceed, B=seed fallback). `CLAUDE.md ## Web Search Policy` and `websearch-gate.md` both updated with explicit scope callout.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-08] Task completed — WebSearch gate: default-off policy
+
+WebSearch is now default-off across all skills via `websearch:"off"` in `dream-init-state.json`. Gate protocol in `skills/shared/websearch-gate.md` — skills read the setting, prompt developer (allow-once / allow-session / skip), never persist session override to disk. Global rule added to CLAUDE.md `## Web Search Policy` section; SET WEBSEARCH on/off keyword handlers in §0a.
+Trigger: Plan approved  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-08] Task completed — upgrade skill dotnet tool replacement (7 files, all tests green)
+
+Replaced `dotnet upgrade-assistant` with `dotnet list package --outdated` across 7 files: upgrade-tool-preflight.cjs, upgrade-classify.cjs, tool-matrix.md, SKILL.md, upgrade-classify.test.cjs, upgrade-orchestrate.test.cjs, DEVELOPER-GUIDE.md. Both test suites pass: classify 7/7, orchestrate 11/11. Key gotcha: `spec.install` must still be present in TOOL_TABLE even when no third-party tool is needed — the main() function reads it unconditionally when status !== 'available'.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-08] Architecture decision — upgrade skill dotnet tool replacement
+
+`dotnet upgrade-assistant` CLI is deprecated by Microsoft (replaced by a VS extension only). Decision: replace with `dotnet list package --outdated` (built-in, no install) for package inventory + `dotnet build` for verification. Residual load moves from Low-Med to Med-High. Alternatives rejected: keeping deprecated tool (bad UX, breaks on .NET 9+); LLM-only authoring (violates "deterministic tool" principle); `dotnet-outdated` community tool (unnecessary extra install).
+Trigger: Architecture decision  Confidence: 0.90  Source: auto-capture
+
+### [2026-10-08] Task completed — icea-implement compact resume: step-boundary checkpoints
+
+Added step-level `active-task.json` writes at Step 5 exit (`step6-start`), Step 6a entry (`step6a-start`), Step 7 entry (`step7-start`) — all including `story_n` for EPIC targeting. Added Step 1 checkpoint read + step-jump logic with `STORY_N` restoration. `IMPLEMENT ADO-{ID}` now jumps directly to the interrupted step instead of re-entering from Step 3 and silently skipping a story whose ACs are already Done.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-08] Task completed — ADO-9021 story COMPLETE (22/22 ACs, 38/38 tests)
+
+Full npm test suite: 38 passed · 0 failed (was 37 before ADO-9021; validate-sca-findings.test.cjs adds 1 new test file, auto-discovered by jest.suite.test.cjs). All 6 implementation files confirmed written and the tracker populated. validate-sca-findings.cjs mirrors validate-iac-findings.cjs exactly — only VALID_IDS and log filename differ.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-08] Task completed — ADO-9021 SCA Dependency Scan implementation written (6 files)
+
+All 6 files approved and written: security/SKILL.md SCA Pre-Scan section inserted after IaC section; sca-scan.md reference doc (4 ecosystems + severity normalization); validate-sca-findings.cjs (mirrors iac validator, VALID_IDS = SEC-DEP only); validate-sca-findings.test.cjs (7 TCs + AC-NF2 performance); _deploy-manifest.json reference_files appended; setup-status 1c-quin inserted after 1c-quad. Two-path sub-agent: CLI primary, OSV.dev WebSearch fallback on CLI absent OR non-zero exit with no parseable output.
+Trigger: Task completed  Confidence: 0.90  Source: auto-capture
+
+### [2026-10-08] Plan approved — icea-implement compact resume fix
+
+`IMPLEMENT ADO-{ID}` is not a true resume — it re-enters from Step 1 and uses tracker AC row state. If compact happened mid-Step 6 (AC rows already flipped to Done but sections not filled), Step 3 sees "all done" and exits silently. Fix: write `active-task.json` at each step boundary (Step 5 exit → `step6-start`, Step 6a entry → `step6a-start`, Step 7 entry → `step7-start`) and add step-jump logic at Step 1 that reads the checkpoint and jumps directly to the declared step, skipping Steps 2–5.
+Trigger: Plan approved  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-08] Task completed — ADO-9021 full planning phase complete (ICEA + Tech Spec + Test Plan approved)
+
+All planning artefacts on disk: Plan → ICEA (✅ Approved, 22 ACs, 8 SP STORY) → Tech Spec (6 files, critic PASS WITH NOTES) → Test Plan (6 suites, 15 TCs). Key design locked: SEC-DEP id; validate-sca-findings.cjs mirrors iac version (only VALID_IDS differs); context-budget-tech-write hook false-positives on schema docs with braces — use force flag when ICEA content is genuinely complete.
+Trigger: Task completed  Confidence: 0.99  Source: auto-capture
+
+### [2026-10-08] Plan approved — ADO-9021 SCA dependency vulnerability scan (Sprint 14)
+
+SCA Pre-Scan step added to security skill: SEC-DEP finding ID, 8-field schema aligned with IaC scan (validate-sca-findings.cjs), 6 files. Key architecture decision: sub-agent uses CLI tool (npm audit/pip audit/dotnet list) as primary path; if tool absent, falls back to WebSearch + OSV.dev batch API query — removes CLI-on-PATH as a blocking dependency. npm dev-deps included by default; pip audit as primary Python tool; Maven pom.xml detected but deferred to Sprint 15 (emit advisory stub only).
+Trigger: Plan approved  Confidence: 0.99  Source: auto-capture
+
+### [2026-10-08] Task completed — /checkin gate passed for ADO-9020 plugin infra changes
+
+checkin against unstaged plugin infrastructure changes (audit-append.cjs day-shard refactor, settings.json 4 new hooks, _deploy-manifest.json IaC reference). All checks green: tsc --noEmit EXIT:0, checkpoint-ledger 37/37, approval-capture 33/33, npm test EXIT:0, no secrets, no `console.log`. Commit command: `git add .claude/hooks/audit-append.cjs .claude/settings.json .claude/rules/_deploy-manifest.json .claude/hooks/context-guard.cjs .claude/hooks/icea-revision-signal.cjs && git commit -m "[ADO-9020] Plugin infra: day-shard audit log, register migration + context hooks"`. Note: `.claude/active-task.json` and `.claude/signals/` are ephemeral — recommend adding to .gitignore rather than committing.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
 ### [2026-10-08] Error resolved — ADO-9020 architectural review: 3 bugs fixed post-Story-5
 
 Bug 1 (reload blind spot): `getPendingAdoId()` only checks in-memory Maps — after window reload Maps are empty so "YES" (no adoId) returns null and the ledger restore is never reached. Fix: `participant.ts` detects `looksLikeGateResponse()` + null adoId → calls `listActiveAdoIds(context)` to scan ledger dir → shows specific "include ADO ID: YES ADO-XXXX" message to developer. Root cause: ledger restore in `checkAndResumePending` is gated on `effectiveAdoId` being non-null, which requires the adoId to be in the prompt or Maps. Bug 2 (stale checkpoint hijacks fresh run): when developer adds Anthropic key and retries same ADO, `checkAndResumePending` picks up stale ledger → re-streams WARN instead of running fresh. Fix: `hasExplicitCommand` guard in participant.ts — explicit command (upgrade/rewrite/replatform keyword) calls `clearPendingState(adoId)` on both handlers + `clearCheckpoint(context, adoId)` before pending check. Bug 3: misleading comment in rewriteHandler claiming Story 5 adds ledger persistence — corrected with explicit rationale for why OPTIONS_ACK_PENDING is in-memory only (V2). New exports: `clearPendingState(adoId)` on both handlers; `listActiveAdoIds(context)` on ledger.ts.

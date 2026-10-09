@@ -215,7 +215,45 @@ Status:
 Include in output report line:
 ```
   iac-scan.md (rule catalog)         {✅ / ⚠️ / ❌}  {last validated: {date} ({N} days) | stale — REFRESH RULES iac-scan.md | missing — run /setup-sync}
+  sca-scan.md (SCA spec)             {✅ / ⚠️ / ❌}  {last validated: {date} ({N} days) | stale — REFRESH RULES sca-scan.md | missing — run /setup-sync}
 ```
+
+---
+
+### 1c-quin — SCA scan spec staleness
+
+Only run if `skills/security/references/sca-scan.md` exists.
+
+```bash
+node -e "
+  const fs = require('fs');
+  const file = 'skills/security/references/sca-scan.md';
+  if (!fs.existsSync(file)) { console.log('SCA_SCAN_MISSING'); process.exit(0); }
+  const content = fs.readFileSync(file, 'utf8');
+  const dateMatch  = content.match(/Last-validated:\s*(\d{4}-\d{2}-\d{2})/);
+  const staleMatch = content.match(/Stale-after:\s*(\d+)/);
+  if (!dateMatch) { console.log('NO_DATE'); process.exit(0); }
+  const lastValidated   = dateMatch[1];
+  const staleAfterDays  = staleMatch ? parseInt(staleMatch[1], 10) : 90;
+  const ageDays = Math.floor((Date.now() - Date.parse(lastValidated)) / 86400000);
+  console.log('LAST_VALIDATED=' + lastValidated + ' AGE_DAYS=' + ageDays + ' STALE_AFTER=' + staleAfterDays);
+" 2>/dev/null
+```
+
+Status:
+- `ageDays` < `staleAfterDays` → ✅ Green — SCA spec is current
+- `ageDays` >= `staleAfterDays` AND < `staleAfterDays * 2` → ⚠️ Amber — over 90 days since last validation:
+  ```
+  ⚠ skills/security/references/sca-scan.md last validated {N} days ago ({lastValidated}).
+    OSV.dev API or CLI tool output formats may have changed — type: REFRESH RULES sca-scan.md
+  ```
+- `ageDays` >= `staleAfterDays * 2` → ❌ Red — over 180 days; spec is likely outdated:
+  ```
+  ❌ skills/security/references/sca-scan.md last validated {N} days ago.
+    SCA scan spec is likely outdated — type: REFRESH RULES sca-scan.md
+  ```
+- `SCA_SCAN_MISSING` → ⚠️ Amber — file not present; run `/setup-sync`
+- `NO_DATE` → ⚠️ Amber — `Last-validated:` header missing from file
 
 ---
 

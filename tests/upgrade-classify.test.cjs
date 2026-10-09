@@ -40,9 +40,9 @@ function check(name, args, expect) {
 }
 
 // Positive — real in-place upgrades
-check('P-U1 .NET 6->8 -> upgrade, upgrade-assistant, hops [7,8]',
+check('P-U1 .NET 6->8 -> upgrade, dotnet list package --outdated, hops [7,8]',
   ['--stack=dotnet', '--from=6', '--to=8'],
-  { classification: 'upgrade', code: 0, tool: 'dotnet upgrade-assistant', hops: [7, 8] });
+  { classification: 'upgrade', code: 0, tool: 'dotnet list package --outdated', hops: [7, 8] });
 check('P-U2 Java 8->21 -> upgrade, OpenRewrite, LTS ladder [11,17,21]',
   ['--stack=java', '--from=8', '--to=21'],
   { classification: 'upgrade', code: 0, tool: 'OpenRewrite', hops: [11, 17, 21] });

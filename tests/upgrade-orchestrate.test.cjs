@@ -30,7 +30,7 @@ function assert(name, cond, detail) {
 }
 
 // P-U5 — a 2-hop plan: baseline tag created FIRST, exactly 2 commits (one per hop)
-const p = run(['plan', '--stack=dotnet', '--from=6', '--to=8', '--hops=7,8', '--tool=dotnet upgrade-assistant', '--ado=9000']);
+const p = run(['plan', '--stack=dotnet', '--from=6', '--to=8', '--hops=7,8', '--tool=dotnet list package --outdated', '--ado=9000']);
 assert('P-U5 plan exit 0', p.code === 0, `exit ${p.code}`);
 assert('P-U5 baseline tag is the FIRST step (before any edit)',
   p.json.steps?.[0]?.op === 'tag', `steps[0].op=${p.json.steps?.[0]?.op}`);

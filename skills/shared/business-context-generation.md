@@ -57,6 +57,32 @@ question needed. (Mirrors `arch-populated-detect.md`.)
 
 ## Step 3 — Regulatory grounding (best-effort)
 
+**Web search gate — ask before searching:**
+
+Read `websearch` from `.claude/dream-init-state.json` (default `"off"` if absent).
+
+If `"off"` — prompt the developer before starting any web search:
+
+```
+🌐 WEB SEARCH — ground regulatory frameworks for {domain} / {jurisdiction}
+   Searches for current regulatory requirements (GDPR, HIPAA, etc.) to produce
+   cited, up-to-date B-series triggers. This may take a moment.
+
+   Allow web search?
+     A) Yes — ground against current sources (recommended for accuracy)
+     B) No — use the preset seed table only (faster; not web-verified)
+
+   Reply A or B.
+```
+
+On **A** — proceed with grounding below.
+On **B** — skip grounding entirely; treat as `BUSINESS_CONTEXT_GROUNDING` off (seed/locked
+table fallback). Record `web-grounded: false — developer skipped web search`.
+
+If `websearch = "on"` — skip the prompt and proceed with grounding directly.
+
+**Grounding:**
+
 Run `business-context-grounding.md`: spawn the **bc-searcher** subagent (`{domain,
 jurisdiction}` only) → grounded, cited categories → **bc-synthesizer** subagent (grounded
 facts + architecture, no web tool) → draft B-series with `citation` + `retrievalDate`.

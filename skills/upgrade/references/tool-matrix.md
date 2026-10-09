@@ -24,7 +24,7 @@ is a graceful pause, not a hard failure.
 
 | Stack | Tool | Probe (read-only) | Min | Coverage | Residual load |
 |---|---|---|---|---|---|
-| `dotnet` | `dotnet upgrade-assistant` | `dotnet --version` | 6 | Good | Low–Med |
+| `dotnet` | `dotnet list package --outdated` (built-in) | `dotnet --version` | 6 | Modest | Med–High |
 | `angular` | `ng update` (Angular CLI) | `ng version` | 15 | Excellent | Low |
 | `java` | OpenRewrite (via Maven) | `mvn --version` | 3 | Good (recipe-dependent) | Med |
 | `python` | `pyupgrade` | `pyupgrade --version` | 3 | Modest (syntax, not deps) | Med–High |
@@ -36,11 +36,16 @@ is a graceful pause, not a hard failure.
 Each command is presented with what it does + how to verify, per the script-transparency rule. The
 skill emits the row for the developer's current OS only.
 
-**dotnet** — installs the .NET SDK + the global `upgrade-assistant` tool.
-- Windows: `winget install Microsoft.DotNet.SDK.8 ; dotnet tool install -g upgrade-assistant`
-- macOS: `brew install --cask dotnet-sdk ; dotnet tool install -g upgrade-assistant`
-- Linux: `sudo apt-get install -y dotnet-sdk-8.0 ; dotnet tool install -g upgrade-assistant`
-- Verify: `dotnet tool list -g | grep upgrade-assistant`
+**dotnet** — no third-party tool to install. `dotnet list package --outdated` is built into the .NET SDK.
+The .NET SDK is the only prerequisite. If missing or outdated, install/upgrade it from the official source:
+- Windows: `winget install Microsoft.DotNet.SDK.8`
+- macOS: `brew install --cask dotnet-sdk`
+- Linux: `sudo apt-get install -y dotnet-sdk-8.0`
+- Verify: `dotnet --version`
+
+Note: `dotnet upgrade-assistant` (CLI) was deprecated by Microsoft in favour of a Visual Studio
+extension. This plugin uses built-in dotnet CLI commands only — no extra install step required.
+The LLM authors TFM and package-version changes (each behind the Write Gate); `dotnet build` verifies.
 
 **angular** — installs the Angular CLI globally (provides `ng update`).
 - All OS: `npm install -g @angular/cli` · Verify: `ng version`

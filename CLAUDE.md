@@ -157,6 +157,8 @@ Recognised globally, no /command needed. ADO ID is case-insensitive (`ADO-1847`,
 | `SET OUTPUT compact` | Read dream-init-state.json → set output_mode="compact" → confirm: ✅ output_mode = compact (one-line summaries in chat; verbose → .claude/logs/) |
 | `SET GRAPH-SYNC-CI on` | Set ci_graph_sync=true in dream-init-state.json → show CI pipeline YAML snippet for the detected CI system (Azure Pipelines / GitHub Actions) → confirm: ✅ ci_graph_sync = on |
 | `SET GRAPH-SYNC-CI off` | Set ci_graph_sync=false in dream-init-state.json → confirm: ✅ ci_graph_sync = off |
+| `SET WEBSEARCH on` | Read dream-init-state.json → set websearch="on" → confirm: ✅ websearch = on (skills proceed with WebSearch without prompting) |
+| `SET WEBSEARCH off` | Read dream-init-state.json → set websearch="off" → confirm: ✅ websearch = off (skills prompt developer before each WebSearch call) |
 
 ---
 
@@ -265,6 +267,23 @@ Show the diff first, then the APPROVE prompt. Never stream content after the APP
 it pushes the prompt off-screen and the developer cannot see it.
 
 Toggle: `SET OUTPUT compact` | `SET OUTPUT verbose`
+
+---
+
+## Web Search Policy
+
+Applies **only to business-context regulatory grounding** (`SET DOMAIN` / `REFRESH DOMAIN` Step 3).
+Migration, security, upgrade, and knowledge-freshness skills search without prompting — that is expected behaviour.
+
+Read from `websearch` in `.claude/dream-init-state.json`. Default: `"off"` when field is absent.
+
+**`off` (default):** Before running the regulatory grounding web search, the developer is asked:
+allow the search (A) or skip and use the preset seed table only (B). No search runs without consent.
+
+**`on`:** Grounding proceeds without the prompt — useful when the developer has already decided
+to allow web search for this project.
+
+Toggle: `SET WEBSEARCH on` | `SET WEBSEARCH off`
 
 ---
 

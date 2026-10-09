@@ -53,6 +53,50 @@ Record the child ADO number in the Story Breakdown table of the ICEA and
 in the Epic tracker immediately. This is the only time the child ADO is
 needed — subsequent `IMPLEMENT ADO-{ID} Story-{N}` calls use it automatically.
 
+**Check for in-flight checkpoint (resume path):**
+
+```bash
+ACTIVE_STEP=$(node -e "
+try {
+  const s = JSON.parse(require('fs').readFileSync('.claude/active-task.json','utf8'));
+  if (s.skill === 'icea-implement' && s.ado === '${ADO_ID}' && s.step && s.step !== 'step4-start')
+    process.stdout.write(s.step);
+} catch(_) {}
+" 2>/dev/null)
+```
+
+If `ACTIVE_STEP` is non-empty — this is a post-compact resume at a step beyond Step 4. Do not re-run Steps 2–5. Display:
+
+```
+🔄 RESUMING ADO #{ADO_ID} — checkpoint: {ACTIVE_STEP}
+   Steps before this point already completed — jumping to resume point.
+   Re-resolving file paths from disk.
+```
+
+Re-resolve all file paths from disk (do not rely on prior in-context values):
+
+```bash
+TRACKER=$(find docs -path "*UserStory${ADO_ID}*" -name "ADO-${ADO_ID}-*.tracker.md" 2>/dev/null | head -1)
+ICEA_FILE=$(find docs -name "ADO-${ADO_ID}-*.icea.md" 2>/dev/null | head -1)
+AUDIT_FILE=$(find docs -path "*UserStory${ADO_ID}*" -name "ADO-${ADO_ID}-*.ai-audit.md" 2>/dev/null | head -1)
+TS=$(date '+%Y-%m-%dT%H:%M:%S')
+ACTOR=$(node -e "const i=require('.claude/hooks/audit-append.cjs').resolveIdentity();console.log(i.verified_actor||i.os_user||'UNRESOLVED')" 2>/dev/null || echo "UNRESOLVED")
+```
+
+Also restore `STORY_N` from the checkpoint (required for EPIC story section targeting):
+
+```bash
+STORY_N=$(node -e "
+try { const s=JSON.parse(require('fs').readFileSync('.claude/active-task.json','utf8'));
+      process.stdout.write(s.story_n||''); } catch(_) {}
+" 2>/dev/null)
+```
+
+Jump directly to the declared step — do not execute any intermediate steps:
+- `step6-start` → jump to Step 6
+- `step6a-start` → jump to Step 6a
+- `step7-start` → jump to Step 7
+
 ---
 
 ## Step 2 — Locate and validate files
@@ -669,6 +713,12 @@ entry with `⚠ WRITE CROSSES REPO BOUNDARY — {path} is outside this repo (dep
 and stop for an explicit `APPROVE ADO-{ADO_ID}` on it, per CLAUDE.md §0 and
 `$PLUGIN_DIR/skills/shared/write-gate-spec.md` § Boundary-crossing writes.
 
+After all files are written to disk, immediately write the step6 checkpoint — before any Step 6 work begins. If the session is compacted after this point, `IMPLEMENT ADO-{ADO_ID}` resumes directly at Step 6 without re-running code generation or re-triggering the Write Gate:
+
+```bash
+node -e "require('fs').writeFileSync('.claude/active-task.json', JSON.stringify({skill:'icea-implement',step:'step6-start',ado:'${ADO_ID}',story_n:'${STORY_N:-}',resume_cmd:'IMPLEMENT ADO-${ADO_ID}'},null,2))"
+```
+
 ---
 
 ## Step 6 — Update tracker
@@ -695,6 +745,8 @@ After writing, update the tracker immediately (no gate — tracking artefact):
 - If all ACs are done, write `Status: COMPLETE` to the ICEA file
 
 **Populate the tracker's implementation section (no gate — tracking artefact):**
+
+> **On resume from `step6-start` checkpoint:** Re-read written source and test files from disk — they are already on disk from the prior Write Gate. Use these files to derive Delivered, Tests added, and Design decisions content. All section population is idempotent — re-derive and overwrite placeholder or partial content with freshly derived values.
 
 Find the correct section in the tracker:
 - STORY type → `## Implementation — ADO #{ADO_ID}`
@@ -819,6 +871,12 @@ Then run Step 6a (test suite expansion) before the pre-commit gate.
 ---
 
 ## Step 6a — Test suite expansion (mandatory post-write — NEVER skip)
+
+Write the step6a checkpoint immediately — before any test plan operation. If the session is compacted after Step 6 completes, `IMPLEMENT ADO-{ADO_ID}` resumes here, skipping the already-complete tracker update:
+
+```bash
+node -e "require('fs').writeFileSync('.claude/active-task.json', JSON.stringify({skill:'icea-implement',step:'step6a-start',ado:'${ADO_ID}',story_n:'${STORY_N:-}',resume_cmd:'IMPLEMENT ADO-${ADO_ID}'},null,2))"
+```
 
 The test plan skeleton was generated at SAVE TECH (icea-feature Step 10b). Each story's suite is
 a stub until this step runs. This step runs post-write, after the tracker is updated, before
@@ -952,6 +1010,12 @@ time). Append audit row:
 ---
 
 ## Step 7 — Post-write gate: bounded fix loop
+
+Write the step7 checkpoint immediately — before the fix loop begins. If the session is compacted after Step 6a completes, `IMPLEMENT ADO-{ADO_ID}` resumes here, skipping Steps 5–6a:
+
+```bash
+node -e "require('fs').writeFileSync('.claude/active-task.json', JSON.stringify({skill:'icea-implement',step:'step7-start',ado:'${ADO_ID}',story_n:'${STORY_N:-}',resume_cmd:'IMPLEMENT ADO-${ADO_ID}'},null,2))"
+```
 
 Ceiling: 3 cycles per loop invocation. Each invocation (initial or Option A guided) gets a fresh 3-cycle budget.
 
@@ -1127,6 +1191,9 @@ Start a new 3-cycle loop (fresh ceiling, cycle count resets to 1):
 - NEVER leave Follow-ups table empty after a REVISE cycle or build failure — every rework leaves a row
 - ALWAYS offer the test-plan skill after checkin passes — do not silently skip it (AC-F50)
 - Mid-story context exhaustion (after CONTINUE is allowed in) produces REWORK, not corruption — the tracker is the implicit checkpoint (✅ Done ACs are skipped on re-run; ⏳ Pending ACs regenerate cleanly). Per-AC temp writes (`temp/ADO-{ID}-AC-{N}.draft.md`) would reduce rework to one AC but are deferred as a follow-up — do not implement inline.
+- ALWAYS check `active-task.json` for a non-`step4-start` checkpoint at Step 1 after resolving the ADO ID — if found, jump directly to the declared step; never re-run code generation or re-trigger the Write Gate on resume
+- ALWAYS write the `step6-start` checkpoint after files land on disk (Step 5 exit) — before any Step 6 tracker update begins; this is the only guarantee that a mid-Step-6 compact does not cause IMPLEMENT to skip Step 6 silently
+- ALWAYS write the `step6a-start` checkpoint at Step 6a entry and the `step7-start` checkpoint at Step 7 entry — every step boundary must have its own checkpoint or compact at that boundary produces silent data loss
 
 ---
 

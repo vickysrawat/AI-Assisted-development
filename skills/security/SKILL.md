@@ -384,6 +384,124 @@ Pass 1 continues normally.
 
 ---
 
+## Pre-Scan — SCA Dependency Scan
+
+**This runs AFTER IaC Scan, BEFORE Pass 1.** (AC-F1)
+
+### Package Manifest Detection (AC-F2, AC-F3, AC-F4, AC-NF1)
+
+Discover package manifests in the working tree:
+
+```bash
+SCA_NPM=$(find . -name "package.json" -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null)
+SCA_PIP=$(find . \( -name "requirements.txt" -o -name "pyproject.toml" -o -name "setup.py" \) -not -path "*/.git/*" 2>/dev/null)
+SCA_DOTNET=$(find . -name "*.csproj" -not -path "*/.git/*" 2>/dev/null)
+SCA_MAVEN=$(find . -name "pom.xml" -not -path "*/.git/*" 2>/dev/null)
+```
+
+Combine npm + pip + dotnet results into `SCA_MANIFESTS`.
+
+If `SCA_MANIFESTS` is empty AND `SCA_MAVEN` is empty:
+```
+SCA Scan: skipped — no package manifests found in scope
+```
+Exit this Pre-Scan step immediately. Continue to Pass 1. Sub-agent is NOT invoked. (AC-F4, AC-NF1)
+
+If `SCA_MAVEN` is non-empty and `SCA_MANIFESTS` is empty: emit advisory and continue to Pass 1 (no sub-agent):
+```
+SCA Scan: Maven pom.xml detected — automated Maven SCA deferred to Sprint 15.
+  Manual review: run `mvn dependency:tree` or use OWASP Dependency-Check.
+  No SEC-DEP findings will be written for Maven dependencies this sprint.
+```
+(AC-F3)
+
+If `SCA_MANIFESTS` is non-empty, announce scope (append Maven advisory separately if pom.xml also present):
+```
+SCA Scan: {N} manifest(s) detected
+  {list of matched manifest paths}
+```
+
+### SCA Reference Doc Gate (AC-F15)
+
+```bash
+[ -f "skills/security/references/sca-scan.md" ] || echo "SCA_SCAN_MISSING"
+```
+
+If `SCA_SCAN_MISSING`:
+```
+⛔ SCA Scan blocked — sca-scan.md not found. Run /setup-sync to repair.
+```
+Skip sub-agent. Continue to Pass 1.
+
+### SCA Sub-Agent Invocation (AC-F5, AC-F6, AC-F7, AC-F8, AC-F17, AC-F18)
+
+Delegate to a sub-agent. Enable the **WebSearch** tool in the sub-agent. Provide ONLY these inputs — no source code files:
+1. The list of detected manifest file paths and their full contents
+2. Full content of `skills/security/references/sca-scan.md`
+3. Full content of `skills/shared/fingerprint-spec.md`
+4. The required JSON output schema and invocation instructions below
+
+**Sub-agent task — two-path execution:**
+
+**Primary path (CLI tool):** For each ecosystem, attempt CLI invocation:
+- npm: `npm audit --json` (do NOT pass `--omit dev` — include dev-dependencies by default) (AC-F18)
+- pip: `pip audit --format=json`
+- dotnet: `dotnet list package --vulnerable --format json`
+
+Parse stdout using the JSON paths in sca-scan.md. Note: npm v7+ uses the `vulnerabilities` key; npm v6 uses `advisories` — check `npm --version` to determine which shape to parse. Apply severity normalization from sca-scan.md. (AC-F17)
+
+**Fallback path (OSV.dev WebSearch):** Activate when the CLI tool is absent from PATH OR the CLI exits non-zero AND stdout contains no parseable vulnerability JSON. (AC-F6)
+
+For each dependency declared in the manifest, use WebSearch to query OSV.dev:
+```
+site:osv.dev {package-name} {version}
+```
+Parse the OSV.dev response for known CVEs or OSV IDs affecting the declared version. Apply severity normalization from the OSV.dev section of sca-scan.md.
+
+Rate-limit handling: retry once after a brief pause if OSV.dev returns no results on the first attempt. If the second attempt also fails, emit:
+```
+SCA Scan: OSV.dev fallback unavailable for {ecosystem} — manual review recommended
+```
+Continue with any findings already collected from other ecosystems.
+
+**Output:** Return a JSON array of findings. Return `[]` if no vulnerabilities found.
+
+Each finding must be a JSON object with exactly these 8 fields:
+- `fingerprint` — string matching pattern `FP-[0-9a-f]{8}`
+- `id` — must be `SEC-DEP` (AC-F7)
+- `file` — relative path to the manifest file containing the vulnerable dependency
+- `line` — integer line number (use `1` when line is not determinable from the tool output)
+- `severity` — one of: `Critical`, `High`, `Medium`, `Low` (apply normalization from sca-scan.md) (AC-F17)
+- `rule` — CVE identifier (e.g. `CVE-2021-23337`) or OSV ID if no CVE assigned
+- `evidence` — `{package}@{version} — {short vulnerability description}`
+- `fix` — `Upgrade to {package}@{fix-version}` (or advisory text if no fix version is known) (AC-F9)
+
+After sub-agent returns, validate output before any ledger write:
+
+```bash
+echo "$SUB_AGENT_OUTPUT" > /tmp/sca-findings-$$.json
+node scripts/validate-sca-findings.cjs --input-file=/tmp/sca-findings-$$.json
+VALID_EXIT=$?
+rm -f /tmp/sca-findings-$$.json
+```
+
+On exit 0 (valid): append each finding as a new row to `security/security-ledger.md` (AC-F8):
+```
+| {fingerprint} | {id} | Open | {severity} | {file} | {line} | {rule} | {evidence} | {fix} |
+```
+Announce:
+```
+SCA Scan: {M} finding(s) written to ledger
+```
+
+On exit 1 (invalid): do NOT write to ledger. Announce:
+```
+SCA Scan: output invalid — manual review required, see .claude/logs/sca-scan-{YYYY-MM-DD}.md
+```
+Pass 1 continues normally.
+
+---
+
 ## Pass 1 — Structured Rule-Based Scan
 
 Apply the deterministic security patterns from `$PLUGIN_DIR/skills/security/references/pass1-patterns.md`

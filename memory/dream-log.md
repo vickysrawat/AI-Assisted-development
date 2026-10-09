@@ -523,3 +523,36 @@
 
 ### [capture] [2026-10-07] Architecture decision — ADO-9020 Story 2: module-level Maps for Upgrade pending state
 ### [capture] [2026-10-07] Task completed — ADO-9016 story COMPLETE (IaC Scan step, 22/22 ACs)
+
+### [capture] [2026-10-08] Task completed — /checkin gate passed for ADO-9020 plugin infra changes
+### [capture] [2026-10-08] Error resolved — ADO-9020 architectural review: 3 bugs fixed post-Story-5
+
+### [capture] [2026-10-08] Plan approved — ADO-9021 SCA dependency vulnerability scan (Sprint 14)
+### [capture] [2026-10-08] Task completed — /checkin gate passed for ADO-9020 plugin infra changes
+
+### [capture] [2026-10-08] Task completed — ADO-9021 full planning phase complete (ICEA + Tech Spec + Test Plan approved)
+### [capture] [2026-10-08] Plan approved — ADO-9021 SCA dependency vulnerability scan (Sprint 14)
+
+### [capture] [2026-10-08] Plan approved — icea-implement compact resume fix
+### [capture] [2026-10-08] Task completed — ADO-9021 full planning phase complete (ICEA + Tech Spec + Test Plan approved)
+
+### [capture] [2026-10-08] Task completed — ADO-9021 SCA Dependency Scan implementation written (6 files)
+
+### [capture] [2026-10-08] Task completed — ADO-9021 story COMPLETE (22/22 ACs, 38/38 tests)
+
+### [capture] [2026-10-08] Task completed — icea-implement compact resume: step-boundary checkpoints
+### [capture] [2026-10-08] Task completed — ADO-9021 story COMPLETE (22/22 ACs, 38/38 tests)
+
+### [capture] [2026-10-08] Architecture decision — upgrade skill dotnet tool replacement
+
+### [capture] [2026-10-08] Task completed — upgrade skill dotnet tool replacement (7 files, all tests green)
+### [capture] [2026-10-08] Architecture decision — upgrade skill dotnet tool replacement
+
+### [capture] [2026-10-08] Plan approved — WebSearch gate: default-off policy
+### [capture] [2026-10-08] Task completed — upgrade skill dotnet tool replacement (7 files, all tests green)
+
+### [capture] [2026-10-08] Task completed — WebSearch gate: default-off policy
+
+### [capture] [2026-10-09] Approach abandoned — REFRESH DOMAIN WEBSEARCH variant not needed
+### [capture] [2026-10-09] Task completed — WebSearch gate narrowed to business-context grounding only
+### [capture] [2026-10-08] Task completed — WebSearch gate: default-off policy

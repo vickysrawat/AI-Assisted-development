@@ -202,7 +202,7 @@ If exit non-zero: `Cannot write upgrade-runbook.md. Free space and re-invoke.` â
 
 | Stack token | Required tool | Check command |
 |---|---|---|
-| `dotnet*` | dotnet CLI | `command -v dotnet` |
+| `dotnet*` | dotnet CLI (`dotnet list package --outdated`) | `command -v dotnet` |
 | `nodejs*` / `javascript*` | node | `command -v node` |
 | `java*` / `spring*` | mvn | `command -v mvn` |
 | `python*` | python3 or python | `command -v python3 \|\| command -v python` |
