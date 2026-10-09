@@ -1,6 +1,6 @@
 ---
 name: articulate-as-human
-description: Deterministically scan generated documents (Claude Code output, Markdown, HTML, plain text) for generic "AI-sounding" writing patterns — stock vocabulary (delve, seamless, robust, testament to, game-changer), promotional puffery, boilerplate transitions and conclusions, hedge-word clusters, vague/weasel attribution ("some critics argue", "industry reports suggest"), leftover chatbot artifacts ("I hope this helps"), the "not just X, it's Y" negation construction, dangling "-ing" significance clauses, bold-lead-in bullet lists, em-dash overuse, uniform sentence rhythm, and repeated paragraph openers. Trigger whenever the user asks to check, review, or clean up whether a generated document "sounds human," "sounds like AI," has "AI slop," or asks for a tone/voice pass on Claude-generated output. Always run scripts/check-tone.cjs first and report structurally before touching the text — never silently rewrite.
+description: Humanize text in two modes. File mode deterministically scans generated documents (Claude Code output, Markdown, HTML, plain text) for generic "AI-sounding" writing patterns — stock vocabulary (delve, seamless, robust, testament to, game-changer), promotional puffery, boilerplate transitions and conclusions, hedge-word clusters, vague/weasel attribution ("some critics argue", "industry reports suggest"), leftover chatbot artifacts ("I hope this helps"), the "not just X, it's Y" negation construction, dangling "-ing" significance clauses, bold-lead-in bullet lists, em-dash overuse, uniform sentence rhythm, and repeated paragraph openers. Trigger whenever the user asks to check, review, or clean up whether generated writing "sounds human"/"sounds like AI" or asks for a tone/voice pass. Direct-text mode rewrites provided text and returns it in chat/console without creating files or reports. File mode must always run scripts/check-tone.cjs first and report structurally before touching text — never silently rewrite.
 ---
 
 # ArticulateAsHuman
@@ -12,7 +12,35 @@ judge whether the content is good, true, or well-argued — that's a separate
 concern. This skill is a filter for one specific failure mode: prose that
 reads like it could have been sent to anyone, about anything.
 
-## Workflow (always in this order)
+## Mode selection (always first)
+
+Resolve mode in this order:
+
+1. `--text <text>` => **text mode**.
+2. `--file <path>` => **file mode**.
+3. No override:
+   - existing file or directory path => **file mode**
+   - non-path argument => **text mode**
+
+---
+
+## Text mode workflow
+
+When in text mode, rewrite/humanize the provided text directly and return the result in
+chat/console.
+
+Rules:
+
+1. **Return only the humanized text by default.**
+2. **Preserve meaning and factual detail**: facts, names, numbers, citations, and required
+   structure stay intact.
+3. **Avoid generic AI/corporate phrasing**: remove stock, vague, promotional phrasing and make
+   wording specific to the content.
+4. **Do not create files or reports** in text mode.
+
+---
+
+## File mode workflow (always in this order)
 
 1. **Run the script first.** Never eyeball the document and guess — the
    whole point is deterministic, repeatable checks with file:line locations,
