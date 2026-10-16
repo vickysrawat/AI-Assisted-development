@@ -55,9 +55,26 @@
             "command": "node .claude/hooks/web-grounding-guard.cjs --hook"
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"_project-deploy/hooks/migration-gate.cjs\""
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"_project-deploy/hooks/approval-capture.cjs\""
+          }
+        ]
+      },
       {
         "hooks": [
           {
@@ -73,6 +90,14 @@
             "command": "node .claude/hooks/audit-prompt.cjs"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/context-guard.cjs"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -82,6 +107,15 @@
           {
             "type": "command",
             "command": "node .claude/hooks/memory-log.cjs"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/icea-revision-signal.cjs"
           }
         ]
       }

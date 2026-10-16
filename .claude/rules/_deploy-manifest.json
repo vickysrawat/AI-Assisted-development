@@ -37,5 +37,17 @@
   "near_miss": [],
   "repo_type": "PYTHON_FASTAPI",
   "deployed_at": "2026-09-24",
-  "plugin_version": "3.25.0"
+  "plugin_version": "3.25.0",
+  "reference_files": [
+    {
+      "file": "skills/security/references/iac-scan.md",
+      "category": "rule-catalog",
+      "description": "IaC scan rule catalog — Dockerfile, docker-compose, and K8s YAML rules"
+    },
+    {
+      "file": "skills/security/references/sca-scan.md",
+      "category": "rule-catalog",
+      "description": "SCA dependency scan spec — npm/pip/dotnet tool invocation, OSV.dev fallback, severity normalization"
+    }
+  ]
 }
