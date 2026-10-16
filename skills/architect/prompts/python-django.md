@@ -46,22 +46,74 @@ Sections where the answer cannot be determined: write
 
 ## File 2 Prompt — architecture-flows.md
 
-You are a software architect tracing request flows through a Django app.
-Read each view/viewset, then follow each through the full chain: url → view →
-service/manager → model/ORM → database or external API.
+You are a software architect producing developer-facing workflow documentation for a Django application. Your audience is developers who do not know the codebase. Your output must show every user-facing workflow as a Mermaid sequence diagram with a plain-English summary.
 
-For each endpoint trace:
-- Entry point: app, view class/function, URL pattern
-- Every call in sequence with fully qualified module path
-- At each step: which database/table or external service, and how (ORM queryset,
-  requests/httpx)
-- Any async or Celery-dispatched work — list what runs out of band
-- Conditional branches (permissions, feature flags) that change the flow
-- Serializer/response shape at each layer
+---
 
-After the call chains, produce a **Dependency Graph** of inter-app imports and
-shared utilities. If a view is too large to trace fully, mark
-`> ⚠ Partial trace — complex view, review manually`.
+### Step 1 — Discovery: build a complete workflow inventory
+
+Read ALL URL configuration files (`urls.py` at project and app level) and every view/viewset they reference. For each URL pattern record:
+- HTTP verb(s) + full resolved path
+- What user action or system event triggers it
+- What it returns / what state it changes
+
+Group related endpoints into logical workflows. A workflow is a user action that may span more than one HTTP call. Do NOT create one workflow per endpoint. Name each workflow with a short, user-facing label and number them sequentially starting at 1.
+
+---
+
+### Step 2 — Table of Contents (MUST be first in the file)
+
+The very first content must be: a one-line preamble describing the app and its actors, then a Table of Contents table with columns `#`, `Workflow`, and `Description`. List ALL workflows. No workflow sections appear before the TOC is complete.
+
+---
+
+### Step 3 — Per-workflow section
+
+For each workflow, in order:
+
+**Heading:** `## Workflow N — Name`
+
+**Lead paragraph:** 1-3 sentences — what user role triggers this, what UI action starts it, what it accomplishes in business terms. No code identifiers.
+
+**Mermaid sequence diagram** (hard constraints):
+- `sequenceDiagram` syntax only — never `flowchart` or `graph`
+- Declare all actors/participants at the top: `actor` for human roles, `participant` for systems, with short alias and readable label
+- Include every participant: user role, Browser/Client, Django (view or viewset), DRF Serializer (where used), each named database, each external service, Celery worker (where used)
+- Every HTTP call: verb + exact URL path + payload type in parentheses — read from actual `urls.py` and view source
+- Every serializer step: label it `validate` or `serialize` with the serializer class name — read from actual serializer source
+- Every ORM operation: SQL type (SELECT / INSERT / UPDATE / DELETE) + model name — read from actual queryset calls in views, managers, or querysets
+- Every external service call: protocol + operation
+- Celery-dispatched tasks: show as an async `par` block or `opt` block with a note that the work runs out of band
+- `alt`/`else` for conditional branches (permissions, feature flags, validation failures), `opt` for optional paths, `par` for concurrent or out-of-band operations
+- Response arrows use `-->>` (dashed)
+- Emit inside a fenced ` ```mermaid ` block
+
+**"What happens:" bullet list:** Bold heading, 4-6 bullets, plain English business rules, no code identifiers, intelligible to a non-technical reader.
+
+---
+
+### Step 4 — Coverage requirement
+
+Document ALL user-facing workflows — do not skip minor ones. If there are 16, document all 16. Background/Celery-triggered endpoints and management-command-driven flows are included with a note in the lead paragraph.
+
+---
+
+### Step 5 — Fallbacks for untraceable flows
+
+Emit what IS traceable. Replace unknown steps with `> ⚠ Could not determine — needs manual input`. Never invent table names, URL paths, or actor names. Never omit a workflow because it is partially untraceable.
+
+---
+
+### Hard rules
+
+1. Table of Contents is ALWAYS the first thing in the file.
+2. Never group unrelated endpoints into one workflow for convenience.
+3. Never invent database table names, URL paths, model names, or external service details — read from source (`urls.py`, view/viewset, serializer, model, migration).
+4. `sequenceDiagram` only.
+5. Every HTTP verb + path must match an actual URL pattern in source.
+6. Every DB table or model name must match an actual Django model class, `db_table` meta attribute, or migration in source.
+7. Do not produce a Dependency Graph of inter-app or module imports.
+8. Do not produce call-chain traces (module.function → module.function).
 
 ---
 

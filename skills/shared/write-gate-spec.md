@@ -15,6 +15,9 @@ this when they need the full artefact-timing table or the edge-case list.
 | `*.techspec.md` | On SAVE TECH ADO-{ID} — after ICEA saved and Tech Spec reviewed in temp/ |
 | `*.epic.md` | On SAVE TECH ADO-{ID} — derived, no interaction |
 | `*.tracker.md` | On SAVE TECH ADO-{ID} — derived, no interaction |
+| `*.test-plan.md` | **full mode:** on SAVE TECH ADO-{ID} (inline after Tech Spec is written to temp). **lightweight mode:** on SAVE PLAN ADO-{ID} (auto-generated as part of the lightweight ceremony, after critic PASS and auto-approval). In both cases written via `--subagent` mode (no second Write Gate prompt) |
+| `*.icea-critic-*.md` | Auto-written during SAVE ICEA (Step 7) on critic PASS — **Write Gate exempt, no APPROVE needed.** Derived audit artifact, not source code or config. Write immediately; do not show WRITE PENDING. |
+| `*.icea-tech-critic-*.md` | Auto-written during SAVE TECH (Step 10) on critic PASS — **Write Gate exempt, no APPROVE needed.** Same rationale as `*.icea-critic-*.md`. |
 | `memory/` | Automatic on trigger — no gate (Dream pipeline) |
 | Source code | Blocked until `APPROVE ADO-{ID}` |
 | Config files | Blocked until `APPROVE CONFIG` (no ADO required — see §Config write gate below) |

@@ -239,6 +239,7 @@ And stop.
 | `**/HttpClient*`, `**/IHttp*`, `**/ExternalService*`, `**/ApiClient*`, `**/Integrations/**` | `architecture-integrations.md` |
 | `**/Auth/**`, `**/Authorization/**`, `**/Permissions/**`, `**/Identity/**`, `**/JWT*`, `**/Token*` | `architecture-security.md` |
 | `azure-pipelines*.yml`, `.github/workflows/**`, `*.pubxml`, `*web.config`, `*Dockerfile*`, `*docker-compose*` | `architecture-deployment.md` |
+| `**/routers/**`, `**/views/**`, `**/urls.py`, `**/Controllers/**`, `**/Services/**`, `**/Endpoints/**` (route-handling files) | `architecture.md` + `architecture-flows.md` / `architecture-callchains.md` |
 | All other source paths (`**/Controllers/**`, `**/Services/**`, `**/Repositories/**`, etc.) | `architecture.md` |
 
 A single changed path may map to multiple docs (e.g. a service that calls an external API
@@ -302,17 +303,59 @@ read unrelated files.
 For each doc in `AFFECTED_DOCS`, update only the sections whose source areas changed.
 Process in this order: `architecture.md` first, then specialist docs.
 
-**`architecture.md`** — update changed sections only (existing behaviour):
+**`architecture.md`** — update changed sections, then refresh required Mermaid diagrams:
 ```bash
 cat .claude/architecture/architecture.md 2>/dev/null
 ```
-For each area refreshed in Step 4, update the corresponding section. Do not touch
+For each area refreshed in Step 4, update the corresponding prose section. Do not touch
 unrelated sections.
+
+**Diagram refresh — architecture.md (run every time this doc is updated):**
+
+```bash
+node -e "
+const fs=require('fs');
+const c=fs.readFileSync('.claude/architecture/architecture.md','utf8');
+console.log('HAS_E2E='    + c.includes('## End-to-End Architecture'));
+console.log('HAS_LAYERED=' + c.includes('## Layered View'));
+"
+```
+
+- `HAS_E2E=false` → generate and insert the `## End-to-End Architecture` section
+  (Mermaid `flowchart LR`: caller/actor → API entry point → services → data store(s) →
+  external services). A missing diagram is always a gap to fill, regardless of which
+  changed areas triggered the update.
+- `HAS_LAYERED=false` → generate and insert the `## Layered View` section
+  (Mermaid `flowchart TB` of the real layers with dependency direction, derived from
+  actual project/module references — not assumed architecture).
+- Either diagram **exists** but the changed source areas introduced new components
+  (new service, new database, new external API, new top-level layer): update only the
+  affected diagram(s). Do not re-render diagrams whose topology has not changed.
+- Diagram rules from the File 1 addendum in `$PLUGIN_DIR/skills/architect/prompts/<stack>.md`:
+  valid fenced ` ```mermaid ` blocks; node labels free of `()[]{}` characters; if a diagram
+  cannot be derived from source, keep `> ⚠ Could not determine — needs manual input`
+  rather than emitting an empty or invalid block.
 
 **`architecture-data.md`** (if in `AFFECTED_DOCS`) — re-run the File 4 prompt from
 `$PLUGIN_DIR/skills/architect/prompts/<detected-stack>.md` scoped to the changed
 data-layer files. Overwrite only the sections that describe the changed entities/schema.
 Flag any undetectable field with `> ⚠ Could not determine — needs manual input`.
+
+**Diagram refresh — architecture-data.md:**
+
+```bash
+node -e "
+const fs=require('fs');
+const c=fs.readFileSync('.claude/architecture/architecture-data.md','utf8');
+console.log('HAS_ER=' + /\`\`\`mermaid/.test(c));
+"
+```
+
+- `HAS_ER=false` → generate and insert an `erDiagram` Mermaid block covering the
+  entities in this file. Derive relationships from FK columns, navigation properties,
+  or ORM associations found in source; mark unresolvable relationships with `> ⚠`.
+- Diagram exists but new entities or FK relationships were added by the changed files:
+  update the `erDiagram` to include them. Do not regenerate unchanged entity relationships.
 
 **`architecture-integrations.md`** (if in `AFFECTED_DOCS`) — re-run the File 5 prompt
 scoped to the changed integration files. Update the affected external-dependency entries
@@ -365,6 +408,29 @@ If output is `ALL_MATCHED` — no action needed; continue.
 **`architecture-security.md`** (if in `AFFECTED_DOCS`) — re-run the File 6 prompt
 scoped to the changed auth/permission files. Update affected trust-zone and authorization
 entries. Do not touch unrelated sections.
+
+**`architecture-flows.md` / `architecture-callchains.md`** (if in `AFFECTED_DOCS` due to
+route-handler / controller / view / router changes) — refresh affected workflow sections
+using the File 2 prompt from `$PLUGIN_DIR/skills/architect/prompts/<detected-stack>.md`,
+scoped to the changed files:
+
+- **Changed handler** → update its `## Workflow N —` section: lead paragraph + sequence
+  diagram (`sequenceDiagram` with exact HTTP verb/path and DB SQL type/table name) +
+  `**What happens:**` 4-6 bullets. Do not regenerate unchanged workflow sections.
+- **New endpoint added** → add a new `## Workflow N —` section (numbered max + 1) and
+  add a row to the Table of Contents. If the ToC is missing entirely, generate it first.
+- **Endpoint deleted** → remove its `## Workflow N —` section and its ToC row.
+- **Missing diagrams in any existing section** → generate the `sequenceDiagram` block
+  for that section from the handler source. Do not leave a section without a diagram.
+
+After updating, run the structural validator to confirm all four gates pass:
+
+```bash
+node {PLUGIN_DIR}/scripts/validate-arch-flows.cjs --file=.claude/architecture/architecture-flows.md
+```
+
+(substitute `architecture-callchains.md` for .NET / Spring Boot stacks). Fix any gate
+failures inline before reporting Step 6 complete.
 
 **`architecture-deployment.md`** (if in `AFFECTED_DOCS` due to CI/CD or config changes)
 — update the affected sections (pipeline, environment list, hosting). For a full

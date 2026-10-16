@@ -1,5 +1,115 @@
 # MEMORY.md — Project memory (dream-managed)
 
+### [2026-10-16] Task completed — migration skill: stack verification + delivery concerns layer
+
+All 6 implementation items complete across 7 files: (1) delivery-concerns.md catalog, (2) lookup-urls.json — 3 new fact types per stack + tech_radar_base, (3) migration-research-agent.md — stack_verification output + Step 2h three-tier lookup, (4) rewrite/SKILL.md — Step 2.2 delivery concerns pre-flight, (5) upgrade/SKILL.md — stack_verification rendering in gap/risk report, (6) replatform/SKILL.md — Step R1.2 remaining concerns with intake-resolved carry-forward, (7) migration-ledger-schema.md — delivery_concerns payload field doc. Key pattern: replatform is leaner because #2/#5/#6 are already resolved in R1 intake step 5 — R1.2 only presents the remaining 5 concerns and merges both sets.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-16] Error resolved — release.cjs minor bump incremented major version instead
+
+`scripts/release.cjs` line 148 had `parts[0]++; parts[1]++;` for the minor branch — this incremented both major and minor, so `npm run bump:minor` on 3.25.0 would produce 4.26.0 instead of 3.26.0. Fix: changed to `parts[1]++; parts[2] = 0;` (major untouched, minor incremented, patch zeroed). The script also requires a clean working directory before running — commit session work first.
+Trigger: Error resolved  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-16] Architecture decision — EF1 DB detection: packages over stack_key categories
+
+`detected_stacks` in `dream-init-state.json` holds only language tokens, not databases. Databases are in `detection.database[*].stack_key` — but that field can contain generic categories like `sql-relational` that are useless for dialect checking. Primary signal is NuGet/npm/pip package names (e.g. `System.Data.SqlClient` → SQL Server, `Microsoft.Data.Sqlite` → SQLite), which are specific and reliable. Generic `stack_key` values are accepted only when specific (sql-server, postgresql, sqlite, mysql); `sql-relational` and `ado-net-legacy` are treated as unresolved with a WARN. Secondary signals: `deployed_rules[]` + architecture docs.
+Trigger: Architecture decision  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-16] Architecture decision — EF1 split into EF1a (pattern detection) + EF1b (dialect compatibility)
+
+"Use ORM = DB-agnostic" only holds for full ORMs (SQLAlchemy, EF Core). Dapper and raw ADO.NET pass SQL strings that are still dialect-specific even when parameterised. EF1 split: EF1a detects data access pattern (ORM vs Dapper/raw SQL); EF1b applies SQL dialect matrix only to Dapper/raw SQL overlays. ORM overlays skip EF1b entirely. Multi-DB projects require checking every SQL string against ALL confirmed dialects simultaneously — fail if any string is incompatible with any detected DB. ANSI-standard SQL (`COALESCE`, `CURRENT_TIMESTAMP`, parameterised queries) is the safe default for overlays targeting mixed-DB projects.
+Trigger: Architecture decision  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-16] Task completed — techspec-refresh skill created
+
+New skill at `skills/techspec-refresh/SKILL.md` with four-pass rubric: (1) SC — self-consistency (DO NOT rules vs snippets, API table vs code reachability, Files Changed vs sections present); (2) CC — cross-layer contract (frontend error handler shape vs framework actual response, repository output type vs service input type); (3) LR/UP/stack — LLM-readability structure + universal and stack-specific patterns; (4) EF — environment fit (SQL dialect, runtime APIs, hosting). Key design insight: the two most critical overlay bugs found (FastAPI 422 array detail causing [object Object], RETURNING id failing on SQL Server) were CC and EF failures, not version drift — web-search alone misses them. Added eval set at `skills/techspec-refresh/evals/techspec-react-nodejs-eval.json` with 10 known cases (E01–E10) from the react-nodejs human review; serves as regression corpus. Keyword handlers added to CLAUDE.md: `CHECK TECHSPEC`, `REFRESH TECHSPEC {overlay}`, `REFRESH TECHSPEC ALL`. Citation discipline hard rule: never assert a framework behaviour claim without a web-sourced URL.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-16] Architecture decision — four-pass structure vs web-search-only for overlay refresh
+
+Rejected web-search-only approach: it catches version staleness (outdated imports, old API syntax) but misses cross-layer contract failures (FastAPI 422 detail format, axios error envelope) and environment fit failures (RETURNING id on SQL Server). Chose four independent passes because the failure modes are orthogonal — SC and CC need no web, EF needs env profile, only version currency needs web. Eval-driven design: seeded with 10 known issues from a real human review so the rubric can be verified before trusting it on production overlays.
+Trigger: Architecture decision  Confidence: 0.90  Source: auto-capture
+
+### [2026-10-16] Task completed — techspec-python-fastapi.md substantially revised
+
+Revised the FastAPI overlay based on 8 structural issues: (1) added missing sections for ORM model, Alembic migration (with downgrade()), dependency wiring, domain exceptions, and test patterns; (2) fixed 422 error handling — FastAPI detail is an array of objects, not a string; added `extractDetail()` helper in both Angular and React services; (3) switched repository layer to full ORM (select + add/flush) — raw `RETURNING id` is not supported on SQL Server; (4) fixed layer contract — repository now returns ORM models, service maps to schemas, commit moved to service; (5) added `NotFoundError`/`ForbiddenError` domain exceptions with main.py handlers; (6) dropped Django/Flask variants — FastAPI only; (7) modernised patterns: `Annotated[T, Depends()]`, typed current_user, no CommonModule, styleUrl, no `import React`, no `React.FC`, React 19+; (8) `{Feature}Response` with `success: bool` replaced by `{Feature}Created` mirroring the created resource, collection routes changed from `"/"` to `""`, AC tags added to all layers, CORS methods note added, checklist expanded. Added DO NOT rules block at top (LLM reader — consolidated rules land more reliably than scattered conditions).
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-16] Error resolved — tech spec freehand writing bypassed structural completeness gate
+
+Root cause: Claude wrote a tech spec freehand (executing the SAVE ICEA handler inline) instead of invoking the icea-feature skill and reading the templates. The context-budget hook only checked 4 of 13 required sections, so the incomplete spec passed Gate 3. Fix: (1) expanded `requiredSections` in `context-budget-tech-write.cjs` Rules 1 and 2 from 4 to all 13 base-template sections; (2) expanded `EPIC_EXEMPT_SECTIONS` with 4 story-only sections (API Changes, Auth & Security, Error Handling, Request Flow); (3) added an explicit NEVER hard rule in icea-feature/SKILL.md: "NEVER write Tech Spec content freehand". Both plugin `.claude/hooks/` and `_project-deploy/hooks/` copies updated. Gotcha: the ALWAYS instruction was already there but insufficient — the NEVER form naming the failure mode is more effective.
+Trigger: Error resolved  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-16] Task completed — Python and React tech spec overlays added
+
+Created `techspec-python-fastapi.md` (FastAPI/Django/Flask + optional Angular or React frontend) and `techspec-react-nodejs.md` (React + Node.js + optional .NET or Python API layer) under `skills/icea-feature/references/`. Updated the routing table in `SKILL.md` so `python` routes to the FastAPI overlay and `react + nodejs` routes to the React overlay — replacing the old "base only — not yet available" entries. Updated `techspec-base.md` header to mark both as `[available]`. The `[future]` label means the overlay file does not exist on disk; `[available]` means it does and SKILL.md will route to it.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-16] Error resolved — ICEA critic output not saved to disk in full mode
+
+Root cause: The icea-feature SKILL.md Step 7 (SAVE ICEA) and Step 10 (SAVE TECH) instructed Claude to write the critic output file to docs/ but provided no gate-exempt signal. Claude was silently skipping the write — either because it treated docs/ writes as requiring APPROVE (wrong) or just rushed past it. Fix: added `⚠ WRITE MANDATORY — gate-exempt` note to both critic-write instructions, explicitly stating "NOT source code or config, do not show WRITE PENDING." Also added `*.icea-critic-*.md` and `*.icea-tech-critic-*.md` to the write-gate-spec.md artefact table with "Write Gate exempt" annotation. Applied to source repo and cached plugin.
+Trigger: Error resolved  Confidence: 0.93  Source: auto-capture
+
+### [2026-10-16] Error resolved — tech spec section header hook: exact-match blocked numbered headings
+
+Root cause: `context-budget-tech-write.cjs` Gate 3 used a `Set.has()` exact match for required sections. `## 1. Overview` ≠ `## Overview` so numbered headers (which Claude sometimes generates) falsely triggered the block. The error message also said "context was exhausted" which was wrong when the spec was complete but just had different header names. Fix: rewrote `checkRequiredSections` to accept numbered prefixes (`## N. Name` → matches `## Name` if heading level and name match); updated Gate 3 error message to explain both causes (context exhaustion AND name mismatch). Added test case. Applied to `.claude/hooks/`, `_project-deploy/hooks/`, and cached plugin copy. Gotcha: `## Test Cases` ≠ `## Test Plan` — the name must still match exactly; only the leading `N.` is flexible.
+Trigger: Error resolved  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-16] Error resolved — lightweight mode: test plan not generated after SAVE PLAN
+
+Root cause: The `SAVE PLAN ADO-{ID}` keyword handler in CLAUDE.md §0a (and `_project-deploy/CLAUDE.md`) was governance-mode unaware — it always ran the full-mode ceremony (write plan + write ICEA draft to temp/), even in lightweight mode. Since §0a handlers have "priority over chat," they override the goal-loop skill's own `SAVE PLAN` ceremony, so the lightweight ceremony (critic → auto-approve → test-plan generation) never fired. Fix: updated both CLAUDE.md files to check `governance_mode` in `dream-init-state.json` first; lightweight branch runs the full ceremony inline (critic → stamp ✅ Approved → test plan via `--source plan --subagent`). Also added `*.test-plan.md` row to `write-gate-spec.md` artefact table documenting when it's written in each mode. Gotcha: any global keyword handler that has governance-mode-specific behavior must embed the branch logic directly — the goal-loop skill's ceremony is never reached if the handler fires first.
+Trigger: Error resolved  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-15] Plan approved — delivery concerns matrix: final format approved
+
+Format combines [simple ← default] / [moderate] / [complex] bracket labels with situation-description "choose when" text written as developer-recognizable experience (e.g. "'Works on my machine' bugs are common"). "Pick B if:" conditional style was rejected — situation descriptions read more naturally. Fast-path: developer replies "none" to accept all defaults; mandated items listed as "2=ECS, 5=GitHub Actions".
+Trigger: Plan approved  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-15] Plan approved — migration skill: stack verification + delivery concerns layer
+
+Two-part enhancement to rewrite/upgrade/replatform skills. Part A: three-tier stack verification in migration-research-agent (official docs → endoflife.date API → ThoughtWorks Tech Radar; missing Tech Radar = neutral; all UNKNOWN → surface to developer). Part B: delivery concerns layer — pre-flight checklist of 8 concerns (local dev, deployment target, K8s packaging, DB migrations, CI/CD, IaC, config/secrets, observability); developer marks org-mandated ones, skips those, gets options (simple→complex) for the rest; fast-path: reply "none" to skip the checklist entirely. New shared file `delivery-concerns.md`; ledger gains `delivery_concerns` section.
+Trigger: Plan approved  Confidence: 0.90  Source: auto-capture
+
+### [2026-10-15] Architecture decision — delivery concerns pre-flight gate format
+
+Option 2 (structured checklist of 8 concerns, developer marks mandated ones) chosen over Option 1 (free-form text). Fast-path: developer can reply "none" to skip directly to the options menu. Rationale: structured checklist produces a clean ledger entry and prevents incomplete capture; fast-path removes friction when no mandates exist.
+Trigger: Architecture decision  Confidence: 0.90  Source: auto-capture
+
+### [2026-10-15] Approach abandoned — infra footprint inside per-option blocks was wrong
+
+Original proposal added a full Infrastructure Footprint table to every option in Step 2. Rejected because: infra topology does not vary by option (all K8s options use the same infra model), so the table would be identical across options — undermining differentiation. Also caused 4 critical bugs (invalid JSON, no document-orchestrator wiring, identical pipeline per option, breaking sentinel change). The architectural review finding 8 major + 4 critical gaps was itself the signal that the approach was wrong.
+Trigger: Approach abandoned  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-15] Plan approved — rewrite skill: infra via hosting_model question + design doc expansion
+
+Correct approach (4 changes, no new scripts): (1) Step 1 — Grep-based light blocker scan for Windows Auth + local file I/O only; stores two boolean flags in checkpoint, writes migration log entry if Windows Auth found. (2) Step 2 pre-design questions — replace vague "hosting model" with explicit mandatory Q2: K8s | PaaS | on-prem; store `hosting_model` in checkpoint at APPROVE OPTIONS. (3) Step 2.5 doc 5 content spec — add per-hosting-model required sections block below the table (not inside the table cell); K8s mandates Container Strategy, K8s Workloads, Networking, Service Bus, Liquibase sections. (4) Step 2.5 doc 6 — same pattern with Pipeline Stages, Helm chart, rollback. No sentinel changes (keeps `## ` to avoid breaking in-flight migrations).
+Trigger: Plan approved  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-12] Task completed — validate-arch-flows.cjs + tests (44/44 passing)
+
+New script validates architecture-flows.md / architecture-callchains.md against 4 gates: (A) ToC before first workflow, (B) sequenceDiagram only in mermaid blocks, (C) **What happens:** ≥4 bullets per workflow, (D) every ToC row has a section. Key pattern: Gate C is a WARNING (not failure) when bullets < 4 but heading is present — only missing the heading entirely is a failure. SKILL.md Step 5 bullet 6 runs the script after generating File 2.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-13] Plan approved — update-arch Mermaid diagram refresh + flows/callchains support
+
+Four changes to skills/update-arch/SKILL.md: (1) add architecture-flows.md/callchains.md to AFFECTED_DOCS classification for route-handler changes, (2) add Mermaid diagram presence check + refresh to architecture.md update step, (3) add ER diagram presence check to architecture-data.md update step, (4) add new flows/callchains section in Step 6 with validate-arch-flows.cjs post-write check.
+Trigger: Plan approved  Confidence: 0.90  Source: auto-capture
+
+### [2026-10-12] Plan approved — architect File 2 output validation (SKILL.md + script + tests)
+
+Adding four-gate validation for architecture-flows.md / architecture-callchains.md: (A) ToC before first workflow, (B) sequenceDiagram only, (C) "What happens:" ≥4 bullets, (D) every ToC row has a section. Two places: SKILL.md Step 5 bullet 6 (LLM self-check before write), and scripts/validate-arch-flows.cjs (standalone validator + tests/validate-arch-flows.test.cjs).
+Trigger: Plan approved  Confidence: 0.90  Source: auto-capture
+
+### [2026-10-12] Task completed — architect File 2 prompts updated across all 8 stacks
+
+Updated File 2 prompts in all 8 stack-specific prompt files (python-fastapi, django, flask, angular-nx, angular-standard, react, dotnet-api, spring-boot). Key pattern: replace call-chain tracing + Dependency Graph with (1) mandatory ToC first, (2) `sequenceDiagram` per workflow with user-role actors + HTTP verb/path + DB SQL/table, (3) "What happens:" 4-6 bullet plain-English summary, (4) explicit coverage requirement. FastAPI file was auto-updated by a workflow subagent to a higher-quality version with example bullets — accept that version.
+Trigger: Task completed  Confidence: 0.95  Source: auto-capture
+
+### [2026-10-12] Architecture decision — architect File 2 prompts: workflow sequence diagrams, not call chains
+
+Replaced File 2 prompts across all 8 stacks (python-fastapi, django, flask, angular-nx, angular-standard, react, dotnet-api, spring-boot). Old prompts produced code-level call-chain traces and Dependency Graphs. New prompts mandate: (1) Table of Contents of ALL workflows first, (2) Mermaid `sequenceDiagram` per workflow with user-role actors + exact HTTP verb/path + DB table/SQL type, (3) "What happens:" 4-6 bullet plain-English summary, (4) explicit coverage requirement (no endpoint skipping). Reference: `C:/Users/rawatv/source/AI-POD/Rate-Tracker/docs/workflow-diagrams.md` as the quality bar.
+Trigger: Architecture decision  Confidence: 0.95  Source: auto-capture
+
 ### [2026-10-09] Approach abandoned — REFRESH DOMAIN WEBSEARCH variant not needed
 
 Considered adding `REFRESH DOMAIN WEBSEARCH` as an explicit web-search refresh command, but the gate already added to `business-context-generation.md` Step 3 handles this: `REFRESH DOMAIN` prompts "Allow web search? A/Yes B/No" and A proceeds with grounding. No separate command or flag needed.

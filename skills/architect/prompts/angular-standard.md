@@ -40,26 +40,89 @@ Sections that cannot be determined: `> ⚠ Could not determine — needs manual 
 
 ## File 2 Prompt — architecture-flows.md
 
-You are documenting user and data flows in an Angular application.
-Read component, service, and routing files for each project.
+You are a software architect documenting user-facing workflows in an Angular application.
 
-For each primary user journey (login, main feature workflows):
-- Route URL → component → service → HTTP call sequence
-- State changes (store dispatches, BehaviorSubject updates, signal writes)
-- Route guards and resolvers that run before activation
-- Error handling path (error interceptor, component-level, global)
+Read the component files, service files, routing configuration, NgRx store files (actions, reducers, effects, selectors), and signal-based state files. Your goal is to produce a workflow reference that a developer or QA engineer can use to understand every user journey end-to-end — from the user's action to the HTTP call to the state update to the UI re-render.
 
-**Component Tree** — for each app's main views, draw the parent-child
-component hierarchy showing Input/Output bindings and service injections.
+**Do NOT produce a dependency graph or code call-chain diagram. Produce sequence diagrams of user-facing workflows.**
 
-**HTTP Interceptors** — list every interceptor, what it adds/modifies
-(auth headers, error handling, loading state), and the order they apply.
+---
 
-**Service Dependency Graph** — list services and what they inject,
-identifying any circular patterns or deep chains.
+**Step 1 — Enumerate ALL workflows.**
 
-Read actual TypeScript and template files.
-Mark incomplete traces: `> ⚠ Partial trace — review manually`
+Scan every route definition, every component with a user-triggered method (click handler, form submit, route activation), and every HTTP call in every service. Produce a numbered list of ALL distinct user journeys. A workflow is any user action that results in an HTTP call, a route navigation, or a meaningful state change. Do not limit to the "happy path" or "main features" — enumerate every workflow you can trace, including:
+
+- Authentication flows (login, logout, token refresh, SSO redirect)
+- Every CRUD operation for every entity (list, create, edit, delete, detail view)
+- Search and filter interactions that trigger HTTP calls
+- File upload / download flows
+- Navigation flows guarded by route guards or resolvers
+- Modal / dialog flows that submit data
+- Real-time / WebSocket subscription flows
+- Error and retry flows (HTTP interceptor behaviour, error boundary components)
+- Pagination, sorting, infinite scroll flows
+- Permission / role-based conditional flows
+
+---
+
+**Step 2 — Write one section per workflow.**
+
+Use this exact structure for every workflow:
+
+**Heading:** `## Workflow N — Name`
+
+**Lead paragraph:** One or two sentences of plain English — what user action triggers this workflow, what the system does, and what the user sees when it completes.
+
+**Mermaid sequence diagram** (hard constraints):
+- `sequenceDiagram` syntax only — never `flowchart` or `graph`
+- Declare all actors/participants at the top using `actor` for human roles and `participant` for systems, with short alias and readable label
+- Include every participant that appears: user role, Component, Service, Angular HttpClient, Backend API, NgRx Store / Signals, Guards, Resolvers, Interceptors
+- Every HTTP call: verb + exact path + payload type in parentheses — read from actual service source
+- Every state operation: show dispatch, selector emit, or signal update
+- `alt`/`else` for conditional branches, `opt` for optional paths, `par` for concurrent operations
+- Response arrows use `-->>` (dashed)
+- Emit inside a fenced ` ```mermaid ` block
+
+**"What happens:" bullet list:** Bold heading `**What happens:**`, 4-6 bullets, plain English business rules, no TypeScript syntax or class names, intelligible to a non-technical reader.
+
+---
+
+**Diagram actor conventions:**
+
+| Actor label | When to use |
+|---|---|
+| `actor User` | The human interacting with the browser |
+| `participant Component as <ComponentName>` | The Angular component that owns the template event (use actual class name) |
+| `participant Service as <ServiceName>` | The injected service that owns the HTTP call (use actual class name) |
+| `participant HTTP as Angular HttpClient` | The Angular HttpClient layer (interceptors fire here) |
+| `participant API as Backend API` | The backend REST/GraphQL/WebSocket endpoint |
+| `participant Store as NgRx Store` | NgRx store (actions in, selectors out) |
+| `participant Store as Signals` | Signal-based state (if the project uses Angular signals instead of NgRx) |
+| `participant Guard as <GuardName>` | Route guard — show when a guard conditionally blocks or redirects |
+| `participant Resolver as <ResolverName>` | Route resolver — show when pre-fetched data is loaded before component activation |
+| `participant Interceptor as <InterceptorName>` | HTTP interceptor — show when auth token injection or global error handling is part of the flow |
+
+Show only the actors that actually participate in a given workflow.
+
+---
+
+**Coverage requirement:**
+
+The Table of Contents at the top of the document must list every workflow. After writing all sections, verify: does every route in the router configuration have at least one corresponding workflow? Does every service method that calls HttpClient appear in at least one sequence diagram? If any are missing, add stub sections with `> ⚠ Partial trace — review manually`.
+
+---
+
+**Hard rules:**
+
+1. Table of Contents is ALWAYS the first thing in the file.
+2. Never group unrelated flows into one workflow for convenience.
+3. Never invent HTTP paths, API endpoints, or state management details — read from actual source files.
+4. `sequenceDiagram` only.
+5. Every HTTP verb + path must match an actual HttpClient call in source.
+6. Do not produce a Component Tree or Service Dependency Graph.
+7. Do not produce call-chain traces (module.function → module.function).
+
+Read actual TypeScript source files — component class bodies, service methods, NgRx effect classes, router module or standalone route arrays. Do not infer workflows from filenames or route paths alone.
 
 ---
 

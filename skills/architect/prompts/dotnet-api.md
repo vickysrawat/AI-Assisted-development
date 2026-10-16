@@ -64,32 +64,82 @@ Sections where the answer cannot be determined: write
 
 ## File 2 Prompt — architecture-callchains.md
 
-You are a software architect tracing request flows through a .NET Web API.
-Read every Controller file, then follow each action method through the full
-call chain: controller → service → repository → database or external API.
+You are a software architect documenting every user-facing API workflow in a .NET Web API project as sequence diagrams. Your audience is developers who do not know the codebase. Your output must show every HTTP endpoint as a Mermaid sequence diagram with a plain-English summary.
 
-For each endpoint trace:
-- Entry point: controller class, method name, route
-- Every method call in sequence with fully qualified class name
-- At each step: which database (name the connection string key) or
-  external service is called, and how (REST, SQL query, named HttpClient)
-- Any parallel operations: Task.WhenAll, Parallel.ForEach — list what runs in parallel
-- Conditional branches that significantly change the flow:
-  feature flags, null short-circuits, UseWall-style toggles
-- Return type at each layer
+---
 
-After all call chains, produce a **Class-Level Dependency Graph**:
-For each non-trivial class (controllers, services, repositories, external API managers),
-read its constructor and list every injected dependency by interface name.
+**Step 1 — Enumerate all workflows.**
 
-Then produce two tables:
-- **Highest Fan-In** (top 10 types most depended upon) — count how many constructors
-  inject each type
-- **Highest Fan-Out** (top 10 classes with most constructor parameters)
+Read every Controller file. For each action method, treat it as one workflow. Group by resource or feature area (e.g. all `OrdersController` actions are the "Orders" feature group).
 
-Read actual constructors and method bodies — do not infer from interface names alone.
-If a method body is too large to trace fully, note the stopping point and
-mark `> ⚠ Partial trace — complex method, review manually`.
+Produce a **Table of Contents** at the top of the document in this format:
+
+| # | Workflow | HTTP Verb + Route |
+|---|----------|-------------------|
+| 1 | Create Order | POST /api/orders |
+| 2 | Get Order by ID | GET /api/orders/{id} |
+
+Number workflows sequentially across all controllers. Every action method in every controller must appear — do not omit "minor" endpoints.
+
+---
+
+**Step 2 — For each workflow, write a section.**
+
+**Heading:** `## Workflow N — Name` (use a plain-English name for the action, not the method name)
+
+**Lead paragraph:** One paragraph — plain English, what HTTP request triggers this workflow, who calls it, and what business outcome it produces. No code jargon. No class names.
+
+**Mermaid sequence diagram** (hard constraints):
+- `sequenceDiagram` syntax only — never `flowchart` or `graph`
+- Declare all actors/participants at the top: `actor Caller as API Caller`, then `participant` for each layer
+- Standard actor set: `API Caller` → `{ControllerClass}` → `{ServiceClass}` → `{RepositoryClass}` → `{DatabaseName}` → `{ExternalServiceName}` (include only what the workflow actually calls)
+- Every HTTP call: verb + exact route + payload type, e.g. `Caller->>Ctrl: POST /api/orders (OrderCreateDto)`
+- Every database call: SQL operation + table name, e.g. `Repo->>DB: INSERT INTO Orders` or `Repo->>DB: SELECT FROM Orders WHERE Id = @Id`
+- Every external call: HTTP method + endpoint, e.g. `Svc->>Ext: POST https://payments.api/charge`
+- `alt`/`else` blocks for meaningful branching (validation failure, not-found, auth failure, business rule guard)
+- `opt` blocks for optional paths (optional cache check, optional notification send)
+- `par` blocks for parallel operations (`Task.WhenAll`, `Parallel.ForEach`) — list each parallel branch explicitly
+- If a service queries the DB directly (e.g. Dapper in the service layer), show `Svc->>DB` directly — do not invent a repository actor
+- Response arrows use `-->>` (dashed), e.g. `Ctrl-->>Caller: HTTP 201 Created {id}`
+- Emit inside a fenced ` ```mermaid ` block
+
+**"What happens:" bullet list:** Bold heading, 4-6 bullets, plain English only — no class names, method names, or technical terms a non-developer would not understand. Cover: what triggers the workflow, what the server validates, what data it reads or writes, what the caller receives, what happens on the main error path.
+
+---
+
+**Actor naming:**
+
+| Actor label | Represents |
+|---|---|
+| `API Caller` | The external system or client sending the HTTP request |
+| `{ControllerClass}` | The .NET controller that receives the request (use actual class name) |
+| `{ServiceClass}` | The service/business logic layer (use actual class name) |
+| `{RepositoryClass}` | The repository or data-access class (use actual name) |
+| `{DatabaseName}` | The database (use the connection string key name from `appsettings.json`) |
+| `{ExternalServiceName}` | Named `HttpClient` or external SDK target — include only when the workflow actually calls it |
+
+---
+
+**Completeness rules:**
+
+- Every action method in every controller = one workflow section. Do not skip any.
+- If an action method delegates 100% of its logic to another method, trace into that method until you reach an actual service call.
+- If a method body is too large or deeply nested to trace fully, emit the diagram up to the point traceable and mark the stopping point with `> ⚠ Partial trace — complex method, review manually`
+- Do not invent actors, database tables, or external services not present in source.
+- Sections where the target cannot be determined: write `> ⚠ Could not determine — needs manual input`
+
+---
+
+**Hard rules:**
+
+1. Table of Contents is ALWAYS the first thing in the file.
+2. Never group unrelated endpoints into one workflow for convenience.
+3. Never invent database table names, HTTP routes, or external service details — read from source.
+4. `sequenceDiagram` only.
+5. Every HTTP verb + route must match an actual `[HttpGet]`/`[HttpPost]`/etc. attribute in source.
+6. Every DB table name must match an actual entity class, SQL script, or migration in source.
+7. Do not produce a Class-Level Dependency Graph.
+8. Do not produce Fan-In / Fan-Out tables — those belong in `architecture-reference.md`.
 
 ---
 

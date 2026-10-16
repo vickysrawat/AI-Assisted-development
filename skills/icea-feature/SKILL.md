@@ -732,7 +732,9 @@ Read $PLUGIN_DIR/skills/critic/SKILL.md and execute it with mode = icea, source 
 
 **If critic verdict is `PASS` or `PASS WITH NOTES`:**
 - Show: `✅ Critic: {verdict} — proceeding to save.`
-- Save critic output to:
+- **⚠ WRITE MANDATORY — gate-exempt:** Write the critic output file immediately. This file
+  is a derived audit artifact, NOT source code or config — the Write Gate does NOT apply.
+  Do not show a WRITE PENDING prompt; do not ask for APPROVE. Write directly:
   ```
   docs/Release{RELEASE_ID}/Sprint{SPRINT_ID}/UserStory{ADO_ID}/ADO-{ADO_ID}-{feature}.icea-critic-{YYYY-MM-DD}.md
   ```
@@ -929,8 +931,10 @@ Select overlay based on all_stacks (primary ∪ external):
 | `dotnet` or `dotnet_framework`, no `angular`, no `nodejs` | `techspec-aspnet-mvc-jquery.md` |
 | `dotnet` or `dotnet_framework` + `angular`, no `nodejs` | `techspec-aspnet-api-angular.md` |
 | `angular` + `nodejs` (with or without `dotnet`/`dotnet_framework`) | `techspec-angular-nodejs.md` |
+| `python` (with or without `angular` or `react`) | `techspec-python-fastapi.md` |
+| `react` + `nodejs` (with or without `dotnet`/`dotnet_framework`/`python`) | `techspec-react-nodejs.md` |
 | `java` | base only — Java overlay not yet available |
-| `python` | base only — Python overlay not yet available |
+| `react` only (no `nodejs`, no `dotnet`) | base only — known gap, no SPA-only overlay |
 | `angular` only (no `nodejs`, no `dotnet`) | base only — known gap, no SPA-only overlay |
 | `unknown` or unrecognised | base only — tell developer no overlay for their stack |
 
@@ -1339,7 +1343,9 @@ Read $PLUGIN_DIR/skills/critic/SKILL.md and execute it with mode = tech, source 
 
 **If critic verdict is `PASS` or `PASS WITH NOTES`:**
 - Show: `✅ Critic: {verdict} — proceeding to save.`
-- Save critic output to:
+- **⚠ WRITE MANDATORY — gate-exempt:** Write the critic output file immediately. This file
+  is a derived audit artifact, NOT source code or config — the Write Gate does NOT apply.
+  Do not show a WRITE PENDING prompt; do not ask for APPROVE. Write directly:
   ```
   docs/Release{RELEASE_ID}/Sprint{SPRINT_ID}/UserStory{ADO_ID}/ADO-{ADO_ID}-{feature}.icea-tech-critic-{YYYY-MM-DD}.md
   ```
@@ -1765,6 +1771,7 @@ transparency). Never name the persona in any artifact — note this is distinct 
 - NEVER omit the AC Coverage Matrix — every Tech Spec must have bidirectional AC↔File traceability
 - NEVER omit the Test Cases section — every AC-F* must have at least one positive and one negative unit test row
 - NEVER use section numbers to reference Tech Spec content — always use heading text (e.g. `## Open Questions`, `## Sizing and Story Breakdown`, `## Test Cases`)
+- NEVER write Tech Spec content freehand — if you have not explicitly Read both techspec-base.md and the stack overlay in this session, stop and Read them first; freehand writing bypasses structural completeness and is never acceptable, even under context pressure; if context is exhausted, stop and instruct the developer to /compact or open a new session
 - ALWAYS read techspec-base.md and the stack overlay before drafting the Tech Spec (STORY path)
 - ALWAYS read techspec-epic-level.md before drafting the epic-level spec (EPIC path)
 - ALWAYS write the tracker draft to temp/ during Step 8 story chaining, and move it to permanent on SAVE TECH (same atomic move as all story specs)

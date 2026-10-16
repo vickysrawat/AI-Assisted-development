@@ -29,7 +29,7 @@ process.stdin.on('end', () => {
     /^(.*\/)?\.claude\//i,
     /\.(json|yaml|yml|gitignore)$/i,
     /^(.*\/)?tests\//i,
-    /(plugin-guide|user-guide)\.html$/i,
+    /^(.*\/)?guides\/.*\.html$/i,
     /^(.*\/)?(prod-readiness|CodeReviews|security|dynamic-scan|token-analysis)\//i,
     /^(prod-readiness|CodeReviews|security|dynamic-scan|token-analysis)\//i,
   ];

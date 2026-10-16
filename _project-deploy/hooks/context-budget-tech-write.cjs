@@ -21,7 +21,21 @@ const RULES = [
     pattern:          /(?:^|\/)temp\/ADO-(\d+).*-tech\.md$/i,
     threshold:        15,
     minLines:         50,
-    requiredSections: ['## Overview', '## AC Coverage Matrix', '## Files Changed', '## Test Cases'],
+    requiredSections: [
+      '## Overview',
+      '## AC Coverage Matrix',
+      '## Files Changed',
+      '## API Changes',
+      '## Auth & Security',
+      '## Error Handling',
+      '## Sizing and Story Breakdown',
+      '## Definition of Done',
+      '## Open Questions',
+      '## Request Flow',
+      '## Rollback',
+      '## Handover',
+      '## Test Cases',
+    ],
     label:            (id, _fp) => `temp/ADO-${id}-tech.md`,
     flagPath:  (id)      => `temp/ADO-${id}-tech-force.flag`,
     flagMode:  'single',
@@ -33,7 +47,21 @@ const RULES = [
     pattern:          /(?:^|\/)docs\/Release[^/]*\/Sprint[^/]*\/UserStory[^/]*\/[^/]*\.techspec\.md$/i,
     threshold:        15,
     minLines:         50,
-    requiredSections: ['## Overview', '## AC Coverage Matrix', '## Files Changed', '## Test Cases'],
+    requiredSections: [
+      '## Overview',
+      '## AC Coverage Matrix',
+      '## Files Changed',
+      '## API Changes',
+      '## Auth & Security',
+      '## Error Handling',
+      '## Sizing and Story Breakdown',
+      '## Definition of Done',
+      '## Open Questions',
+      '## Request Flow',
+      '## Rollback',
+      '## Handover',
+      '## Test Cases',
+    ],
     label:            (_id, fp) => path.basename(fp),
     flagPath:  (id)      => `temp/ADO-${id}-techspec-force.flag`,
     flagMode:  'single',
@@ -92,7 +120,15 @@ const FORCE_FLAG_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 // An epic-level tech spec legitimately omits the per-story sections — those live in each
 // ADO-{ID}-Story-{N} spec, not the epic umbrella. These three are skipped for an EPIC spec.
-const EPIC_EXEMPT_SECTIONS = new Set(['## AC Coverage Matrix', '## Files Changed', '## Test Cases']);
+const EPIC_EXEMPT_SECTIONS = new Set([
+  '## AC Coverage Matrix',
+  '## Files Changed',
+  '## Test Cases',
+  '## API Changes',
+  '## Auth & Security',
+  '## Error Handling',
+  '## Request Flow',
+]);
 
 function countPlaceholders(content) {
   let count = 0, inCodeBlock = false;
@@ -111,8 +147,17 @@ function countNonEmptyLines(content) {
 }
 
 function checkRequiredSections(content, requiredSections) {
-  const lines = new Set(content.split('\n').map(l => l.trim()));
-  return requiredSections.filter(s => !lines.has(s));
+  const lines = content.split('\n').map(l => l.trim());
+  return requiredSections.filter(section => {
+    const level = (section.match(/^(#+)/) || ['', '##'])[1];
+    const bare  = section.replace(/^#+\s*/, ''); // e.g. "Overview", "AC Coverage Matrix"
+    return !lines.some(l => {
+      if (l === section) return true; // exact match
+      // Allow numbered prefix: "## 1. Overview" or "## 1 Overview" → level + bare match
+      const m = l.match(/^(#+)\s+\d+\.?\s+(.*)/);
+      return m && m[1] === level && m[2].trim() === bare;
+    });
+  });
 }
 
 // DECISION: how to detect an epic-level spec so its Gate-3 required-sections check can relax
@@ -246,8 +291,10 @@ process.stdin.on('end', () => {
       process.stderr.write(
         `⛔ CONTEXT GATE — ${noun} write blocked (missing ${missing.length} required section(s))\n` +
         `\n` +
-        `${label} is missing required sections — context was exhausted before the full\n` +
-        `template could be derived:\n` +
+        `${label} is missing required sections. This can happen when context was exhausted\n` +
+        `before the full template was derived, OR when section headings don't match the\n` +
+        `template exactly. Numbered prefixes are accepted (e.g. "## 1. Overview"), but the\n` +
+        `section name must match precisely — "## Test Cases" not "## Test Plan":\n` +
         missing.map(s => `  • ${s}`).join('\n') + '\n' +
         `\n` +
         `Options:\n` +

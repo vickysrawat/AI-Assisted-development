@@ -915,6 +915,31 @@ For each file:
 5. For `architecture.md`, ensure both ` ```mermaid ` blocks are syntactically valid
    (balanced brackets, no stray `()[]{}` inside node labels). If the layer graph is not
    derivable, keep the `⚠` marker instead of emitting an empty/invalid diagram.
+6. For **File 2** (`architecture-flows.md` / `architecture-callchains.md`) only — run a
+   four-gate structural self-check **before** writing the file. Fix any failures inline;
+   do not skip a gate and proceed:
+
+   **Gate A — Table of Contents:** A markdown table with `| # | Workflow |` columns must
+   appear before the first `## Workflow` heading. If absent, prepend the ToC now.
+
+   **Gate B — `sequenceDiagram` only:** Every fenced ` ```mermaid ` block must open with
+   `sequenceDiagram` as its first content line. If any block opens with `flowchart`, `graph`,
+   `classDiagram`, or any other type — rewrite that block as a proper `sequenceDiagram`.
+
+   **Gate C — "What happens:" present:** Every `## Workflow N —` section must contain a
+   `**What happens:**` heading followed by at least 4 bullet points. If missing, add it
+   (use `> ⚠ Could not determine` per bullet where business rules are not derivable from code).
+
+   **Gate D — Coverage:** Every workflow row in the Table of Contents must have a corresponding
+   `## Workflow N —` section. If any are missing, add a stub section with
+   `> ⚠ Could not trace this workflow — needs manual input`.
+
+   To verify after writing, run:
+   ```bash
+   node {PLUGIN_DIR}/scripts/validate-arch-flows.cjs --file=.claude/architecture/architecture-flows.md
+   ```
+   (substitute `architecture-callchains.md` for .NET / Spring Boot). All four gates must pass
+   before reporting Step 5 complete.
 
 ---
 

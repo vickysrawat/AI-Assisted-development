@@ -1,0 +1,121 @@
+{
+  "overlay": "react-nodejs",
+  "file": "skills/icea-feature/references/techspec-react-nodejs.md",
+  "description": "Known issues from human review 2026-10-16. A working CHECK TECHSPEC react-nodejs run should surface all cases with expected=FAIL. Cases with expected=PASS verify the skill does not over-trigger.",
+  "env_assumptions": { "db": "unspecified", "runtime": "nodejs-22", "host": "unspecified" },
+  "cases": [
+    {
+      "id": "E01",
+      "rubric_check": "R1",
+      "pass": "3c",
+      "category": "React-specific",
+      "expected": "FAIL",
+      "evidence": "`import React from 'react'` on line 54 — React 19+ uses automatic JSX transform; this import is unnecessary and causes the LLM to generate it in all new components",
+      "source": "human-review-2026-10-16",
+      "web_verification_needed": true,
+      "verification_query": "React 19 automatic JSX transform no import required site:github.com/facebook/react OR react.dev"
+    },
+    {
+      "id": "E02",
+      "rubric_check": "R2",
+      "pass": "3c",
+      "category": "React-specific",
+      "expected": "FAIL",
+      "evidence": "`export const {Feature}: React.FC = () =>` on line 58 — React.FC is not idiomatic in React 19+; plain named function export is preferred",
+      "source": "human-review-2026-10-16",
+      "web_verification_needed": true,
+      "verification_query": "React FC deprecated React 19 named function export preferred site:react.dev"
+    },
+    {
+      "id": "E03",
+      "rubric_check": "R3",
+      "pass": "3c",
+      "category": "React-specific",
+      "expected": "FAIL",
+      "evidence": "HTTP service at lines 170-185 has no extractDetail helper — FastAPI 422 detail field is list[{loc,msg,type}] not a plain string; catch block in the hook uses `err instanceof Error ? err.message` which would display [object Object]",
+      "source": "human-review-2026-10-16",
+      "web_verification_needed": true,
+      "verification_query": "FastAPI 422 validation error response body format detail array site:fastapi.tiangolo.com"
+    },
+    {
+      "id": "E04",
+      "rubric_check": "CC1",
+      "pass": "2",
+      "category": "Cross-layer contract",
+      "expected": "FAIL",
+      "evidence": "Custom hook at lines 106-127 uses `err instanceof Error ? err.message : 'An unexpected error occurred.'` — does not handle the axios error envelope; err.response.data.detail contains the FastAPI error array and is not accessible via err.message",
+      "source": "human-review-2026-10-16",
+      "web_verification_needed": true,
+      "verification_query": "axios error response body err.response.data access site:axios-http.com OR npmjs.com/package/axios"
+    },
+    {
+      "id": "E05",
+      "rubric_check": "P1",
+      "pass": "3b",
+      "category": "Universal pattern",
+      "expected": "FAIL",
+      "evidence": "`success: boolean` in {Feature}Response interface at line 150 — REST convention for 201 Created responses is to return the created resource (id + fields), not a generic success flag",
+      "source": "human-review-2026-10-16",
+      "web_verification_needed": false
+    },
+    {
+      "id": "E06",
+      "rubric_check": "P2",
+      "pass": "3b",
+      "category": "Universal pattern",
+      "expected": "FAIL",
+      "evidence": "`{feature}Router.get('/', ...)` and `{feature}Router.post('/', ...)` at lines 211 and 217 — trailing slash causes 307 redirect on Express when mounted with `app.use('/api/{feature}', router)` and strict routing enabled",
+      "source": "human-review-2026-10-16",
+      "web_verification_needed": false
+    },
+    {
+      "id": "E07",
+      "rubric_check": "S1",
+      "pass": "3a",
+      "category": "LLM-readability",
+      "expected": "FAIL",
+      "evidence": "No `## DO NOT rules` section in the first 40 lines — LLM cannot apply consolidated rules; conditions are scattered through the document reducing reliability",
+      "source": "human-review-2026-10-16",
+      "web_verification_needed": false
+    },
+    {
+      "id": "E08",
+      "rubric_check": "S6",
+      "pass": "3a",
+      "category": "LLM-readability",
+      "expected": "FAIL",
+      "evidence": "No `## Tests` section present — overlay gives no unit or integration test stubs; generated tech specs will lack test coverage guidance",
+      "source": "human-review-2026-10-16",
+      "web_verification_needed": false
+    },
+    {
+      "id": "E09",
+      "rubric_check": "P4",
+      "pass": "3b",
+      "category": "Universal pattern — MUST NOT TRIGGER",
+      "expected": "PASS",
+      "evidence": "Line 191 comment `/* from in-memory auth store — never localStorage for tokens */` correctly prohibits localStorage — skill must NOT flag this as a P4 failure",
+      "source": "human-review-2026-10-16",
+      "web_verification_needed": false
+    },
+    {
+      "id": "E10",
+      "rubric_check": "SC4",
+      "pass": "1",
+      "category": "Self-consistency",
+      "expected": "WARN",
+      "evidence": "Header declares `python = FastAPI / Django / Flask` but the Python section (lines 316-337) shows only FastAPI router patterns — Django and Flask are not covered, misleading the LLM into applying FastAPI patterns for those frameworks",
+      "source": "human-review-2026-10-16",
+      "web_verification_needed": false
+    }
+  ],
+  "coverage_summary": {
+    "total_cases": 10,
+    "expected_fail": 8,
+    "expected_pass": 1,
+    "expected_warn": 1,
+    "passes_covered": ["1-SC", "2-CC", "3a-LR", "3b-UP", "3c-React"],
+    "passes_not_covered": ["3d-Angular", "3e-FastAPI", "4-EF"],
+    "note": "EF coverage: techspec-python-fastapi.md pre-rewrite had RETURNING id as a clear EF1/FAIL. Add an eval for that overlay to cover pass 4."
+  }
+}

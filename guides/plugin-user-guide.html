@@ -400,6 +400,7 @@
   <div class="sidebar-section">
     <div class="sidebar-label">Getting started</div>
     <a href="#overview" class="optional"><span class="nav-icon">◈</span> What this plugin is</a>
+    <a href="#prereqs" class="mandatory"><span class="step-dot">0</span> Prerequisites</a>
     <a href="#pat" class="mandatory"><span class="step-dot">1</span> Azure DevOps PAT</a>
     <a href="#install" class="mandatory"><span class="step-dot">2</span> Install</a>
     <a href="#setup" class="mandatory"><span class="step-dot">3</span> First-time setup</a>
@@ -451,6 +452,48 @@
     </div>
     <div class="info"><span class="wi">ℹ</span><span><strong>Core principle:</strong> do not over-complicate. The plugin stops and asks when something is ambiguous rather than guessing, and it documents non-trivial choices as it goes.</span></div>
     <div class="warning"><span class="wi">⚠</span><span>Maintaining or extending the plugin itself (adding skills/commands, releasing a version)? That lives in the <strong>Plugin Developer Guide</strong>, not here.</span></div>
+  </section>
+
+  <section id="prereqs">
+    <div class="section-eyebrow">Getting started · step 0</div>
+    <h2><em class="accent">Prerequisites</em></h2>
+    <p class="section-intro">Everything that must be installed and configured on a fresh machine before you can use the plugin. Run through this list before running the installer.</p>
+
+    <div class="step-card mandatory">
+      <div class="step-number">1</div>
+      <div class="step-header"><div class="step-title">Git</div><span class="tag tag-mandatory">Required</span></div>
+      <p class="step-desc">Install Git first — it is required for the governance audit trail (events are committed to git), the pre-commit hook, branch-policy compliance checks, and PR creation. <strong>Windows:</strong> install <a href="https://git-scm.com/download/win" style="color:inherit;font-weight:600;">Git for Windows</a> — it includes Git Bash, which the plugin uses as its shell. After installing, set your global user name and email so audit events record the correct actor.</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">verify + configure</span></div><div class="code-body"><pre>git --version                          <span class="cmt"># must print git version 2.x</span>
+git config --global user.name  "Your Name"
+git config --global user.email "you@example.com"</pre></div></div>
+    </div>
+
+    <div class="step-card mandatory">
+      <div class="step-number">2</div>
+      <div class="step-header"><div class="step-title">Node.js ≥ 18</div><span class="tag tag-mandatory">Required</span></div>
+      <p class="step-desc">Node.js 18 LTS or later is required for the plugin's helper scripts (<code>.cjs</code> files invoked by skills) and — if you use the CLI — for installing Claude Code itself. Download from <strong>nodejs.org</strong> or use a version manager such as <code>nvm</code> (macOS/Linux) or <code>fnm</code> (Windows/cross-platform). npm ships with Node.js.</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">verify</span></div><div class="code-body"><pre>node --version   <span class="cmt"># must print v18.x or higher</span></pre></div></div>
+    </div>
+
+    <div class="step-card mandatory">
+      <div class="step-number">3</div>
+      <div class="step-header"><div class="step-title">Claude Code</div><span class="tag tag-mandatory">Required</span></div>
+      <p class="step-desc">The plugin runs inside <strong>Claude Code</strong>. Install either the VS Code extension (<em>Claude for VS Code</em>, available in the VS Code marketplace) or the Claude Code CLI via npm. You need an Anthropic account with Claude access; a Pro or Team subscription is recommended because generation skills use the full context window.</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">CLI install (requires Node.js from step 2)</span></div><div class="code-body"><pre>npm install -g @anthropic-ai/claude-code</pre></div></div>
+      <div class="info"><span class="wi">ℹ</span><span><strong>VS Code users:</strong> after installing or updating the extension, run <strong>Developer: Reload Window</strong> (<code>Ctrl+Shift+P</code>) to pick up changes.</span></div>
+    </div>
+
+    <div class="step-card mandatory">
+      <div class="step-number">4</div>
+      <div class="step-header"><div class="step-title">Azure DevOps access</div><span class="tag tag-mandatory">Required for ADO features</span></div>
+      <p class="step-desc">Skills that read or write work items, open pull requests, and generate sprint metrics authenticate against Azure DevOps. You need access to the organization and project where your work items live. The Personal Access Token is configured in the next step. Without ADO connectivity, ICEA artefacts still work locally but ADO-backed features — task creation, PR creation, sprint metrics — are unavailable.</p>
+    </div>
+
+    <div class="step-card optional">
+      <div class="step-number">5</div>
+      <div class="step-header"><div class="step-title">Docker (optional)</div><span class="tag tag-optional">Optional</span></div>
+      <p class="step-desc">Only required if you plan to use the <span class="cmd-pill">dynamic-scan</span> skill, which runs OWASP ZAP in a Docker container against a running application. No other skill needs Docker. Install Docker Desktop from <strong>docker.com</strong> and ensure the daemon is running before invoking the skill.</p>
+    </div>
   </section>
 
   <section id="pat">

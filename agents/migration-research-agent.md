@@ -112,6 +112,31 @@ Lookup structure in `lookup-urls.json`:
       "source_url": "<URL or null>",
       "retrieved_date": "<YYYY-MM-DD>",
       "confidence": "high | medium | low | UNKNOWN"
+    },
+    "stack_verification": {
+      "official_docs": {
+        "recommended_scaffold": "<e.g. 'Angular CLI (ng new)' or UNKNOWN>",
+        "deprecated_scaffold_notice": "<e.g. 'Create React App is no longer recommended' or null>",
+        "source_url": "<URL — non-null when confidence is high or medium>",
+        "retrieved_date": "<YYYY-MM-DD>",
+        "confidence": "high | medium | low | UNKNOWN"
+      },
+      "endoflife_date": {
+        "version_supported": "<true | false | null — null when version not found in endoflife.date>",
+        "eol_date": "<YYYY-MM-DD or null>",
+        "source_url": "<URL or null>",
+        "retrieved_date": "<YYYY-MM-DD>",
+        "confidence": "high | medium | low | UNKNOWN"
+      },
+      "tech_radar": {
+        "ring": "Adopt | Trial | Assess | Hold | UNKNOWN",
+        "quadrant": "<e.g. 'Languages & Frameworks' or null>",
+        "source_url": "<URL or null>",
+        "retrieved_date": "<YYYY-MM-DD>",
+        "confidence": "medium | UNKNOWN",
+        "note": "<'Not found in ThoughtWorks Tech Radar — treat as neutral' when ring=UNKNOWN>"
+      },
+      "verification_summary": "<one sentence combining all three tiers — e.g. 'Angular 17 is actively maintained (EoL 2025-05), scaffold is Angular CLI, rated Adopt by ThoughtWorks.' If all UNKNOWN: 'Could not verify {stack}@{version} — developer should confirm stack currency and recommended scaffold before proceeding.'>"
     }
   }
 ]
@@ -122,6 +147,8 @@ Lookup structure in `lookup-urls.json`:
 - `retrieved_date` MUST always be today's ISO date (YYYY-MM-DD), including UNKNOWN fields.
 - UNKNOWN shape: `{ "status": "UNKNOWN", "source_url": null, "canonical_url": "<best vendor URL>", "retrieved_date": "<YYYY-MM-DD>", "confidence": "UNKNOWN" }`
 - Never omit a field. Never invent a value.
+- `stack_verification.tech_radar.ring = "UNKNOWN"` when the stack is not listed in the Tech Radar — this is neutral, not a negative signal.
+- `stack_verification.endoflife_date.version_supported = null` when the version is not found in endoflife.date (set confidence=UNKNOWN).
 
 ## Execution Steps — rewrite/upgrade mode
 
@@ -166,6 +193,36 @@ then each in `target_layers[]` (role="target"):
      `lookup-urls.json`. WebFetch the URL (official docs or IDE marketplace page). Immediately
      bind `tooling_source_url`. Return descriptive signal. If no data: UNKNOWN shape.
 
+  h. **Stack verification (official docs · endoflife.date · Tech Radar):** Three-tier lookup,
+     all three tiers run for every layer regardless of role (source or target).
+
+     **Tier 1 — Official docs scaffold:** Find the `official_docs_scaffold` fact for this
+     stack in `lookup-urls.json`. WebFetch the primary URL. Immediately bind `source_url`.
+     Scan the page for: (a) the recommended scaffold tool or creation command (e.g. "ng new",
+     "Vite", "create-next-app"); (b) any explicit deprecation notice on a scaffolding tool
+     (e.g. "no longer maintained", "no longer recommended"). Populate `recommended_scaffold`
+     and `deprecated_scaffold_notice` (null if no deprecation found). If fetch fails: UNKNOWN
+     shape, `source_url=null`, `canonical_url` = primary URL from `lookup-urls.json`.
+
+     **Tier 2 — endoflife.date API:** Find the `endoflife_date_api` fact for this stack.
+     WebFetch the primary URL (returns a JSON array). Immediately bind `source_url`. Find
+     the entry where `cycle` matches the major version string from the layer input (e.g. "22"
+     for nodejs@22, "3.11" for python@3.11, "3.3" for spring-boot@3.3). If found: set
+     `version_supported = (entry.eol > today's date)`, `eol_date = entry.eol`. If the version
+     is not in the array or the fetch fails: UNKNOWN shape, `version_supported=null`.
+
+     **Tier 3 — ThoughtWorks Tech Radar:** Find the `tech_radar` fact for this stack.
+     WebFetch the primary URL. If the page loads and contains a ring label (Adopt / Trial /
+     Assess / Hold), extract `ring` and `quadrant`. If the URL returns 404 or no ring label
+     is found, set `ring="UNKNOWN"` and
+     `note="Not found in ThoughtWorks Tech Radar — treat as neutral"`. Do not attempt the
+     fallback URL for ring extraction — it cannot be reliably parsed. Set `canonical_url` to
+     `rewrite_upgrade.tech_radar_base.canonical_url` from the loaded `lookup-urls.json`.
+
+     **verification_summary:** Assemble one plain-English sentence combining all three tiers.
+     If all three are UNKNOWN: "Could not verify {stack}@{version} — developer should confirm
+     stack currency and recommended scaffold before proceeding."
+
   g. **Cloud-hosted runtime support** (when `cloud_hosted` is non-null): Look up
      `rewrite_upgrade.cloud_hosted[provider]` in the loaded `lookup-urls.json`. Substitute
      `{stack}` with the stack name. For AWS also substitute `{service}` using the slug_map
@@ -178,7 +235,10 @@ then each in `target_layers[]` (role="target"):
 
 **Step 3 — Completeness check.** Verify each entry has all fields, all `retrieved_date` values
 are today, all high/medium confidence facts have non-null `source_url`, all UNKNOWN facts have
-`source_url=null` and non-null `canonical_url`. Do NOT reassign `source_url` here.
+`source_url=null` and non-null `canonical_url`. Also verify: `stack_verification` is present on
+every entry; all three sub-objects (`official_docs`, `endoflife_date`, `tech_radar`) are
+populated; UNKNOWN fields have `source_url=null` and non-null `canonical_url`;
+`verification_summary` is a non-empty string. Do NOT reassign `source_url` here.
 
 **Step 4 — Return.** Return the completed JSON bundle. No further Agent tool calls or subagents.
 

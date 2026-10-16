@@ -42,27 +42,120 @@ Sections that cannot be determined: `> ⚠ Could not determine — needs manual 
 
 ## File 2 Prompt — architecture-flows.md
 
-You are documenting user and data flows in a React application.
-Read page components, hooks, and service files.
+You are a software architect documenting user-facing workflows in a React SPA (applies to both standard CRA/Vite projects and monorepo setups using Nx, Turborepo, or similar).
 
-For each primary user journey:
-- Entry route → page component → data-fetching hook → API call sequence
-- State changes triggered (store updates, cache invalidations, optimistic updates)
-- Auth guard or loader that runs before rendering
-- Error boundary scope and error handling path
+Read the page/route components, custom hooks, context providers, data-fetching layer (fetch/axios/TanStack Query/SWR), and state management files (useState, useReducer, Redux slices, Zustand stores, Jotai atoms) for each app. Your goal is to produce a workflow reference that a developer or QA engineer can use to understand every user journey end-to-end — from the user's action to the HTTP call to the state update to the UI re-render.
 
-**Component Composition Patterns** — identify how components are composed:
-render props, compound components, HOCs, custom hooks. List representative examples.
+**Do NOT produce a dependency graph or code call-chain diagram. Produce sequence diagrams of user-facing workflows.**
 
-**Custom Hooks Inventory** — list every custom hook in hooks/ or equivalent,
-what it encapsulates, what it returns, and which components use it.
+---
 
-**Data Fetching Pattern** — describe the pattern used for fetching:
-useEffect + useState, TanStack Query, SWR, server components, loaders.
-Show a representative example with caching and error handling.
+**Step 1 — Enumerate ALL workflows.**
 
-Read actual component and hook files.
-Mark incomplete traces: `> ⚠ Partial trace — review manually`
+Scan every route definition, every component with a user-triggered handler (onClick, onSubmit, onChange that triggers a side effect), and every HTTP call in every service file or hook. Produce a numbered list of ALL distinct user journeys. A workflow is any user action that results in an HTTP call, a route navigation, or a meaningful state change. Do not limit to the "happy path" or "main features" — enumerate every workflow you can trace, including:
+
+- Authentication flows (login, logout, token refresh, SSO redirect, protected route enforcement)
+- Every CRUD operation for every entity (list, create, edit, delete, detail view)
+- Search and filter interactions that trigger HTTP calls or store updates
+- File upload / download flows
+- Navigation flows guarded by route loaders, protected route wrappers, or auth checks
+- Modal / dialog flows that submit data
+- Real-time / WebSocket subscription flows
+- Error and retry flows (error boundary scope, query retry behaviour, fallback UI)
+- Pagination, sorting, infinite scroll, cursor-based loading flows
+- Permission / role-based conditional rendering flows
+- Optimistic update flows (UI updates before server confirmation)
+- Cache invalidation flows (TanStack Query `invalidateQueries`, SWR `mutate`)
+
+For monorepos: enumerate workflows per app. Group by app, then number workflows within each app.
+
+---
+
+**Step 2 — Write one section per workflow.**
+
+Use this exact structure for every workflow:
+
+**Heading:** `## Workflow N — Name`
+
+**Lead paragraph:** One or two sentences of plain English — what user action triggers this workflow, what the system does, and what the user sees when it completes.
+
+**Mermaid sequence diagram** (hard constraints):
+- `sequenceDiagram` syntax only — never `flowchart` or `graph`
+- Declare all actors/participants at the top using `actor` for human roles and `participant` for systems, with short alias and readable label
+- Include every participant that appears: user role, Component, Hook, HTTP Client, Backend API, State store, Router, Guards, ErrorBoundary
+- Every HTTP call: verb + exact path + payload type in parentheses — read from actual hook/service source
+- Every state operation: show setState, dispatch, store action, or signal update
+- `alt`/`else` for conditional branches, `opt` for optional paths, `par` for concurrent operations
+- Response arrows use `-->>` (dashed)
+- Emit inside a fenced ` ```mermaid ` block
+
+**"What happens:" bullet list:** Bold heading `**What happens:**`, 4-6 bullets, plain English business rules, no TypeScript syntax or hook internals, intelligible to a non-technical reader.
+
+---
+
+**Diagram actor conventions:**
+
+| Actor label | When to use |
+|---|---|
+| `actor User` | The human interacting with the browser |
+| `participant Component as <ComponentName>` | The React component that owns the JSX event handler (use actual component name) |
+| `participant Hook as <useHookName>` | The custom hook that encapsulates data-fetching or state logic (use actual hook name) |
+| `participant Query as TanStack Query / SWR` | The caching/fetching layer when TanStack Query or SWR is used |
+| `participant Client as HTTP Client` | The fetch/axios layer that makes the network call |
+| `participant API as Backend API` | The backend REST/GraphQL/WebSocket endpoint |
+| `participant Store as useState` | Local component state via `useState` or `useReducer` |
+| `participant Store as Redux Store` | Redux store (dispatch in, selector/useSelector out) |
+| `participant Store as Zustand Store` | Zustand store (actions in, subscribed state out) |
+| `participant Store as Context` | React Context value — when a context provider owns the state that re-renders consumers |
+| `participant Router as React Router` | React Router — when `navigate()`, `<Navigate>`, loader, or `useNavigate` is part of the flow |
+| `participant Guard as <ProtectedRouteName>` | Protected route wrapper component — when it conditionally redirects unauthenticated users |
+| `participant Boundary as ErrorBoundary` | Error boundary — when a render error or thrown promise is caught and a fallback UI is shown |
+
+Show only the actors that actually participate in a given workflow.
+
+---
+
+**State management — show the full update and re-render cycle:**
+
+For `useState`/`useReducer`: show `setState(newValue)` on the arrow to Store, and `state value triggers re-render` on the return arrow.
+For Redux Toolkit: show `dispatch(actionCreator({payload}))` and `useSelector(selector) emits updated state`.
+For Zustand: show `store.actionName(payload)` and `useStore(selector) re-renders with updated slice`.
+For TanStack Query: show `useMutation`/`useQuery` status transitions and `queryClient.invalidateQueries([key])` for cache invalidation.
+For optimistic updates: show both phases — immediate state update, then server confirmation or rollback.
+
+---
+
+**Custom Hooks Inventory — add this section after all workflow sections:**
+
+### Custom Hooks Inventory
+
+For every custom hook found in `hooks/`, `src/hooks/`, or co-located with components:
+
+| Hook | Encapsulates | Returns | Used By |
+|---|---|---|---|
+| `useRates` | Fetches rates list via TanStack Query | `{ data, isLoading, isError, refetch }` | `RatesListPage`, `RatesSummaryWidget` |
+
+If a hook exists but is never imported by any component or other hook, note it as `> ⚠ Orphaned hook — defined but not traced to any workflow`.
+
+---
+
+**Coverage requirement:**
+
+The Table of Contents at the top of the document must list every workflow. After writing all sections, verify: does every route in the router configuration have at least one corresponding workflow? Does every hook or service function that calls `fetch`, `axios`, `useQuery`, `useMutation`, or `useSWR` appear in at least one sequence diagram? If any are missing, add stub sections with `> ⚠ Partial trace — review manually`.
+
+---
+
+**Hard rules:**
+
+1. Table of Contents is ALWAYS the first thing in the file.
+2. Never group unrelated flows into one workflow for convenience.
+3. Never invent HTTP paths, API endpoints, or state management details — read from actual source files.
+4. `sequenceDiagram` only.
+5. Every HTTP verb + path must match an actual fetch/axios/query call in source.
+6. Do not produce a Component Composition Pattern catalogue or Data Fetching Pattern description.
+7. Do not produce call-chain traces (module.function → module.function).
+
+Read actual source files — component function bodies, custom hook implementations, Redux slice files, Zustand store definitions, TanStack Query definitions, React Router configuration, and axios/fetch wrapper modules. Do not infer workflows from filenames or route paths alone.
 
 ---
 

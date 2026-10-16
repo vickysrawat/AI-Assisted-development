@@ -90,6 +90,7 @@ Detect source stack                  (shared detector — migration-source-detec
   → Present OPTIONS (assurance × effort × TCO, INCLUDING a per-option target-space DAG projection)
      each option: clusters · wave schedule · effort · TCO · assurance ceiling (DAG basis: INFERRED)
      APPROVE OPTIONS → selected option's DAG committed (re-derived + promoted to `computed` at Step 2.5)
+  → Delivery & operations concerns    (Step 2.2 — 8-concern pre-flight gate; ledger write; feeds Doc 5 + 6)
   → Author target design documents    (design-revision-spec.md → document-orchestrator.md)
      feedback loop available          (document-feedback.md · option-change-spec.md)
      APPROVE DESIGN
@@ -116,6 +117,7 @@ apply the conservative bias rule — when in doubt, stop.**
 | Step 1 — Source analysis + posture | ~25–40K | — |
 | Step 1.5 — Integration + oracle + intake | ~15–25K | — |
 | Step 2 — Options analysis + options file | ~15–25K | — |
+| Step 2.2 — Delivery concerns pre-flight | ~2–5K | — |
 | Step 2.5 — Design docs (via document-orchestrator) | ~10–20K (orchestration + review loops) | ~8–15K per doc × 7 |
 | Step 3 — Wave orchestration (per wave) | ~5–10K | ~30–60K per cluster (isolated) |
 | Step 4 — BAL + ERL (inside cluster subagent) | — (runs in subagent) | ~10–20K per cluster |
@@ -357,6 +359,7 @@ _Last updated: {date} · Phase: 0 — Initialize · Step: 0_
 | 1 — Source analysis | Stack detect + posture | ⬜ Not started | — |
 | 1.5 — Integration + oracle | Inventory + manifest + intake gate | ⬜ Not started | integration-inventory.md · source-context-manifest.md |
 | 2 — Options | Options file + APPROVE OPTIONS | ⬜ Not started | {ADO}-options.md |
+| 2.2 — Delivery concerns | Delivery concerns pre-flight | ⬜ Not started | — |
 | 2.5 — Target design | 7 design docs + APPROVE DESIGN | ⬜ Not started | target-*.md · migration-feasibility.md |
 | 3 — Generation | Per-cluster code + design-quality gate | ⬜ Not started | target/ worktrees |
 | 4 — BAL + ERL | Per-cluster assurance | ⬜ Not started | {ADO}-cluster-{N}-assurance.md |
@@ -443,6 +446,34 @@ node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key
 node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key=target_version --value={TARGET_VERSION}
 node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key=posture --value={POSTURE}
 ```
+
+**Blocker signal scan.** Two hard-constraint signals that affect all options regardless of which is
+selected. Use Grep tool calls on the source roots — do not rely on LLM recall.
+
+**Signal 1 — Windows Auth** (hard constraint for Linux container targets):
+Grep for: `WindowsAuthentication`, `NTLMAuthentication`, `AuthenticationSchemes.Ntlm`,
+`UseWindowsAuthentication`, `Negotiate`, `IntegratedSecurity=true`, `UseWindowsIdentity`.
+Record result: `windows_auth_detected = true` or `false`.
+
+**Signal 2 — Local file I/O** (refactor candidate for cloud-native targets):
+Grep for: `File.WriteAllText`, `File.AppendAllText`, `StreamWriter`, `FileStream`,
+`open(` with mode `'w'`/`"w"`, `fs.writeFileSync`, `fs.createWriteStream`, `Files.write`.
+Record result: `file_io_detected = true` or `false`.
+
+```bash
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key=windows_auth_detected --value=true   # or false
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key=file_io_detected --value=true        # or false
+```
+
+If `windows_auth_detected=true`: append to `migration-log.md` immediately:
+```
+[FINDING] Windows Auth detected — Linux container targets (K8s/PaaS) cannot use Windows Auth.
+All options must propose a replacement auth scheme (MSAL / OIDC / Azure AD / custom identity).
+If on-prem is selected as hosting model, this constraint does not apply.
+```
+
+**What this scan does NOT do:** Does not scan for messaging, database, cache, or config signals —
+those feed the design documents via the existing data architecture and integration architecture docs.
 
 ---
 
@@ -913,9 +944,21 @@ These finding types determine the correction path shown in the REVISE verdict.
 
 ## Pre-design questions (answer with APPROVE OPTIONS)
 
-{Numbered list of architecture and hosting questions that must be answered before design documents
-can be authored. Minimum: keep-vs-redesign architecture posture + hosting model. Add any
-integration-specific questions surfaced by PARTIAL rows.}
+These answers must accompany `APPROVE OPTIONS` — design documents cannot be authored without them.
+
+**Q1 (mandatory) — Architecture posture:** retain the source application's architecture patterns,
+or redesign idiomatically for the target stack? (keep-vs-redesign)
+
+**Q2 (mandatory) — Target hosting model:**
+- `K8s` — Azure Kubernetes Service: containerised workloads, Helm-deployed, cloud-native runtime
+- `PaaS` — Azure App Service / Azure Functions / Azure Spring Apps: managed runtime, no container orchestration
+- `on-prem` — Windows Server / IIS / bare-metal: traditional deployment
+
+**Q3 (conditional — include only if `windows_auth_detected=true`):** What is the replacement auth
+scheme? Must name a concrete scheme (MSAL / OIDC / Azure AD / custom identity) — "TBD" is not
+accepted. Required before design documents can be authored for K8s or PaaS targets.
+
+{Add any further questions surfaced by PARTIAL integration rows.}
 
 ---
 
@@ -1124,7 +1167,83 @@ node scripts/checkpoint-ledger.cjs set-gate --skill=rewrite --ado={ADO} --gate=o
 node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key=selected_option --value={SELECTED_OPTION}
 node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key=selected_option_label --value="{SELECTED_OPTION_LABEL}"
 node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key=committed_dag_path --value={COMMITTED_DAG_PATH}
+# Store hosting model — design doc subagents read this to determine which sections to produce
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key=hosting_model --value={K8s|PaaS|on-prem}
+# If windows_auth_detected=true, record the developer-provided replacement scheme (else "none")
+node scripts/checkpoint-ledger.cjs set-payload --skill=rewrite --ado={ADO} --key=replacement_auth_scheme --value="{scheme or none}"
 ```
+
+## Step 2.2 — Delivery & Operations Concerns
+
+> Runs immediately after APPROVE OPTIONS — before any design document authoring.
+> Resolves the 8 delivery concerns so that Doc 5 (`target-infrastructure-architecture.md`)
+> and Doc 6 (`target-deployment-architecture.md`) are authored against concrete tool choices,
+> not open questions.
+
+Read `$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/delivery-concerns.md`
+for the full options catalog, situation-description criteria, and source references.
+
+**Present the pre-flight checklist:**
+
+> Before we author the design documents, mark any delivery concerns your org has already decided.
+> Reply with the numbers of mandated items (e.g. "2, 5") — or "none" to accept all defaults.
+> For mandated items, include your org's choice (e.g. "2=ECS, 5=GitHub Actions, 6=Terraform").
+>
+> [Render the full concerns matrix from delivery-concerns.md — all 8 concerns with
+>  [simple ← default] / [complex] labels and situation-description text]
+
+**Three paths:**
+
+| Developer replies | Action |
+|---|---|
+| `"none"` | Record all defaults in ledger under `delivery_concerns.chosen`. Proceed. |
+| Numbers (e.g. `"2, 5"`) | Ask for org's tool per mandated concern. Present options matrix for the rest. Record both in ledger. Proceed. |
+| `"all"` | Ask for org's tool per each of the 8 concerns. Record all as mandated. Proceed. |
+
+**Conditional — K8s packaging (#3):** Only present concern #3 if `payload.rewrite.hosting_model = K8s`.
+For PaaS or on-prem: omit #3 from the checklist and record `"3": null` in the ledger.
+
+**Write resolved concerns to the checkpoint ledger:**
+```bash
+cat > ".claude/migration/{ADO}/delivery-concerns.json" << 'EOF'
+{
+  "delivery_concerns": {
+    "mandated": {
+      "5": "GitHub Actions"
+    },
+    "chosen": {
+      "1": "Docker Compose",
+      "2": "Managed containers (Container Apps)",
+      "3": null,
+      "4": "Stack-native (EF Core)",
+      "6": "Bicep",
+      "7": "Env vars",
+      "8": "Platform-native logging"
+    }
+  }
+}
+EOF
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-payload \
+  --skill=rewrite --ado={ADO} --payload-file=".claude/migration/{ADO}/delivery-concerns.json"
+```
+
+Write a `[DECISION]` migration log entry:
+```
+[DECISION] Delivery concerns resolved.
+  Local dev: {1} | Deployment: {2} | K8s packaging: {3 or N/A} | DB migrations: {4}
+  CI/CD: {5} | IaC: {6} | Secrets: {7} | Observability: {8}
+  Mandated by org: {list of mandated concern numbers, or "none"}
+```
+
+**Doc 5 and Doc 6 subagents receive `delivery_concerns` from the checkpoint payload** — they
+author their required sections using the resolved tool choices, not open questions.
+
+```bash
+node "$PLUGIN_DIR/scripts/checkpoint-ledger.cjs" set-gate \
+  --skill=rewrite --ado={ADO} --gate=delivery_concerns_resolved --verdict=PASS
+```
+
+**Update migration-tracker.md** — mark Phase 2.2 ✅, update "Next action" to "Run Step 2.5 target design documents".
 
 ## Step 2.5 — Target design documents (new)
 
@@ -1187,9 +1306,71 @@ All 7 documents are documentation artifacts — **not subject to the Write Gate*
 | 2 | `target-data-architecture.md` | `design_doc_data_written` | `## ` | Entity model, ORM/Dapper strategy, migrations, schema decisions |
 | 3 | `target-security-architecture.md` | `design_doc_security_written` | `## Coupling pattern resolutions` | Auth scheme, claims, role model, policy definitions |
 | 4 | `target-integration-architecture.md` | `design_doc_integration_written` | `## Coupling pattern resolutions` | Per-service client strategy, PARTIAL resolutions |
-| 5 | `target-infrastructure-architecture.md` | `design_doc_infrastructure_written` | `## ` | Hosting, IIS config, networking, identity |
-| 6 | `target-deployment-architecture.md` | `design_doc_deployment_written` | `## ` | CI/CD pipeline, deployment units, environment config |
+| 5 | `target-infrastructure-architecture.md` | `design_doc_infrastructure_written` | `## ` | Hosting, networking, identity — sections vary by `hosting_model` (see spec block below) |
+| 6 | `target-deployment-architecture.md` | `design_doc_deployment_written` | `## ` | CI/CD pipeline, deployment units, environment config — sections vary by `hosting_model` (see spec block below) |
 | 7 | `migration-feasibility.md` | `design_doc_feasibility_written` | Cluster effort table, risk register, BAL ceiling, recommended floor |
+
+**Doc 5 (`target-infrastructure-architecture.md`) — required sections per `hosting_model`.**
+Pass `payload.rewrite.hosting_model`, `windows_auth_detected`, and `file_io_detected` to the subagent prompt.
+
+_When `hosting_model = K8s`:_
+- `## Container Strategy` — Dockerfile per cluster (multi-stage build), base image per target stack,
+  image naming convention `{registry}/{cluster}:{commit-sha}`
+- `## Kubernetes Workloads` — one entry per cluster: workload type (Deployment = stateless API,
+  StatefulSet = stateful data service, CronJob = background worker), replica count,
+  resource requests/limits (initial estimates — flag explicitly for load-test validation before production)
+- `## Networking` — Ingress controller (NGINX or Azure Application Gateway), NetworkPolicy per
+  cluster, TLS termination, inter-service DNS (`{service}.{namespace}.svc.cluster.local`)
+- `## Configuration & Secrets` — ConfigMap structure per environment, Kubernetes Secrets,
+  Azure Key Vault CSI driver, no plaintext secrets in image or values files
+- `## Identity` — Workload identity or pod-managed identity, RBAC assignments
+- `## Service Bus Topology` *(include only if messaging coupling identified at Step 1.5)*
+  — Namespace naming (`{app}-{env}`), one topic per domain event type, subscriptions per
+  consumer cluster, dead-letter queue policy
+- `## Database Migration` *(include only if database coupling or data architecture has migrations)*
+  — Liquibase init-container in the pod spec of the cluster owning schema changes, migration
+  scripts at `db/migrations/`, changelog format matching detected SQL dialect
+  (SQL for .NET/Node, YAML/XML for Java/Spring Boot)
+
+_When `hosting_model = PaaS`:_
+- `## App Service Configuration` — Plan tier, deployment slots, health probe path (`/health`)
+- `## Configuration & Secrets` — App Settings per environment, Key Vault references (no hardcoded values)
+- `## Identity` — Managed identity, RBAC assignments to downstream resources
+- `## Networking` — VNet integration, private endpoints if internal-only services required
+
+_When `hosting_model = on-prem`:_
+- Retain original scope: IIS site configuration, app pool identity, Windows Auth
+  (if `windows_auth_detected=true` and `hosting_model=on-prem`), network share mounts, certificate store
+
+---
+
+**Doc 6 (`target-deployment-architecture.md`) — required sections per `hosting_model`.**
+Pass `payload.rewrite.hosting_model` and the cluster inventory to the subagent prompt.
+
+_When `hosting_model = K8s`:_
+- `## Pipeline Stages` — ordered stages: (1) build + unit test per cluster in parallel,
+  (2) Docker build + push to Azure Container Registry per cluster image,
+  (3) Trivy or Snyk container security scan,
+  (4) Helm upgrade to dev namespace,
+  (5) integration + E2E gate,
+  (6) manual approval,
+  (7) Helm upgrade to staging then prod
+- `## Helm Chart Structure` — chart layout per cluster, `values.yaml` base +
+  `values-{env}.yaml` overlay per environment, no secrets in values files
+- `## Rollback Strategy` — `helm rollback {release}` per cluster; Liquibase rollback script
+  if the cluster owns schema changes
+- `## Environment Config Strategy` — ConfigMap overlay per environment, secret injection via
+  Key Vault CSI, no environment-specific branches or image rebuilds per environment
+
+_When `hosting_model = PaaS`:_
+- `## Pipeline Stages` — build → publish artifact → deploy to deployment slot → smoke test → swap
+- `## Environment Config` — App Settings per environment via pipeline variables, Key Vault references
+- `## Rollback` — slot swap reversal; document the swap command explicitly
+
+_When `hosting_model = on-prem`:_
+- Retain original scope: CI/CD pipeline for IIS deployment, deployment units, environment config files
+
+---
 
 **`## Coupling pattern resolutions` section — required in component, security, and integration docs.**
 Each of these three documents must include this section. Write one entry per critical/major coupling

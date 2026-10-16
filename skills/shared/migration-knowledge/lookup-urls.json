@@ -12,7 +12,10 @@
           { "type": "cve_exposure",         "primary": "https://learn.microsoft.com/security/updates",                        "fallback": null,                                         "confidence": "high" },
           { "type": "ecosystem_health",     "primary": "https://www.nuget.org/packages/Microsoft.NETCore.App",                "fallback": "https://github.com/dotnet/runtime/releases", "confidence": "high" },
           { "type": "tooling_availability", "primary": "https://learn.microsoft.com/dotnet/core/tools/",                      "fallback": null,                                         "confidence": "high" },
-          { "type": "breaking_changes",     "primary": "https://learn.microsoft.com/en-us/dotnet/core/compatibility/{target_version}.0", "fallback": null, "confidence": "high", "confidence_note": "Official Microsoft breaking-changes catalogue per .NET target version. Substitute {target_version} with the major version number at runtime (e.g. '10' → '/compatibility/10.0'). For multi-hop upgrades fetch each intermediate version page and merge." }
+          { "type": "breaking_changes",     "primary": "https://learn.microsoft.com/en-us/dotnet/core/compatibility/{target_version}.0", "fallback": null, "confidence": "high", "confidence_note": "Official Microsoft breaking-changes catalogue per .NET target version. Substitute {target_version} with the major version number at runtime (e.g. '10' → '/compatibility/10.0'). For multi-hop upgrades fetch each intermediate version page and merge." },
+          { "type": "official_docs_scaffold", "primary": "https://learn.microsoft.com/dotnet/core/tools/dotnet-new", "fallback": "https://learn.microsoft.com/dotnet/get-started", "confidence": "high", "confidence_note": "Official Microsoft docs for project creation. Check for deprecation notices on scaffolding tools." },
+          { "type": "endoflife_date_api",     "primary": "https://endoflife.date/api/dotnet.json", "fallback": "https://endoflife.date/dotnet", "confidence": "high", "confidence_note": "endoflife.date JSON API. Find entry where 'cycle' matches the major version; check 'eol' date and 'lts' flag." },
+          { "type": "tech_radar",             "primary": "https://www.thoughtworks.com/radar/languages-and-frameworks/net", "fallback": null, "confidence": "medium", "confidence_note": "ThoughtWorks Tech Radar. Missing entry = neutral. Ring: Adopt > Trial > Assess > Hold." }
         ]
       },
       {
@@ -22,7 +25,10 @@
           { "type": "cve_exposure",         "primary": "https://github.com/angular/angular/security/advisories",              "fallback": null,                                         "confidence": "high" },
           { "type": "ecosystem_health",     "primary": "https://www.npmjs.com/package/@angular/core",                         "fallback": null,                                         "confidence": "high" },
           { "type": "tooling_availability", "primary": "https://angular.dev/tools",                                           "fallback": null,                                         "confidence": "high" },
-          { "type": "breaking_changes",     "primary": "https://update.angular.io/",                                          "fallback": "https://github.com/angular/angular/blob/main/CHANGELOG.md", "confidence": "high", "confidence_note": "Angular Update Guide at update.angular.io is the authoritative interactive guide for breaking changes between versions. Fallback: GitHub CHANGELOG.md for raw release notes." }
+          { "type": "breaking_changes",     "primary": "https://update.angular.io/",                                          "fallback": "https://github.com/angular/angular/blob/main/CHANGELOG.md", "confidence": "high", "confidence_note": "Angular Update Guide at update.angular.io is the authoritative interactive guide for breaking changes between versions. Fallback: GitHub CHANGELOG.md for raw release notes." },
+          { "type": "official_docs_scaffold", "primary": "https://angular.dev/installation", "fallback": "https://angular.dev/tools/cli/setup-local", "confidence": "high", "confidence_note": "Official Angular docs for project creation and CLI setup." },
+          { "type": "endoflife_date_api",     "primary": "https://endoflife.date/api/angular.json", "fallback": "https://endoflife.date/angular", "confidence": "high", "confidence_note": "endoflife.date JSON API. Find entry where 'cycle' matches the major version; check 'eol' date." },
+          { "type": "tech_radar",             "primary": "https://www.thoughtworks.com/radar/languages-and-frameworks/angular", "fallback": null, "confidence": "medium", "confidence_note": "ThoughtWorks Tech Radar. Missing entry = neutral. Ring: Adopt > Trial > Assess > Hold." }
         ]
       },
       {
@@ -32,7 +38,10 @@
           { "type": "cve_exposure",         "primary": "https://github.com/facebook/react/security/advisories",               "fallback": null,                                         "confidence": "high" },
           { "type": "ecosystem_health",     "primary": "https://www.npmjs.com/package/react",                                 "fallback": null,                                         "confidence": "high" },
           { "type": "tooling_availability", "primary": "https://react.dev/learn/editor-setup",                                "fallback": null,                                         "confidence": "high" },
-          { "type": "breaking_changes",     "primary": "https://github.com/facebook/react/releases/tag/v{target_version}.0.0", "fallback": "https://react.dev/blog",                     "confidence": "high", "confidence_note": "GitHub Releases page for the target React major version. Substitute {target_version} at runtime (e.g. '19'). Fallback: react.dev/blog lists official upgrade guide posts (e.g. 'React 19 Upgrade Guide')." }
+          { "type": "breaking_changes",     "primary": "https://github.com/facebook/react/releases/tag/v{target_version}.0.0", "fallback": "https://react.dev/blog",                     "confidence": "high", "confidence_note": "GitHub Releases page for the target React major version. Substitute {target_version} at runtime (e.g. '19'). Fallback: react.dev/blog lists official upgrade guide posts (e.g. 'React 19 Upgrade Guide')." },
+          { "type": "official_docs_scaffold", "primary": "https://react.dev/learn/start-a-new-react-project", "fallback": "https://react.dev/learn", "confidence": "high", "confidence_note": "Official React docs for starting a new project. This page explicitly lists Create React App as no longer maintained — check for current recommended scaffold (Vite, Next.js, Remix)." },
+          { "type": "endoflife_date_api",     "primary": "https://endoflife.date/api/react.json", "fallback": "https://endoflife.date/react", "confidence": "medium", "confidence_note": "React has no formal EoL schedule — coverage may be absent. Use ecosystem_health signal as primary lifecycle indicator if UNKNOWN." },
+          { "type": "tech_radar",             "primary": "https://www.thoughtworks.com/radar/languages-and-frameworks/react-js", "fallback": null, "confidence": "medium", "confidence_note": "ThoughtWorks Tech Radar. Missing entry = neutral. Ring: Adopt > Trial > Assess > Hold." }
         ]
       },
       {
@@ -42,7 +51,10 @@
           { "type": "cve_exposure",         "primary": "https://www.oracle.com/java/technologies/javase/java-security-alerts.html", "fallback": null,                                  "confidence": "high" },
           { "type": "ecosystem_health",     "primary": "https://adoptium.net/temurin/releases/",                           "fallback": "https://endoflife.date/java",                 "confidence": "medium", "confidence_note": "JDK-level signal (Temurin release cadence). For framework-level health (Spring Boot, Quarkus etc.) the calling skill should include the framework as a separate source_layer." },
           { "type": "tooling_availability", "primary": "https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-pack", "fallback": null,                               "confidence": "high" },
-          { "type": "breaking_changes",     "primary": "https://www.oracle.com/java/technologies/javase/{target_version}-relnotes.html", "fallback": "https://github.com/openjdk/jdk/releases", "confidence": "medium", "confidence_note": "JDK-level breaking changes. Substitute {target_version} at runtime (e.g. '21'). For Spring Boot framework breaking changes use the spring-boot stack entry instead." }
+          { "type": "breaking_changes",     "primary": "https://www.oracle.com/java/technologies/javase/{target_version}-relnotes.html", "fallback": "https://github.com/openjdk/jdk/releases", "confidence": "medium", "confidence_note": "JDK-level breaking changes. Substitute {target_version} at runtime (e.g. '21'). For Spring Boot framework breaking changes use the spring-boot stack entry instead." },
+          { "type": "official_docs_scaffold", "primary": "https://adoptium.net/temurin/releases/", "fallback": "https://jdk.java.net/", "confidence": "high", "confidence_note": "Official Adoptium (Eclipse Temurin) releases. Check LTS status and active support end dates for the given version." },
+          { "type": "endoflife_date_api",     "primary": "https://endoflife.date/api/java.json", "fallback": "https://endoflife.date/java", "confidence": "high", "confidence_note": "endoflife.date JSON API. Find entry where 'cycle' matches the major version (e.g. '21'); check 'eol' date and 'lts' flag." },
+          { "type": "tech_radar",             "primary": "https://www.thoughtworks.com/radar/languages-and-frameworks/java", "fallback": null, "confidence": "medium", "confidence_note": "ThoughtWorks Tech Radar. Missing entry = neutral. Ring: Adopt > Trial > Assess > Hold." }
         ]
       },
       {
@@ -52,7 +64,10 @@
           { "type": "cve_exposure",         "primary": "https://www.python.org/news/security/",                               "fallback": null,                                         "confidence": "high" },
           { "type": "ecosystem_health",     "primary": "https://github.com/python/cpython/releases",                          "fallback": null,                                         "confidence": "medium" },
           { "type": "tooling_availability", "primary": "https://marketplace.visualstudio.com/items?itemName=ms-python.python", "fallback": null,                                        "confidence": "high" },
-          { "type": "breaking_changes",     "primary": "https://docs.python.org/{target_version}/whatsnew/index.html",        "fallback": "https://docs.python.org/3/whatsnew/changelog.html", "confidence": "high", "confidence_note": "Official Python What's New doc per version. Substitute {target_version} at runtime (e.g. '3.12')." }
+          { "type": "breaking_changes",     "primary": "https://docs.python.org/{target_version}/whatsnew/index.html",        "fallback": "https://docs.python.org/3/whatsnew/changelog.html", "confidence": "high", "confidence_note": "Official Python What's New doc per version. Substitute {target_version} at runtime (e.g. '3.12')." },
+          { "type": "official_docs_scaffold", "primary": "https://www.python.org/downloads/", "fallback": "https://docs.python.org/3/using/index.html", "confidence": "high", "confidence_note": "Official Python downloads page. Check status (active / security-fixes-only / EoL) for the given version." },
+          { "type": "endoflife_date_api",     "primary": "https://endoflife.date/api/python.json", "fallback": "https://endoflife.date/python", "confidence": "high", "confidence_note": "endoflife.date JSON API. Find entry where 'cycle' matches major.minor (e.g. '3.11'); check 'eol' date." },
+          { "type": "tech_radar",             "primary": "https://www.thoughtworks.com/radar/languages-and-frameworks/python", "fallback": null, "confidence": "medium", "confidence_note": "ThoughtWorks Tech Radar. Missing entry = neutral. Ring: Adopt > Trial > Assess > Hold." }
         ]
       },
       {
@@ -62,7 +77,10 @@
           { "type": "cve_exposure",         "primary": "https://nodejs.org/en/blog/vulnerability",                            "fallback": null,                                         "confidence": "high" },
           { "type": "ecosystem_health",     "primary": "https://github.com/nodejs/node/releases",                             "fallback": null,                                         "confidence": "medium" },
           { "type": "tooling_availability", "primary": "https://nodejs.org/en/download/",                                     "fallback": null,                                         "confidence": "high" },
-          { "type": "breaking_changes",     "primary": "https://nodejs.org/en/blog/release/v{target_version}.0.0",            "fallback": "https://github.com/nodejs/node/blob/main/doc/changelogs/CHANGELOG_V{target_version}.md", "confidence": "high", "confidence_note": "Official Node.js release blog and changelog per major version. Substitute {target_version} at runtime (e.g. '22')." }
+          { "type": "breaking_changes",     "primary": "https://nodejs.org/en/blog/release/v{target_version}.0.0",            "fallback": "https://github.com/nodejs/node/blob/main/doc/changelogs/CHANGELOG_V{target_version}.md", "confidence": "high", "confidence_note": "Official Node.js release blog and changelog per major version. Substitute {target_version} at runtime (e.g. '22')." },
+          { "type": "official_docs_scaffold", "primary": "https://nodejs.org/en/download/", "fallback": "https://nodejs.org/en/about/releases", "confidence": "high", "confidence_note": "Official Node.js download page. Check Active LTS / Maintenance LTS / End-of-life status for the given version." },
+          { "type": "endoflife_date_api",     "primary": "https://endoflife.date/api/nodejs.json", "fallback": "https://endoflife.date/nodejs", "confidence": "high", "confidence_note": "endoflife.date JSON API. Find entry where 'cycle' matches the major version (e.g. '22'); check 'eol' date and 'lts' flag." },
+          { "type": "tech_radar",             "primary": "https://www.thoughtworks.com/radar/languages-and-frameworks/node-js", "fallback": null, "confidence": "medium", "confidence_note": "ThoughtWorks Tech Radar. Missing entry = neutral. Ring: Adopt > Trial > Assess > Hold." }
         ]
       },
       {
@@ -73,7 +91,10 @@
           { "type": "cve_exposure",         "primary": "https://spring.io/security",                                          "fallback": null,                                         "confidence": "high" },
           { "type": "ecosystem_health",     "primary": "https://mvnrepository.com/artifact/org.springframework.boot/spring-boot", "fallback": "https://github.com/spring-projects/spring-boot/releases", "confidence": "high" },
           { "type": "tooling_availability", "primary": "https://start.spring.io/",                                            "fallback": null,                                         "confidence": "high" },
-          { "type": "breaking_changes",     "primary": "https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-{target_version}-Release-Notes", "fallback": "https://github.com/spring-projects/spring-boot/releases", "confidence": "high", "confidence_note": "Official Spring Boot release notes wiki page per target version. Substitute {target_version} with the major.minor version at runtime (e.g. '3.3')." }
+          { "type": "breaking_changes",     "primary": "https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-{target_version}-Release-Notes", "fallback": "https://github.com/spring-projects/spring-boot/releases", "confidence": "high", "confidence_note": "Official Spring Boot release notes wiki page per target version. Substitute {target_version} with the major.minor version at runtime (e.g. '3.3')." },
+          { "type": "official_docs_scaffold", "primary": "https://start.spring.io/", "fallback": "https://spring.io/projects/spring-boot#learn", "confidence": "high", "confidence_note": "Official Spring Initializr — canonical starting point for all new Spring Boot projects. Versions absent from the UI are EoL." },
+          { "type": "endoflife_date_api",     "primary": "https://endoflife.date/api/spring-boot.json", "fallback": "https://endoflife.date/spring-boot", "confidence": "high", "confidence_note": "endoflife.date JSON API. Find entry where 'cycle' matches major.minor (e.g. '3.3'); check 'eol' date." },
+          { "type": "tech_radar",             "primary": "https://www.thoughtworks.com/radar/languages-and-frameworks/spring-boot", "fallback": null, "confidence": "medium", "confidence_note": "ThoughtWorks Tech Radar. Missing entry = neutral. Ring: Adopt > Trial > Assess > Hold." }
         ]
       }
     ],
@@ -101,6 +122,12 @@
       "primary": "https://github.com/advisories?query=ecosystem%3A{ecosystem}+{stack}",
       "confidence": "UNKNOWN",
       "confidence_note": "Substitute {ecosystem} with 'npm' for JS stacks, 'maven' for Java, 'pip' for Python, 'nuget' for .NET. Returns UNKNOWN if no results found for the stack."
+    },
+    "tech_radar_base": {
+      "_comment": "ThoughtWorks Technology Radar A-Z index — used as canonical_url hint when per-stack tech_radar entry is not found. Missing entry is neutral, not a red flag.",
+      "canonical_url": "https://www.thoughtworks.com/radar/a-z",
+      "confidence": "medium",
+      "confidence_note": "Ring values: Adopt (proven, use it) > Trial (worth pursuing) > Assess (worth exploring) > Hold (proceed with caution). Not every technology has a Radar entry — absence is neutral."
     }
   },
   "replatform": {

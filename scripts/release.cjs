@@ -144,7 +144,7 @@ const pj      = readJSON(path.join(ROOT, '.claude-plugin/plugin.json'));
 const current = pj.version;
 const parts   = current.split('.').map(Number);
 if (bumpType === 'major')      { parts[0]++; parts[1] = 0; parts[2] = 0; }
-else if (bumpType === 'minor') { parts[0]++; parts[1]++; parts[2] = 0; }
+else if (bumpType === 'minor') { parts[1]++; parts[2] = 0; }
 else                           { parts[2]++; }
 const newVersion  = parts.join('.');
 const isBreaking  = args.includes('--breaking');

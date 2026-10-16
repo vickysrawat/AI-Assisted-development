@@ -396,6 +396,7 @@
 <nav class="sidebar">
   <div class="sidebar-section">
     <div class="sidebar-label">Orientation</div>
+    <a href="#prereqs" class="mandatory"><span class="step-dot">0</span> Prerequisites</a>
     <a href="#why" class="optional"><span class="nav-icon">◈</span> Why this exists</a>
     <a href="#fits" class="optional"><span class="step-dot">→</span> How it all fits</a>
     <a href="#layout" class="optional"><span class="nav-icon">📁</span> Repository layout</a>
@@ -430,6 +431,65 @@
   </div>
 </nav>
 <main>
+
+  <section id="prereqs">
+    <div class="section-eyebrow">Orientation · before you start</div>
+    <h2><em class="accent">Prerequisites</em></h2>
+    <p class="section-intro">Everything a plugin maintainer needs installed on a fresh machine before extending, testing, or releasing the plugin.</p>
+
+    <div class="step-card mandatory">
+      <div class="step-number">1</div>
+      <div class="step-header"><div class="step-title">Git (configured with name + email)</div><span class="tag tag-mandatory">Required</span></div>
+      <p class="step-desc">Install Git first — it is required for the audit trail, pre-commit governance hooks, and the release tagging step (<code>node scripts/release.cjs</code>). <strong>Windows:</strong> install <a href="https://git-scm.com/download/win" style="color:inherit;font-weight:600;">Git for Windows</a> — the plugin uses <code>C:\Program Files\Git\mingw64\bin\git.exe</code> and <code>C:\Program Files\Git\usr\bin\bash.exe</code> explicitly. Set your global user name and email so audit events record the correct actor.</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">verify + configure</span></div><div class="code-body"><pre>git --version
+git config --global user.name  "Your Name"
+git config --global user.email "you@example.com"</pre></div></div>
+    </div>
+
+    <div class="step-card mandatory">
+      <div class="step-number">2</div>
+      <div class="step-header"><div class="step-title">Node.js ≥ 18 + npm</div><span class="tag tag-mandatory">Required</span></div>
+      <p class="step-desc">Node.js 18 LTS or later is required for all helper scripts (<code>scripts/*.cjs</code>), the test suite (<code>npm test</code>), the release tooling (<code>npm run bump:*</code>, <code>npm run release</code>), the validators (<code>node tests/validate.js</code>), and the Claude Code CLI install. npm ships with Node.js — no separate install needed. Download from <strong>nodejs.org</strong> or use <code>nvm</code> / <code>fnm</code>.</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">verify</span></div><div class="code-body"><pre>node --version   <span class="cmt"># must print v18.x or higher</span>
+npm  --version   <span class="cmt"># typically 9.x or 10.x</span></pre></div></div>
+    </div>
+
+    <div class="step-card mandatory">
+      <div class="step-number">3</div>
+      <div class="step-header"><div class="step-title">Python 3.9+</div><span class="tag tag-mandatory">Required</span></div>
+      <p class="step-desc">The structural validator <code>tests/validate.py</code> cross-checks the CHANGELOG version, CLAUDE.md version line, consent-category agreement, and ensures no org name is hardcoded. It must pass before any release. Install Python 3.9 or later from <strong>python.org</strong>.</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">verify</span></div><div class="code-body"><pre>python --version   <span class="cmt"># or python3 --version — must be 3.9+</span></pre></div></div>
+    </div>
+
+    <div class="step-card mandatory">
+      <div class="step-number">4</div>
+      <div class="step-header"><div class="step-title">Claude Code</div><span class="tag tag-mandatory">Required</span></div>
+      <p class="step-desc">The plugin runs inside <strong>Claude Code</strong>. Install the VS Code extension (<em>Claude for VS Code</em>) or the Claude Code CLI via npm (requires Node.js from step 2). You need an Anthropic account with Claude access — a Pro or Team subscription gives you the context window required for generation and review skills.</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">CLI install (requires Node.js from step 2)</span></div><div class="code-body"><pre>npm install -g @anthropic-ai/claude-code</pre></div></div>
+      <div class="info"><span class="wi">ℹ</span><span>After installing or updating the VS Code extension, run <strong>Developer: Reload Window</strong> (<code>Ctrl+Shift+P</code>) to pick up changes.</span></div>
+    </div>
+
+    <div class="step-card recommended">
+      <div class="step-number">5</div>
+      <div class="step-header"><div class="step-title">Anthropic API key (for behaviour tests)</div><span class="tag tag-recommended">Recommended</span></div>
+      <p class="step-desc">The structural validators (<code>node tests/validate.js</code>, <code>python tests/validate.py</code>) run without an API key. The <strong>behaviour test suite</strong> (<code>node tests/runner.js</code>) does require one — it sends prompts to the API to verify skill scenarios. Set the key as a user environment variable.</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">powershell</span></div><div class="code-body"><pre>[System.Environment]::SetEnvironmentVariable('ANTHROPIC_API_KEY','sk-ant-...','User')</pre></div></div>
+      <div class="code-block"><div class="code-header"><span class="code-lang">bash / macOS</span></div><div class="code-body"><pre>export ANTHROPIC_API_KEY=sk-ant-...</pre></div></div>
+    </div>
+
+    <div class="step-card optional">
+      <div class="step-number">6</div>
+      <div class="step-header"><div class="step-title">Docker (optional)</div><span class="tag tag-optional">Optional</span></div>
+      <p class="step-desc">Only required if you are testing the <code>dynamic-scan</code> skill end-to-end (it runs OWASP ZAP in a container). No other skill or script needs Docker. Install Docker Desktop from <strong>docker.com</strong>.</p>
+    </div>
+
+    <h3>Install dependencies</h3>
+    <p>Once Node.js is confirmed, install the plugin's npm dependencies from the repo root. This gives you Jest (test runner), the bump-version script, and any shared utilities.</p>
+    <div class="code-block"><div class="code-header"><span class="code-lang">bash</span></div><div class="code-body"><pre>npm install          <span class="cmt"># installs devDependencies from package.json</span>
+npm test             <span class="cmt"># runs the full test suite — should print "N passed · 0 failed"</span>
+node tests/validate.js   <span class="cmt"># structural validator — must be green before any release</span></pre></div></div>
+    <div class="info"><span class="wi">ℹ</span><span><strong>Windows-specific:</strong> skills run git via <code>C:\Program Files\Git\mingw64\bin\git.exe</code>. If <code>setup-init</code> cannot detect this path, run <span class="cmd-pill">setup-sync</span> to repair it. <code>/dev/stdin</code> is unavailable on Windows — scripts that need to pipe data into <code>node -e</code> write to a temp file instead.</span></div>
+  </section>
 
   <section id="why">
     <div class="section-eyebrow">For plugin maintainers</div>

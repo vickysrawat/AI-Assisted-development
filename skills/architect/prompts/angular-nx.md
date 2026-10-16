@@ -48,29 +48,114 @@ Sections that cannot be determined: `> ⚠ Could not determine — needs manual 
 
 ## File 2 Prompt — architecture-flows.md
 
-You are a software architect documenting user and data flows in an Nx Angular monorepo.
-Read the component files, service files, and routing configuration for each app.
+You are a software architect documenting user-facing workflows in an Angular SPA (applies to both standard Angular and Nx monorepo projects).
 
-For each significant user journey (login, primary CRUD operations, key workflows):
-- Entry point: route URL and component
-- Component → service → HTTP call sequence
-- State changes triggered (NgRx dispatches, signal updates, local state)
-- Guard or resolver that runs before the component activates
-- Error handling path
+Read the component files, service files, routing configuration, NgRx store files (actions, reducers, effects, selectors), and signal-based state files for each app. Your goal is to produce a workflow reference that a developer or QA engineer can use to understand every user journey end-to-end — from the user's action to the HTTP call to the state update to the UI re-render.
 
-**Component Interaction Patterns** — for each app identify:
-- Input/Output chains between parent and child components
-- Any service-mediated cross-component communication
-- EventEmitter vs signal vs store patterns used
+**Do NOT produce a dependency graph or code call-chain diagram. Produce sequence diagrams of user-facing workflows.**
 
-**Library Usage Flows** — for each shared library, show a representative
-call flow of how an app component uses it end-to-end.
+---
 
-**Nx Affected Impact Map** — based on the dependency graph, list which apps
-are affected when each library changes. Present as: Library → Affected apps.
+**Step 1 — Enumerate ALL workflows.**
 
-Read actual component templates and TypeScript files — do not infer from filenames.
-Mark complex flows that need manual review: `> ⚠ Partial trace — review manually`
+Scan every route definition, every component with a user-triggered method (click handler, form submit, route activation), and every HTTP call in every service. Produce a numbered list of ALL distinct user journeys. A workflow is any user action that results in an HTTP call, a route navigation, or a meaningful state change. Do not limit to the "happy path" or "main features" — enumerate every workflow you can trace, including:
+
+- Authentication flows (login, logout, token refresh, SSO redirect)
+- Every CRUD operation for every entity (list, create, edit, delete, detail view)
+- Search and filter interactions that trigger HTTP calls
+- File upload / download flows
+- Navigation flows guarded by route guards or resolvers
+- Modal / dialog flows that submit data
+- Real-time / WebSocket subscription flows
+- Error and retry flows (HTTP interceptor behaviour, error boundary components)
+- Pagination, sorting, infinite scroll flows
+- Permission / role-based conditional flows
+
+For Nx monorepos: enumerate workflows per app. Group by app, then number workflows within each app.
+
+---
+
+**Step 2 — Write one section per workflow.**
+
+Use this exact structure for every workflow:
+
+**Heading:** `## Workflow N — Name`
+
+**Lead paragraph:** One or two sentences of plain English — what user action triggers this workflow, what the system does, and what the user sees when it completes.
+
+**Mermaid sequence diagram** (hard constraints):
+- `sequenceDiagram` syntax only — never `flowchart` or `graph`
+- Declare all actors/participants at the top using `actor` for human roles and `participant` for systems, with short alias and readable label
+- Include every participant that appears: user role, Component, Service, Angular HttpClient, Backend API, NgRx Store / Signals, Guards, Resolvers, Interceptors
+- Every HTTP call: verb + exact path + payload type in parentheses — read from actual service source
+- Every database/state operation: show dispatch, selector emit, or signal update
+- `alt`/`else` for conditional branches, `opt` for optional paths, `par` for concurrent operations
+- Response arrows use `-->>` (dashed)
+- Emit inside a fenced ` ```mermaid ` block
+
+**"What happens:" bullet list:** Bold heading `**What happens:**`, 4-6 bullets, plain English business rules, no TypeScript syntax or class names, intelligible to a non-technical reader.
+
+---
+
+**Diagram actor conventions:**
+
+| Actor label | When to use |
+|---|---|
+| `actor User` | The human interacting with the browser |
+| `participant Component as <ComponentName>` | The Angular component that owns the template event (use actual class name) |
+| `participant Service as <ServiceName>` | The injected service that owns the HTTP call (use actual class name) |
+| `participant HTTP as Angular HttpClient` | The Angular HttpClient layer (interceptors fire here) |
+| `participant API as Backend API` | The backend REST/GraphQL/WebSocket endpoint |
+| `participant Store as NgRx Store` | NgRx store (actions in, selectors out) |
+| `participant Store as Signals` | Signal-based state (if the project uses Angular signals instead of NgRx) |
+| `participant Guard as <GuardName>` | Route guard — show when a guard conditionally blocks or redirects |
+| `participant Resolver as <ResolverName>` | Route resolver — show when pre-fetched data is loaded before component activation |
+| `participant Interceptor as <InterceptorName>` | HTTP interceptor — show when auth token injection or global error handling is part of the flow |
+
+Show only the actors that actually participate in a given workflow. Do not include actors that play no role.
+
+---
+
+**NgRx / signals — show the full dispatch-select cycle:**
+
+For NgRx workflows: show `dispatch(ActionName({payload}))` on the arrow from Component or Effect to Store, and `selector emits <EntityList>` on the return arrow. If an Effect handles the HTTP call, add a `participant Effect as <EffectClassName>` and show the full: Store → Effect → HTTP → Effect → Store chain.
+
+For signal-based workflows: show `signal.set(value)` or `signal.update(fn)` on the arrow to Store, and `computed(() => ...)` emitting on the return arrow.
+
+---
+
+**Nx monorepo — additional requirements:**
+
+After the per-app workflow sections, add a final section:
+
+### Library Impact Map
+
+For each shared library in the monorepo, list which apps are affected if it changes:
+
+| Library | Affected Apps | Workflows Impacted |
+|---|---|---|
+| `@org/ui-components` | app-a, app-b | Workflow 1, 4, 7 (app-a); Workflow 2 (app-b) |
+
+---
+
+**Coverage requirement:**
+
+The Table of Contents at the top of the document must list every workflow. After writing all sections, verify: does every route in the router configuration have at least one corresponding workflow? Does every service method that calls HttpClient appear in at least one sequence diagram? If any are missing, add stub sections with `> ⚠ Partial trace — review manually`.
+
+---
+
+**Hard rules:**
+
+1. Table of Contents is ALWAYS the first thing in the file.
+2. Never group unrelated flows into one workflow for convenience.
+3. Never invent HTTP paths, API endpoints, or state management details — read from actual source files.
+4. `sequenceDiagram` only.
+5. Every HTTP verb + path must match an actual HttpClient call in source.
+6. Do not produce a Component Dependency Graph or Service Dependency Graph.
+7. Do not produce call-chain traces (module.function → module.function).
+8. If a service method exists but is never called from any component or effect you can find, note it as `> ⚠ Orphaned service method — not traced to any workflow`.
+
+Read actual TypeScript source files — component class bodies, service methods, NgRx effect classes, router module or standalone route arrays. Do not infer workflows from filenames or route paths alone.
 
 ---
 

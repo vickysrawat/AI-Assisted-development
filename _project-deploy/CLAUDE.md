@@ -77,8 +77,8 @@ execute the skill immediately — priority over chat.
 
 | Pattern | Action |
 |---|---|
-| `SAVE PLAN ADO-{ID}` | Write plan to disk → write ICEA draft to `temp/ADO-{ID}-icea.md` → tell developer to open in VS Code preview |
-| `SAVE PLAN ADO-{ID} CONFIRM` | Save plan with open questions — bypass warning |
+| `SAVE PLAN ADO-{ID}` | **Governance-mode aware** — read `.claude/dream-init-state.json` → `governance_mode`. **lightweight:** (1) write plan to `docs/Release{R}/Sprint{S}/UserStory{ID}/ADO-{ID}-{feature}.plan.md` (Status: DRAFT), (2) run critic (`$PLUGIN_DIR/skills/critic/SKILL.md`, mode=plan, source=internal) → on PASS: stamp `Status: ✅ Approved`, write audit entry (`node .claude/hooks/audit-append.cjs`), auto-generate test plan (`$PLUGIN_DIR/skills/test-plan/SKILL.md` with `--source plan --subagent`), confirm and prompt `IMPLEMENT ADO-{ID}`; on REVISE: show findings, max 1 auto-retry (then stop with "Fix the plan and re-run SAVE PLAN ADO-{ID}"). **full (default):** write plan to disk → write ICEA draft to `temp/ADO-{ID}-icea.md` → tell developer to open in VS Code preview |
+| `SAVE PLAN ADO-{ID} CONFIRM` | Save plan with open questions — bypass warning. Governance-mode aware: same routing as `SAVE PLAN ADO-{ID}` (lightweight ceremony or full ceremony) but skips the open-questions guard |
 | `SAVE ICEA ADO-{ID}` | Run critic gate → save critic output → copy `temp/ADO-{ID}-icea.md` to permanent docs/ → delete temp → write Tech Spec to `temp/ADO-{ID}-tech.md` |
 | `SAVE ICEA ADO-{ID} ACCEPT` | Override critic REVISE verdict and save ICEA anyway (with audit note) |
 | `SAVE TECH ADO-{ID}` | Write Tech Spec → auto-approve ICEA (runs icea-approve inline) → auto-generate test plan → prompt to IMPLEMENT |

@@ -556,3 +556,57 @@
 ### [capture] [2026-10-09] Approach abandoned — REFRESH DOMAIN WEBSEARCH variant not needed
 ### [capture] [2026-10-09] Task completed — WebSearch gate narrowed to business-context grounding only
 ### [capture] [2026-10-08] Task completed — WebSearch gate: default-off policy
+
+### [capture] [2026-10-12] Architecture decision — architect File 2 prompts: workflow sequence diagrams, not call chains
+### [capture] [2026-10-09] Approach abandoned — REFRESH DOMAIN WEBSEARCH variant not needed
+
+### [capture] [2026-10-12] Task completed — architect File 2 prompts updated across all 8 stacks
+### [capture] [2026-10-12] Architecture decision — architect File 2 prompts: workflow sequence diagrams, not call chains
+
+### [capture] [2026-10-12] Plan approved — architect File 2 output validation (SKILL.md + script + tests)
+### [capture] [2026-10-12] Task completed — architect File 2 prompts updated across all 8 stacks
+
+### [capture] [2026-10-12] Task completed — validate-arch-flows.cjs + tests (44/44 passing)
+### [capture] [2026-10-12] Plan approved — architect File 2 output validation (SKILL.md + script + tests)
+
+### [capture] [2026-10-13] Plan approved — update-arch Mermaid diagram refresh + flows/callchains support
+### [capture] [2026-10-12] Plan approved — architect File 2 output validation (SKILL.md + script + tests)
+
+### [capture] [2026-10-14] Plan approved — rewrite skill: add infrastructure footprint detection to Options phase
+### [capture] [2026-10-12] Task completed — validate-arch-flows.cjs + tests (44/44 passing)
+
+### [capture] [2026-10-15] Approach abandoned — infra footprint inside per-option blocks was wrong
+### [capture] [2026-10-15] Plan approved — rewrite skill: infra via hosting_model question + design doc expansion
+
+### [capture] [2026-10-15] Plan approved — migration skill: stack verification + delivery concerns layer
+### [capture] [2026-10-15] Architecture decision — delivery concerns pre-flight gate format
+### [capture] [2026-10-15] Approach abandoned — infra footprint inside per-option blocks was wrong
+
+### [capture] [2026-10-15] Plan approved — delivery concerns matrix: final format approved
+### [capture] [2026-10-15] Plan approved — migration skill: stack verification + delivery concerns layer
+
+### [capture] [2026-10-16] Error resolved — lightweight mode: test plan not generated after SAVE PLAN
+
+### [capture] [2026-10-16] Error resolved — ICEA critic output not saved to disk in full mode
+### [capture] [2026-10-16] Error resolved — tech spec section header hook: exact-match blocked numbered headings
+### [capture] [2026-10-16] Error resolved — lightweight mode: test plan not generated after SAVE PLAN
+
+### [capture] [2026-10-16] Task completed — Python and React tech spec overlays added
+
+### [capture] [2026-10-16] Error resolved — tech spec freehand writing bypassed structural completeness gate
+### [capture] [2026-10-16] Task completed — Python and React tech spec overlays added
+
+### [capture] [2026-10-16] Task completed — techspec-python-fastapi.md substantially revised
+
+### [capture] [2026-10-16] Task completed — techspec-refresh skill created
+### [capture] [2026-10-16] Architecture decision — four-pass structure vs web-search-only for overlay refresh
+
+### [capture] [2026-10-16] Architecture decision — EF1 DB detection: packages over stack_key categories
+### [capture] [2026-10-16] Architecture decision — EF1 split into EF1a (pattern detection) + EF1b (dialect compatibility)
+### [capture] [2026-10-16] Task completed — techspec-refresh skill created
+
+### [capture] [2026-10-16] Error resolved — release.cjs minor bump incremented major version instead
+### [capture] [2026-10-16] Architecture decision — EF1 DB detection: packages over stack_key categories
+
+### [capture] [2026-10-16] Task completed — migration skill: stack verification + delivery concerns layer
+### [capture] [2026-10-16] Error resolved — release.cjs minor bump incremented major version instead

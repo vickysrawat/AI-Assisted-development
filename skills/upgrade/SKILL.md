@@ -619,6 +619,24 @@ These risks are NOT resolved by completing the upgrade — state each explicitly
 - Ecosystem signal at target version: `{target ecosystem_health.signal} [{source_url}, {retrieved_date}]`
   — or `WARNING: ecosystem signal not available for {stack} {target version} — check: {canonical_url}` if UNKNOWN
 
+**Stack currency check (from stack_verification bundle):**
+- endoflife.date: target version `{target_version}` supported =
+  `{target stack_verification.endoflife_date.version_supported}`,
+  EoL date `{eol_date} [{source_url}, {retrieved_date}]`
+  — or `WARNING: target version not found in endoflife.date — check: {canonical_url}` if UNKNOWN.
+  This is a second, API-level confirmation of the EoL signal above — cite both if they differ.
+- ThoughtWorks Tech Radar: `{target stack_verification.tech_radar.ring}`
+  `[{source_url}, {retrieved_date}]`
+  — if `ring = "UNKNOWN"`: `Note: {target stack} not found in ThoughtWorks Tech Radar — neutral signal`.
+  Never treat a missing Radar entry as a risk finding.
+- Official docs notice: include this line ONLY when
+  `target stack_verification.official_docs.deprecated_scaffold_notice` is non-null:
+  `⚠ {deprecated_scaffold_notice} — see {source_url}`. Omit entirely when null.
+- Summary: surface `{target stack_verification.verification_summary}` verbatim as a one-sentence
+  callout at the end of this section. If all three tiers returned UNKNOWN, the summary will read
+  "Could not verify {stack}@{version} — developer should confirm stack currency before proceeding."
+  — retain that wording and flag it as a manual check item in the report.
+
 **The gap/risk report IS Document 7 (feasibility).** Per `feasibility-spec.md`, this spec governs the
 report's format directly — no separate `migration-feasibility.md` is produced for upgrade.
 

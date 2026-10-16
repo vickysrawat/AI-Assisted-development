@@ -50,29 +50,82 @@ Sections where the answer cannot be determined: write
 
 ## File 2 Prompt — architecture-callchains.md
 
-You are a software architect tracing request flows through a Spring Boot app.
-Read every controller class, then follow each handler method through the full
-call chain: controller → service → repository → database or external API.
+You are a software architect documenting every user-facing API workflow in a Spring Boot project as sequence diagrams. Your audience is developers who do not know the codebase. Your output must show every HTTP endpoint as a Mermaid sequence diagram with a plain-English summary.
 
-For each endpoint trace:
-- Entry point: controller class, method name, route
-- Every method call in sequence with fully qualified class/bean name
-- At each step: which database (name the datasource) or external service is
-  called, and how (JPA repository, `RestClient`/`WebClient`, JDBC)
-- Any parallel/async operations (`@Async`, `CompletableFuture`) — list what runs in parallel
-- Conditional branches that significantly change the flow (feature flags, null short-circuits)
-- Return type at each layer
+---
 
-After all call chains, produce a **Bean-Level Dependency Graph**: for each
-non-trivial bean, read its constructor and list every injected dependency by type.
+**Step 1 — Enumerate all workflows.**
 
-Then produce two tables:
-- **Highest Fan-In** (top 10 types injected into the most constructors)
-- **Highest Fan-Out** (top 10 beans with the most constructor parameters)
+Read every `@RestController` and `@Controller` class. For each `@GetMapping`, `@PostMapping`, `@PutMapping`, `@PatchMapping`, `@DeleteMapping`, or `@RequestMapping` method, treat it as one workflow. Group by resource or feature area (e.g. all handler methods in `OrderController` are the "Orders" feature group).
 
-Read actual constructors and method bodies — do not infer from type names alone.
-If a method body is too large to trace fully, mark
-`> ⚠ Partial trace — complex method, review manually`.
+Produce a **Table of Contents** at the top of the document in this format:
+
+| # | Workflow | HTTP Verb + Route |
+|---|----------|-------------------|
+| 1 | Create Order | POST /api/orders |
+| 2 | Get Order by ID | GET /api/orders/{id} |
+
+Number workflows sequentially across all controllers. Every mapped handler method in every controller must appear — do not omit "minor" endpoints.
+
+---
+
+**Step 2 — For each workflow, write a section.**
+
+**Heading:** `## Workflow N — Name` (use a plain-English name for the action, not the method name)
+
+**Lead paragraph:** One paragraph — plain English, what HTTP request triggers this workflow, who calls it, and what business outcome it produces. No code jargon. No class names.
+
+**Mermaid sequence diagram** (hard constraints):
+- `sequenceDiagram` syntax only — never `flowchart` or `graph`
+- Declare all actors/participants at the top: `actor Caller as API Caller`, then `participant` for each layer
+- Standard actor set: `API Caller` → `{ControllerClass}` → `{ServiceClass}` → `{RepositoryClass}` → `{DataSourceName}` → `{ExternalServiceName}` (include only what the workflow actually calls)
+- Every HTTP call: verb + exact route + payload type, e.g. `Caller->>Ctrl: POST /api/orders (OrderRequest)`
+- Every database call: SQL operation + entity/table name, e.g. `Repo->>DB: INSERT INTO orders` or `Repo->>DB: SELECT FROM orders WHERE id = ?`
+- Every external call: HTTP method + endpoint, e.g. `Svc->>Ext: POST https://payments.api/charge`
+- `alt`/`else` blocks for meaningful branching (validation failure, `Optional.empty()` not-found, auth failure, business rule guard)
+- `opt` blocks for optional paths (optional cache lookup, optional event publish)
+- `par` blocks for parallel operations (`@Async`, `CompletableFuture.allOf`) — list each parallel branch explicitly
+- If a `@Service` queries the DB directly via JDBC rather than through a repository, show `Svc->>DB` directly — do not invent a repository actor
+- Response arrows use `-->>` (dashed), e.g. `Ctrl-->>Caller: HTTP 201 Created {id}`
+- Emit inside a fenced ` ```mermaid ` block
+
+**"What happens:" bullet list:** Bold heading, 4-6 bullets, plain English only — no class names, bean names, or technical terms a non-developer would not understand. Cover: what triggers the workflow, what the server validates, what data it reads or writes, what the caller receives, what happens on the main error path.
+
+---
+
+**Actor naming:**
+
+| Actor label | Represents |
+|---|---|
+| `API Caller` | The external system or client sending the HTTP request |
+| `{ControllerClass}` | The Spring `@RestController` that receives the request (use actual class name) |
+| `{ServiceClass}` | The `@Service` bean handling business logic (use actual bean class name) |
+| `{RepositoryClass}` | The `@Repository`, JPA repository interface, or DAO (use actual name) |
+| `{DataSourceName}` | The database (use the datasource name from `application.yml` / `application.properties`) |
+| `{ExternalServiceName}` | `RestClient`, `WebClient`, or external SDK target — include only when the workflow actually calls it |
+
+---
+
+**Completeness rules:**
+
+- Every mapped handler method in every controller = one workflow section. Do not skip any.
+- If a handler delegates 100% of its logic to another method or bean, trace into that bean until you reach an actual service or repository call.
+- If a method body is too large or deeply nested to trace fully, emit the diagram up to the point traceable and mark the stopping point with `> ⚠ Partial trace — complex method, review manually`
+- Do not invent actors, database tables, external services, or entity names not present in source.
+- Sections where the target cannot be determined: write `> ⚠ Could not determine — needs manual input`
+
+---
+
+**Hard rules:**
+
+1. Table of Contents is ALWAYS the first thing in the file.
+2. Never group unrelated endpoints into one workflow for convenience.
+3. Never invent database table names, HTTP routes, or external service details — read from source.
+4. `sequenceDiagram` only.
+5. Every HTTP verb + route must match an actual `@GetMapping`/`@PostMapping`/etc. annotation in source.
+6. Every DB table or entity name must match an actual `@Entity` class, `@Table` annotation, or SQL script in source.
+7. Do not produce a Bean-Level Dependency Graph.
+8. Do not produce Fan-In / Fan-Out tables — those belong in `architecture-reference.md`.
 
 ---
 

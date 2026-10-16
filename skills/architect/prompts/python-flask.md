@@ -45,21 +45,72 @@ Sections where the answer cannot be determined: write
 
 ## File 2 Prompt — architecture-flows.md
 
-You are a software architect tracing request flows through a Flask app.
-Read each view, then follow each through: route → service → repository/data-access
-→ database or external API.
+You are a software architect producing developer-facing workflow documentation for a Flask application. Your audience is developers who do not know the codebase. Your output must show every user-facing workflow as a Mermaid sequence diagram with a plain-English summary.
 
-For each endpoint trace:
-- Entry point: blueprint/module, view function, rule
-- Every call in sequence with fully qualified module.function name
-- At each step: which database or external service, and how (ORM, requests/httpx)
-- Any out-of-band work (Celery/RQ) — list it
-- Conditional branches (auth decorators, feature flags) that change the flow
-- Response shape at each layer
+---
 
-After the call chains, produce a **Dependency Graph** of inter-module imports.
-If a view is too large to trace fully, mark
-`> ⚠ Partial trace — complex view, review manually`.
+### Step 1 — Discovery: build a complete workflow inventory
+
+Read ALL blueprint and route files. For each route function record:
+- HTTP verb + full path (from `@app.route`, `@blueprint.route`, or `MethodView` decorators)
+- What user action or system event triggers it
+- What it returns / what state it changes
+
+Group related routes into logical workflows. A workflow is a user action that may span more than one HTTP call. Do NOT create one workflow per route function. Name each workflow with a short, user-facing label and number them sequentially starting at 1.
+
+---
+
+### Step 2 — Table of Contents (MUST be first in the file)
+
+The very first content must be: a one-line preamble describing the app and its actors, then a Table of Contents table with columns `#`, `Workflow`, and `Description`. List ALL workflows. No workflow sections appear before the TOC is complete.
+
+---
+
+### Step 3 — Per-workflow section
+
+For each workflow, in order:
+
+**Heading:** `## Workflow N — Name`
+
+**Lead paragraph:** 1-3 sentences — what user role triggers this, what UI action starts it, what it accomplishes in business terms. No code identifiers.
+
+**Mermaid sequence diagram** (hard constraints):
+- `sequenceDiagram` syntax only — never `flowchart` or `graph`
+- Declare all actors/participants at the top: `actor` for human roles, `participant` for systems, with short alias and readable label
+- Include every participant: user role, Browser/Client, Flask, each named database, each external service
+- Every HTTP call: verb + exact path + payload type in parentheses — read from actual blueprint/route decorator source
+- Every DB operation: SQL type + table name — read from actual SQLAlchemy model, `db.session` call, or raw SQL string in source
+- Every external service call: protocol + operation
+- `alt`/`else` for conditional branches (including `@login_required`, `before_request` guards, and feature flags), `opt` for optional paths, `par` for concurrent operations
+- Response arrows use `-->>` (dashed)
+- Emit inside a fenced ` ```mermaid ` block
+
+**"What happens:" bullet list:** Bold heading, 4-6 bullets, plain English business rules, no code identifiers, intelligible to a non-technical reader.
+
+---
+
+### Step 4 — Coverage requirement
+
+Document ALL user-facing workflows — do not skip minor ones. If there are 16, document all 16. Background/scheduler-triggered routes (Celery tasks, APScheduler jobs, Click CLI commands registered on the app) are included with a note in the lead paragraph.
+
+---
+
+### Step 5 — Fallbacks for untraceable flows
+
+Emit what IS traceable. Replace unknown steps with `> ⚠ Could not determine — needs manual input`. Never invent table names, paths, or actor names. Never omit a workflow because it is partially untraceable.
+
+---
+
+### Hard rules
+
+1. Table of Contents is ALWAYS the first thing in the file.
+2. Never group unrelated routes into one workflow for convenience.
+3. Never invent database table names, HTTP paths, or external service details — read from source.
+4. `sequenceDiagram` only.
+5. Every HTTP verb + path must match an actual route decorator in source.
+6. Every DB table name must match an actual SQLAlchemy model class, `__tablename__` string, or migration in source.
+7. Do not produce a Dependency Graph of inter-module imports.
+8. Do not produce call-chain traces (module.function → module.function).
 
 ---
 

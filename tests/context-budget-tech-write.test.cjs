@@ -53,23 +53,43 @@ function run(filePath, content) {
 const EPIC_STATUS = 'Status: DRAFT · EPIC · 10 SP total';
 const STORY_STATUS = 'Status: DRAFT';
 
-// EPIC spec: has ## Overview, omits the three per-story sections by design.
+// All 13 required sections (expanded list from RULES).
+const ALL_STORY_SECTIONS = [
+  '## Overview', '## AC Coverage Matrix', '## Files Changed', '## API Changes',
+  '## Auth & Security', '## Error Handling', '## Sizing and Story Breakdown',
+  '## Definition of Done', '## Open Questions', '## Request Flow',
+  '## Rollback', '## Handover', '## Test Cases',
+];
+// Non-exempt sections an EPIC spec must still include (EPIC_EXEMPT_SECTIONS removes 7 of the 13).
+const EPIC_REQUIRED = [
+  '## Overview', '## Sizing and Story Breakdown', '## Definition of Done',
+  '## Open Questions', '## Rollback', '## Handover',
+];
+
+// EPIC spec: has all non-exempt required sections, omits the 7 per-story-exempt sections.
 const epicNoStorySections = pad([
-  '# Epic Tech Spec — sample', EPIC_STATUS, '', '## Overview', 'Epic overview prose.', '',
-  '## Story Breakdown', 'Story rows here.', '', '## Definition of Done — Epic', 'Done items.',
+  '# Epic Tech Spec — sample', EPIC_STATUS, '',
+  ...EPIC_REQUIRED.flatMap(s => [s, 'content here.', '']),
 ]);
 // EPIC spec missing ## Overview — must still block.
 const epicNoOverview = pad([
-  '# Epic Tech Spec — sample', EPIC_STATUS, '', '## Story Breakdown', 'Story rows here.',
+  '# Epic Tech Spec — sample', EPIC_STATUS, '',
+  ...EPIC_REQUIRED.filter(s => s !== '## Overview').flatMap(s => [s, 'content.', '']),
 ]);
-// Non-epic (story) spec missing the three sections — must block.
+// Non-epic (story) spec missing most required sections — must block.
 const storyNoSections = pad([
   '# Tech Spec — sample', STORY_STATUS, '', '## Overview', 'Story overview prose.',
 ]);
-// Complete story spec — must be allowed.
+// Complete story spec with all 13 required sections — must be allowed.
 const storyComplete = pad([
-  '# Tech Spec — sample', STORY_STATUS, '', '## Overview', 'Story overview prose.', '',
-  '## AC Coverage Matrix', 'matrix', '', '## Files Changed', 'files', '', '## Test Cases', 'tests',
+  '# Tech Spec — sample', STORY_STATUS, '',
+  ...ALL_STORY_SECTIONS.flatMap(s => [s, 'content here.', '']),
+]);
+// Complete story spec with numbered section headings — must be allowed (e.g. ## 1. Overview).
+const storyCompleteNumbered = pad([
+  '# Tech Spec — sample', STORY_STATUS, '',
+  ...ALL_STORY_SECTIONS.map((s, i) => s.replace('## ', `## ${i + 1}. `))
+    .flatMap(s => [s, 'content here.', '']),
 ]);
 
 const cases = [
@@ -81,6 +101,8 @@ const cases = [
     run('temp/ADO-9004-Story-1-tech.md', storyNoSections) === 2],
   ['Complete story spec -> ALLOW', () =>
     run('temp/ADO-9004-Story-1-tech.md', storyComplete) === 0],
+  ['Complete story spec with numbered headings (## 1. Overview) -> ALLOW', () =>
+    run('temp/ADO-9004-Story-1-tech.md', storyCompleteNumbered) === 0],
 ];
 
 let passed = 0, failed = 0;

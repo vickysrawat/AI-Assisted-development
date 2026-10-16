@@ -51,6 +51,37 @@ repurpose a core field; only add.
 }
 ```
 
+## `delivery_concerns` payload field (rewrite + replatform only)
+
+Written at Step 2.2 (rewrite) or Step R1.2 (replatform) after the delivery concerns pre-flight.
+Not present in the upgrade payload — upgrade does not author infrastructure from scratch.
+
+```jsonc
+"delivery_concerns": {
+  "mandated": {              // concerns org already decided before the skill ran
+    "5": "GitHub Actions",
+    "6": "Terraform"
+  },
+  "chosen": {                // concerns resolved during the pre-flight gate
+    "1": "Docker Compose",
+    "2": "Managed containers (Container Apps)",   // rewrite: from Q2; replatform: from APPROVE OPTIONS
+    "3": null,               // null = not applicable (K8s packaging when non-K8s target)
+    "4": "Stack-native (EF Core)",
+    "5": "GitHub Actions",   // replatform: carried from R1 intake; rewrite: from pre-flight
+    "6": "Bicep",            // replatform: carried from R1 intake; rewrite: from pre-flight
+    "7": "Env vars",
+    "8": "Platform-native logging"
+  }
+}
+```
+
+**Concern index:** 1=Local dev · 2=Deployment target · 3=K8s packaging · 4=DB migrations ·
+5=CI/CD · 6=IaC · 7=Config & secrets · 8=Observability.
+Full catalog + options: `skills/shared/migration-knowledge/refs/specs/delivery-concerns.md`.
+
+**Additive, absent-tolerant.** A ledger without `delivery_concerns` is valid — it means
+the pre-flight step has not run yet or the skill version predates this field.
+
 `source.stack`/`from`/`to` carry the detector's `SRC.primary.token`/`version` (from
 `scripts/migration-source-detect.cjs`) and the chosen target version. `source.roots` (string[],
 optional, absent-tolerant) records the source root(s) the detector scanned — the repo and/or
@@ -69,8 +100,8 @@ shared contract and opaque to the others:
 ```jsonc
 "payload": {
   "upgrade":    { "hops": ["7","8"], "baseline_tag": "pre-upgrade/dotnet-6", "gate_verdicts": {} },
-  "rewrite":    { "clusters": [], "BAL": {}, "ERL": null, "DAG": [], "posture": "port" },
-  "replatform": { "resources": [], "IaC": [], "NFR": {} }
+  "rewrite":    { "clusters": [], "BAL": {}, "ERL": null, "DAG": [], "posture": "port", "delivery_concerns": { "mandated": {}, "chosen": {} } },
+  "replatform": { "resources": [], "IaC": [], "NFR": {}, "delivery_concerns": { "mandated": {}, "chosen": {} } }
 }
 ```
 

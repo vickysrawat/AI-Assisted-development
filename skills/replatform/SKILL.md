@@ -75,6 +75,7 @@ Detect source runtime topology
   → R1 Intake: 6R posture + integration verification + oracle mode + TCO options + NFR spec + feasibility
      options presented per options-insight-spec.md (basis · comparative insight · web-grounded · triggered judge)
      APPROVE OPTIONS
+  → R1.2 Remaining delivery concerns (concerns #1, #3, #4, #7, #8 — #2, #5, #6 resolved at intake)
   → R1.5 Target design documents (design-revision-spec.md → document-orchestrator.md)
      feedback loop (document-feedback.md · option-change-spec.md) → APPROVE DESIGN
   → R2 Decompose by cloud capability (landing zone = Tier-0 first; reads target-infrastructure-architecture)
@@ -346,6 +347,66 @@ node scripts/checkpoint-ledger.cjs set-payload --skill=replatform --ado={ADO_ID}
 ```
 The `manifest-read-guard.cjs` hook arms after this write — subsequent Read calls to the manifest
 are blocked and redirected to `source_context.summary` in the ledger.
+
+## Step R1.2 — Remaining Delivery & Operations Concerns
+
+> Runs immediately after APPROVE OPTIONS — before R1.5 design document authoring.
+
+Concerns #2 (deployment target), #5 (CI/CD), and #6 (IaC flavor) are **already resolved**
+from the R1 intake questions (step 5). Carry them forward directly from the checkpoint.
+
+Read `$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/delivery-concerns.md`
+for the full options catalog, situation-description criteria, and source references.
+
+**Present the pre-flight checklist for the remaining concerns only:**
+
+> The following delivery concerns were not covered in the R1 intake.
+> Mark any your org has already decided, or reply "none" to accept all defaults.
+> For mandated items, include your org's choice (e.g. "1=Dev Containers, 7=Key Vault").
+>
+> [Render concerns #1, #4, #7, #8 from delivery-concerns.md with
+>  [simple ← default] / [complex] labels and situation-description text.
+>  Also render #3 (K8s packaging) ONLY if the selected option includes AKS or Kubernetes.]
+
+**Merge intake-resolved and pre-flight-resolved concerns and write to the ledger:**
+```bash
+cat > ".claude/migration/{ADO_ID}/delivery-concerns.json" << 'EOF'
+{
+  "delivery_concerns": {
+    "mandated": { },
+    "chosen": {
+      "1": "{local dev choice or default}",
+      "2": "{from APPROVE OPTIONS — already resolved}",
+      "3": "{K8s packaging choice or null}",
+      "4": "{DB migrations choice or default}",
+      "5": "{cicd-platform from R1 step 5 intake — already resolved}",
+      "6": "{iac-flavor from R1 step 5 intake — already resolved}",
+      "7": "{config/secrets choice or default}",
+      "8": "{observability choice or default}"
+    }
+  }
+}
+EOF
+node scripts/checkpoint-ledger.cjs set-payload \
+  --skill=replatform --ado={ADO_ID} --payload-file=".claude/migration/{ADO_ID}/delivery-concerns.json"
+```
+
+Write a `[DECISION]` migration log entry:
+```
+[DECISION] Delivery concerns resolved.
+  Local dev: {1} | Deployment: {2} (from options) | K8s packaging: {3 or N/A} | DB migrations: {4}
+  CI/CD: {5} (from intake) | IaC: {6} (from intake) | Secrets: {7} | Observability: {8}
+  Mandated by org: {list or "none"}
+```
+
+**R1.5 design document subagents receive `delivery_concerns` from the checkpoint payload** —
+`target-infrastructure-architecture.md` and `target-deployment-architecture.md` are authored
+using the resolved tool choices, not open questions.
+
+```bash
+node scripts/checkpoint-ledger.cjs set-gate \
+  --skill=replatform --ado={ADO_ID} --gate=delivery_concerns_resolved --verdict=PASS
+```
 
 ## Step R1.5 — Target design documents (new)
 

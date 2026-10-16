@@ -11,7 +11,8 @@
 #   techspec-aspnet-api-angular.md  — ASP.NET/dotnet Web API + Angular          [available]
 #   techspec-angular-nodejs.md      — Angular + Node.js [+ optional .NET API]   [available]
 #   techspec-java-spring-angular.md — Java Spring Boot + Angular                [future]
-#   techspec-python-fastapi.md      — Python FastAPI + Angular/React            [future]
+#   techspec-python-fastapi.md      — Python FastAPI/Django/Flask + Angular/React [available]
+#   techspec-react-nodejs.md        — React + Node.js [+ optional .NET or Python] [available]
 
 ---
 
