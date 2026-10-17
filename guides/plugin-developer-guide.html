@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- documents-plugin-version: 3.25.0 -->
+<!-- documents-plugin-version: 3.26.0 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -370,7 +370,7 @@
   <div class="hero-grid"></div>
   <div class="hero-glow"></div>
   <div class="hero-content">
-    <div class="hero-tag" style="margin-bottom:12px;">Plugin Developer Guide · v3.25.0</div>
+    <div class="hero-tag" style="margin-bottom:12px;">Plugin Developer Guide · v3.26.0</div>
     <h1>ai-assisted-<em>development</em></h1>
     <p class="sub">
       For plugin <strong>maintainers</strong> — how the commands, skills, rules, shared specs,
@@ -378,7 +378,7 @@
       <code>.claude-plugin/plugin.json</code> and guarded by deterministic validators.
     </p>
     <div class="hero-badges">
-      <span class="badge badge-gold">v3.25.0</span>
+      <span class="badge badge-gold">v3.26.0</span>
       <span class="badge badge-blue">46 commands</span>
       <span class="badge badge-cyan">48 skills</span>
       <span class="badge badge-cyan">43 rules</span>
@@ -559,6 +559,7 @@ node tests/validate.js   <span class="cmt"># structural validator — must be gr
       </tbody>
     </table>
     <p>The authoritative table is <code>skills/shared/source-file-consent.md</code>; <code>validate.py</code> errors if a SKILL.md's token disagrees with it. Skills route to models by task type (see Model routing) and reason through named expert personas kept consistent across the suite.</p>
+    <p>Key skill changes in v3.26.0: new <strong>techspec-refresh</strong> skill (<code>skills/techspec-refresh/SKILL.md</code>) — four-pass audit and refresh harness for tech spec overlay templates. Pass 1 (self-consistency): checks DO NOT rules vs code snippets, API table HTTP status reachability from code, Files Changed rows vs implementation sections, layer contract vs return type annotations. Pass 2 (cross-layer contract): verifies frontend error handlers match the framework's actual response shape (e.g. FastAPI 422 <code>detail</code> is <code>list[{loc,msg,type}]</code>, not a string); confirms repository→service type flow. Pass 3 (LLM-readability + patterns): structural conventions (DO NOT block, layer contract in header, conditional guards, AC tags, tests section); universal coding patterns; stack-specific idioms (React 19+, Angular 17+, FastAPI <code>Annotated[]</code>). Pass 4 (environment fit): detects ORM vs Dapper/raw SQL; for raw SQL checks every SQL string against all databases inferred from package dependencies — multi-DB aware. Keyword handlers: <code>CHECK TECHSPEC</code> (offline), <code>REFRESH TECHSPEC {overlay}</code>, <code>REFRESH TECHSPEC ALL</code>. Also fixed: <code>techspec-python-fastapi.md</code> rewritten (8 structural issues: 422 array detail, SQL Server-compatible inserts via ORM flush, layer contract, domain exceptions, React 19+/Angular 17+ idioms); <code>scripts/release.cjs</code> minor bump bug corrected.</p>
     <p>Key skill changes in v3.25.0: <strong>icea-feature</strong> reads <code>.claude/project-knowledge.md</code> and injects applicable patterns at Step 3b, and tracks <code>clarification_count</code> through Steps 2–3 to write a <code>story-quality</code> signal at <code>SAVE PLAN</code>. <strong>icea-revise</strong> writes a <code>REVISE_ADO</code> audit event and a <code>revision</code> signal. <strong>icea-implement</strong> writes a <code>gap</code> signal when an Example cannot produce a real assertion. <strong>governance-report</strong> and <strong>onboarding-guide</strong> are new skills. Unreleased (next version): all boilerplate CONTINUE/COMPACT step-boundary gates removed from <strong>upgrade</strong> (11 removed → 3 real gates: INTAKE CONFIRMED · APPROVE REPORT · APPROVE DESIGN), <strong>rewrite</strong> (8 removed → 5 real gates), and <strong>replatform</strong> (7 removed → 4 real gates) — steps auto-advance between real artifact-review gates only (ADR 0070). <strong>upgrade</strong> intake redesigned from hand-authored manifest to a skill-generated 12-section document via three automated passes: live registry, knowledge cache, behavioral grep (ADR 0071). Research cache exit codes redesigned: 0=fresh/1=miss/2=stale with <code>--extract-bundle-to</code> flag (ADR 0073). ICEA revision signal scoped to Edit-only on doc artifacts; <code>signal-write.cjs</code> changed to append-only JSONL (ADR 0075). See ADRs 0070–0075 in <code>docs/adr/</code>.</p>
   </section>
 
@@ -834,7 +835,7 @@ node tests/validate.js   <span class="cmt"># structural validator — must be gr
 </div>
 
 <footer>
-  <span>ai-assisted-development · Plugin Developer Guide · v3.25.0</span>
+  <span>ai-assisted-development · Plugin Developer Guide · v3.26.0</span>
   <span>Your Company</span>
 </footer>
 

@@ -1,6 +1,6 @@
 {
-  "latest": "3.25.0",
-  "released": "2026-09-20",
+  "latest": "3.26.0",
+  "released": "2026-10-16",
   "breaking": false,
-  "summary": "Enterprise readiness: governance enforcement hooks, test integration gate, generated unit tests, plugin CI/CD release pipeline"
+  "summary": "Tech spec overlay refresh: four-pass audit/refresh skill (self-consistency, cross-layer contract, LLM-readability, environment fit); FastAPI overlay rewrite; release script fix"
 }

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- documents-plugin-version: 3.25.0 -->
+<!-- documents-plugin-version: 3.26.0 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -370,7 +370,7 @@
   <div class="hero-grid"></div>
   <div class="hero-glow"></div>
   <div class="hero-content">
-    <div class="hero-tag" style="margin-bottom:12px;">Plugin User Guide · v3.25.0</div>
+    <div class="hero-tag" style="margin-bottom:12px;">Plugin User Guide · v3.26.0</div>
     <h1>ai-assisted-<em>development</em></h1>
     <p class="sub">
       ICEA-driven development for teams on Azure DevOps — language-agnostic across
@@ -379,7 +379,7 @@
       every governance action is audited and role-gated.
     </p>
     <div class="hero-badges">
-      <span class="badge badge-gold">v3.25.0</span>
+      <span class="badge badge-gold">v3.26.0</span>
       <span class="badge badge-blue">.NET (Framework 4.x → .NET 10)</span>
       <span class="badge badge-cyan">Angular</span>
       <span class="badge badge-cyan">React</span>
@@ -870,6 +870,9 @@ git config --global user.email "you@example.com"</pre></div></div>
         <tr><td><code>KNOWLEDGE UPDATE {N}</code></td><td>Update pattern number N in project-knowledge.md.</td></tr>
         <tr><td><code>LESSONS ADO-{ID}</code></td><td>Re-generate the lessons learned section for a single ADO — also offers to promote a recurring pattern to project-knowledge.</td></tr>
         <tr><td><code>SET DOMAIN</code></td><td>Infer/confirm the business domain so business-context severity is tuned to your domain.</td></tr>
+        <tr><td><code>CHECK TECHSPEC</code></td><td>Offline audit of all tech spec overlay templates — self-consistency, cross-layer contract (LLM-only), LLM-readability, and stale version mentions. Read-only, no web. See <code>skills/techspec-refresh/SKILL.md</code>.</td></tr>
+        <tr><td><code>REFRESH TECHSPEC {overlay}</code></td><td>Web-grounded refresh of one overlay (e.g. <code>REFRESH TECHSPEC react-nodejs</code>). Four passes: self-consistency, cross-layer contract, environment fit (auto-detected from project context), version currency. Proposes a unified diff; writes under the Write Gate.</td></tr>
+        <tr><td><code>REFRESH TECHSPEC ALL</code></td><td>Same as <code>REFRESH TECHSPEC {overlay}</code> iterated over all registered overlays — one Write Gate prompt per overlay.</td></tr>
       </tbody>
     </table>
   </section>

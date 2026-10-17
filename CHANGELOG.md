@@ -1,3 +1,54 @@
+## [3.26.0] — 2026-10-16
+
+### Added — Tech spec overlay refresh skill (`/techspec-refresh`)
+
+New skill at `skills/techspec-refresh/SKILL.md` — four-pass audit and refresh harness
+for tech spec overlay templates in `skills/icea-feature/references/techspec-*.md`.
+
+- **Pass 1 — Self-consistency (no web):** checks that DO NOT rules match code snippets,
+  every HTTP status in the API table is reachable from code, Files Changed rows have a
+  matching implementation section, and layer contracts match return type annotations in code.
+- **Pass 2 — Cross-layer contract (LLM + web-confirm):** verifies frontend error handlers
+  match the framework's actual error response shape (e.g. FastAPI 422 `detail` is
+  `list[{loc,msg,type}]`, not a string); confirms repository → service type flow;
+  checks TypeScript interfaces match API response shapes.
+- **Pass 3 — LLM-readability + patterns:** structural checks (DO NOT block at top, layer
+  contract in header, explicit conditional guards, AC tags in code, tests section, error
+  handling section); universal patterns (no `success: boolean`, no trailing-slash routes,
+  no f-string/concat SQL, tokens not in localStorage); stack-specific patterns (React 19+,
+  Angular 17+, FastAPI `Annotated[]` syntax).
+- **Pass 4 — Environment fit:** detects data access pattern (ORM vs Dapper/raw SQL);
+  for Dapper/raw SQL overlays checks every SQL string against all databases detected from
+  NuGet/npm/pip package dependencies (primary signal — more reliable than generic
+  `stack_key` categories). Multi-DB aware: fails if any SQL string is incompatible with
+  any confirmed dialect. ORM overlays skip dialect checking entirely.
+- New keyword handlers: `CHECK TECHSPEC` (offline audit, all overlays), `REFRESH TECHSPEC
+  {overlay}` (web-grounded, one Write Gate per overlay), `REFRESH TECHSPEC ALL`.
+- Eval set at `skills/techspec-refresh/evals/techspec-react-nodejs-eval.json` — 10 seeded
+  cases from a human review of `techspec-react-nodejs.md`; regression corpus for the rubric.
+
+### Fixed
+
+- **`techspec-python-fastapi.md` rewrite** — 8 structural issues resolved:
+  (1) FastAPI 422 `detail` is `list[{loc,msg,type}]`, not a string — added
+  `extractDetail(detail: unknown): string` helper in both Angular and React service sections.
+  (2) `RETURNING id` replaced with ORM `session.add() + flush()` — SQL Server compatible on
+  all dialects. (3) Repository now returns ORM models (not Pydantic schemas); service maps
+  to schemas via `model_validate()`. (4) `commit()` moved from repository to service,
+  enabling multi-write transactions. (5) Added `NotFoundError`/`ForbiddenError` domain
+  exceptions + `main.py` handlers; service raises instead of returning `None`.
+  (6) Dropped Django/Flask half-coverage — FastAPI only. (7) Modernised patterns:
+  `Annotated[T, Depends()]`, typed `current_user`, no `CommonModule`, `styleUrl` (singular),
+  no `import React`, no `React.FC`, React 19+. (8) `{Feature}Response success: bool`
+  replaced by `{Feature}Created` resource shape; routes `"/"` → `""`; DO NOT rules block
+  added at top; ORM model, Alembic migration with `downgrade()`, dependency wiring, and
+  tests sections added.
+- **`scripts/release.cjs` minor bump bug** — `npm run bump:minor` incorrectly incremented
+  the major version (`parts[0]++; parts[1]++`) producing `4.26.0` from `3.25.0` instead of
+  `3.26.0`. Fixed to `parts[1]++; parts[2] = 0;`.
+
+---
+
 ## [Unreleased]
 
 ### Changed — Migration skill friction reduction (Upgrade · Rewrite · Replatform)

@@ -847,8 +847,8 @@ Read $PLUGIN_DIR/skills/shared/context-budget-check.md and execute it with:
   operation_name    = "Tech Spec generation"
   size_signal       = $ICEA_LINES
   size_label        = "ICEA: {ICEA_LINES} lines"
-  threshold_medium  = 150
-  threshold_high    = 350
+  threshold_medium  = 220
+  threshold_high    = 450
   recovery_command  = "TECH ADO-{ADO_ID}"
   skip_keywords     = ["TECH ADO-"]
   operation_needs   = [

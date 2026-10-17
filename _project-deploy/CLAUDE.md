@@ -4,7 +4,7 @@
 # Domain: <business domain, identified at setup by business-context-generation.md — e.g.
 #          legal / healthcare / fintech / ecommerce / govtech / generic. Drives the
 #          project-local B-series in .claude/business-context.md. Re-run with `SET DOMAIN`.>
-# Plugin version: 3.25.0
+# Plugin version: 3.26.0
 
 # Dream
 
