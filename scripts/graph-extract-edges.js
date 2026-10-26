@@ -88,69 +88,59 @@ for (const r of roots) walk(r);
 const fileToNode = {};
 for (const f of files) { const o = ownerOf(f); if (o) fileToNode[f] = o; }
 
-function readSource(f) {
-  try { return { ok: true, text: fs.readFileSync(f, 'utf8') }; }
-  catch (e) { return { ok: false, text: '', error: e }; }
-}
+function readSafe(f) { try { return fs.readFileSync(f, 'utf8'); } catch (e) { return ''; } }
 const JS_CODE_EXT = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
-// Regex extractor boundary (intentional): this is not a full language parser.
-// Known limits include dynamic JS imports/path aliases, Python comma-import and some
-// namespace-package attribution cases, C# aliases/global usings, and Java wildcard imports.
-const records = []; // Single-read parse records; this reduces duplicate per-file I/O.
-const readFailureNodes = new Set();
-const readFailures = [];
+
+// ── parse once → compact intermediate records ────────────────────────────────
+// Read each owned source/project file at most once, extract only the declarations and
+// dependency references needed for later resolution, then discard the raw source text.
+const records = [];
 for (const f of files) {
-  const from = fileToNode[f]; if (!from) continue;
+  const owner = fileToNode[f]; if (!owner) continue;
   const ext = path.extname(f).toLowerCase();
-  const read = readSource(f);
-  if (!read.ok) { readFailureNodes.add(from); readFailures.push({ file: f, error: read.error }); continue; }
-  const src = read.text;
-  const rec = { file: f, from, ext, declarations: [], refs: [] };
-
-  if (JS_CODE_EXT.has(ext)) {
+  const rec = { file: f, owner, ext, declarations: [], refs: [] };
+  const src = readSafe(f);
+  if (src) {
     let m;
-    let re = /(?:import|export)[\s\S]*?from\s*['"]([^'"]+)['"]/g; while ((m = re.exec(src))) if (m[1].startsWith('.')) rec.refs.push({ kind: 'rel-js', spec: m[1] });
-    re = /\bimport\s*['"]([^'"]+)['"]/g;                          while ((m = re.exec(src))) if (m[1].startsWith('.')) rec.refs.push({ kind: 'rel-js', spec: m[1] });
-    re = /\brequire\(\s*['"]([^'"]+)['"]\s*\)/g;                  while ((m = re.exec(src))) if (m[1].startsWith('.')) rec.refs.push({ kind: 'rel-js', spec: m[1] });
+    if (JS_CODE_EXT.has(ext)) {
+      let re = /(?:import|export)[\s\S]*?from\s*['"]([^'"]+)['"]/g; while ((m = re.exec(src))) rec.refs.push({ kind: 'rel', spec: m[1] });
+      re = /\bimport\s*['"]([^'"]+)['"]/g;                          while ((m = re.exec(src))) rec.refs.push({ kind: 'rel', spec: m[1] });
+      re = /\brequire\(\s*['"]([^'"]+)['"]\s*\)/g;                  while ((m = re.exec(src))) rec.refs.push({ kind: 'rel', spec: m[1] });
 
-  } else if (ext === '.py') {
-    let m;
-    let re = /^\s*from\s+(\.*[\w.]*)\s+import\s+/gm;
-    while ((m = re.exec(src))) rec.refs.push({ kind: 'py', spec: m[1] });
-    re = /^\s*import\s+([\w.]+)/gm;
-    while ((m = re.exec(src))) rec.refs.push({ kind: 'py', spec: m[1] });
+    } else if (ext === '.py') {
+      let re = /^\s*from\s+(\.*[\w.]*)\s+import\s+/gm; while ((m = re.exec(src))) rec.refs.push({ kind: 'py', spec: m[1] });
+      re = /^\s*import\s+([\w.]+)/gm;                  while ((m = re.exec(src))) rec.refs.push({ kind: 'py', spec: m[1] });
 
-  } else if (ext === '.cs') {
-    let m; const nsRe = /^\s*namespace\s+([A-Za-z_][\w.]*)/gm;
-    while ((m = nsRe.exec(src))) rec.declarations.push({ kind: 'cs-namespace', spec: m[1] });
-    const usingRe = /^\s*using\s+(?:static\s+)?([A-Za-z_][\w.]*)\s*;/gm;
-    while ((m = usingRe.exec(src))) rec.refs.push({ kind: 'cs-using', spec: m[1] });
+    } else if (ext === '.cs') {
+      let re = /^\s*namespace\s+([A-Za-z_][\w.]*)/gm;                while ((m = re.exec(src))) rec.declarations.push(m[1]);
+      re = /^\s*using\s+(?:static\s+)?([A-Za-z_][\w.]*)\s*;/gm;      while ((m = re.exec(src))) rec.refs.push({ kind: 'ns', spec: m[1] });
 
-  } else if (ext === '.java') {
-    let m; const pkgRe = /^\s*package\s+([A-Za-z_][\w.]*)\s*;/gm;
-    while ((m = pkgRe.exec(src))) rec.declarations.push({ kind: 'java-package', spec: m[1] });
-    const importRe = /^\s*import\s+(?:static\s+)?([A-Za-z_][\w.]*)\.[A-Za-z_]\w*\s*;/gm;
-    while ((m = importRe.exec(src))) rec.refs.push({ kind: 'java-import', spec: m[1] });
+    } else if (ext === '.java') {
+      let re = /^\s*package\s+([A-Za-z_][\w.]*)\s*;/gm;              while ((m = re.exec(src))) rec.declarations.push(m[1]);
+      re = /^\s*import\s+(?:static\s+)?([A-Za-z_][\w.]*)\.[A-Za-z_]\w*\s*;/gm;
+      while ((m = re.exec(src))) rec.refs.push({ kind: 'pkg', spec: m[1] });
 
-  } else if (ext === '.csproj') {
-    let m; const re = /<ProjectReference\s+[^>]*Include\s*=\s*"([^"]+)"/g;
-    while ((m = re.exec(src))) rec.refs.push({ kind: 'csproj-ref', spec: m[1] });
+    } else if (ext === '.csproj') {
+      const re = /<ProjectReference\s+[^>]*Include\s*=\s*"([^"]+)"/g;
+      while ((m = re.exec(src))) rec.refs.push({ kind: 'project', spec: m[1] });
+    }
   }
-
   records.push(rec);
 }
 
-// ── namespace/package → node maps (C#, Java) ─────────────────────────────────
+// ── build indexes after parsing ──────────────────────────────────────────────
 const nsToNode = {}; // C# namespace  → node id
 const pkgToNode = {}; // Java package → node id
 for (const rec of records) {
-  for (const d of rec.declarations) {
-    if (d.kind === 'cs-namespace' && !(d.spec in nsToNode)) nsToNode[d.spec] = rec.from;
-    else if (d.kind === 'java-package' && !(d.spec in pkgToNode)) pkgToNode[d.spec] = rec.from;
+  if (rec.ext === '.cs') {
+    for (const ns of rec.declarations) if (!(ns in nsToNode)) nsToNode[ns] = rec.owner;
+  } else if (rec.ext === '.java') {
+    for (const pkg of rec.declarations) if (!(pkg in pkgToNode)) pkgToNode[pkg] = rec.owner;
   }
 }
 const nsKeys = Object.keys(nsToNode).sort((a, b) => b.length - a.length);
 const pkgKeys = Object.keys(pkgToNode).sort((a, b) => b.length - a.length);
+
 // longest-prefix namespace/package resolver
 function resolveNs(map, keys, ns) {
   if (map[ns]) return map[ns];
@@ -182,20 +172,25 @@ const edgeSet = new Set(); // "from\tto"
 function addEdge(from, to) { if (from && to && from !== to) edgeSet.add(from + '\t' + to); }
 
 for (const rec of records) {
-  for (const ref of rec.refs) {
-    if (ref.kind === 'rel-js') {
-      const tf = resolveRelFile(rec.file, ref.spec, JS_EXT);
-      if (tf) addEdge(rec.from, fileToNode[tf]);
-    } else if (ref.kind === 'py') {
-      addEdge(rec.from, resolvePy(rec.file, ref.spec));
-    } else if (ref.kind === 'cs-using') {
-      addEdge(rec.from, resolveNs(nsToNode, nsKeys, ref.spec));
-    } else if (ref.kind === 'java-import') {
-      addEdge(rec.from, resolveNs(pkgToNode, pkgKeys, ref.spec));
-    } else if (ref.kind === 'csproj-ref') {
+  if (!rec.refs.length) continue;
+
+  if (JS_CODE_EXT.has(rec.ext)) {
+    for (const ref of rec.refs) if (ref.spec.startsWith('.')) { const tf = resolveRelFile(rec.file, ref.spec, JS_EXT); if (tf) addEdge(rec.owner, fileToNode[tf]); }
+
+  } else if (rec.ext === '.py') {
+    for (const ref of rec.refs) addEdge(rec.owner, resolvePy(rec.file, ref.spec));
+
+  } else if (rec.ext === '.cs') {
+    for (const ref of rec.refs) addEdge(rec.owner, resolveNs(nsToNode, nsKeys, ref.spec));
+
+  } else if (rec.ext === '.java') {
+    for (const ref of rec.refs) addEdge(rec.owner, resolveNs(pkgToNode, pkgKeys, ref.spec));
+
+  } else if (rec.ext === '.csproj') {
+    for (const ref of rec.refs) {
       const refWin = ref.spec.split('\\').join('/');
       const target = norm(path.posix.normalize(path.posix.dirname(norm(rec.file)) + '/' + refWin));
-      addEdge(rec.from, fileToNode[target] || ownerOf(target));
+      addEdge(rec.owner, fileToNode[target] || ownerOf(target));
     }
   }
 }
