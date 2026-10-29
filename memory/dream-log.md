@@ -610,3 +610,58 @@
 
 ### [capture] [2026-10-16] Task completed — migration skill: stack verification + delivery concerns layer
 ### [capture] [2026-10-16] Error resolved — release.cjs minor bump incremented major version instead
+
+### [capture] [2026-10-20] Task completed — REFRESH TECHSPEC ALL: all 6 overlays refreshed
+### [capture] [2026-10-16] Architecture decision — four-pass structure vs web-search-only for overlay refresh
+
+### [capture] [2026-10-20] Architecture decision — Entra ID auth knowledge: plugin-wide storage strategy
+### [capture] [2026-10-16] Task completed — migration skill: stack verification + delivery concerns layer
+
+### [capture] [2026-10-20] Architecture decision — Entra ID auth knowledge: plugin-wide storage strategy
+### [capture] [2026-10-20] Plan approved — Entra ID plugin integration: 5-item implementation sequence
+
+### [capture] [2026-10-20] Task completed — Entra ID auth knowledge added to plugin (5 files)
+### [capture] [2026-10-20] Architecture decision — Entra ID auth knowledge: plugin-wide storage strategy
+
+### [capture] [2026-10-20] Plan approved — Address all 8 plugin enforcement architecture gaps
+### [capture] [2026-10-20] Task completed — Entra ID auth knowledge added to plugin (5 files)
+
+### [capture] [2026-10-20] Task completed — 4 rule file edits (G3 gap closure, Entra + React 19+)
+
+### [capture] [2026-10-20] Task completed — G5 gap closure: plugin-path.txt auto-heal in session-start
+### [capture] [2026-10-20] Task completed — 4 rule file edits (G3 gap closure, Entra + React 19+)
+
+### [capture] [2026-10-20] Task completed — G2 gap closure: rule file version drift signal in setup-status
+### [capture] [2026-10-20] Task completed — G5 gap closure: plugin-path.txt auto-heal in session-start
+
+### [capture] [2026-10-20] Task completed — G3 remaining: techspec pointer convention + SC6 judge check
+### [capture] [2026-10-20] Task completed — G2 gap closure: rule file version drift signal in setup-status
+
+### [capture] [2026-10-20] Task completed — G1 gap closure: deployment_gaps for silent rule file misses
+### [capture] [2026-10-20] Task completed — G3 remaining: techspec pointer convention + SC6 judge check
+
+### [capture] [2026-10-27] Task completed — G6 gap closure: CHECK RULES command (rule-check skill)
+### [capture] [2026-10-20] Task completed — G1 gap closure: deployment_gaps for silent rule file misses
+
+### [capture] [2026-10-27] Plan approved — context budget check: session-budget mode + installer consolidation
+### [capture] [2026-10-27] Task completed — G6 gap closure: CHECK RULES command (rule-check skill)
+
+### [capture] [2026-10-27] Plan approved — G4, G7, G8 gap closures
+### [capture] [2026-10-27] Task completed — G6 gap closure: CHECK RULES command (rule-check skill)
+
+### [capture] [2026-10-27] Task completed — G4 + G7 + G8 gap closures
+### [capture] [2026-10-27] Plan approved — G4, G7, G8 gap closures
+
+### [capture] [2026-10-28] Error resolved — ICEA floor blocks .js but not .cjs
+### [capture] [2026-10-27] Plan approved — context budget check: session-budget mode + installer consolidation
+
+### [capture] [2026-10-28] Plan approved — code-review grounding gate (stop hallucinated fixes)
+
+### [capture] [2026-10-28] Error resolved — per-finding child processes make verifier scripts crawl on Windows
+
+### [capture] [2026-10-28] Architecture decision — security skill adopts finding-verify gate; IaC/SCA become gating blocks
+
+### [capture] [2026-10-28] Task completed — context budget check: statusLine + installer consolidation (11/11 files)
+### [capture] [2026-10-28] Architecture decision — security skill adopts finding-verify gate
+
+### [capture] [2026-10-28] Task completed — finding-verify grounding gate shipped for code-review + security (ADO-9000)

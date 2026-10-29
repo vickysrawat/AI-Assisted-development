@@ -304,24 +304,9 @@ Write the file via Bash:
 node -e "require('fs').writeFileSync('.claude/active-task.json', JSON.stringify({skill:'icea-implement',step:'step4-start',ado:'${ADO_ID}',resume_cmd:'IMPLEMENT ADO-'+String('${ADO_ID}')},null,2))"
 ```
 
-Read $PLUGIN_DIR/skills/shared/context-budget-check.md and execute it with:
-  operation_name    = "Code generation — {AC_COUNT} pending ACs / ADO #{ADO_ID}"
-  size_signal       = $AC_COUNT
-  size_label        = "{AC_COUNT} pending ACs"
-  threshold_medium  = 10
-  threshold_high    = 20
-  recovery_command  = "IMPLEMENT ADO-{ADO_ID}{if Epic: ' Story-{N}'}"
-  skip_keywords     = ["IMPLEMENT ADO-"]
-  operation_needs   = [
-    "Read ICEA, Tech Spec, and architecture docs from disk",
-    "Generate implementation code for each pending AC across all layers",
-    "Run the critic (Step 4a) and goal-loop (Step 4b) on the full output"
-  ]
-  risks_if_continue = [
-    "Truncated code — missing layers or incomplete ACs",
-    "Critic and goal-loop evaluate partial output — false pass"
-  ]
-  saved_context = "ICEA, Tech Spec, and tracker at docs/.../UserStory{ADO_ID}/ — nothing on disk is lost"
+Read $PLUGIN_DIR/skills/shared/context-budget-check.md and run the entry-point check with:
+  skill_name    = "Code generation — {AC_COUNT} pending ACs / ADO #{ADO_ID}"
+  skip_keywords = []
 
 **On BUDGET_OK or BUDGET_SKIPPED** — proceed directly to Step 4. `active-task.json` is already written. No developer reply required.
 

@@ -177,6 +177,104 @@ If any file is ⚠️ or ❌, include in recommended actions:
 
 ---
 
+### 1c-six — Rule file version drift
+
+Compare the `plugin_version` recorded in `_deploy-manifest.json` (the version that last
+deployed the rule files) against the currently installed plugin version. A mismatch means
+new rules added since the last `/setup-sync` or `/setup-init` are not yet in `.claude/rules/`.
+
+Only runs when the manifest exists (i.e. check 1c found a manifest).
+
+```bash
+node -e "
+const fs=require('fs'),os=require('os'),path=require('path');
+let deployedVer='';
+try{
+  const man=JSON.parse(fs.readFileSync('.claude/rules/_deploy-manifest.json','utf8'));
+  deployedVer=man.plugin_version||'';
+}catch(e){console.log('NO_MANIFEST');process.exit(0);}
+if(!deployedVer){console.log('DEPLOYED_VERSION_ABSENT');process.exit(0);}
+let installedVer='';
+try{
+  const base=path.join(os.homedir(),'.claude','plugins');
+  const reg=JSON.parse(fs.readFileSync(path.join(base,'installed_plugins.json'),'utf8'));
+  const key=Object.keys(reg.plugins||{}).find(k=>k.startsWith('ai-assisted-development@'));
+  if(key){const a=reg.plugins[key]||[];const e=a.find(x=>x.scope==='user')||a[0];if(e)installedVer=e.version||'';}
+}catch(e){}
+if(!installedVer){console.log('INSTALLED_UNKNOWN');process.exit(0);}
+if(installedVer===deployedVer){
+  console.log('RULES_CURRENT version='+deployedVer);
+}else{
+  console.log('RULES_STALE deployed='+deployedVer+' installed='+installedVer);
+}
+" 2>/dev/null
+```
+
+Status:
+- `RULES_CURRENT` → ✅ Green — rule files were deployed by the installed plugin version
+- `RULES_STALE` → ⚠️ Amber:
+  ```
+  ⚠ Rule files deployed at v{deployed}; installed plugin is v{installed}.
+    New rules added in the upgrade are not yet active.
+    Type REFRESH RULES to review changes and apply a three-way merge.
+  ```
+- `DEPLOYED_VERSION_ABSENT` → ⚠️ Amber — manifest predates version tracking; run `/setup-sync` to reseed
+- `NO_MANIFEST` → skip (handled by 1c)
+- `INSTALLED_UNKNOWN` → ℹ️ Blue — registry unreadable; skip version comparison
+
+Include in output report line:
+```
+  .claude/rules/ version             {✅ / ⚠️ / ℹ️}  {rules current at v{X} | deployed v{old} vs installed v{new} — REFRESH RULES | registry unreadable}
+```
+
+---
+
+### 1c-sev — Deployment gaps (stack signals below threshold)
+
+Only runs when `_deploy-manifest.json` exists. Surfaces stack keys that produced a detection
+signal and have a rule file in the plugin, but were not deployed because confidence fell below
+the threshold. These are the silent misses — no rule file deployed, no warning at setup time.
+
+```bash
+node -e "
+const fs = require('fs');
+let man;
+try { man = JSON.parse(fs.readFileSync('.claude/rules/_deploy-manifest.json', 'utf8')); } catch(e) { process.exit(0); }
+console.log('MODE=' + (man.mode || 'repo-wide'));
+const cit=man.rule_citations||{};const citN=Object.keys(cit).length;
+if(citN)console.log('CITATIONS='+citN+' '+Object.keys(cit).map(k=>k+':'+cit[k].length).join(','));
+const gaps = man.deployment_gaps;
+if (!gaps || !gaps.length) { console.log('NO_GAPS'); process.exit(0); }
+const threshold = man.threshold || 0.6;
+console.log('THRESHOLD=' + threshold);
+for (const g of gaps) {
+  console.log('GAP stack_key=' + g.stack_key + ' confidence=' + g.confidence.toFixed(2));
+}
+" 2>/dev/null
+```
+
+Status:
+- `MODE=per-project` → ✅ Green — paths scoped to framework dirs (Track A)
+- `MODE=repo-wide` → ℹ️ Blue — all rules loaded on every edit; `SET RULES per-project` to enable scoped loading
+- `CITATIONS=N ...` → ℹ️ Blue (when present) — N rule files cited by overlays; run `REFRESH TECHSPEC` after `REFRESH RULES` to keep in sync
+- `NO_GAPS` (or field absent) → ✅ Green — no sub-threshold signals with available rule files
+- One or more `GAP` lines → ℹ️ Blue — signal detected but not deployed:
+  ```
+  ℹ Stack signals below deployment threshold ({threshold}):
+    {stack_key} (confidence {confidence}) — {stack_key}-rules.md exists in plugin but was not deployed.
+    To deploy: re-run /setup-init with env RULE_DEPLOY_THRESHOLD={confidence} or lower,
+    or manually copy {stack_key}-rules.md to .claude/rules/.
+  ```
+
+Include in output report lines (omit citations line when no citations; omit gaps line when NO_GAPS):
+```
+  .claude/rules/ mode                {✅ / ℹ️}  {per-project (Track A, paths scoped) | repo-wide — SET RULES per-project to enable}
+  .claude/rules/ citations           ℹ️         {{N} rule files cited by overlays — REFRESH TECHSPEC after REFRESH RULES}
+  .claude/rules/ gaps                ℹ️         {{N} below-threshold signal(s): {stack_key} ({confidence}), … — consider lowering threshold}
+```
+
+---
+
 ### 1c-quad — IaC scan rule catalog staleness
 
 Only run if `skills/security/references/iac-scan.md` exists.
@@ -631,15 +729,15 @@ count_open_by_severity() {
   local sev="$2"
   [ -f "$ledger" ] || { echo "0"; return; }
   # Match heading lines with severity, then verify Status: Open in the same FP block
-  grep "^### \[FP-" "$ledger" | grep -i "$sev" | grep -oE "FP-[0-9a-f]{8}" | while read fp; do
-    awk "/^\\#\\#\\# \\[$fp\\]/,/^\\#\\#\\# \\[FP-/" "$ledger" 2>/dev/null | grep -q "\\*\\*Status\\*\\*: Open" && echo "$fp"
+  grep "^### \[FP-" "$ledger" | grep -i "$sev" | sed -E 's/^### \[(FP-[0-9a-z]+)\].*/\1/' | while read fp; do
+    awk -v h="### [$fp]" 'f && (/^### \[FP-/ || /^## /) {exit} index($0,h)==1 {f=1} f' "$ledger" 2>/dev/null | grep -q "\*\*Status\*\*: Open" && echo "$fp"
   done | wc -l
 }
 
 count_dismissed() {
   local ledger="$1"
   [ -f "$ledger" ] || { echo "0"; return; }
-  grep -c "^\*\*Status\*\*: Dismissed" "$ledger" 2>/dev/null || echo 0
+  grep -cE "^(- )?\*\*Status\*\*: Dismissed" "$ledger" 2>/dev/null || true
 }
 
 total_critical=0
@@ -1232,6 +1330,8 @@ Include in output report line:
   CLAUDE.md identity                 {✅ / ⚠️}       {§2 values filled | unresolved: Organization, Project, …}
   memory/                            {✅ / ❌}       {detail}
   .claude/rules/                     {✅ / ⚠️}       {N/4 files present}
+  .claude/rules/ version             {✅ / ⚠️ / ℹ️}  {rules current at v{X} | deployed v{old} vs installed v{new} — REFRESH RULES | registry unreadable}
+  .claude/rules/ gaps                {✅ / ℹ️}       {no gaps | {N} sub-threshold: {stack_key} ({confidence}) — lower threshold to deploy}
   iac-scan.md (rule catalog)         {✅ / ⚠️ / ❌}  {last validated: {date} ({N} days) | stale — REFRESH RULES iac-scan.md | missing — run /setup-sync}
   .claude/commands/                  {✅ / ⚠️}       {N/41 stubs deployed}
   .claude/architecture/              {✅ / ⚠️}       {N files, N populated}

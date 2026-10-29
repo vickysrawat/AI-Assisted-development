@@ -190,7 +190,8 @@ Evidence:
   {file2}:{function2} — {how it connects}
 
 Remediation:
-  {specific fix — name the file and function, include corrected code}
+  {specific fix — name the file and function, include corrected code;
+   or manual-fix-required + prose when it needs code that does not exist yet}
 ```
 
 ---

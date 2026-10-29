@@ -23,6 +23,13 @@ Copy these verbatim into any skill that needs findings detection.
 Do not write local variants — changes to this spec must propagate to both callers.
 
 ```bash
+# Prints one finding's section: its "### [FP-x]" heading through the line before the
+# next finding heading or "## " section. Exact string match on the heading avoids regex
+# escaping; an awk range (/A/,/B/) cannot be used because the heading matches both ends.
+_ledger_fp_section() {
+  awk -v h="### [$2]" 'f && (/^### \[FP-/ || /^## /) {exit} index($0,h)==1 {f=1} f' "$1"
+}
+
 # Returns FP IDs for open Critical or High findings in a ledger.
 # A finding is open only if its section contains "**Status**: Open".
 # Dismissed findings (any reason) are excluded.
@@ -30,8 +37,8 @@ get_open_critical_high() {
   local ledger="$1"
   [ -f "$ledger" ] || return
   grep "^### \[FP-" "$ledger" | grep -iE "Critical|High" | \
-    grep -oE "FP-[0-9a-f]{8}" | while read fp; do
-      awk "/^### \[$fp\]/,/^### \[FP-/" "$ledger" | \
+    sed -E 's/^### \[(FP-[0-9a-z]+)\].*/\1/' | while read fp; do
+      _ledger_fp_section "$ledger" "$fp" | \
         grep -q "\*\*Status\*\*: Open" && echo "$fp"
     done
 }
@@ -42,8 +49,8 @@ get_accepted_risk_dismissed() {
   local ledger="$1"
   [ -f "$ledger" ] || return
   grep "^### \[FP-" "$ledger" | grep -iE "Critical|High" | \
-    grep -oE "FP-[0-9a-f]{8}" | while read fp; do
-      section=$(awk "/^### \[$fp\]/,/^### \[FP-/" "$ledger" 2>/dev/null)
+    sed -E 's/^### \[(FP-[0-9a-z]+)\].*/\1/' | while read fp; do
+      section=$(_ledger_fp_section "$ledger" "$fp" 2>/dev/null)
       echo "$section" | grep -q "\*\*Status\*\*: Dismissed" && \
       echo "$section" | grep -q "\*\*Reason\*\*: accepted-risk" && echo "$fp"
     done

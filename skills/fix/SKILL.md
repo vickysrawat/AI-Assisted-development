@@ -91,6 +91,27 @@ If the finding has `manual-fix-required` status:
 ```
 And stop.
 
+If the finding has `needs-confirmation` status (in `## Needs-Confirmation Findings`):
+```
+ℹ {FP-xxxxxxxx} is waiting on a question — it may be intended behaviour, not a defect.
+  Question: {question from ledger}
+
+Answer it first: if it IS a defect, the finding moves to Open and /fix can apply it;
+if it is intended, run /dismiss {FP-xxxxxxxx} by-design "<your answer>".
+```
+And stop.
+
+If the finding has `- **Fix kind**: dependency-upgrade` (security SCA finding):
+```
+ℹ {FP-xxxxxxxx} is a vulnerable dependency — the fix is an upgrade, not a code edit.
+  Declared : {file}:{line} → {vulnerable code line}
+  Fix      : {fix from ledger}
+  Run your package manager (e.g. npm install {pkg}@{version} · pip install "{pkg}=={version}" ·
+  dotnet add package {pkg} --version {version}) and commit the manifest + lockfile.
+  The next /security-review marks it Fixed once the manifest no longer pins the vulnerable version.
+```
+And stop — do not str_replace the manifest line (lockfiles and transitive pins would drift).
+
 If the finding is in `## Dismissed Findings`:
 ```
 ℹ {FP-xxxxxxxx} is dismissed — cannot apply a fix to a dismissed finding.
@@ -154,13 +175,19 @@ Only after `yes`:
 cat {file}
 ```
 
-2. Verify the vulnerable code is still present (the file may have changed since the review).
+2. Verify the vulnerable code is still present, verbatim and exactly once (the file may have changed
+   since the review). If it occurs more than once, stop — str_replace would edit the wrong copy:
+   `⚠ The vulnerable code occurs {N} times in {file} — re-run /code-review to re-quote it.`
    If not found:
    ```
-   ⚠ The vulnerable code pattern is no longer present in {file}.
-   The issue may have already been fixed manually.
-   Mark as Fixed in the ledger anyway? (yes / no)
+   ⚠ The vulnerable code is no longer present in {file} exactly as recorded.
+   Either it was fixed, or the code moved/was reworded (the ledger snippet may not have been verbatim).
+     fixed    — it was fixed by hand; record the commit or your confirmation
+     rescan   — leave it Open and re-run /code-review on {file} to re-verify it
    ```
+   On `fixed`, mark Fixed with `Fixed by: [manual — <the commit or confirmation given>]`. Never mark
+   it Fixed just because the text is missing, and never mark it Fixed because the code is merely
+   unused — dead code still contains the defect (`ledger-schema.md` § Reconciliation rules).
 
 3. Apply the fix using str_replace — replace the vulnerable snippet with the fix snippet.
 

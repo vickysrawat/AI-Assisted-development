@@ -86,6 +86,20 @@ if (exists(SETTINGS)) {
   }
 }
 
+// Detect whether statusLine in settings.json points to our plugin.
+// Normalise separators so Windows backslashes match Unix-style paths in settings.
+let removeStatusLine = false;
+if (settings && typeof settings.statusLine === 'string') {
+  const norm = p => p.replace(/\\/g, '/').toLowerCase();
+  for (const name of mpSet) {
+    const pluginPath = path.join(PLUGINS_ROOT, name, 'plugins', PLUGIN);
+    if (norm(settings.statusLine).includes(norm(pluginPath))) {
+      removeStatusLine = true;
+      break;
+    }
+  }
+}
+
 // installed_plugins.json entries to strip (keyed as "<plugin>@<marketplace>")
 let installedPlugins = null;
 const installedKeys = [];
@@ -106,6 +120,8 @@ if (dirPlan.length === 0 && settingsKeys.length === 0 && installedKeys.length ==
 for (const d of dirPlan)       console.log('    dir : ' + d.path + '   [' + d.why + ']');
 for (const k of settingsKeys)  console.log('    key : settings.json  extraKnownMarketplaces.' + k);
 for (const k of installedKeys) console.log('    key : installed_plugins.json  plugins.' + k);
+if (removeStatusLine) console.log('    key : settings.json  statusLine');
+
 
 if (!APPLY) {
   console.log('  (dry-run — re-run with --apply to remove)');
@@ -131,5 +147,10 @@ if (installedPlugins && installedKeys.length) {
   for (const k of installedKeys) delete installedPlugins.plugins[k];
   fs.writeFileSync(INSTALLED_PLUGINS, JSON.stringify(installedPlugins, null, 2));
   console.log('    ✓ removed ' + installedKeys.length + ' installed_plugins.json entr' + (installedKeys.length === 1 ? 'y' : 'ies'));
+}
+if (settings && removeStatusLine) {
+  delete settings.statusLine;
+  fs.writeFileSync(SETTINGS, JSON.stringify(settings, null, 2));
+  console.log('    ✓ removed statusLine from settings.json');
 }
 console.log('  Cleanup complete.');

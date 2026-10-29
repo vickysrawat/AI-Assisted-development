@@ -1,3 +1,44 @@
+## [Unreleased]
+
+### Fixed — code-review and security no longer write hallucinated findings to the ledger
+
+A real review produced 64 Open findings of which only 21 held up: fixes called symbols that do not
+exist (`PendingUpsert`, `conn=` parameters), snippets were condensed so `/fix` could not find them,
+guesses about business intent blocked `/checkin`, and some FP IDs were typed by hand.
+
+- **New `scripts/finding-verify.cjs` grounding gate**, run by code-review and security before every ledger write.
+  It checks that each vulnerable snippet appears verbatim and only once in the file. It checks that
+  each fix is real code: no `...` placeholders, no invented names or keyword arguments, and the file
+  still parses after the fix (Python and CommonJS). It also computes the FP IDs. The
+  `audit-ledger` mode re-checks an existing ledger and flags IDs that look hand-typed.
+- **A fix is no longer mandatory.** `output-format.md` now tells the reviewer to use
+  `manual-fix-required` instead of inventing code. Reviewer-subagent output must pass the gate.
+- **New non-gating `## Needs-Confirmation Findings` ledger section.** Findings that depend on an
+  unconfirmed business rule carry a question, and the run ends with one list of questions. The new
+  intent test in `analysis-rules.md` decides which findings go there.
+- **Fixed now requires evidence.** A finding is marked Fixed only when its code is gone or `/fix`
+  applied it. Dead code stays Open. `/fix` no longer offers to mark a missing snippet Fixed, and it
+  refuses snippets that occur twice and needs-confirmation findings.
+- **security: Pass 1/Pass 2 go through the same gate.** Findings whose exploitability depends on
+  facts the code cannot show (is the endpoint internet-facing? is the input user-controlled?) become
+  needs-confirmation, and the run ends with one list of questions.
+- **security: IaC and SCA findings now block commits.** They used to be appended as table rows,
+  which `findings-gate.md` (it reads `### [FP-` blocks only) never saw, so Critical/High container,
+  Kubernetes and CVE findings never stopped `/checkin`. They are now standard blocks.
+  **Upgrade note:** `/checkin` may start blocking on IaC/SCA findings it used to ignore. The first
+  `/security-review` after upgrading replaces Open legacy rows with verified blocks. Dismissed and
+  Fixed rows are kept. A dismissal does not carry over to a re-detected finding's new ID; re-apply
+  `/dismiss` to it.
+- **security: sub-agents no longer type FP IDs.** The IaC and SCA sub-agents used to return a
+  `fingerprint` field that was format-checked but never hashed. `validate-iac-findings.cjs` and
+  `validate-sca-findings.cjs` now treat it as optional, and the gate computes it. Each IaC
+  `evidence` line is checked against the file. Each SCA finding's `package@version` must be declared
+  in the cited manifest; the check covers the next lines too, for lockfiles.
+- **`/fix` and dependency findings:** `/fix` now shows the upgrade command for SCA findings instead
+  of string-replacing the manifest line.
+- Spec bumps: `fingerprint-spec.md` 1.1 (hash algorithm unchanged), `ledger-schema.md` 1.1,
+  code-review skill 2.1, security skill 2.1. dynamic-scan has not adopted the gate yet.
+
 ## [3.26.0] — 2026-10-16
 
 ### Added — Tech spec overlay refresh skill (`/techspec-refresh`)

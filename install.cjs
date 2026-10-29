@@ -182,20 +182,15 @@ function writeMarketplaceJson(version) {
   );
 }
 
-function registerInSettings() {
-  if (!fs.existsSync(SETTINGS_FILE)) fs.writeFileSync(SETTINGS_FILE, '{}', 'utf8');
-  let settings = {};
-  try { settings = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')); } catch {}
-  if (!settings.extraKnownMarketplaces) settings.extraKnownMarketplaces = {};
-  if (settings.extraKnownMarketplaces[MARKETPLACE_NAME]) {
-    console.log(`  - extraKnownMarketplaces.${MARKETPLACE_NAME} already exists, skipping.`);
-  } else {
-    settings.extraKnownMarketplaces[MARKETPLACE_NAME] = {
-      source: { source: 'directory', path: MARKETPLACE_DIR },
-    };
-    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf8');
-    console.log(`  + extraKnownMarketplaces.${MARKETPLACE_NAME} registered in settings.json`);
-  }
+function configureSettings() {
+  const script = path.join(__dirname, 'scripts', 'install-configure-settings.cjs');
+  const result = spawnSync('node', [
+    script,
+    '--marketplace-name', MARKETPLACE_NAME,
+    '--marketplace-dir',  MARKETPLACE_DIR,
+    '--plugin-dir',       __dirname,
+  ], { stdio: 'inherit' });
+  if (result.status !== 0) warn('Settings configuration reported warnings (see above).');
 }
 
 function clearCache() {
@@ -308,7 +303,7 @@ async function doInstall() {
   const newVersion = getPluginVersion(PLUGIN_DIR);
   writePluginConfig(PLUGIN_DIR);
   writeMarketplaceJson(newVersion);
-  registerInSettings();
+  configureSettings();
   clearCache();
   setupAdoEnv(PLUGIN_DIR);
 

@@ -5,12 +5,13 @@ description: >
   review, or any request mentioning "SAST", "static analysis", "defect density",
   "CID", "tainted data", or "review my code". Performs deep inter-procedural analysis across
   function boundaries. Stack-agnostic — detects the project's language stack and loads only
-  matching checker files. Every finding includes a concrete fix with a corrected code snippet.
+  matching checker files. Every finding quotes the vulnerable code verbatim; a fix is given only when
+  it is real paste-able code (verified by scripts/finding-verify.cjs), otherwise manual-fix-required.
 ---
 
 # Claude Code Review Skill
 
-_Skill version: 2.0 · Last changed: 2026-07-06 · Plugin compatibility: >=1.14.0 · Consent: A_
+_Skill version: 2.1 · Last changed: 2026-10-28 · Plugin compatibility: >=1.14.0 · Consent: A_
 
 A static code analysis assistant using the **three-pass scan
 architecture**. Performs inter-procedural data flow, control flow, null safety,
@@ -18,8 +19,10 @@ resource leak, concurrency, and code quality analysis. Stack-agnostic — detect
 the project's languages and loads only matching checker files.
 
 Every finding is assigned a **CID** (Code Issue Defect), a **checker name**,
-an **event path**, an **impact rating**, and a **concrete fix with a corrected
-code snippet** — matching standard static-analysis output format.
+an **event path**, an **impact rating**, the **vulnerable code quoted verbatim**, and
+either a **paste-able fix** or a `manual-fix-required` recommendation — matching standard
+static-analysis output format. No finding reaches the ledger until the deterministic
+grounding gate (`scripts/finding-verify.cjs`) has checked it against the real files.
 
 ---
 
@@ -335,7 +338,9 @@ Categories from `$PLUGIN_DIR/skills/code-review/references/checkers.md`:
 Per `$PLUGIN_DIR/skills/code-review/references/analysis-rules.md`:
 - Inter-procedural: follow data across function boundaries
 - Path-sensitive: only report reachable defects
-- No false positives without caveat (mark uncertain as [Needs Verification])
+- No false positives without caveat — an unproven path is needs-confirmation with a question, not Open
+- Intent test: a defect that exists only under an assumed business rule is needs-confirmation;
+  check tests, comments and DECISION blocks for evidence of intent first
 - Minimum event depth: 2-3+ events per finding
 - Business context override: per `$PLUGIN_DIR/skills/shared/business-context-severity.md`
 
@@ -351,15 +356,19 @@ Per `$PLUGIN_DIR/skills/code-review/references/output-format.md`:
   Event 2 [{role}]: {file}:{function} — {description}
 
 **Vulnerable code:**
-  {snippet}
+  {contiguous lines copied verbatim from the file — unique in the file}
 
 **Fix:**
-  {corrected snippet}
+  {paste-able replacement for exactly those lines}
+  — OR — manual-fix-required — {reason}; Recommendation: {prose}
 
 **References:** CWE-{id} | OWASP {category} | {link}
 ```
 
-Every finding gets a fingerprint per `$PLUGIN_DIR/skills/shared/fingerprint-spec.md`. Set Pass: 1.
+Copy the vulnerable code from the file you read — never retype, condense, re-indent or elide it
+with `...`. Write a code fix only if every name it uses already exists (or the fix defines it);
+otherwise use `manual-fix-required`. Do NOT assign an FP ID here — IDs come from the grounding gate
+(§ Grounding gate) so they are always computed, never typed. Set Pass: 1.
 Update checkpoint after each file.
 
 **Progress marker:** After every 10th file completes in Pass 1, and always after the final file, emit a single indented line:
@@ -410,8 +419,8 @@ Only report NEW findings that add information not captured above.
 
 ### Pass 2 output
 
-Findings follow the format in `$PLUGIN_DIR/skills/code-review/references/pass2-personas.md`. Fingerprint
-fixable findings per `$PLUGIN_DIR/skills/shared/fingerprint-spec.md`. Set Pass: 2.
+Findings follow the format in `$PLUGIN_DIR/skills/code-review/references/pass2-personas.md`, with the
+same verbatim-snippet / real-fix rules as Pass 1. No FP IDs yet — the grounding gate assigns them. Set Pass: 2.
 
 **Progress marker:** After all active Pass 2 personas complete, emit:
 ```
@@ -474,6 +483,63 @@ Set Pass: 3.
 ---
 
 ## Post-Scan — Report Assembly
+
+### Grounding gate (MANDATORY — runs before the report and the ledger write)
+
+The passes are LLM reasoning; the ledger is what `/fix` pastes from and `/checkin` blocks on. Nothing
+moves from one to the other without this deterministic check. **This applies with full force when
+passes ran in reviewer subagents:** their reports are raw input to the gate — never copy a subagent
+finding into the ledger directly, and never "spot-check a sample" instead of running the gate.
+Phase D (Pass 0) findings are already deterministic and skip it.
+
+1. Write every Pass 1 and Pass 2 finding to `CodeReviews/.pending-findings.json` — a JSON array of
+   `{ checker, file, category, short_description, line, vulnerable_code, fix, external_symbols?, needs_confirmation? }`.
+   `fix` is `null` for manual-fix-required findings. `external_symbols` lists library/framework APIs
+   the fix calls that are not in the repo (e.g. `run_in_threadpool`). `needs_confirmation` is the
+   question for any finding the intent test flagged.
+2. Run the gate:
+   ```bash
+   node "$PLUGIN_DIR/scripts/finding-verify.cjs" check --root=. \
+     --findings=CodeReviews/.pending-findings.json --ledger=CodeReviews/code-review-ledger.md
+   ```
+3. Route each finding by its `verdict`:
+
+   | Verdict | Action |
+   |---|---|
+   | `fingerprint` | Ledger `## Open Findings` with the computed `fp` and `Verified: {today} (finding-verify)`. Use `snippet.found_line` as the line. |
+   | `needs-confirmation` | Ledger `## Needs-Confirmation Findings` with the computed `fp`, the `Question` and `Verified`. Never gates. |
+   | `manual-fix-required` | Ledger `## Manual-Fix-Required Findings`, `Reason` from the gate's `reasons` (`fix-not-verifiable` when it invented names or broke syntax). |
+   | `requote` | Re-read the file at `snippet.found_line` (use `snippet.exact_text` when given), re-quote verbatim, re-run the gate **once**. Still `requote` → drop the finding and list it in the report under "Dropped — could not be grounded in the code". |
+   | `invalid` | Supply the missing field and re-run. |
+
+   The gate parses fixes for Python and CommonJS only. For other languages (JSX/TSX, ES modules, C#,
+   Java, YAML, SQL), check yourself that the fix replaces exactly the quoted lines and is valid in place.
+   If you cannot be sure, use `manual-fix-required`.
+4. Reconcile existing entries against the code, not against this scan's memory:
+   ```bash
+   node "$PLUGIN_DIR/scripts/finding-verify.cjs" audit-ledger --root=. --ledger=CodeReviews/code-review-ledger.md
+   ```
+   An Open finding absent from this scan may be marked Fixed **only if its ID is in
+   `summary.fixed_candidates`** (it has a `Verified` date and its code is gone). If the code is still
+   there, it stays Open. IDs in `summary.unverified_snippets` are NOT Fixed: their snippet was probably
+   never verbatim. Re-quote them from the file through the gate (`ledger-schema.md` § Reconciliation rules).
+   For each ID in `suspect_hand_assigned_ids`, add `- **Provenance**: legacy-unverified (hand-assigned)`.
+5. Delete `CodeReviews/.pending-findings.json` once the ledger is written.
+6. Report the gate result in chat and in both reports:
+   ```
+   Grounding gate: {N} findings checked → {a} fingerprinted · {b} needs-confirmation · {c} manual-fix-required · {d} dropped
+   ```
+
+### Intent questions
+
+If any finding is needs-confirmation, end the run with ONE numbered list of the questions, and do not
+guess the answers:
+```
+❓ {b} finding(s) depend on how the system is meant to behave — they do not block commits:
+  1. [FP-xxxxxxxx] {file}:{line} — {question}
+  ...
+Answer by number. A confirmed defect moves to Open; intended behaviour → /dismiss FP-… by-design "<answer>".
+```
 
 ### HTML report
 
@@ -539,6 +605,7 @@ Delete `.claude/code-review-checkpoint.json` on successful completion.
 | `$PLUGIN_DIR/skills/shared/file-cache-schema.md` | Cache schema and merge rules |
 | `$PLUGIN_DIR/skills/shared/checkpoint-schema.md` | Checkpoint schema |
 | `$PLUGIN_DIR/skills/shared/fingerprint-spec.md` | Fingerprint generation |
+| `$PLUGIN_DIR/scripts/finding-verify.cjs` | Grounding gate — run in Post-Scan (not read) |
 | `$PLUGIN_DIR/skills/shared/ledger-schema.md` | Ledger format and reconciliation |
 | `$PLUGIN_DIR/skills/shared/business-context-severity.md` | B-series override triggers |
 | `$PLUGIN_DIR/skills/shared/source-file-consent.md` | Consent category enforcement |

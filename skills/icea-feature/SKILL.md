@@ -82,6 +82,20 @@ Do not proceed. Do not ask for ADO ID, Release, or Sprint.
 
 ---
 
+## Entry-point context check
+
+Run immediately after the governance gate, before reading any project files:
+
+```
+Read $PLUGIN_DIR/skills/shared/context-budget-check.md and run the entry-point check with:
+  skill_name    = "ICEA feature planning"
+  skip_keywords = ["ICEA ADO-", "TECH ADO-", "PLAN ADO-"]
+```
+
+On `BUDGET_OK` or `BUDGET_SKIPPED` — proceed to Resolve PLUGIN_DIR. No message needed.
+
+---
+
 ## Resolve PLUGIN_DIR — do this first, before any step
 
 Read `.claude/plugin-path.txt` to get PLUGIN_DIR. If absent or empty, use the §1a resolver:

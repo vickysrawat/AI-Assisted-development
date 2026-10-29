@@ -187,11 +187,12 @@ When no severity data is available from any source, default to `Medium` and note
 
 ## SEC-DEP Finding Schema
 
-Every SCA finding must have exactly these 8 fields for ledger and actionability compatibility (AC-F8):
+Every SCA finding must have exactly these 7 fields for ledger and actionability compatibility (AC-F8).
+There is **no `fingerprint` field**: the security skill computes FP IDs with
+`scripts/finding-verify.cjs`, which also checks the package@version is really declared in `file`:
 
 | Field | Type | Description | Example |
 |---|---|---|---|
-| `fingerprint` | string | `FP-[0-9a-f]{8}` | `FP-a1b2c3d4` |
 | `id` | string | Always `SEC-DEP` | `SEC-DEP` |
 | `file` | string | Relative path to manifest | `package.json` |
 | `line` | integer | Line number (use `1` if undeterminable) | `1` |

@@ -48,7 +48,6 @@ function assert(name, condition, detail) {
 
 // Reusable valid findings — used as a base for multiple test cases
 const FINDING_A = {
-  fingerprint: 'FP-a1b2c3d4',
   id: 'SEC-CONTAINER',
   file: FIXTURE_1,
   line: 1,
@@ -58,7 +57,6 @@ const FINDING_A = {
   fix: 'FROM node:20.11-alpine3.19',
 };
 const FINDING_B = {
-  fingerprint: 'FP-e5f6a7b8',
   id: 'SEC-IAC',
   file: FIXTURE_2,
   line: 5,
@@ -71,7 +69,7 @@ const FINDING_B = {
 // --- Required test cases (AC-F13) ---
 
 // TC-1: valid batch accepted
-// Two complete findings with all 8 fields, valid id/severity/fingerprint, real fixture paths
+// Two complete findings with all 7 required fields, valid id/severity, real fixture paths
 const r1 = validateIacFindings([{ ...FINDING_A }, { ...FINDING_B }]);
 assert(
   'valid batch accepted',
@@ -80,19 +78,19 @@ assert(
 );
 
 // TC-2: missing-field batch rejected
-// finding[1] has the fingerprint field removed — entire batch must be rejected with MISSING_FIELD
+// finding[1] has the evidence field removed — entire batch must be rejected with MISSING_FIELD
 const batchMissingFingerprint = [
   { ...FINDING_A },
   {
-    // fingerprint intentionally omitted
+    // evidence intentionally omitted
     id: 'SEC-IAC', file: FIXTURE_2, line: 5, severity: 'Critical',
-    rule: 'K8S-001', evidence: 'value: mysecret', fix: 'valueFrom: secretKeyRef',
+    rule: 'K8S-001', fix: 'valueFrom: secretKeyRef',
   },
 ];
 const r2 = validateIacFindings(batchMissingFingerprint);
 assert(
   'missing-field batch rejected',
-  r2.valid === false && r2.error === 'MISSING_FIELD' && r2.finding_index === 1 && r2.field === 'fingerprint',
+  r2.valid === false && r2.error === 'MISSING_FIELD' && r2.finding_index === 1 && r2.field === 'evidence',
   JSON.stringify(r2),
 );
 
@@ -137,7 +135,6 @@ assert(
 // TC-7: 50 findings validated in <500ms (AC-NF2)
 // Generates a 50-finding batch programmatically and asserts wall-clock time is under 500ms
 const largeBatch = Array.from({ length: 50 }, (_, i) => ({
-  fingerprint: 'FP-' + i.toString(16).padStart(8, '0'),
   id: i % 2 === 0 ? 'SEC-CONTAINER' : 'SEC-IAC',
   file: FIXTURE_1,
   line: i + 1,
@@ -153,6 +150,22 @@ assert(
   '50 findings validated in <500ms (AC-NF2)',
   elapsed < 500,
   `elapsed: ${elapsed}ms`,
+);
+
+// TC-8: fingerprint is optional — finding-verify.cjs computes the FP ID (fingerprint-spec.md 1.1)
+const r8 = validateIacFindings([{ ...FINDING_A }]);
+assert(
+  'finding without a fingerprint accepted',
+  r8.valid === true && r8.findings.length === 1 && r8.findings[0].fingerprint === undefined,
+  JSON.stringify(r8),
+);
+
+// TC-9: a fingerprint that IS supplied must still be well-formed
+const r9 = validateIacFindings([{ ...FINDING_A, fingerprint: 'FP-XYZ' }]);
+assert(
+  'malformed supplied fingerprint rejected',
+  r9.valid === false && r9.error === 'INVALID_FINGERPRINT' && r9.finding_index === 0,
+  JSON.stringify(r9),
 );
 
 // --- Cleanup temp fixtures ---

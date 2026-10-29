@@ -1,5 +1,5 @@
 # Finding Fingerprint Specification
-_Spec version: 1.0 · Last changed: 2026-07-06 · Applies to: code-review, security, dynamic-scan_
+_Spec version: 1.1 · Last changed: 2026-10-28 · Applies to: code-review, security, dynamic-scan · 1.1: eligibility decided by scripts/finding-verify.cjs; IDs must be computed (hash algorithm unchanged)_
 
 Shared by: `code-review`, `security`, `dynamic-scan`
 
@@ -71,16 +71,22 @@ Collisions are rare but silent when undetected — always check.
 
 ## What gets a fingerprint
 
-Only findings with a **concrete source-level fix** qualify:
+Eligibility is decided by `scripts/finding-verify.cjs check`, not by judgement — its
+`verdict` field is authoritative. (code-review and security — including its IaC and SCA
+sub-agents — run it before every ledger write; dynamic-scan has not adopted it yet — until it
+does, apply the same conditions by hand.) SCA dependency findings (`kind: "dependency"`) are
+checked differently: the vulnerable `package@version` must be declared in the cited manifest, and
+the fix is a version upgrade rather than a paste.
 
-| Has fingerprint | Condition |
-|---|---|
-| Yes | Specific file + vulnerable code snippet + corrected code snippet |
-| No | Advisory-only findings (e.g. "consider adding rate limiting") |
+| Verdict | Condition (all checked against the real file) | Ledger section |
+|---|---|---|
+| `fingerprint` | Vulnerable snippet exists verbatim and once in the file; fix has no `...` placeholders, is code (not a comment), uses only existing / self-defined / declared-external names, passes only real keyword args, and (where a parser exists) leaves the file parsable | `## Open Findings` (FP ID) |
+| `needs-confirmation` | As `fingerprint`, but the defect depends on an unconfirmed business intent or reachability (`needs_confirmation` question supplied) | `## Needs-Confirmation Findings` (FP ID, never gates) |
+| `manual-fix-required` | Snippet verified, but the fix is missing, prose, pseudocode, invents names, or breaks the syntax | `## Manual-Fix-Required Findings` (no FP ID) |
+| `requote` | Snippet is not verbatim, not unique, or the file is missing — re-quote from the file and re-run, or drop the finding | not written until resolved |
 
-Advisory-only findings get `manual-fix-required` in place of an FP ID and are
-excluded from the `/fix` workflow. They still appear in the ledger under
-`## Manual-Fix-Required Findings`.
+Advisory-only findings (e.g. "consider adding rate limiting") are `manual-fix-required`
+and are excluded from the `/fix` workflow.
 
 ---
 
@@ -99,6 +105,12 @@ re-evaluated, not silently carried forward.
 
 ## Hard rules
 
+- **IDs are computed, never typed.** Take the `fp` from `finding-verify.cjs check`
+  output (it hashes the four input fields and applies the collision suffix when given
+  `--ledger`). An ID typed by a model or a person — e.g. `FP-a1b2c3d4`, `FP-e9f0a1b2` — cannot
+  be reproduced, so a later scan can never re-confirm it. `finding-verify.cjs audit-ledger`
+  reports such IDs as `suspect-hand-assigned`; keep the ID (it may be referenced elsewhere)
+  but add `- **Provenance**: legacy-unverified (hand-assigned)` to the block.
 - **Always check for collisions** before writing to the ledger.
 - **Never generate fingerprints for advisory-only findings.** Use
   `manual-fix-required` instead.

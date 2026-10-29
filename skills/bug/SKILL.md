@@ -23,6 +23,20 @@ requires design decisions. Use `icea-feature` for those.
 
 ---
 
+## Entry-point context check
+
+Run before Step 1 — before reading any project files:
+
+```
+Read $PLUGIN_DIR/skills/shared/context-budget-check.md and run the entry-point check with:
+  skill_name    = "Bug fix flow"
+  skip_keywords = []
+```
+
+On `BUDGET_OK` or `BUDGET_SKIPPED` — proceed to Step 1. No message needed.
+
+---
+
 ## Persona
 
 Execute as **[SE] Elena Fischer — Senior Software Engineer** (9 yrs across all layers). Optimizes for

@@ -18,18 +18,32 @@ Event Path:
   Event 3 [<role>]  <file>:<line>  — <what happens here / the defect>
 
 Vulnerable Code:
-  <the actual problematic code snippet, with file:line>
+  <contiguous lines copied VERBATIM from the file (same indentation), unique in the file>
 
 Fix:
-  <corrected code snippet — complete enough to copy-paste, with a one-line
+  <replacement for exactly those lines — paste-able as-is, with a one-line
    explanation of what changed and why>
+  — OR —
+  manual-fix-required — <config-level | infra-level | requires-design-decision | multi-file>
+  Recommendation: <what to change, in prose>
 
 References: <CWE / OWASP / MSRC link if applicable>
 ```
 
-**Every finding MUST include both a "Vulnerable Code" snippet showing the current
-problematic code, and a "Fix" snippet showing the corrected code.** Never give a
-fix as prose only — always provide the actual corrected code the developer can paste in.
+**Every finding MUST include a "Vulnerable Code" snippet copied verbatim from the file.**
+`/fix` replaces that exact text with the Fix text — a condensed, reworded, re-indented
+or `...`-elided snippet cannot be found, and a snippet that occurs twice gets the wrong
+copy replaced. Extend the snippet with neighbouring lines until it is unique.
+
+**Give a code Fix only when it is real, paste-able code.** A Fix must replace exactly the
+quoted lines, leave the file syntactically valid, and use only names that already exist in
+the repo, appear in the vulnerable snippet, or are defined by the fix itself (declare any
+library API it relies on in `external_symbols`). When the right fix needs a new type,
+helper, parameter or constant that does not exist, an edit in another file, or a design
+decision, write `manual-fix-required` with a prose recommendation instead. **Never invent
+a symbol to make a fix look complete** — a pseudocode fix is worse than none, because it
+gets an FP ID and `/fix` would paste it. `scripts/finding-verify.cjs` enforces this before
+the ledger write (SKILL.md § Grounding gate).
 
 Roles: `Source` | `Transfer` | `Sink` | `Check` | `Null` | `Alloc` | `Free` | `Lock` | `Unlock` | `Defect`
 

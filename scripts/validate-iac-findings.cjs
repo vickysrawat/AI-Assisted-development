@@ -1,8 +1,8 @@
 // SCRIPT REVIEW
 // What it does:        Validates a batch of IaC scan findings (JSON array) produced by the
 //                      security skill's IaC Scan sub-agent before any findings are written
-//                      to security/security-ledger.md. Checks all 8 required fields per
-//                      finding, validates id/severity/fingerprint format, and verifies each
+//                      to security/security-ledger.md. Checks the 7 required fields per
+//                      finding, validates id/severity (and fingerprint format when supplied), and verifies each
 //                      file path exists on disk. Uses all-or-nothing semantics — a single
 //                      malformed finding rejects the entire batch. On failure, writes the raw
 //                      sub-agent output to .claude/logs/iac-scan-{YYYY-MM-DD}.md for review.
@@ -24,8 +24,9 @@
 const fs   = require('fs');
 const path = require('path');
 
-// All 8 required fields — every finding must have all of these or the batch is rejected (AC-F11)
-const REQUIRED_FIELDS = ['fingerprint', 'id', 'file', 'line', 'severity', 'rule', 'evidence', 'fix'];
+// All 7 required fields — every finding must have all of these or the batch is rejected (AC-F11).
+// `fingerprint` is optional: scripts/finding-verify.cjs computes the FP ID (fingerprint-spec.md 1.1).
+const REQUIRED_FIELDS = ['id', 'file', 'line', 'severity', 'rule', 'evidence', 'fix'];
 
 // Valid pattern IDs — Dockerfile/docker-compose findings use SEC-CONTAINER,
 // Kubernetes YAML findings use SEC-IAC (AC-F5, AC-F6)
@@ -82,7 +83,7 @@ function validateIacFindings(input) {
   for (let i = 0; i < findings.length; i++) {
     const f = findings[i];
 
-    // All 8 required fields must be present and non-null (AC-F11)
+    // All 7 required fields must be present and non-null (AC-F11)
     for (const field of REQUIRED_FIELDS) {
       if (f[field] === undefined || f[field] === null) {
         return { valid: false, error: 'MISSING_FIELD', finding_index: i, field };
@@ -99,8 +100,8 @@ function validateIacFindings(input) {
       return { valid: false, error: 'INVALID_SEVERITY', finding_index: i };
     }
 
-    // fingerprint must match FP-[0-9a-f]{8} — format required for /fix and /dismiss
-    if (!FINGERPRINT_RE.test(f.fingerprint)) {
+    // A supplied fingerprint must match FP-[0-9a-f]{8}; normally it is absent and finding-verify computes it
+    if (f.fingerprint !== undefined && f.fingerprint !== null && !FINGERPRINT_RE.test(f.fingerprint)) {
       return { valid: false, error: 'INVALID_FINGERPRINT', finding_index: i };
     }
 

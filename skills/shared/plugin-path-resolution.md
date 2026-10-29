@@ -46,10 +46,11 @@ PLUGIN_DIR=$(cat .claude/plugin-path.txt 2>/dev/null | tr -d '\r\n')
 ```
 
 **Stale-window caveat:** After `install.sh --update` installs a new plugin version,
-`plugin-path.txt` still points to the previous cache until setup-sync runs. Skills
-invoked in this window use old reference files. Dream-status detects version drift and
-prompts setup-sync, which updates the file. Do not rely on `plugin-path.txt` in projects
-where setup-status reports UPGRADE PENDING.
+`plugin-path.txt` still points to the previous cache until setup-sync runs. `/session-start`
+auto-heals this at the start of each session (Step 0b) — it re-resolves from
+`installed_plugins.json` and rewrites the file if stale, then warns the developer.
+Do not rely on `plugin-path.txt` in headless or non-interactive contexts where
+`/session-start` is not run; use the §1a resolver directly instead.
 
 ---
 

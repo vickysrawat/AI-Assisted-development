@@ -74,6 +74,16 @@ GOVERNANCE=$(node -e "try{const s=JSON.parse(require('fs').readFileSync('.claude
 echo "GOVERNANCE_MODE=$GOVERNANCE"
 ```
 
+4. Run entry-point context check (after resolving governance mode, before any skill is invoked):
+
+```
+Read $PLUGIN_DIR/skills/shared/context-budget-check.md and run the entry-point check with:
+  skill_name    = "Goal-loop orchestration"
+  skip_keywords = []
+```
+
+On `BUDGET_OK` or `BUDGET_SKIPPED` — continue to the governance-mode branch below.
+
 ---
 
 ### Step 0 — Lightweight mode branch (if GOVERNANCE_MODE=lightweight)

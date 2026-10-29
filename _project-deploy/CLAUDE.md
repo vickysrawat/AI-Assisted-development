@@ -109,6 +109,10 @@ execute the skill immediately — priority over chat.
 | `REFRESH DOMAIN` | Execute `skills/shared/business-context-generation.md` in refresh mode — skips refresh/keep prompt; shows before/after diff of every trigger change before `APPROVED`. |
 | `REFRESH RULES` | Execute `skills/shared/rule-refresh.md` — per-file three-way diff (plugin changes + your edits vs baseline); writes only on `APPROVED` per file. |
 | `REFRESH RULES {filename}` | Same as `REFRESH RULES` scoped to one plugin-managed file (must appear in `_deploy-manifest.json`). |
+| `CHECK RULES` | Run rule-check skill — scan all files changed in the working tree against deployed DO NOT rules in `.claude/rules/`. LLM-based; read-only. |
+| `CHECK RULES ADO-{ID}` | Run rule-check skill scoped to files changed on the feature branch for that ADO (`git diff origin/{target-branch}...HEAD`). |
+| `SET RULES per-project` | Read `dream-init-state.json` → set `per_project_rules: true` → confirm: ✅ per-project mode — run `/setup-sync` to apply scoped rule paths to `.claude/rules/`. |
+| `SET RULES repo-wide` | Read `dream-init-state.json` → set `per_project_rules: false` → confirm: ✅ repo-wide mode — run `/setup-sync` to apply. |
 | `UPGRADE ADO-{ID}` | Run the upgrade skill (`/upgrade`) for that ADO ID — in-place, same-stack version upgrade (orchestrates a deterministic tool; rejects false-upgrades → Rewrite) |
 | `REWRITE ADO-{ID}` | Run the rewrite skill (`/rewrite`) for that ADO ID — out-of-place generative migration to a new target folder (posture · options · target-space DAG · per-cluster BAL/ERL · two-gate) |
 | `REPLATFORM ADO-{ID}` | Run the replatform skill (`/replatform`) for that ADO ID — hosting/topology migration (on-prem → cloud); LLM authors IaC + human-executable runbooks, human executes; NFR/Well-Architected oracle |

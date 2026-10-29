@@ -104,7 +104,10 @@ The description must answer three questions in plain prose:
 3. **Who is affected and how?** (the impact)
 
 Then the remediation must be **specific to this codebase** — not generic OWASP advice.
-Name the actual file, function, and fix. Include corrected code.
+Name the actual file, function, and fix. Include corrected code when a real, paste-able fix exists;
+when it would need a new helper, parameter or type, another file, or a design decision, say
+`manual-fix-required` and describe the change in prose — never invent symbols (code-review
+`output-format.md` §3a).
 
 ✅ Good description (from Claude built-in):
 > "The app calls `/whoami` to discover the current Windows username and uses it as a
@@ -148,7 +151,8 @@ Evidence:
 <Minimal code snippet showing the flaw — actual code from the file, not pseudocode>
 
 Remediation:
-<Specific fix for this codebase. Name the file and function. Include corrected code.
+<Specific fix for this codebase. Name the file and function. Include corrected code (or
+ `manual-fix-required` + prose when no real paste-able fix exists).
 Not generic advice — tell the developer exactly what to change.>
 ```
 Group findings by severity (Critical → Informational). End with an **Executive Summary**

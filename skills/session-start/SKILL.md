@@ -59,6 +59,42 @@ Orientation, clarifying questions, and reading architecture docs are always perm
 
 ---
 
+## Step 0b — Plugin-path integrity check
+
+Verify `.claude/plugin-path.txt` points to the currently installed plugin. Run this before
+any skill reads a `$PLUGIN_DIR`-relative file. If stale (e.g. after a plugin upgrade
+without re-running `/setup-sync`), auto-heal and warn the developer.
+
+```bash
+STORED_DIR=$(cat .claude/plugin-path.txt 2>/dev/null | tr -d '\r\n')
+
+IFS=$'\t' read -r TRUE_DIR INSTALLED_VERSION < <(node -e '
+const fs=require("fs"),os=require("os"),path=require("path");
+const base=path.join(os.homedir(),".claude","plugins");
+const norm=p=>p?p.split(String.fromCharCode(92)).join("/"):"";
+let dir="",ver="";
+try{
+  const reg=JSON.parse(fs.readFileSync(path.join(base,"installed_plugins.json"),"utf8"));
+  const key=Object.keys(reg.plugins||{}).find(k=>k.startsWith("ai-assisted-development@"));
+  if(key){const a=reg.plugins[key]||[];const e=a.find(x=>x.scope==="user")||a[0];
+    if(e&&e.installPath&&fs.existsSync(e.installPath)){dir=e.installPath;ver=e.version||"";}}
+}catch(e){}
+if(!dir){try{for(const m of fs.readdirSync(base)){const p=path.join(base,m,"plugins","ai-assisted-development");if(fs.existsSync(p)){dir=p;break;}}}catch(e){}}
+if(dir&&!ver){try{ver=JSON.parse(fs.readFileSync(path.join(dir,".claude-plugin","plugin.json"),"utf8")).version||"";}catch(e){}}
+process.stdout.write(norm(dir)+"\t"+(ver||"unknown"));
+')
+
+if [ -n "$TRUE_DIR" ] && [ "$TRUE_DIR" != "$STORED_DIR" ]; then
+  printf '%s\n' "$TRUE_DIR" > .claude/plugin-path.txt
+  echo "⚠ plugin-path.txt was stale — updated to plugin v${INSTALLED_VERSION}. Run /setup-sync to refresh deployed rule files and hooks."
+fi
+```
+
+Skip silently if `plugin-path.txt` is absent or `installed_plugins.json` cannot be read —
+the §1a fallback in each skill handles both cases already.
+
+---
+
 ## Step 1 — Load project intelligence
 
 Read the following files in order. Skip silently if any are absent.

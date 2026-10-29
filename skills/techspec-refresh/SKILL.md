@@ -57,6 +57,7 @@ All overlay files live under `$PLUGIN_DIR/skills/icea-feature/references/`.
 | `aspnet-api-angular` | `techspec-aspnet-api-angular.md` | .NET, Angular, TypeScript |
 | `aspnet-mvc-jquery` | `techspec-aspnet-mvc-jquery.md` | .NET Framework, jQuery |
 | `vsto` | `techspec-vsto.md` | VSTO, .NET Framework |
+| `react-fastapi` | `techspec-react-fastapi.md` | React, FastAPI, Python, MSAL |
 
 ---
 
@@ -137,7 +138,7 @@ Runs pass 4 (version currency) as heuristic only — flags ⚠ NEEDS-WEB-CONFIRM
    - Files Changed table rows.
 
 3. **Run all rubric categories** (web-free):
-   - Pass 1 — SC (Self-Consistency): checks SC1–SC5
+   - Pass 1 — SC (Self-Consistency): checks SC1–SC6
    - Pass 2 — CC (Cross-Layer Contract): LLM reasoning only, mark results as NOT-WEB-VERIFIED
    - Pass 3 — LR/UP/stack patterns: checks S1–S7, P1–P4, and applicable stack checks (R, A, F)
    - Pass 4 — version currency: flag ⚠ NEEDS-WEB-CONFIRM on version strings that look
@@ -203,6 +204,7 @@ targeted web search. Record source URL and retrieved date for every factual clai
 | CC2 — Repository → Service type contract | `"{framework} repository pattern return ORM model" site:docs.{framework-domain}` |
 | CC3 — HTTP status reachability | `"{framework} {status_code} exception handler" site:docs.{framework-domain}` |
 | CC4 — Auth token transport | `"{framework} JWT bearer token middleware" site:docs.{framework-domain}` |
+| CC5 — Overlay code ↔ rule files | LLM-only: read `.claude/rules/` DO NOT rules and cross-check proposed diff code blocks — no web query needed |
 
 ### Step 4 — Pass 3: Environment Fit (web-grounded if env known)
 
@@ -260,6 +262,8 @@ Run an inline LLM-as-judge on `CRITIC_MODEL`. PASS / FAIL:
 | Pattern correctness | proposed code would not compile or run correctly |
 | Scope | diff edits content unrelated to the identified rubric failures |
 | No regression | a change removes a valid current pattern without replacement |
+| SC6 — Rule file duplication | proposed diff adds or restores a DO NOT rule whose substance is already covered in `_project-deploy/rules/` (pointer convention violated) |
+| CC5 — Rule file consistency | proposed diff adds a code pattern that violates a DO NOT rule in `.claude/rules/` (read rule files from `.claude/rules/` at judge time; skip this check if `.claude/rules/` is unavailable) |
 
 On FAIL: stop, report reasons, present no write prompt.
 
@@ -294,6 +298,7 @@ On judge PASS:
 | SC3 | API table ↔ code reachability | Every HTTP status in the API table has a code path that produces it | An HTTP status (e.g. 403) appears in the API table but no middleware, exception handler, or raise can produce it |
 | SC4 | Header scope ↔ content | Header comment accurately lists covered frameworks; no framework is half-covered | Header lists "FastAPI/Django/Flask" but only FastAPI patterns appear |
 | SC5 | Layer contract ↔ return types | Stated layer contract matches actual return type annotations in code blocks | Layer contract says "repository returns ORM models" but repository code returns Pydantic schemas |
+| SC6 | DO NOT pointer convention | DO NOT section opens with `> Rules enforced by rule files: see...` pointer block; no rule below the pointer duplicates content already in `_project-deploy/rules/` | DO NOT section contains rules whose substance is already enforced by a deployed rule file (e.g. React.FC ban, import React ban, auth Entra rules) — duplicates that will drift independently |
 
 ### Pass 2: CC — Cross-Layer Contract (LLM reasoning; web-confirm in refresh)
 
@@ -303,6 +308,7 @@ On judge PASS:
 | CC2 | Repository output ↔ service input | Service reads properties consistent with the repository's return type | Service reads `.field` that exists on the Pydantic schema but not on the ORM model the repository returns |
 | CC3 | TypeScript types ↔ API response shape | TypeScript interfaces match the fields the backend actually returns | Interface declares `success: boolean` but API returns the created resource; or a field the API returns is missing |
 | CC4 | Auth token transport ↔ backend expectation | Frontend attaches the token the same way the backend middleware expects | Frontend sets `X-Auth-Token` but middleware reads `Authorization: Bearer` |
+| CC5 | Overlay code ↔ deployed rule files | No proposed code block in the overlay diff violates a DO NOT rule in `.claude/rules/` | Proposed diff adds a code pattern that directly contradicts a deployed rule file (e.g. uses `React.FC` when `react-ecosystem-rules.md` bans it) |
 
 ### Pass 3a: LR — LLM-Readability Structure (all overlays)
 
@@ -413,6 +419,7 @@ SQLite only (no other DB confirmed): WARN — likely dev/test only; production d
 | CC2 | Update service code to read ORM model fields, not schema fields |
 | CC3 | Update TypeScript interface to match actual API response shape |
 | CC4 | Align frontend token header name with backend middleware expectation |
+| CC5 | Remove or rewrite the violating code block so it complies with the cited DO NOT rule; if the rule file is wrong, update it first with `REFRESH RULES {filename}` |
 | S1 | Add `## DO NOT rules` before first `---` separator |
 | S2 | Add `# Layer contract: {describe flow}` as last line of header comment |
 | S3 | Prepend `> **Include only when {X} ∈ all_stacks.** Omit this section ...` to each conditional section |

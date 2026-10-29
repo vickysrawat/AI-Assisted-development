@@ -335,26 +335,11 @@ Set-Content -Path "$MARKETPLACE_DIR\.claude-plugin\marketplace.json" -Encoding U
 }
 "@
 
-# -- Write extraKnownMarketplaces to settings.json -----------------------------
-if (-not (Test-Path $SETTINGS_FILE)) { Set-Content $SETTINGS_FILE "{}" -Encoding UTF8 }
-
-$jsInstall = @"
-const fs = require('fs');
-const settingsPath = '$($SETTINGS_FILE -replace '\\', '\\\\')';
-const marketplaceName = '$MARKETPLACE_NAME';
-const winPath = '$winPath';
-let settings = {};
-try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch(e) {}
-if (!settings.extraKnownMarketplaces) settings.extraKnownMarketplaces = {};
-if (settings.extraKnownMarketplaces[marketplaceName]) {
-  console.log('  - extraKnownMarketplaces.' + marketplaceName + ' already exists, skipping.');
-} else {
-  settings.extraKnownMarketplaces[marketplaceName] = { source: { source: 'directory', path: winPath } };
-  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
-  console.log('  + extraKnownMarketplaces.' + marketplaceName + ' registered in settings.json');
-}
-"@
-Run-NodeScript $jsInstall
+# -- Write plugin settings to ~/.claude/settings.json -------------------------
+& node "$PLUGIN_DIR\scripts\install-configure-settings.cjs" `
+  --marketplace-name $MARKETPLACE_NAME `
+  --marketplace-dir  $MARKETPLACE_DIR `
+  --plugin-dir       $PLUGIN_DIR
 
 # -- Clear stale plugin cache --------------------------------------------------
 $cacheDir = "$env:USERPROFILE\.claude\plugins\cache"

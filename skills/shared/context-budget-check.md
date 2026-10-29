@@ -160,6 +160,90 @@ Your work is safe — {saved_context}
 
 ## Caller examples
 
+---
+
+## Entry-point check (session-budget mode)
+
+Use at the **start** of a skill — before reading any documents — to warn when
+the session context is already too loaded for the skill to complete safely.
+Unlike the full invocation above, there is no document to measure; the signal
+is the actual remaining context window percentage written by the `statusLine`
+script to `{os.tmpdir()}/ctx-{session_id}.json`.
+
+### Invocation
+
+```
+Read $PLUGIN_DIR/skills/shared/context-budget-check.md and run the entry-point check with:
+  skill_name    = "{name of the skill being entered}"
+  skip_keywords = [{keyword prefixes that imply a fresh/compact context}]
+```
+
+### Step 0 — Skip check?
+
+If the triggering command starts with any string in `skip_keywords` → `BUDGET_SKIPPED`. Return immediately.
+
+### Step 1 — Read remaining context percentage
+
+```bash
+CTX_REMAINING=$(node -e "
+const fs = require('fs'), os = require('os'), path = require('path');
+try {
+  const tmp = os.tmpdir();
+  const files = fs.readdirSync(tmp)
+    .filter(f => f.startsWith('ctx-') && f.endsWith('.json'))
+    .map(f => ({ f, m: fs.statSync(path.join(tmp,f)).mtimeMs }))
+    .sort((a,b) => b.m - a.m);
+  if (!files.length) { process.stdout.write('100'); return; }
+  const d = JSON.parse(fs.readFileSync(path.join(tmp, files[0].f), 'utf8'));
+  process.stdout.write(d.remaining_percentage != null ? String(Math.round(d.remaining_percentage)) : '100');
+} catch(_) { process.stdout.write('100'); }
+")
+echo "CTX_REMAINING=${CTX_REMAINING}%"
+```
+
+If `CTX_REMAINING=100` (file missing, null, or post-`/compact`) → `BUDGET_OK`. Proceed silently — fresh context or already compacted.
+
+### Step 2 — Classify and emit
+
+| remaining % | Verdict | Action |
+|---|---|---|
+| ≥ 40 | `BUDGET_OK` | Proceed silently |
+| 15–39 | `BUDGET_WARN` | Show warning, wait for reply |
+| < 15 | `BUDGET_STOP` | Hard stop, wait for reply |
+
+**On `BUDGET_OK`:** proceed immediately, no message.
+
+**On `BUDGET_WARN`:**
+```
+⚠ CONTEXT BUDGET — {skill_name}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Your context window is ~{100-CTX_REMAINING}% full from earlier in this session.
+{skill_name} reads multiple documents and generates substantial output —
+a loaded context risks truncated or incomplete results.
+
+Options — reply with one:
+  /compact  then re-enter the command
+  CONTINUE  to proceed anyway (quality checks will flag any gaps)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+⛔ STOP — wait for developer reply.
+
+**On `BUDGET_STOP`:**
+```
+⛔ CONTEXT BUDGET — {skill_name}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Your context window is ~{100-CTX_REMAINING}% full.
+Continuing will likely produce truncated or structurally incorrect output.
+
+  Option A — /compact  (recommended)
+  Then re-enter the command.
+
+  Option B — New session
+  Open a fresh Claude Code session and re-enter the command.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+⛔ STOP — no CONTINUE option at skill entry under BUDGET_STOP.
+
 **icea-feature Step 8 (Tech Spec generation):**
 ```
 size_signal       = ICEA line count

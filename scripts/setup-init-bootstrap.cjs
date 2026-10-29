@@ -1164,9 +1164,8 @@ function stepSeedStateFiles(manifest) {
     dream_init_last_run:       today,
     detected_stacks:           [],
     deployed_rules:            [],
-    // Track-A per-project rule scoping — explicit default OFF (discoverable in-state; behaviorally
-    // == absent for the reader). A developer sets true to opt in; setup never clobbers that.
-    per_project_rules:         false,
+    // Track-A per-project rule scoping — default ON; set false in dream-init-state.json to opt out.
+    per_project_rules:         true,
     // ICEA quality signal promotion threshold — number of occurrences before Dream proposes
     // adding a pattern to project-knowledge.md. Default 2; increase for larger teams.
     gap_promotion_threshold:   2,
@@ -1934,11 +1933,19 @@ function stepDeployRules(manifest) {
   // Collect every stack_key at/above threshold across all categories (no dedup cleverness).
   const keys = new Set(['project-rules']);   // project-rules always deploys
   const nearMiss = [];
+  const deploymentGaps = [];
   for (const cat of Object.keys(detection)) {
     if (!Array.isArray(detection[cat])) continue;   // skip non-category fields (e.g. a generations map)
     for (const e of (detection[cat] || [])) {
       if (typeof e.confidence === 'number' && e.confidence >= THRESHOLD) keys.add(e.stack_key);
-      else if (e.stack_key) nearMiss.push(e.stack_key + '@' + e.confidence);
+      else if (e.stack_key) {
+        nearMiss.push(e.stack_key + '@' + e.confidence);
+        if (typeof e.confidence === 'number' && e.confidence > 0) {
+          const gapFile = (e.stack_key === 'project-rules' ? 'project-rules.md' : e.stack_key + '-rules.md');
+          if (fs.existsSync(path.join(rulesDir, gapFile)))
+            deploymentGaps.push({ stack_key: e.stack_key, confidence: e.confidence });
+        }
+      }
     }
   }
 
@@ -2013,6 +2020,17 @@ function stepDeployRules(manifest) {
   const hashLines = Object.entries(updatedHashes).map(([f, h]) => h + '  ' + f);
   atomicWrite(hashesPath, hashLines.join('\n') + (hashLines.length ? '\n' : ''));
 
+  // Build rule_citations: rule file → overlays that cite it (forward-link graph for /setup-status)
+  const ruleCitations = {};
+  const overlaysDir = path.join(PLUGIN_DIR, 'skills', 'icea-feature', 'references');
+  try {
+    const ovFiles = fs.readdirSync(overlaysDir).filter(f => f.startsWith('techspec-') && f.endsWith('.md'));
+    for (const rf of deployed) {
+      const refs = ovFiles.filter(ov => { try { return fs.readFileSync(path.join(overlaysDir, ov), 'utf8').includes(rf); } catch(e) { return false; } });
+      if (refs.length) ruleCitations[rf] = refs;
+    }
+  } catch(e) {}
+
   // _deploy-manifest.json — audit trail (overwrite is otherwise silent)
   const deployedAt   = new Date().toISOString().slice(0, 10);
   const pluginVer    = (() => { try { return JSON.parse(fs.readFileSync(path.join(PLUGIN_DIR, '.claude-plugin', 'plugin.json'), 'utf8')).version || 'unknown'; } catch(e) { return 'unknown'; } })();
@@ -2024,6 +2042,8 @@ function stepDeployRules(manifest) {
     skipped_developer_edited: skippedEdited,
     scoped_paths: Object.keys(scopedPaths).length ? scopedPaths : undefined,
     near_miss: nearMiss,
+    deployment_gaps: deploymentGaps.length ? deploymentGaps : undefined,
+    rule_citations: Object.keys(ruleCitations).length ? ruleCitations : undefined,
     repo_type: state.repo_type || null,
     deployed_at: deployedAt,
     plugin_version: pluginVer,

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LegacyOrders")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5610559415768fd5d124af5966359bd9dd8227d3")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+abe4cf0145aa355c282294b9782cd5388910b860")]
 [assembly: System.Reflection.AssemblyProductAttribute("LegacyOrders")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LegacyOrders")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

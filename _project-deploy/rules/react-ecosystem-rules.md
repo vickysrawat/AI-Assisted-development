@@ -11,7 +11,7 @@ Covers React + state management (RTK / Zustand / TanStack Query) + unit testing
 - Strict mode enabled — no implicit `any`, strict null checks, strict function types
 - Props typed with an explicit `interface` — never inline object type or `any`
 - Event handler types from React: `React.ChangeEvent<HTMLInputElement>`, `React.MouseEvent`, etc.
-- `React.FC` avoided — prefer plain function with explicit return type
+- No React.FC — use a plain function with an explicit return type
 
 ## File Naming
 - Components: `PascalCase.tsx` (e.g. `UserFilterPanel.tsx`)
@@ -79,9 +79,11 @@ Covers React + state management (RTK / Zustand / TanStack Query) + unit testing
 
 ## Out of bounds
 - No class components
-- No `React.FC` with implicit children — use `React.PropsWithChildren<Props>` or explicit `children: React.ReactNode`
+- No React.FC — use a plain function with an explicit return type; if children are needed, declare children: React.ReactNode explicitly
 - No direct DOM manipulation via `document.querySelector` — use refs
 - No data fetching in `useEffect` — use TanStack Query
 - No array index as list key for dynamic data
 - No Context for high-frequency updates — re-renders the entire consumer tree; use Zustand/Jotai
 - No prop drilling beyond 3 levels — use Context or a state store
+- No `import React from 'react'` — React 19+ uses the automatic JSX transform; importing React is not needed for JSX
+- No `success: boolean` in POST response DTOs — return the created resource; the 201 status code carries the success signal

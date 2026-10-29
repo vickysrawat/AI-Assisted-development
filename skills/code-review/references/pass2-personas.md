@@ -138,11 +138,16 @@ Event path:
   Event 2 [{role}]: {file}:{function} — {how it connects}
 
 Vulnerable code:
-  {snippet from the problematic interaction}
+  {contiguous lines copied verbatim from ONE file — same indentation, unique in that file}
 
 Fix:
-  {corrected code showing the proper interaction}
+  {paste-able replacement for exactly those lines}
+  — OR — manual-fix-required — {reason}; Recommendation: {prose}
 ```
+
+Cross-component findings (races, partial failures, transactions) usually need a change in several
+files or a new parameter (e.g. passing a shared connection). That is `manual-fix-required` — do not
+write a fix that calls a parameter, helper or type the code does not have (output-format.md §3a).
 
 ---
 

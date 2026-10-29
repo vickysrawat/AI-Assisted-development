@@ -46,7 +46,7 @@ finding.
 |---|---|
 | Deterministic | Yes — same input = same findings |
 | Stack-specific | Yes — load only the checkers for detected languages |
-| Output | Fingerprinted findings (FP-xxxxxxxx) with concrete fix snippets |
+| Output | Fingerprinted findings (FP-xxxxxxxx) with verified fix snippets, or `manual-fix-required` |
 | Dedup gate | None (first pass) |
 | Hard signals | Secrets, known injection patterns, critical misconfigs = fail |
 
@@ -68,7 +68,8 @@ Every Pass 1 finding must include:
 3. File, function/location, event path
 4. Severity (technical + business override per `business-context-severity.md`)
 5. Vulnerable code snippet
-6. Corrected code snippet (copy-pasteable fix)
+6. Corrected code snippet (paste-able fix) — or `manual-fix-required` with a recommendation when no
+   real fix can be written without inventing code (`fingerprint-spec.md` § What gets a fingerprint)
 
 ---
 
@@ -221,7 +222,7 @@ After all three passes complete, the skill assembles the final report:
 4. Summary statistics (open/fixed/dismissed counts from ledger reconciliation)
 ```
 
-Pass 1 and Pass 2 findings with concrete fixes get fingerprints and enter the
+Pass 1 and Pass 2 findings that pass `scripts/finding-verify.cjs` (verbatim snippet + verified fix) get fingerprints and enter the
 ledger. Pass 3 findings are advisory-only and do not enter the ledger unless
 the developer promotes them via `/fix`.
 

@@ -379,29 +379,14 @@ write_plugin_config
 # ── Create marketplace wrapper ─────────────────────────────────────────────────
 write_marketplace_json "$NEW_VERSION"
 
-# ── Write extraKnownMarketplaces to settings.json ─────────────────────────────
-SETTINGS_FILE="$HOME/.claude/settings.json"
-[ ! -f "$SETTINGS_FILE" ] && echo "{}" > "$SETTINGS_FILE"
-
+# ── Write plugin settings to ~/.claude/settings.json ──────────────
 WIN_MARKETPLACE_DIR="$(to_win_path "$MARKETPLACE_DIR")"
-WIN_SETTINGS_FILE="$(to_win_path "$SETTINGS_FILE")"
-
-node << JSEOF
-const fs = require('fs');
-const settingsPath = '$WIN_SETTINGS_FILE';
-const marketplaceName = '$MARKETPLACE_NAME';
-const winPath = '$WIN_MARKETPLACE_DIR';
-let settings = {};
-try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch(e) {}
-if (!settings.extraKnownMarketplaces) settings.extraKnownMarketplaces = {};
-if (settings.extraKnownMarketplaces[marketplaceName]) {
-  console.log('  — extraKnownMarketplaces.' + marketplaceName + ' already exists, skipping.');
-} else {
-  settings.extraKnownMarketplaces[marketplaceName] = { source: { source: 'directory', path: winPath } };
-  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
-  console.log('  ✓ extraKnownMarketplaces.' + marketplaceName + ' registered in settings.json');
-}
-JSEOF
+WIN_PLUGIN_DIR="$(to_win_path "$PLUGIN_DIR")"
+WIN_CONFIGURE_SCRIPT="$(to_win_path "$SCRIPT_DIR/scripts/install-configure-settings.cjs")"
+node "$WIN_CONFIGURE_SCRIPT" \
+  --marketplace-name "$MARKETPLACE_NAME" \
+  --marketplace-dir  "$WIN_MARKETPLACE_DIR" \
+  --plugin-dir       "$WIN_PLUGIN_DIR"
 
 # ── Clear stale plugin cache ───────────────────────────────────────────────────
 CACHE_DIR="$HOME/.claude/plugins/cache"

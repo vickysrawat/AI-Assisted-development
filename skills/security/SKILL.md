@@ -8,7 +8,7 @@ description: >
 
 # Claude Security Skill
 
-_Skill version: 2.0 · Last changed: 2026-07-06 · Plugin compatibility: >=1.14.0 · Consent: A_
+_Skill version: 2.1 · Last changed: 2026-10-28 · Plugin compatibility: >=1.14.0 · Consent: A_
 
 A structured security review skill using the **three-pass scan architecture**.
 Covers application security, cloud infrastructure, threat modeling, and
@@ -342,41 +342,47 @@ Skip sub-agent. Continue to Pass 1.
 Delegate to a sub-agent. Provide ONLY these inputs — no source code files:
 1. The list of detected IaC file paths and their full contents
 2. Full content of `skills/security/references/iac-scan.md`
-3. Full content of `skills/shared/fingerprint-spec.md`
-4. The required JSON output schema:
+3. The required JSON output schema:
 
-Each finding must be a JSON object with exactly these 8 fields:
-- `fingerprint` — string matching pattern `FP-[0-9a-f]{8}`
+Each finding must be a JSON object with exactly these 7 fields — **no `fingerprint`**: the grounding
+gate computes FP IDs; a sub-agent never types one (`fingerprint-spec.md` § Hard rules):
 - `id` — either `SEC-CONTAINER` (Dockerfile or docker-compose) or `SEC-IAC` (Kubernetes YAML)
 - `file` — relative path to the file containing the finding
 - `line` — integer line number
 - `severity` — one of: `Critical`, `High`, `Medium`, `Low`
 - `rule` — rule ID from iac-scan.md (e.g. `DOCKER-001`, `COMPOSE-004`, `K8S-001`)
-- `evidence` — verbatim code excerpt triggering the rule
-- `fix` — corrected code snippet that resolves the finding
+- `evidence` — the whole line(s) that trigger the rule, copied exactly from the file (same indentation)
+- `fix` — paste-able replacement for exactly those lines, or `""` (empty string) when the fix spans
+  other files or needs a decision (it is then recorded as manual-fix-required)
 
 Sub-agent task: scan each IaC file against the rules in `iac-scan.md`. Emit only rules that fire.
 Return a JSON array of findings. Return `[]` if no rules fire.
 
-After sub-agent returns, validate output before any ledger write:
+After the sub-agent returns, validate the shape, then ground every finding before any ledger write:
 
 ```bash
 echo "$SUB_AGENT_OUTPUT" > /tmp/iac-findings-$$.json
-node scripts/validate-iac-findings.cjs --input-file=/tmp/iac-findings-$$.json
+node "$PLUGIN_DIR/scripts/validate-iac-findings.cjs" --input-file=/tmp/iac-findings-$$.json
 VALID_EXIT=$?
-rm -f /tmp/iac-findings-$$.json
 ```
 
-On exit 0 (valid): append each finding as a new row to `security/security-ledger.md`:
+On exit 0 (valid): convert each finding to the grounding-gate input and run it (§ Grounding gate):
+`{ checker: rule, file, category: id, short_description: "{rule}: {first evidence line, trimmed}",
+line, vulnerable_code: evidence, fix }` → `security/.pending-iac.json`, then
+```bash
+node "$PLUGIN_DIR/scripts/finding-verify.cjs" check --root=. \
+  --findings=security/.pending-iac.json --ledger=security/security-ledger.md
+rm -f /tmp/iac-findings-$$.json security/.pending-iac.json
 ```
-| {fingerprint} | {id} | Open | {severity} | {file} | {line} | {rule} | {evidence} | {fix} |
-```
+Write each finding as a standard `### [FP-…]` block per `ledger-schema.md`, routed by `verdict`
+exactly as in § Grounding gate step 3 (`Pass: pre-scan (IaC)`, `Rule: {rule}`). **Never append table
+rows** — the commit gate reads `### [FP-` blocks only, so a row never blocks `/checkin`.
 Announce:
 ```
-IaC Scan: {M} finding(s) written to ledger
+IaC Scan: {N} finding(s) → {a} Open · {c} manual-fix-required · {d} dropped (not in the file as quoted)
 ```
 
-On exit 1 (invalid): do NOT write to ledger. Announce:
+On exit 1 (invalid): `rm -f /tmp/iac-findings-$$.json`; do NOT write to ledger. Announce:
 ```
 IaC Scan: output invalid — manual review required, see .claude/logs/iac-scan-{YYYY-MM-DD}.md
 ```
@@ -438,8 +444,7 @@ Skip sub-agent. Continue to Pass 1.
 Delegate to a sub-agent. Enable the **WebSearch** tool in the sub-agent. Provide ONLY these inputs — no source code files:
 1. The list of detected manifest file paths and their full contents
 2. Full content of `skills/security/references/sca-scan.md`
-3. Full content of `skills/shared/fingerprint-spec.md`
-4. The required JSON output schema and invocation instructions below
+3. The required JSON output schema and invocation instructions below
 
 **Sub-agent task — two-path execution:**
 
@@ -466,8 +471,8 @@ Continue with any findings already collected from other ecosystems.
 
 **Output:** Return a JSON array of findings. Return `[]` if no vulnerabilities found.
 
-Each finding must be a JSON object with exactly these 8 fields:
-- `fingerprint` — string matching pattern `FP-[0-9a-f]{8}`
+Each finding must be a JSON object with exactly these 7 fields — **no `fingerprint`** (the grounding
+gate computes it):
 - `id` — must be `SEC-DEP` (AC-F7)
 - `file` — relative path to the manifest file containing the vulnerable dependency
 - `line` — integer line number (use `1` when line is not determinable from the tool output)
@@ -480,21 +485,32 @@ After sub-agent returns, validate output before any ledger write:
 
 ```bash
 echo "$SUB_AGENT_OUTPUT" > /tmp/sca-findings-$$.json
-node scripts/validate-sca-findings.cjs --input-file=/tmp/sca-findings-$$.json
+node "$PLUGIN_DIR/scripts/validate-sca-findings.cjs" --input-file=/tmp/sca-findings-$$.json
 VALID_EXIT=$?
-rm -f /tmp/sca-findings-$$.json
 ```
 
-On exit 0 (valid): append each finding as a new row to `security/security-ledger.md` (AC-F8):
+On exit 0 (valid): ground every finding — prove the vulnerable `package@version` is really declared in
+the cited manifest — before any ledger write (AC-F8). Convert each to
+`{ kind: "dependency", checker: rule, file, category: "SEC-DEP", short_description: "{package}@{version}",
+line, evidence, fix }` → `security/.pending-sca.json`, then
+```bash
+node "$PLUGIN_DIR/scripts/finding-verify.cjs" check --root=. \
+  --findings=security/.pending-sca.json --ledger=security/security-ledger.md
+rm -f /tmp/sca-findings-$$.json security/.pending-sca.json
 ```
-| {fingerprint} | {id} | Open | {severity} | {file} | {line} | {rule} | {evidence} | {fix} |
-```
+
+| Verdict | Action |
+|---|---|
+| `fingerprint` | Standard `### [FP-…] SEC-DEP — {severity}` block in `## Open Findings`: `Vulnerable code` = `snippet.exact_text` (the manifest line, verbatim), `Fix` = the upgrade text, `- **Fix kind**: dependency-upgrade`, `Pass: pre-scan (SCA)`, `Verified: {today} (finding-verify)`. |
+| `requote` (`NOT_DECLARED`) | The manifest does not pin that version. If the CVE is in a transitive dependency, re-cite the lockfile that pins it and re-run once; otherwise drop it and list it under "Dropped — not declared". |
+
+**Never append table rows** — the commit gate reads `### [FP-` blocks only.
 Announce:
 ```
-SCA Scan: {M} finding(s) written to ledger
+SCA Scan: {N} finding(s) → {a} Open · {d} dropped (package@version not declared)
 ```
 
-On exit 1 (invalid): do NOT write to ledger. Announce:
+On exit 1 (invalid): `rm -f /tmp/sca-findings-$$.json`; do NOT write to ledger. Announce:
 ```
 SCA Scan: output invalid — manual review required, see .claude/logs/sca-scan-{YYYY-MM-DD}.md
 ```
@@ -533,13 +549,16 @@ Load `$PLUGIN_DIR/skills/security/references/pass1-patterns.md` for the full pat
 ### Pass 1 output
 
 Every finding gets:
-1. A fingerprint per `$PLUGIN_DIR/skills/shared/fingerprint-spec.md`
-2. A pattern ID (SEC-INJ, SEC-AUTH, etc.)
-3. File, function/location
-4. Severity (technical + business override)
-5. Vulnerable code snippet
-6. Corrected code snippet (copy-pasteable fix)
-7. Pass: 1
+1. A pattern ID (SEC-INJ, SEC-AUTH, etc.)
+2. File, function/location
+3. Severity (technical + business override)
+4. Vulnerable code snippet — contiguous lines copied verbatim from the file, unique in it
+5. Corrected code snippet (paste-able fix) — or `manual-fix-required` with a prose recommendation
+   when the remediation needs a new helper/type/parameter, an edit in another file, a config change
+   or a design decision. Never invent a symbol to make a fix look complete.
+6. Pass: 1
+
+No FP ID yet — the grounding gate (§ Grounding gate) computes it; never type one.
 
 Update the checkpoint after each file.
 
@@ -574,8 +593,8 @@ Only report NEW findings that add information not captured above.
 
 ### Pass 2 output
 
-Findings follow the format in `$PLUGIN_DIR/skills/security/references/pass2-personas.md`. Fingerprint
-fixable findings per `$PLUGIN_DIR/skills/shared/fingerprint-spec.md`. Set Pass: 2.
+Findings follow the format in `$PLUGIN_DIR/skills/security/references/pass2-personas.md`, with the
+same verbatim-snippet / real-fix rules as Pass 1. No FP IDs yet — the grounding gate assigns them. Set Pass: 2.
 
 ---
 
@@ -622,6 +641,67 @@ Set Pass: 3.
 
 ## Post-Scan — Report Assembly
 
+### Grounding gate (MANDATORY — runs before the report and the ledger write)
+
+Same gate as code-review (`$PLUGIN_DIR/skills/code-review/SKILL.md` § Grounding gate), applied to
+the security ledger. Pass 1/Pass 2 findings, and any findings from reviewer subagents, are raw input
+to the gate. Never copy a finding into the ledger directly. (The IaC and SCA pre-scans already ran
+their output through the same script.)
+
+1. Write every Pass 1 and Pass 2 finding to `security/.pending-findings.json` — a JSON array of
+   `{ checker: pattern_id, file, category: owasp_category, short_description, line, vulnerable_code, fix,
+   external_symbols?, needs_confirmation? }`. `fix` is `null` for manual-fix-required findings.
+   Use `needs_confirmation` when exploitability depends on something the code cannot show: is the
+   endpoint internet-facing? Is the input ever user-controlled? Is a compensating control in place?
+2. Run the gate:
+   ```bash
+   node "$PLUGIN_DIR/scripts/finding-verify.cjs" check --root=. \
+     --findings=security/.pending-findings.json --ledger=security/security-ledger.md
+   ```
+3. Route each finding by its `verdict`:
+
+   | Verdict | Action |
+   |---|---|
+   | `fingerprint` | `## Open Findings` with the computed `fp`, `Verified: {today} (finding-verify)`; line = `snippet.found_line` |
+   | `needs-confirmation` | `## Needs-Confirmation Findings` with the `fp`, the `Question` and `Verified` — never gates |
+   | `manual-fix-required` | `## Manual-Fix-Required Findings`, `Reason` from the gate's `reasons` |
+   | `requote` | Re-read the file at `snippet.found_line` (`snippet.exact_text` when given), re-quote verbatim, re-run **once**; still `requote` → drop and list under "Dropped — could not be grounded in the code" |
+   | `invalid` | Supply the missing field and re-run |
+
+   The syntax probe covers Python and CommonJS only. For other languages, check yourself that the fix
+   replaces exactly the quoted lines; if you cannot be sure, use `manual-fix-required`.
+4. Reconcile existing entries against the code:
+   ```bash
+   node "$PLUGIN_DIR/scripts/finding-verify.cjs" audit-ledger --root=. --ledger=security/security-ledger.md
+   ```
+   - **Fixed:** an Open finding absent from this scan (code, IaC or SCA) may be marked Fixed **only
+     if its ID is in `summary.fixed_candidates`**. IDs in `summary.unverified_snippets` stay Open:
+     re-quote them through the gate.
+   - **Hand-assigned IDs:** for each ID in `suspect_hand_assigned_ids`, add
+     `- **Provenance**: legacy-unverified (hand-assigned)`.
+   - **Legacy table rows:** handle each entry in `summary.legacy_table_rows` (pre-1.1 IaC/SCA output,
+     which never gated). Only do this once the IaC/SCA pre-scan for that row's type (`SEC-CONTAINER`/
+     `SEC-IAC` → IaC, `SEC-DEP` → SCA) has completed successfully in this run.
+     - Delete its `Open` rows. The fresh pre-scan re-emitted every finding that still applies as a
+       verified block.
+     - Convert `Dismissed`/`Fixed` rows to blocks in the matching section. Keep the ID and add
+       `Provenance: legacy-unverified (sub-agent-assigned)`.
+     - Tell the developer that a dismissal does not carry over to the newly computed ID of a
+       re-detected finding; they need to re-apply `/dismiss` to it.
+     - Report: `Legacy rows: {n} replaced by verified blocks · {m} converted`.
+     - If that pre-scan was skipped or invalid this run, leave its rows untouched.
+5. Delete `security/.pending-findings.json` once the ledger is written.
+6. Report: `Grounding gate: {N} findings checked → {a} fingerprinted · {b} needs-confirmation · {c} manual-fix-required · {d} dropped`
+
+### Exploitability questions
+
+If any finding is needs-confirmation, end the run with ONE numbered list of the questions:
+```
+❓ {b} finding(s) depend on facts the code cannot show — they do not block commits:
+  1. [FP-xxxxxxxx] {file}:{line} — {question}
+Answer by number. Confirmed exploitable → moves to Open; not exploitable → /dismiss FP-… accepted-risk|false-positive "<answer>".
+```
+
 ### HTML report
 
 Generate a self-contained HTML report with:
@@ -644,8 +724,8 @@ cat security/security-ledger.md 2>/dev/null || echo "NO_LEDGER_YET"
 
 Apply reconciliation rules from `$PLUGIN_DIR/skills/shared/ledger-schema.md`:
 1. Still Open → keep Open, update last-seen
-2. Newly Fixed → mark Fixed
-3. New → add as Open
+2. Newly Fixed → mark Fixed **only** for IDs in the audit's `fixed_candidates` (§ Grounding gate step 4)
+3. New → add per its grounding-gate verdict
 4. Already Fixed → leave unchanged
 5. Dismissed → delegate to `$PLUGIN_DIR/skills/shared/dismissed-findings-reconciliation.md`
 
@@ -687,6 +767,7 @@ Delete `.claude/security-checkpoint.json` on successful completion.
 | `$PLUGIN_DIR/skills/shared/file-cache-schema.md` | Cache schema and merge rules |
 | `$PLUGIN_DIR/skills/shared/checkpoint-schema.md` | Checkpoint schema |
 | `$PLUGIN_DIR/skills/shared/fingerprint-spec.md` | Fingerprint generation |
+| `$PLUGIN_DIR/scripts/finding-verify.cjs` | Grounding gate — run for IaC, SCA and Post-Scan (not read) |
 | `$PLUGIN_DIR/skills/shared/ledger-schema.md` | Ledger format and reconciliation |
 | `$PLUGIN_DIR/skills/shared/business-context-severity.md` | B-series override triggers |
 | `$PLUGIN_DIR/skills/shared/source-file-consent.md` | Consent category enforcement |
