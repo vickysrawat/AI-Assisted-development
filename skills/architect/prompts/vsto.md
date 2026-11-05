@@ -114,6 +114,11 @@ Document the data and settings model for this VSTO add-in.
 - **External Data** — if the add-in calls external APIs or databases, document the
   data exchanged: entity names, key fields, ownership.
 - **Sensitive Data** — identify any PII, credentials, or B-series sensitive data handled.
+- **Data Lineage** — freehand, shaped by this application: trace where its important data
+  enters, what transforms it, where it is stored and for how long, and where it leaves. Pick the
+  structure that fits (one or more Mermaid flowcharts, tables, a sub-section per flow) and answer
+  every "Must answer" question in the template. Cite the code for each hop; anything not
+  derivable → `> ⚠ Could not determine — needs manual input`.
 
 Every fact from source. Undetectable → `> ⚠ Could not determine — needs manual input`.
 

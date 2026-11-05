@@ -179,6 +179,11 @@ Dapper for access), SQL scripts / migrations, and repository classes.
   cardinality (1:1 / 1:N / N:M), FK column, and on-delete behavior if known.
 - **Data Ownership** — infer which module/service is the system-of-record for each
   table (the one that writes it); list who else reads it.
+- **Data Lineage** — freehand, shaped by this application: trace where its important data
+  enters, what transforms it, where it is stored and for how long, and where it leaves. Pick the
+  structure that fits (one or more Mermaid flowcharts, tables, a sub-section per flow) and answer
+  every "Must answer" question in the template. Cite the code for each hop; anything not
+  derivable → `> ⚠ Could not determine — needs manual input`.
 - **Key Aggregates** — the main consistency boundaries (root entity + what loads/saves with it).
 - **Access Patterns** — this project mandates **Dapper + parameterised SQL**. For each
   repository, list its queries/stored-procs, the tables touched, and read vs write.

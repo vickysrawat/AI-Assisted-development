@@ -201,7 +201,8 @@ Tier → `type` mapping applied when building the `localPathMeta` entry:
 cat .claude/architecture/architecture-data.md 2>/dev/null || echo "NOT_FOUND"
 ```
 
-For each named data store (SQL Server, Redis, CosmosDB, etc.):
+For each named data store (SQL Server, Redis, CosmosDB, etc.) — skip the `## Data Lineage`
+section; its sub-headings and flowchart boxes describe flows, not data stores:
 - Type: `database`
 - Direction: `bidirectional` (most databases are read+write; set `outbound` if read-only)
 - `tech`: the database engine/protocol

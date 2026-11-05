@@ -122,13 +122,26 @@ function readExternalDetails(detailFilePath) {
 }
 
 /**
+ * Return the text with one "## <heading>" section removed (up to the next "## " heading or EOF).
+ * Returns the text unchanged when the section is absent.
+ */
+function withoutSection(text, heading) {
+  const start = text.search(new RegExp('^## ' + heading + '\\s*$', 'm'));
+  if (start === -1) return text;
+  const next = text.slice(start + 1).search(/^##\s/m);
+  return next === -1 ? text.slice(0, start) : text.slice(0, start) + text.slice(start + 1 + next);
+}
+
+/**
  * Parse an architecture doc for named external dependencies.
  * Returns an array of { name, type, tech, direction } objects.
  * Heuristic: lines starting with "- **Name**" or "### Name" in known sections.
  */
 function parseArchDoc(docPath, defaultType) {
   try {
-    const text  = fs.readFileSync(docPath, 'utf8');
+    // "## Data Lineage" sub-headings describe flows, not dependencies — drop the section so its
+    // "### ..." headings never become external nodes.
+    const text  = withoutSection(fs.readFileSync(docPath, 'utf8'), 'Data Lineage');
     const found = [];
     // Match bold-named entries: "- **ServiceName**" or "### ServiceName"
     const pattern = /(?:^[-*]\s+\*\*([^*]+)\*\*|^###\s+([^\n]+))/gm;

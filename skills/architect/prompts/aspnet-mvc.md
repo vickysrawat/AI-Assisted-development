@@ -120,6 +120,11 @@ and repository/DAO classes.
 - **Entities / Tables** — each persisted entity/table with owning module, key columns, purpose.
 - **Relationships** — from foreign keys / associations: from, to, cardinality, FK, on-delete.
 - **Data Ownership** — which module/service is the system-of-record for each table; who else reads it.
+- **Data Lineage** — freehand, shaped by this application: trace where its important data
+  enters, what transforms it, where it is stored and for how long, and where it leaves. Pick the
+  structure that fits (one or more Mermaid flowcharts, tables, a sub-section per flow) and answer
+  every "Must answer" question in the template. Cite the code for each hop; anything not
+  derivable → `> ⚠ Could not determine — needs manual input`.
 - **Key Aggregates** — the main consistency boundaries (root entity + what loads/saves with it).
 - **Access Patterns** — the data-access approach actually used (ORM entities/repositories or a
   query surface). For each repository/DAO: its queries/operations, tables touched, read vs write.

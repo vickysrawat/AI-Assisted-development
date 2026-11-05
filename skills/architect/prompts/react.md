@@ -213,6 +213,11 @@ slices/services, typed models/interfaces, and API client code.
 - **State Ownership & Flow** — which feature owns each piece of state and how it flows
   (inputs/props, selectors, events/actions); derived vs source-of-truth. *(Library: how the
   exported types compose + public-shape versioning constraints.)*
+- **Data Lineage** — freehand, shaped by this application: trace where its important data
+  enters, what transforms it, where it is stored and for how long, and where it leaves. Pick the
+  structure that fits (one or more Mermaid flowcharts, tables, a sub-section per flow) and answer
+  every "Must answer" question in the template. Cite the code for each hop; anything not
+  derivable → `> ⚠ Could not determine — needs manual input`.
 - **Caching / Invalidation** — client-side caching and how it is invalidated.
 
 Every fact from source. Undetectable → `> ⚠ Could not determine — needs manual input`.

@@ -347,7 +347,8 @@ Flag any undetectable field with `> ⚠ Could not determine — needs manual inp
 node -e "
 const fs=require('fs');
 const c=fs.readFileSync('.claude/architecture/architecture-data.md','utf8');
-console.log('HAS_ER=' + /\`\`\`mermaid/.test(c));
+console.log('HAS_ER=' + /\`\`\`mermaid\\s*\\n\\s*erDiagram/.test(c));
+console.log('HAS_LINEAGE=' + /^## Data Lineage/m.test(c));
 "
 ```
 
@@ -356,6 +357,10 @@ console.log('HAS_ER=' + /\`\`\`mermaid/.test(c));
   or ORM associations found in source; mark unresolvable relationships with `> ⚠`.
 - Diagram exists but new entities or FK relationships were added by the changed files:
   update the `erDiagram` to include them. Do not regenerate unchanged entity relationships.
+- `HAS_LINEAGE=false` (and the stack is not `js-library`) → add the `## Data Lineage` section per
+  the File 4 prompt's Data Lineage bullet (freehand shape, every "Must answer" question covered).
+- Lineage exists and the changed files add, move, store, or export a data element: update only
+  the affected diagrams and rows, keeping the section's existing shape.
 
 **`architecture-integrations.md`** (if in `AFFECTED_DOCS`) — re-run the File 5 prompt
 scoped to the changed integration files. Update the affected external-dependency entries

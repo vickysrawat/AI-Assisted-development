@@ -731,7 +731,7 @@ stack file overriding the shared one. Every repo type still resolves to the same
 | `architecture.md` | File 1 prompt | includes two Mermaid diagrams (End-to-End + Layered) |
 | `architecture-{callchains\|flows\|api}.md` | File 2 prompt | stack-specific (see below), include mermaid diagrams |
 | `architecture-reference.md` | File 3 prompt | package versions, CI/CD, fan-in/out |
-| `architecture-data.md` | File 4 prompt | data model / schema / ownership, include mermaid diagrams (entity relationship) |
+| `architecture-data.md` | File 4 prompt | data model / schema / ownership / lineage, include mermaid diagrams (entity relationship; lineage diagrams freehand) |
 | `architecture-integrations.md` | File 5 prompt | external deps + resilience + failure |
 | `architecture-security.md` | File 6 prompt | trust zones + authorization model |
 | `architecture-decisions.md` | File 7 prompt | **seed-only** AD-NNN log (never invent rationale) |
@@ -756,7 +756,8 @@ stack file overriding the shared one. Every repo type still resolves to the same
 
 > `architecture-data.md` is stack-adaptive: backend stacks document DB schema/entities;
 > frontend stacks (angular-*, react) document client state model + API DTO shapes;
-> `js-library` documents exported data structures/types.
+> `js-library` documents exported data structures/types. Every variant except `js-library` has a
+> `## Data Lineage` section — freehand shape, fixed "Must answer" questions.
 
 ---
 
