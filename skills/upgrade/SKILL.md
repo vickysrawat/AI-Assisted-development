@@ -303,6 +303,17 @@ analysis below supplements and validates it, not the other way around.
    ```
    Exit `0` = hit (reuse — the facts are immutable once the version shipped); `7` = miss → ground it.
    For tool-capability facts use `--layer=volatile`; exit `6` = stale → re-ground.
+2. **Ground on miss/stale.** Use WebSearch to find the change from an **authoritative** source
+   (official migration guide / release notes / deprecation list). Never source a breaking-change
+   claim from model memory.
+3. **Verify + cache each fact.** Store it so the tag is set deterministically from the source host:
+   ```bash
+   node "$PLUGIN_DIR/scripts/upgrade-knowledge-cache.cjs" put --stack=<token> --from=<v> --to=<v> \
+     --fact="<claim>" --source="<url>" --source-date=<YYYY-MM-DD> --json
+   ```
+   `tier: VERIFIED` (authoritative host) or `INFERRED` (anything else — confidence auto-lowered).
+   A stable fact is immutable: an identical re-put is idempotent; a differing claim under the same id
+   returns `immutable-conflict` (exit 8) for you to resolve, never silently overwrite.
 
 **Integration verification (the integration dimension of the analysis)** — run
 `integration-verification-spec.md` as part of this step. Most integrations pass through an in-place
@@ -496,29 +507,32 @@ Status: READY FOR REVIEW
 
 The INTAKE CONFIRMED gate is hook-enforced (AC-F1). Skill stops until keyword received.
 
-After INTAKE CONFIRMED, invoke:
+**Source-context intake gate** (after INTAKE CONFIRMED) — per `$PLUGIN_DIR/skills/shared/migration-knowledge/refs/specs/source-context-intake-spec.md`.
+Author the **Source Context Manifest** (`docs/migrations/{ADO_ID}/source-context-manifest.md`) from the
+source's own docs + code, then verify. The upgrade profile is lighter (cross-cutting scan = delta only;
+Tier-2 only for integrations that break) BUT **source coverage is full accounting** — every `graph.json`
+module gets a `mapped`/`out-of-scope` disposition, so "unchanged" is asserted, never assumed by omission:
 ```bash
-node scripts/upgrade-checkpoint.cjs intake-verify --ado={ADO_ID}
+node "$PLUGIN_DIR/scripts/intake-verify.cjs" verify --manifest=docs/migrations/{ADO_ID}/source-context-manifest.md \
+  --skill=upgrade --json
 ```
-Exit non-zero → report: "Intake not recorded — generate intake first (Pass 1–3 must complete)."
-Only proceed to Step 4 once this exits 0.
-
-2. **Ground on miss/stale.** Use WebSearch to find the change from an **authoritative** source
-   (official migration guide / release notes / deprecation list). Never source a breaking-change
-   claim from model memory.
-3. **Verify + cache each fact.** Store it so the tag is set deterministically from the source host:
-   ```bash
-   node "$PLUGIN_DIR/scripts/upgrade-knowledge-cache.cjs" put --stack=<token> --from=<v> --to=<v> \
-     --fact="<claim>" --source="<url>" --source-date=<YYYY-MM-DD> --json
-   ```
-   `tier: VERIFIED` (authoritative host) or `INFERRED` (anything else — confidence auto-lowered).
-   A stable fact is immutable: an identical re-put is idempotent; a differing claim under the same id
-   returns `immutable-conflict` (exit 8) for you to resolve, never silently overwrite.
+Exit 0 → flush the checkpoint below. Exit 2–9 → **STOP** and resolve; do not proceed to Step 4.
+Exit 2 carries a `reason` field in `--json` output: `manifest-missing` = file does not exist — author from the manifest template and re-run; `manifest-empty` = file was created but is empty — run `git log -- docs/migrations/{ADO_ID}/source-context-manifest.md` to check for a recoverable draft before re-authoring from scratch.
 
 ```bash
 # Flush checkpoint — intake confirmed and verified (intake_pass=3 in ledger)
 node scripts/upgrade-checkpoint.cjs set-gate --ado={ADO_ID} --gate=intake_context --verdict=PASS
 ```
+Then record full source_context including summary — the Step 4 `report` gate re-validates it via
+`intake-verify.cjs check-gate` and fails closed without it. Use `modules_total`, `modules_mapped`,
+`modules_out_of_scope` from the `verify --json` output above.
+Set `coverage_verdict` to `"full"` if `modules_out_of_scope == 0`, otherwise `"partial"`:
+```bash
+node scripts/upgrade-checkpoint.cjs set-payload --ado={ADO_ID} \
+  --payload-json='{"source_context":{"manifest_path":"docs/migrations/{ADO_ID}/source-context-manifest.md","verified":true,"roots_expected":[{ROOTS_ARRAY}],"modules_total":{N},"modules_mapped":{M},"modules_out_of_scope":{K},"verified_at":"{DATE}","summary":{"coverage_verdict":"{full|partial}","modules_total":{N},"modules_mapped":{M},"modules_out_of_scope":{K},"partial_row_count":0}}}'
+```
+The `manifest-read-guard.cjs` hook arms after this write — subsequent Read calls to the manifest
+are blocked and redirected to `source_context.summary` in the ledger.
 
 > ⚓ **Safe point SP-Step3 — Intake confirmed, before Step 4 report assembly**
 > Checkpoint flushed: `intake_context=PASS` — Pass 1–3 complete, intake-verify gate confirmed.

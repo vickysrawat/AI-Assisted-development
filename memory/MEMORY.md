@@ -2017,3 +2017,7 @@ Trigger: Error resolved  Confidence: 0.80  Source: auto-capture
 ### [2026-10-29] Error resolved — backslashes mangled in Bash heredoc/sed on this machine
 Heredocs and `sed -i 's/...\[...'` sent through the Bash tool lost backslashes (`\[` → `[`, `/\\/g` → `/\/g`), producing broken JS/regex. Use the Write/Edit tools for any content containing regex backslashes.
 Trigger: Error resolved  Confidence: 0.70  Source: auto-capture
+
+### [2026-11-05] Error resolved — upgrade SKILL.md called nonexistent `upgrade-checkpoint.cjs intake-verify`
+Commit a6c0ffc (upgrade refactor to 3-pass intake) dropped the source-context manifest + `intake-verify.cjs verify` + `source_context` payload write and replaced it with a made-up `upgrade-checkpoint.cjs intake-verify` op (script only supports init|get|set-gate|set-payload). Fix (ADO-001): restored the manifest/verify block after INTAKE CONFIRMED, routed flushes via `upgrade-checkpoint.cjs` (set-gate + set-payload --payload-json), and moved the orphaned "2. Ground on miss/stale / 3. Verify + cache" items back under "1. Cache-first". Gotcha: Step 4 `report=PASS` guard runs `intake-verify check-gate`, which needs `payload.upgrade.source_context.manifest_path` — any refactor that drops that write breaks Step 4 even if Step 3 looks fine.
+Trigger: Error resolved  Confidence: 0.70  Source: auto-capture
