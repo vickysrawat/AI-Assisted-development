@@ -1,0 +1,50 @@
+# Fixture for /arch-diagram scenario tests (ADO-8001). Made-up application; not deployed anywhere.
+services:
+  nginx:
+    image: nginx:1.27
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - contoso-api
+
+  contoso-api:
+    build: .
+    command: ["node", "server.js"]
+    env_file: .env
+    environment:
+      DB_HOST: contoso-db
+      REDIS_URL: redis://contoso-cache:6379
+      # Fake value on purpose: the scenario test checks it never reaches the draft spec.
+      SESSION_SIGNING_SECRET: fx7Qm2Lp9Rt4Vw8Yz3Kd
+    ports:
+      - "8000:8000"
+    depends_on:
+      - contoso-db
+      - contoso-cache
+
+  worker:
+    build: .
+    command: ["node", "worker.js"]
+    env_file: .env
+    environment:
+      DB_HOST: contoso-db
+      REDIS_URL: redis://contoso-cache:6379
+    depends_on:
+      - contoso-db
+      - contoso-cache
+
+  contoso-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: orders
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  contoso-cache:
+    image: redis:7
+
+volumes:
+  pgdata:

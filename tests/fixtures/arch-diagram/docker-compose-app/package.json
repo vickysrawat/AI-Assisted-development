@@ -1,0 +1,12 @@
+{
+  "name": "contoso-orders",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fixture for /arch-diagram scenario tests (ADO-8001). Made-up application.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

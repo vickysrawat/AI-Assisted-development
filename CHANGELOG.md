@@ -1,4 +1,39 @@
-## [Unreleased]
+## [3.27.0] — 2026-11-16
+
+### Added — `/arch-diagram`: architecture & recovery diagram from the codebase (ADO-8001)
+
+Teams were drawing DR / runbook diagrams by hand, or hard-coding them in scripts. `/arch-diagram`
+draws them from evidence in the repository, on any hosting model: Kubernetes, Docker Compose,
+Node.js / PM2, Linux servers, Azure PaaS, AWS, on-prem IIS.
+
+- **Generate:** `/arch-diagram` (or `ARCH DIAGRAM`). It asks once before reading evidence files,
+  then drafts a YAML spec in which every zone, component and flow cites the file and line it came
+  from, or is marked `⚠ TODO` and drawn amber-dashed as "⚠ unverified". The draft is checked for
+  secrets and missing sources before you see it; hostnames are listed and kept as found. Nothing is written
+  until you approve: `docs/architecture/diagram/{app}.arch.yaml` and `docs/images/{app}-architecture.png`.
+  The application name comes from the target repository; the plugin contains none.
+- **Refresh:** `/arch-diagram --refresh` (or `ARCH DIAGRAM --refresh`) shows Added / Removed /
+  Changed against the saved spec, and keeps every item marked `# manual` byte for byte.
+- **Render your own spec:** `/arch-diagram --spec <file>`. Five made-up examples are in
+  `skills/arch-diagram/references/examples/`.
+- **New scripts:**
+  - `scripts/architecture-diagram.py`: the generic renderer, with automatic layout, A* arrow
+    routing, 12 hosting presets and `--check`, which reports overlapping boxes and arrows
+    crossing boxes or headings.
+  - `scripts/arch-spec-scan.cjs`: `--secrets` (including YAML `key: value` forms the commit
+    gate misses), `--hosts`, `--sources --root=`, `--keys` (settings key names only, never
+    values) and `--manual-kept=`.
+- **Prerequisite:** Python 3.10+ with `pip install matplotlib pyyaml` on the developer's
+  machine. Nothing is added to the application's dependencies. The Python test cases skip
+  cleanly when Python is absent.
+- **Tests:** `tests/architecture-diagram.test.cjs`, `tests/arch-spec-scan.test.cjs`, three
+  fixture repositories under `tests/fixtures/arch-diagram/`, and 35 skill scenarios. An
+  allow-list test fails on any hostname or IP that is not an RFC 2606 / RFC 5737
+  documentation value.
+- **Registration:** the `skills` list in `plugin.json`, a deployed `/arch-diagram` command stub,
+  `setup-init` and `setup-status` stub lists, the consent table (category B) and the README
+  skills table.
+
 
 ### Fixed — code-review and security no longer write hallucinated findings to the ledger
 

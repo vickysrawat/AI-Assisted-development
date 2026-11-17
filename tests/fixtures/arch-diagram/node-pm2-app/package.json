@@ -1,0 +1,12 @@
+{
+  "name": "@contoso/portal-web",
+  "version": "2.3.0",
+  "private": true,
+  "description": "Fixture for /arch-diagram scenario tests (ADO-8001). Made-up application.",
+  "scripts": {
+    "start": "pm2 start ecosystem.config.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

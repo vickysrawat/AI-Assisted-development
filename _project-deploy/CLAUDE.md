@@ -4,7 +4,7 @@
 # Domain: <business domain, identified at setup by business-context-generation.md — e.g.
 #          legal / healthcare / fintech / ecommerce / govtech / generic. Drives the
 #          project-local B-series in .claude/business-context.md. Re-run with `SET DOMAIN`.>
-# Plugin version: 3.26.0
+# Plugin version: 3.27.0
 
 # Dream
 
@@ -133,6 +133,8 @@ execute the skill immediately — priority over chat.
 | `KNOWLEDGE UPDATE {N}` | Show current entry N from `.claude/project-knowledge.md`, prompt for replacement text, write after confirmation. |
 | `ONBOARDING GUIDE` | Run onboarding-guide skill — generate `docs/ONBOARDING.md` if it does not exist. Reads architecture docs + ApprovalRoles.json + stack detection. Skips silently if file already exists. |
 | `ONBOARDING GUIDE --refresh` | Run onboarding-guide skill — regenerate `docs/ONBOARDING.md` unconditionally (overwrites). |
+| `ARCH DIAGRAM` | Run arch-diagram skill — draw the architecture / technical recovery diagram from the codebase and architecture docs: asks before reading evidence files, drafts a spec in which every item cites its file (or is ⚠ TODO), scans it for secrets and hostnames, writes `docs/architecture/diagram/{slug}.arch.yaml` + `docs/images/{slug}-architecture.png` only after approval ({slug} from the application name). Needs local Python 3.10+ with matplotlib and pyyaml. |
+| `ARCH DIAGRAM --refresh` | Run arch-diagram skill in refresh mode — re-collect evidence, show Added / Removed / Changed against the saved spec, keep every `# manual` item byte for byte, overwrite only after approval. |
 | `GOVERNANCE REPORT` | Run governance-report skill — sprint governance & quality report for the tech lead. Reads `.claude/audit/` + ledgers + token-graph. Saves to `governance/`. |
 | `GOVERNANCE REPORT --since {date}` | Same, scoped from a specific date. |
 | `GOVERNANCE REPORT --days {N}` | Same, for the last N days. |
