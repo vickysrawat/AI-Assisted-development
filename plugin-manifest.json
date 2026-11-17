@@ -1,6 +1,6 @@
 {
-  "latest": "3.26.0",
-  "released": "2026-10-16",
+  "latest": "3.27.0",
+  "released": "2026-11-16",
   "breaking": false,
-  "summary": "Tech spec overlay refresh: four-pass audit/refresh skill (self-consistency, cross-layer contract, LLM-readability, environment fit); FastAPI overlay rewrite; release script fix"
+  "summary": "/arch-diagram: architecture & recovery diagram generated from the codebase on any hosting model — every box cites its file or is marked ⚠ TODO; refresh keeps # manual items; generic renderer + spec scanner (needs local Python 3.10+, matplotlib, pyyaml)"
 }

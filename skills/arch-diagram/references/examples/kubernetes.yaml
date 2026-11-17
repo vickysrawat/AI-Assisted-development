@@ -1,0 +1,98 @@
+# Example spec — Kubernetes application with a primary and a failover site.
+# Made-up application ("Contoso Orders"); every host uses example.com (RFC 2606).
+title: "Contoso Orders — Architecture & Recovery"
+subtitle: "On-prem Kubernetes · SQL Server · failover cluster at the secondary site"
+zones:
+  - id: dr
+    name: "Secondary site (failover)"
+    row: 1
+    span: 1
+    style: failover
+    columns: 1
+    note: "Started only during a recovery"
+    components:
+      - id: dr-k8s
+        name: Standby Kubernetes cluster
+        type: kubernetes
+        standby: true
+        details: ["Same manifests, scaled to 0", "Image pulled from the registry"]
+      - id: dr-sql
+        name: SQL Server (restore target)
+        type: sql-server
+        standby: true
+        details: ["Restored from the latest backup"]
+  - id: primary
+    name: "Primary site"
+    row: 1
+    span: 3
+    columns: 2
+    note: "Company firewall"
+    components:
+      - id: cluster
+        name: "Kubernetes cluster — prod"
+        type: kubernetes
+        columns: 2
+        details: ["Namespace orders"]
+        children:
+          - id: ingress
+            name: Ingress controller
+            type: ingress
+            details: ["orders.contoso.example.com", "TLS 1.2+"]
+          - id: pod
+            name: Pod orders-api
+            type: pod
+            details: ["2 replicas", "Port 8000", "Readiness probe /health"]
+          - {id: s1, name: orders-db-credentials, type: secret}
+          - {id: s2, name: orders-oidc-client, type: secret}
+          - {id: c1, name: orders-settings, type: config}
+          - {id: v1, name: orders-uploads (PVC), type: volume}
+      - type: stack
+        children:
+          - id: sql
+            name: SQL Server
+            type: sql-server
+            details: ["sql01.contoso.example.com", "Database Orders"]
+          - id: backups
+            name: Database backups
+            type: backup
+            details: ["Nightly full · hourly log"]
+  - id: users-zone
+    name: ""
+    row: 2
+    span: 0.8
+    style: plain
+    components:
+      - {id: users, name: Contoso staff, type: users, tag: "", details: ["Browser · office / VPN"]}
+  - name: "Cloud identity"
+    row: 2
+    style: cloud
+    columns: 1
+    components:
+      - {id: idp, name: Identity provider, type: identity, details: ["OpenID Connect", "App roles: Admin, User"]}
+  - name: "Shared services"
+    row: 2
+    style: shared
+    columns: 2
+    components:
+      - {id: logs, name: Central logging, type: monitoring, details: ["Container logs", "Alerts"]}
+      - {id: dns, name: DNS, type: dns, details: ["orders.contoso.example.com"]}
+  - name: "CI/CD"
+    row: 2
+    style: shared
+    columns: 2
+    components:
+      - {id: build, name: Build pipeline, type: pipeline, details: ["Test · image build"]}
+      - {id: registry, name: Container registry, type: registry, details: ["orders-api images"]}
+      - {id: deploy, name: Deploy pipeline, type: pipeline, details: ["kubectl apply", "Manual approval"]}
+flows:
+  - {from: users, to: idp, label: "Sign-in · HTTPS 443"}
+  - {from: users, to: ingress, label: "HTTPS 443"}
+  - {from: ingress, to: pod, label: "HTTP 8000"}
+  - {from: pod, to: idp, label: "Token validation"}
+  - {from: pod, to: sql, label: "TCP 1433"}
+  - {from: pod, to: logs, label: "Log shipping"}
+  - {from: registry, to: pod, label: "Image pull"}
+  - {from: build, to: registry, kind: deploy, label: "Push image"}
+  - {from: deploy, to: cluster, kind: deploy, label: "Apply manifests"}
+  - {from: backups, to: dr-sql, kind: recovery, label: "Restore latest backup"}
+  - {from: deploy, to: dr-k8s, kind: recovery, label: "Scale up standby cluster · repoint DNS"}

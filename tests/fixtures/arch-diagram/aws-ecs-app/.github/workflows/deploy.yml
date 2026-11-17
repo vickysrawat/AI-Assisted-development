@@ -1,0 +1,15 @@
+# Fixture for /arch-diagram scenario tests (ADO-8001). Made-up application.
+# Lives under tests/fixtures, so it never runs as a workflow of this repository.
+name: deploy
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and push image
+        run: docker build -t billing-api . && docker push billing-api:latest
+      - name: Deploy stack
+        run: aws cloudformation deploy --template-file infra/template.yaml --stack-name billing

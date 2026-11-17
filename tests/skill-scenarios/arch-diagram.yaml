@@ -1,0 +1,343 @@
+skill: arch-diagram
+scenarios:
+  - id: trigger-render-spec
+    description: "AC-F1: triggers on a render request and names the spec mode"
+    input: "Draw the architecture diagram from docs/architecture/diagram/contoso.arch.yaml"
+    expect:
+      triggered: true
+      contains: ["--spec", "architecture-diagram.py"]
+      not_contains: ["TODO: "]
+
+  # ---- Story 2: generate the spec from the repository ------------------------------------
+
+  - id: generate-docker-fixture
+    description: "AC-F5 (P-U4): Docker Compose fixture → Docker host zone, compose services, database, reverse proxy, code-only notice"
+    input: "/arch-diagram in a copy of tests/fixtures/arch-diagram/docker-compose-app (reply yes to the evidence scan)"
+    expect:
+      triggered: true
+      contains: ["Application: contoso-orders (from package.json name)", "Evidence scan request", "compose-service",
+                 "reverse-proxy", "database", "no architecture docs", "# source: docker-compose.yml:", "WRITE PENDING"]
+      not_contains: ["fx7Qm2Lp9Rt4Vw8Yz3Kd"]
+
+  - id: generate-node-pm2-fixture
+    description: "AC-F5 (P-U5): Node + PM2 fixture → linux-server, reverse-proxy, process-manager with two node-server children, port cited"
+    input: "/arch-diagram in a copy of tests/fixtures/arch-diagram/node-pm2-app (reply yes)"
+    expect:
+      triggered: true
+      contains: ["Application: portal-web (from package.json name)", "linux-server", "process-manager", "node-server",
+                 "# source: ecosystem.config.js:", "app.contoso.example.com"]
+      not_contains: ["DEP_MISSING"]
+
+  - id: generate-aws-fixture
+    description: "AC-F5 (P-U6): AWS fixture → aws-ecs, load-balancer, aws-rds, s3, GitHub Actions pipeline, each cited"
+    input: "/arch-diagram in a copy of tests/fixtures/arch-diagram/aws-ecs-app (reply yes)"
+    expect:
+      triggered: true
+      contains: ["aws-ecs", "load-balancer", "aws-rds", "s3", "pipeline", "# source: infra/template.yaml:", "DB_PASSWORD"]
+      not_contains: ["valueFrom"]
+
+  - id: generate-empty-repo
+    description: "AC-F5 (N-U3): no hosting evidence → one server box with todo: true and the globs searched"
+    input: "/arch-diagram in an empty git repository whose folder is named contoso-empty (reply yes)"
+    expect:
+      triggered: true
+      contains: ["Application: contoso-empty (from folder name)", "type: server", "todo: true", "hosting not found"]
+      not_contains: ["type: kubernetes", "type: app-service"]
+
+  - id: evidence-scan-declined
+    description: "AC-NF2 / consent B: developer replies no to the evidence scan → stop, nothing read or written"
+    input: "/arch-diagram (reply no to the evidence scan request)"
+    expect:
+      triggered: true
+      contains: ["Evidence scan request"]
+      not_contains: ["WRITE PENDING", "# source:"]
+
+  - id: read-budget-cap
+    description: "AC-NF2 (INT-2): more than 15 matches for a role → at most 15 read, the rest listed as skipped"
+    input: "/arch-diagram in a repository with 40 Kubernetes manifests (reply yes)"
+    expect:
+      triggered: true
+      contains: ["Skipped (cap)", "15"]
+      not_contains: ["node_modules/"]
+
+  - id: secret-never-copied
+    description: "AC-F7 (N-U4): the fake SESSION_SIGNING_SECRET value in the Docker fixture never appears in the draft, the summary or the chat"
+    input: "/arch-diagram in a copy of tests/fixtures/arch-diagram/docker-compose-app (reply yes, then APPROVE)"
+    expect:
+      triggered: true
+      contains: ["arch-spec-scan.cjs\" --secrets --hosts --sources", "rm -f"]
+      not_contains: ["fx7Qm2Lp9Rt4Vw8Yz3Kd"]
+
+  - id: settings-keys-only
+    description: "AC-F7 (N-U4): config/app.yaml is a settings template → read with --keys only; none of its values reach the draft or the chat"
+    input: "/arch-diagram in a copy of tests/fixtures/arch-diagram/docker-compose-app (reply yes)"
+    expect:
+      triggered: true
+      contains: ["arch-spec-scan.cjs\" --keys", "ORDERS_DB_PASSWORD"]
+      not_contains: ["Qp4Tz8Wn2Lr6Vx"]
+
+  - id: secret-in-draft-blocked
+    description: "AC-F7 (N-U4): a secret value injected into the draft → Step 6 reports it; the value is removed before the draft is shown; nothing written"
+    input: "/arch-diagram — Step 6 scan reports: secret pattern (password) at line 14"
+    expect:
+      triggered: true
+      contains: ["line 14", "Step 6"]
+      not_contains: ["Diagram written"]
+
+  - id: hosts-listed-as-found
+    description: "AC-F7 (developer decision 2026-11-16): hosts are listed for information and kept exactly as found — no masking"
+    input: "/arch-diagram in a copy of tests/fixtures/arch-diagram/node-pm2-app (reply yes)"
+    expect:
+      triggered: true
+      contains: ["app.contoso.example.com", "Host / IP"]
+      not_contains: ["Keep or mask", "proxy-host"]
+
+  - id: identity-generic-heading
+    description: "AC-F12: '# Architecture — Contoso Orders' gives Contoso Orders; a bare '# Architecture' heading is skipped"
+    input: "/arch-diagram in a repository whose architecture.md starts '# Architecture — Contoso Orders'"
+    expect:
+      triggered: true
+      contains: ["Application: Contoso Orders (from architecture.md title)"]
+      not_contains: ["Architecture — Contoso Orders — Architecture"]
+
+  - id: identity-generic-package-name
+    description: "AC-F12: package.json name '@contoso.orders/source' → contoso.orders (generic part skipped)"
+    input: "/arch-diagram in a repository with no architecture title, no CLAUDE.md overview and package.json name '@contoso.orders/source'"
+    expect:
+      triggered: true
+      contains: ["Application: contoso.orders (from package.json name)"]
+      not_contains: ["Application: source"]
+
+  - id: mount-becomes-flow
+    description: "AC-F5: a ConfigMap mounted into a pod becomes a config → pod flow cited at the mount line"
+    input: "/arch-diagram in a Kubernetes repository whose deployment mounts ConfigMap orders-settings (reply yes)"
+    expect:
+      triggered: true
+      contains: ["from: c1", "volumeMounts"]
+      not_contains: []
+
+  - id: skip-writes-nothing
+    description: "AC-F8 (N-U5): draft shown, developer replies SKIP → nothing under docs/architecture/diagram/, docs/images/ or temp/"
+    input: "/arch-diagram in a copy of tests/fixtures/arch-diagram/docker-compose-app (reply yes, then SKIP)"
+    expect:
+      triggered: true
+      contains: ["WRITE PENDING"]
+      not_contains: ["Diagram written"]
+
+  - id: approve-writes-both
+    description: "AC-F8 (P-U9): APPROVE → spec and PNG written at the announced paths; check: ok; PNG shown"
+    input: "/arch-diagram in a copy of tests/fixtures/arch-diagram/docker-compose-app (reply yes, then APPROVE)"
+    expect:
+      triggered: true
+      contains: ["docs/architecture/diagram/contoso-orders.arch.yaml", "docs/images/contoso-orders-architecture.png", "check: ok"]
+      not_contains: ["spec error"]
+
+  - id: existing-spec
+    description: "AC-F8 (N-U6): a spec already exists and no flag → --refresh or OVERWRITE message; nothing read"
+    input: "/arch-diagram in a repository that already has docs/architecture/diagram/contoso-orders.arch.yaml"
+    expect:
+      triggered: true
+      contains: ["already exists", "--refresh", "OVERWRITE"]
+      not_contains: ["Evidence scan request"]
+
+  - id: identity-override
+    description: "AC-F12 (P-U8): reply 'call it Orders Platform' → title and slug change, nothing else"
+    input: "/arch-diagram in a copy of tests/fixtures/arch-diagram/docker-compose-app (reply yes, then: call it Orders Platform)"
+    expect:
+      triggered: true
+      contains: ["Orders Platform — Architecture & Recovery", "orders-platform.arch.yaml", "orders-platform-architecture.png"]
+      not_contains: []
+
+  - id: identity-sources
+    description: "AC-F12 (P-U7): the identity line names each source in order (architecture title, CLAUDE.md, manifest, folder)"
+    input: "/arch-diagram in a repository whose .claude/architecture/architecture.md starts '# Contoso Billing — Architecture' (reply yes)"
+    expect:
+      triggered: true
+      contains: ["Application: Contoso Billing (from architecture.md title)"]
+      not_contains: []
+
+  - id: identity-claude-md
+    description: "AC-F12 (P-U7): no usable architecture title → name from the CLAUDE.md project overview"
+    input: "/arch-diagram in a repository with no .claude/architecture/ and a CLAUDE.md whose overview starts 'Contoso Intake is a matter intake portal'"
+    expect:
+      triggered: true
+      contains: ["Application: Contoso Intake (from CLAUDE.md project overview)"]
+      not_contains: []
+
+  - id: identity-folder
+    description: "AC-F12 (P-U7): no title, no CLAUDE.md, no manifest → folder name"
+    input: "/arch-diagram in an empty repository whose folder is named contoso-empty"
+    expect:
+      triggered: true
+      contains: ["Application: contoso-empty (from folder name)"]
+      not_contains: []
+
+  - id: identity-scoped-npm
+    description: "AC-F12 (N-U9): architecture.md without a usable title falls through to package.json; scoped name keeps the part after /"
+    input: "/arch-diagram in a copy of tests/fixtures/arch-diagram/node-pm2-app with an architecture.md whose first heading is a template placeholder"
+    expect:
+      triggered: true
+      contains: ["portal-web", "from package.json name"]
+      not_contains: ["@contoso/"]
+
+  - id: one-layout-revision
+    description: "AC-F9 (N-U7 / P-U11): --check fails → exactly one layout revision proposed as a diff; final result reported"
+    input: "/arch-diagram after APPROVE, the render reports check: 2 problems"
+    expect:
+      triggered: true
+      contains: ["span", "check:"]
+      not_contains: ["second revision"]
+
+  - id: spec-error-fixed-in-spec
+    description: "AC-F9 (N-U8): renderer spec error → fix proposed in the spec as a diff; renderer untouched"
+    input: "/arch-diagram after APPROVE, the render reports spec error: flow to 'nowhere': no zone or component has that id"
+    expect:
+      triggered: true
+      contains: ["spec error", "diff"]
+      not_contains: ["architecture-diagram.py is edited"]
+
+  - id: dependency-python-missing
+    description: "AC-F2: python missing → install message, nothing read or written"
+    input: "/arch-diagram --spec my.arch.yaml (python is not installed)"
+    expect:
+      triggered: true
+      contains: ["Python 3.10+", "pip install matplotlib pyyaml", "python"]
+      not_contains: ["WRITE PENDING", "check: ok"]
+
+  - id: dependency-matplotlib-missing
+    description: "AC-F2: matplotlib missing → install message names matplotlib"
+    input: "/arch-diagram --spec my.arch.yaml (python 3.12 installed, matplotlib not installed)"
+    expect:
+      triggered: true
+      contains: ["matplotlib", "pip install matplotlib pyyaml"]
+      not_contains: ["WRITE PENDING"]
+
+  - id: dependency-pyyaml-missing
+    description: "AC-F2: pyyaml missing → install message names pyyaml"
+    input: "/arch-diagram --spec my.arch.yaml (python 3.12 and matplotlib installed, pyyaml not installed)"
+    expect:
+      triggered: true
+      contains: ["pyyaml", "pip install matplotlib pyyaml"]
+      not_contains: ["WRITE PENDING"]
+
+  - id: dependencies-present-proceeds
+    description: "AC-F2 (P-U11): all dependencies present → proceeds to the scan and the Write Gate"
+    input: "/arch-diagram --spec skills/arch-diagram/references/examples/docker-compose.yaml (python 3.12, matplotlib, pyyaml installed)"
+    expect:
+      triggered: true
+      contains: ["arch-spec-scan", "WRITE PENDING"]
+      not_contains: ["DEP_MISSING"]
+
+  - id: secret-in-spec-blocks
+    description: "AC-F1 / Step R0: a secret value in the spec blocks rendering, value not echoed"
+    input: "/arch-diagram --spec my.arch.yaml (the scan reports: secret pattern (password) at line 12)"
+    expect:
+      triggered: true
+      contains: ["BLOCKED", "line 12"]
+      not_contains: ["APPROVE to render"]
+
+  - id: skip-at-write-gate
+    description: "AC-F1 (N-U12): hosts listed, developer replies SKIP → no PNG written"
+    input: "/arch-diagram --spec my.arch.yaml then reply SKIP"
+    expect:
+      triggered: true
+      contains: ["WRITE PENDING", "Hosts in the picture"]
+      not_contains: ["Diagram written"]
+
+  # ---- Story 3: refresh mode and keywords ------------------------------------------------
+
+  - id: refresh-keeps-manual
+    description: "AC-F10 (P-U1): a saved spec with one # manual component → kept byte for byte, listed under Kept (manual)"
+    input: "/arch-diagram --refresh in a copy of the Docker fixture whose saved spec has '- id: fw   # manual' (reply yes)"
+    expect:
+      triggered: true
+      contains: ["Kept (manual)", "fw", "--manual-kept="]
+      not_contains: ["missing or changed"]
+
+  - id: refresh-shows-added
+    description: "AC-F10 (P-U2): a service added to docker-compose.yml → listed under Added with its source"
+    input: "/arch-diagram --refresh after adding a 'mailer' service to docker-compose.yml (reply yes)"
+    expect:
+      triggered: true
+      contains: ["Added", "mailer", "# source: docker-compose.yml:"]
+      not_contains: []
+
+  - id: refresh-approve
+    description: "AC-F10 (P-U3): APPROVE → spec overwritten, PNG re-rendered, check: ok"
+    input: "/arch-diagram --refresh (reply yes, then APPROVE)"
+    expect:
+      triggered: true
+      contains: ["(overwrite)", "check: ok"]
+      not_contains: []
+
+  - id: refresh-no-saved-spec
+    description: "AC-F10 (N-U1): no saved spec → run /arch-diagram first; nothing read or written"
+    input: "/arch-diagram --refresh in a repository with no docs/architecture/diagram/"
+    expect:
+      triggered: true
+      contains: ["No saved spec", "/arch-diagram first"]
+      not_contains: ["Evidence scan request", "WRITE PENDING"]
+
+  - id: refresh-skip
+    description: "AC-F10 (N-U2): refresh draft shown, developer replies SKIP → saved spec and PNG untouched"
+    input: "/arch-diagram --refresh (reply yes, then SKIP)"
+    expect:
+      triggered: true
+      contains: ["WRITE PENDING", "keep them as they are"]
+      not_contains: ["Diagram written"]
+
+  - id: refresh-manual-secret
+    description: "AC-F10 (N-U3): a # manual block holding a fake password → blocked; the developer is asked to fix that item; nothing written"
+    input: "/arch-diagram --refresh where the saved spec's # manual item fw has a details line with a password value"
+    expect:
+      triggered: true
+      contains: ["BLOCKED", "# manual item fw", "Fix it in the saved spec"]
+      not_contains: ["Diagram written", "WRITE PENDING"]
+
+  - id: keyword-arch-diagram
+    description: "AC-F11 (P-U4): the ARCH DIAGRAM keyword triggers generation"
+    input: "ARCH DIAGRAM"
+    expect:
+      triggered: true
+      contains: ["Application:"]
+      not_contains: []
+
+  - id: keyword-arch-diagram-refresh
+    description: "AC-F11 (P-U4): the ARCH DIAGRAM --refresh keyword triggers refresh mode"
+    input: "ARCH DIAGRAM --refresh"
+    expect:
+      triggered: true
+      contains: ["Refresh —", "Kept (manual)"]
+      not_contains: []
+
+  - id: refresh-shows-removed-changed
+    description: "AC-F10: a service deleted from docker-compose.yml and a port changed → listed under Removed and Changed"
+    input: "/arch-diagram --refresh after removing the worker service and changing contoso-api's port to 8080 (reply yes)"
+    expect:
+      triggered: true
+      contains: ["Removed", "worker", "Changed", "8080"]
+      not_contains: []
+
+  - id: refresh-several-specs
+    description: "AC-F10: more than one saved spec → list them and ask which one to refresh"
+    input: "/arch-diagram --refresh in a repository with contoso-orders.arch.yaml and contoso-billing.arch.yaml"
+    expect:
+      triggered: true
+      contains: ["contoso-orders.arch.yaml", "contoso-billing.arch.yaml"]
+      not_contains: ["Evidence scan request"]
+
+  - id: refresh-keeps-file-names
+    description: "AC-F10: the application name changed since the spec was saved → names reported, saved file names kept"
+    input: "/arch-diagram --refresh after package.json name changed from contoso-orders to contoso-shop"
+    expect:
+      triggered: true
+      contains: ["contoso-shop", "docs/architecture/diagram/contoso-orders.arch.yaml"]
+      not_contains: ["contoso-shop.arch.yaml"]
+
+  - id: contradiction-settled
+    description: "AC-F5: a document names deploy-prod.yml but the repository has deploy.yml → the existing file wins, and the TODO summary lists it as settled"
+    input: "/arch-diagram in a repository whose architecture.md mentions deploy-prod.yml while pipelines/deploy.yml exists (reply yes)"
+    expect:
+      triggered: true
+      contains: ["settled:", "deploy.yml"]
+      not_contains: []

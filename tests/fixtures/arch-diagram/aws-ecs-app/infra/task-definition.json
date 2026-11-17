@@ -1,0 +1,18 @@
+{
+  "family": "billing-api",
+  "requiresCompatibilities": ["FARGATE"],
+  "containerDefinitions": [
+    {
+      "name": "billing-api",
+      "image": "billing-api:latest",
+      "portMappings": [{ "containerPort": 8080 }],
+      "environment": [
+        { "name": "DB_HOST", "value": "billing-db.contoso.example.com" },
+        { "name": "INVOICE_BUCKET", "value": "contoso-billing-invoices" }
+      ],
+      "secrets": [
+        { "name": "DB_PASSWORD", "valueFrom": "billing/db-password" }
+      ]
+    }
+  ]
+}

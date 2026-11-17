@@ -1,0 +1,62 @@
+# Example spec — Azure PaaS application with a secondary region.
+# Made-up application ("Contoso Expenses"); every host uses example.com (RFC 2606).
+title: "Contoso Expenses — Architecture & Recovery"
+subtitle: "Azure App Service · Azure SQL active geo-replication · Front Door failover"
+zones:
+  - {id: uz, name: "", row: 1, span: 0.7, style: plain, components: [{id: users, name: Employees, type: users, tag: "", details: ["Browser · office / VPN"]}]}
+  - name: "Cloud — global"
+    row: 1
+    span: 2.3
+    style: cloud
+    columns: 2
+    components:
+      - {id: afd, name: Azure Front Door, type: front-door, details: ["expenses.contoso.example.com", "WAF policy · TLS 1.2+", "Priority routing East → West"]}
+      - {id: idp, name: Microsoft Entra ID, type: identity, details: ["App registration", "App roles: Approver, Employee"]}
+  - name: "Azure — East US 2 (primary)"
+    row: 2
+    span: 3
+    columns: 3
+    components:
+      - id: plan
+        name: "App Service Plan · 2 instances"
+        type: app-service
+        columns: 1
+        children:
+          - {id: web, name: expenses-web, type: app-service, tag: "Web App", details: ["API + web UI", "Managed identity", "VNet integration"]}
+          - {id: func, name: expenses-func, type: function-app, details: ["Nightly export", "Timer trigger"]}
+      - type: stack
+        children:
+          - {id: sql, name: sql-contoso-expenses-eus2, type: azure-sql, details: ["Business Critical", "Private endpoint"]}
+          - {id: st, name: stexpenseseus2, type: storage, details: ["Receipts (blob)", "GRS"]}
+      - type: stack
+        children:
+          - {id: kv, name: kv-contoso-expenses-eus2, type: key-vault, details: ["Connection secrets", "Certificates"]}
+          - {id: ai, name: appi-expenses, type: app-insights, details: ["Logs · metrics · alerts"]}
+  - name: "Azure — West US 2 (secondary)"
+    row: 2
+    span: 1.4
+    style: failover
+    columns: 1
+    components:
+      - {id: web2, name: contoso-expenses-web-wus2, type: app-service, standby: true, details: ["Scaled to 1 instance", "Same package"]}
+      - {id: sql2, name: sql-contoso-expenses-wus2, type: azure-sql, standby: true, details: ["Geo-secondary (readable)", "Failover group"]}
+  - name: "CI/CD"
+    row: 3
+    style: shared
+    columns: 2
+    components:
+      - {id: ci, name: expenses-ci, type: pipeline, details: ["Build · test · publish artifact"]}
+      - {id: cd, name: expenses-cd, type: pipeline, details: ["Deploy to staging slot", "Swap to production"]}
+flows:
+  - {from: users, to: idp, label: "Sign-in · HTTPS 443"}
+  - {from: users, to: afd, label: "HTTPS 443"}
+  - {from: afd, to: web, label: "HTTPS 443 · private origin"}
+  - {from: web, to: sql, label: "TCP 1433 · managed identity"}
+  - {from: web, to: kv, label: "Key Vault references"}
+  - {from: web, to: ai, label: "Telemetry"}
+  - {from: func, to: st, label: "Blob write"}
+  - {from: ci, to: cd, kind: deploy, label: "Artifact"}
+  - {from: cd, to: plan, kind: deploy, label: "Zip deploy · slot swap"}
+  - {from: sql, to: sql2, kind: data, label: "Active geo-replication"}
+  - {from: afd, to: web2, kind: recovery, label: "Front Door fails over to West US 2 when health probes fail"}
+  - {from: cd, to: web2, kind: recovery, label: "Scale out secondary · fail over SQL failover group"}
