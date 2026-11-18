@@ -186,6 +186,7 @@ those live in the command reference table below.
 | `pr-create` | B | icea-review gate applies; pr-create itself reads diff only |
 | `pr-describe` | C | Reads git diff only — no source file access |
 | `product-docs` | B | Gate before reading any source file for doc generation |
+| `arch-diagram` | B | One bulk-scan prompt (Step 3b) before reading evidence files by evidence-map glob (max 15 per role); application source only for listen ports; settings templates via `arch-spec-scan.cjs --keys` (key names only); `--spec` mode reads only the named spec |
 | `architect` | B | Gate before reading entry-point files when building the map |
 | `graph-sync` | B | Gate before reading entry-point/source files when refreshing the graph |
 | `graph-viz` | C | Reads `.claude/graph/graph.json` only — never application source |

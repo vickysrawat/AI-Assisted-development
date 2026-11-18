@@ -1,0 +1,55 @@
+# Example spec — on-prem IIS application with a DR data centre.
+# Made-up application ("Contoso Intake"); every host uses example.com (RFC 2606).
+title: "Contoso Intake — Architecture & Recovery"
+subtitle: "IIS on Windows Server · SQL Server Always On · DR data centre"
+zones:
+  - {id: uz, name: "", row: 1, span: 0.8, style: plain, components: [{id: users, name: Contoso staff, type: users, tag: "", details: ["Office · VPN · VDI"]}]}
+  - name: "Primary data centre"
+    row: 1
+    span: 3
+    columns: 3
+    note: "Company firewall"
+    components:
+      - {id: lb, name: Load balancer, type: load-balancer, details: ["intake.contoso.example.com", "VIP · TLS offload"]}
+      - id: web01
+        name: WEB01
+        type: iis-server
+        details: ["Windows Server · IIS"]
+        children:
+          - {id: site, name: Intake, type: iis-site, details: ["HTTPS 443 binding", "ASP.NET"]}
+          - {id: pool, name: IntakePool, type: app-pool, details: ["Managed service account"]}
+      - {id: sql, name: SQL Server AG listener, type: sql-server, details: ["sql-ag.contoso.example.com", "Always On primary"]}
+  - name: "DR data centre"
+    row: 1
+    span: 1.3
+    style: failover
+    columns: 1
+    components:
+      - {id: web02, name: WEB02 (DR), type: iis-server, standby: true, details: ["Site deployed · stopped"]}
+      - {id: sqldr, name: SQL Server DR replica, type: sql-server, standby: true, details: ["Async commit"]}
+  - name: "Shared services"
+    row: 2
+    style: shared
+    columns: 3
+    components:
+      - {id: ad, name: Active Directory, type: identity, details: ["Windows auth · Kerberos"]}
+      - {id: smtp, name: SMTP relay, type: service, details: ["Notifications"]}
+      - {id: logs, name: Central logging, type: monitoring, details: ["IIS + app logs"]}
+  - name: "CI/CD"
+    row: 2
+    span: 0.8
+    style: shared
+    columns: 1
+    components:
+      - {id: rel, name: Release pipeline, type: pipeline, details: ["Web Deploy (msdeploy)", "Deployment group agents"]}
+flows:
+  - {from: users, to: lb, label: "HTTPS 443"}
+  - {from: lb, to: site, label: "HTTPS 443"}
+  - {from: site, to: sql, label: "TCP 1433 · Windows auth"}
+  - {from: site, to: ad, label: "Kerberos / LDAP"}
+  - {from: site, to: smtp, label: "SMTP 25"}
+  - {from: web01, to: logs, label: "Log forwarder"}
+  - {from: rel, to: web01, kind: deploy, label: "Web Deploy package"}
+  - {from: sql, to: sqldr, kind: data, label: "AG async replication"}
+  - {from: rel, to: web02, kind: recovery, label: "Start site on WEB02 · repoint load balancer pool"}
+  - {from: lb, to: web02, kind: recovery, label: "Pool member fails over"}

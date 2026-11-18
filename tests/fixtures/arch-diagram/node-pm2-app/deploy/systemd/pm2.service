@@ -1,0 +1,14 @@
+# Fixture for /arch-diagram scenario tests (ADO-8001). Made-up application.
+[Unit]
+Description=PM2 process manager for the Contoso portal
+After=network.target
+
+[Service]
+Type=forking
+User=portal
+ExecStart=/usr/bin/pm2 resurrect
+ExecReload=/usr/bin/pm2 reload all
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

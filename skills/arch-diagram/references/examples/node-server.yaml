@@ -1,0 +1,48 @@
+# Example spec — Node.js application run by PM2 behind nginx on a Linux server.
+# Made-up application ("Contoso Portal"); hosts use example.com (RFC 2606) and RFC 5737 IPs.
+# It also shows how items that are not confirmed yet look: todo: true.
+title: "Contoso Portal — Architecture & Recovery"
+subtitle: "Node.js under PM2 · nginx reverse proxy · Linux server"
+zones:
+  - {id: uz, name: "", row: 1, span: 0.7, style: plain, components: [{id: users, name: Contoso staff, type: users, tag: "", details: ["Browser"]}]}
+  - name: "Primary data centre"
+    row: 1
+    span: 3
+    columns: 2
+    components:
+      - id: vm
+        name: portal-vm01
+        type: linux-server
+        columns: 2
+        details: ["192.0.2.10"]
+        children:
+          - {id: nginx, name: nginx, type: reverse-proxy, details: ["portal.contoso.example.com", "TLS 443"]}
+          - id: pm2
+            name: PM2
+            type: process-manager
+            columns: 1
+            children:
+              - {id: web, name: portal-web, type: node-server, details: ["Port 3000"]}
+              - {id: jobs, name: portal-jobs, type: node-server, details: ["Scheduled jobs"]}
+      - {id: db, name: PostgreSQL, type: database, details: ["db.contoso.example.com"]}
+  - name: "Recovery"
+    row: 2
+    span: 1.5
+    style: failover
+    columns: 1
+    components:
+      - {id: vm2, name: Rebuild server, type: linux-server, todo: true, details: ["⚠ TODO: no rebuild runbook found"]}
+  - name: "CI/CD"
+    row: 2
+    span: 2.2
+    style: shared
+    columns: 1
+    components:
+      - {id: gha, name: Deploy workflow, type: pipeline, details: ["rsync · pm2 reload"]}
+flows:
+  - {from: users, to: nginx, label: "HTTPS 443"}
+  - {from: nginx, to: web, label: "HTTP 3000"}
+  - {from: web, to: db, label: "TCP 5432"}
+  - {from: jobs, to: db, label: "TCP 5432"}
+  - {from: gha, to: pm2, kind: deploy, label: "pm2 reload"}
+  - {from: gha, to: vm2, kind: recovery, todo: true, label: "⚠ TODO: redeploy to a rebuilt server"}

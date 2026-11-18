@@ -1,0 +1,43 @@
+# Fixture for /arch-diagram scenario tests (ADO-8001). Made-up application; never deployed.
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Contoso billing service on ECS Fargate
+
+Resources:
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: billing-alb
+      Scheme: internet-facing
+
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: billing-cluster
+
+  Service:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref Cluster
+      DesiredCount: 2
+      LaunchType: FARGATE
+      LoadBalancers:
+        - ContainerName: billing-api
+          ContainerPort: 8080
+
+  Database:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: postgres
+      MultiAZ: true
+      BackupRetentionPeriod: 7
+
+  InvoiceBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: contoso-billing-invoices
+      VersioningConfiguration:
+        Status: Enabled
+
+Outputs:
+  ServiceUrl:
+    Value: https://billing.contoso.example.com

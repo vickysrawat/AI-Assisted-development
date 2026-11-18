@@ -1,0 +1,50 @@
+# Example spec — application run with Docker Compose on a single host.
+# Made-up application ("Contoso Orders"); every host uses example.com (RFC 2606).
+title: "Contoso Orders — Architecture & Recovery"
+subtitle: "Docker Compose on one host · PostgreSQL · Redis · nginx"
+zones:
+  - {id: uz, name: "", row: 1, span: 0.7, style: plain, components: [{id: users, name: Customers, type: users, tag: "", details: ["Browser · mobile"]}]}
+  - name: "Primary server"
+    row: 1
+    span: 3
+    columns: 3
+    note: "docker-compose.yml"
+    components:
+      - {id: nginx, name: nginx, type: reverse-proxy, details: ["shop.contoso.example.com", "Ports 80 / 443"]}
+      - id: app
+        name: "Compose project: shop"
+        type: docker-host
+        columns: 1
+        children:
+          - {id: api, name: api, type: compose-service, details: ["Port 8000", "depends_on: postgres, redis"]}
+          - {id: worker, name: worker, type: compose-service, details: ["Background jobs"]}
+      - type: stack
+        children:
+          - {id: db, name: postgres, type: database, details: ["Volume pgdata"]}
+          - {id: cache, name: redis, type: queue, tag: "Cache / queue", details: ["Port 6379"]}
+  - name: "Backups"
+    row: 2
+    span: 1.5
+    style: shared
+    columns: 1
+    components:
+      - {id: dump, name: Nightly pg_dump, type: backup, details: ["Copied off the host"]}
+  - name: "CI/CD"
+    row: 2
+    span: 2.2
+    style: shared
+    columns: 2
+    components:
+      - {id: ci, name: Build workflow, type: pipeline, details: ["Test · build images"]}
+      - {id: reg, name: Container registry, type: registry, details: ["api and worker images"]}
+flows:
+  - {from: users, to: nginx, label: "HTTPS 443"}
+  - {from: nginx, to: api, label: "HTTP 8000"}
+  - {from: api, to: db, label: "TCP 5432"}
+  - {from: api, to: cache, label: "TCP 6379"}
+  - {from: worker, to: cache, label: "Job queue"}
+  - {from: worker, to: db, label: "TCP 5432"}
+  - {from: ci, to: reg, kind: deploy, label: "Push images"}
+  - {from: reg, to: app, kind: deploy, label: "docker compose pull · up -d"}
+  - {from: db, to: dump, kind: data, label: "Nightly dump"}
+  - {from: dump, to: db, kind: recovery, label: "Restore onto a rebuilt host"}

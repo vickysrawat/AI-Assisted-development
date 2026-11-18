@@ -157,6 +157,7 @@ const STUB_FILES = [
   'security-review.md',     'session-start.md',    'setup-init.md',          'setup-status.md',
   'setup-sync.md',          'setup-teardown.md',   'sprint-metrics.md',      'sync-dirs.md',
   'token-analysis.md',      'update-arch.md',      'upgrade.md',
+  'arch-diagram.md',
 ];
 
 // Legacy stub names replaced in v3.8.0 — removed from target projects on next sync

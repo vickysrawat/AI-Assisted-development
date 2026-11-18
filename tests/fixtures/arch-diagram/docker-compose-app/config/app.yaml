@@ -1,0 +1,7 @@
+# Fixture for /arch-diagram scenario tests (ADO-8001). Made-up application.
+# A settings template: /arch-diagram reads its key names only (arch-spec-scan.cjs --keys).
+# The values are fake on purpose; the scenario test checks none of them reaches the draft.
+ORDERS_DB_HOST: contoso-db
+ORDERS_DB_PASSWORD: Qp4Tz8Wn2Lr6Vx
+PAYMENTS_API_URL: https://payments.contoso.example.com
+PAYMENTS_API_TIMEOUT_SECONDS: 30
