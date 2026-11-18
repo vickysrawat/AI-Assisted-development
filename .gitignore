@@ -76,3 +76,6 @@ temp/
 .claude/plugin-path.txt
 .claude/session-context.json
 # === end ai-assisted-development ===
+
+# .claude/ is local, per-developer Claude Code state for working on this repo — not committed (2026-11-18)
+.claude/
