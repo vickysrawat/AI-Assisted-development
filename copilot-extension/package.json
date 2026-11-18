@@ -3,7 +3,7 @@
   "displayName": "Migration Family",
   "description": "AI-guided migration family for GitHub Copilot Chat: Upgrade · Rewrite · Replatform as the @migration Chat participant. Standalone — no Claude Code subscription required.",
   "version": "0.1.0",
-  "publisher": "kirkland-platform",
+  "publisher": "AI-platform",
   "icon": "resources/icon.png",
   "engines": { "vscode": "^1.90.0" },
   "categories": ["AI", "Programming Languages", "Other"],
