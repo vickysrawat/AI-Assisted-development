@@ -101,6 +101,17 @@ function Safe-Copy($src, $dest) {
     ForEach-Object { Copy-Item -Recurse -Force $_.FullName $dest }
 }
 
+# ADO-83: the migration notes are the one part of docs/ an installed plugin needs - /setup-sync
+# and scripts/setup-sync.cjs show the notes between the old and the new version.
+function Copy-MigrationNotes($src, $dest) {
+  $notes = Join-Path $src 'docs\migrations'
+  if (Test-Path $notes) {
+    $target = Join-Path $dest 'docs\migrations'
+    New-Item -ItemType Directory -Force -Path $target | Out-Null
+    Safe-Copy $notes $target
+  }
+}
+
 function Run-NodeScript($script) {
   Set-Content -Path $TEMP_JS -Value $script -Encoding UTF8
   node $TEMP_JS
@@ -213,6 +224,7 @@ if ($Update) {
   Write-Host ""
   Write-Cyan "  Copying updated files - please wait..."
   Safe-Copy $LOCAL_PATH $PLUGIN_DIR
+  Copy-MigrationNotes $LOCAL_PATH $PLUGIN_DIR
 
   $newVersion = Get-PluginVersion $PLUGIN_DIR
 
@@ -304,6 +316,7 @@ Write-Host "  -> Installing: v$SOURCE_VERSION"
 Write-Host ""
 Write-Cyan "  Copying plugin files - please wait..."
 Safe-Copy $LOCAL_PATH $PLUGIN_DIR
+Copy-MigrationNotes $LOCAL_PATH $PLUGIN_DIR
 
 # -- Validate -------------------------------------------------------------------
 if (-not (Test-Path "$PLUGIN_DIR\.claude-plugin\plugin.json")) {

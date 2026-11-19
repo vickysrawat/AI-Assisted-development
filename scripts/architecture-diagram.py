@@ -54,6 +54,7 @@ SPEC FORMAT (YAML shown; JSON uses the same keys)
             todo: true            # not confirmed from the code or documents yet: amber dashed
                                   # border and a "⚠ unverified" label (also allowed on zones)
             tag: "Custom label"   # replaces the type label; "" hides it
+            icon: virtual-machine # Azure icon name, replaces the type's icon; "" hides it
             color: "#5C2D91"      # optional border colour override
             fill: "#FFFFFF"       # optional fill colour override
             columns: 1            # child components per line
@@ -72,9 +73,22 @@ SPEC FORMAT (YAML shown; JSON uses the same keys)
 
     A component with type "stack" draws nothing itself. Use it to stack components on top of
     each other in one column of a zone (for example a database above its backups).
+
+AZURE ICONS
+
+    Boxes without children whose type is an Azure service (aks, app-service, function-app,
+    front-door, app-gateway, key-vault, storage, azure-sql, app-insights, container-apps,
+    event-hubs, service-bus, log-analytics, private-endpoint, network-interface, vnet,
+    expressroute, entra-app) and users boxes show the official Microsoft Azure Architecture
+    Icon on the left. The icons are the PNGs in assets/icons/azure/ in the plugin (names in its
+    manifest.json, terms in its NOTICE.md). icon: picks any bundled icon for a box (for
+    example icon: firewalls on a firewall box), and icon: "" hides the icon. An icon name that
+    is not bundled prints a warning and the box keeps its usual icon. When the assets folder
+    is missing, boxes are drawn without Azure icons and icon: names are ignored.
 """
 
 import argparse
+import functools
 import heapq
 import json
 import math
@@ -85,6 +99,7 @@ from pathlib import Path
 import matplotlib
 
 matplotlib.use("Agg")
+import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse, FancyBboxPatch, Rectangle
 
@@ -130,6 +145,15 @@ TYPES = {
     "azure-sql": ("#FFFFFF", AZURE, None, "Azure SQL Database", "db"),
     "app-insights": ("#F2F8FD", AZURE, None, "Application Insights", None),
     "identity": ("#FFFFFF", AZURE, None, "Identity provider", None),
+    # AC-F4 (ADO-82) — more Azure services, each with a default Azure icon (AZURE_ICONS)
+    "event-hubs": ("#F2F8FD", AZURE, None, "Azure Event Hubs", None),
+    "service-bus": ("#F2F8FD", AZURE, None, "Azure Service Bus", None),
+    "log-analytics": ("#F2F8FD", AZURE, None, "Log Analytics workspace", None),
+    "private-endpoint": ("#FFFFFF", AZURE, None, "Private endpoint", None),
+    "network-interface": ("#FFFFFF", AZURE, None, "Network interface", None),
+    "vnet": ("#FFFFFF", AZURE, AZURE, "Virtual network", None),
+    "expressroute": ("#FFFFFF", AZURE, None, "ExpressRoute circuit", None),
+    "entra-app": ("#FFFFFF", AZURE, None, "Entra ID app registration", None),
     # On-prem / Windows
     "iis-server": ("#FFFFFF", IIS, IIS, "Windows Server · IIS", None),
     "iis-site": ("#F6F2FB", IIS, None, "IIS website", None),
@@ -170,6 +194,35 @@ TYPES = {
     "service": ("#FFFFFF", INK, None, None, None),
     "external": ("#FFFFFF", "#9AA4B2", None, "External system", None),
     "stack": (None, None, None, None, None),
+}
+
+# AC-F3 (ADO-82) — Microsoft Azure Architecture Icons bundled with the plugin (terms in NOTICE.md
+# there). Found next to this script, so the renderer works from any working directory.
+ICON_DIR = Path(__file__).resolve().parent.parent / "assets" / "icons" / "azure"
+ICON_SIZE = 3.6  # drawn width and height of an Azure icon, inside the ICON_W slot
+
+# Default Azure icon (manifest name) per type. Only types that are clearly one Azure service get
+# one; vm, firewall, dns, sql-server ... keep their usual look and can opt in with icon:.
+AZURE_ICONS = {
+    "aks": "kubernetes-services",
+    "app-service": "app-services",
+    "function-app": "function-apps",
+    "front-door": "front-door-and-cdn-profiles",
+    "app-gateway": "application-gateways",
+    "key-vault": "key-vaults",
+    "storage": "storage-accounts",
+    "azure-sql": "sql-database",
+    "app-insights": "application-insights",
+    "container-apps": "container-apps-environments",
+    "users": "users",
+    "event-hubs": "event-hubs",
+    "service-bus": "azure-service-bus",
+    "log-analytics": "log-analytics-workspaces",
+    "private-endpoint": "private-endpoints",
+    "network-interface": "network-interfaces",
+    "vnet": "virtual-networks",
+    "expressroute": "expressroute-circuits",
+    "entra-app": "app-registrations",
 }
 
 # Zone styles: (fill, border, dashed border)
@@ -223,6 +276,26 @@ def todo_flag(d, what):  # AC-F14
     if not isinstance(value, bool):
         raise SpecError(f"todo must be true or false ({what})")
     return value
+
+
+@functools.lru_cache(maxsize=None)
+def load_icons(folder):  # AC-F3 (ADO-82)
+    """Icon name -> PNG path from the folder's manifest.json. Empty when the folder or the
+    manifest is missing, so the diagram is drawn as it was before the icons were bundled.
+    """
+    manifest = folder / "manifest.json"
+    if not manifest.is_file():
+        return {}
+    try:
+        entries = json.loads(manifest.read_text(encoding="utf-8"))["icons"]
+        icons = {e["name"]: folder / e["file"] for e in entries}
+    except (ValueError, KeyError, TypeError) as err:
+        print(
+            f"warning: {manifest} is not readable ({err}), icons skipped",
+            file=sys.stderr,
+        )
+        return {}
+    return {name: path for name, path in icons.items() if path.is_file()}
 
 
 # ---------------------------------------------------------------- text helpers
@@ -335,7 +408,7 @@ class Node:
         self.edge = d.get("color", edge)
         self.header = header if self.children else None
         self.tag = d.get("tag", tag)
-        self.icon = icon
+        self.icon = self.pick_icon(d, icon)
         self.dashed = bool(d.get("standby", False))
         if self.dashed:
             self.edge = RED
@@ -350,6 +423,34 @@ class Node:
         # AC-F14: not confirmed yet: amber dashed border, "unverified" label.
         if self.todo:
             self.edge, self.dashed, self.tag = TODO_EDGE, True, TODO_TAG
+
+    def pick_icon(self, d, builtin):  # AC-F3 (ADO-82)
+        """The icon drawn in the box: a bundled Azure icon (its PNG path), a built-in shape
+        ("db" / "user") or None. The icon: key wins over the type; "" means no icon."""
+        icons = load_icons(ICON_DIR)
+        usual = icons.get(AZURE_ICONS.get(self.type), builtin)
+        if "icon" not in d:
+            return usual
+        name = d["icon"]
+        if not isinstance(name, str):
+            raise SpecError(f'icon must be an icon name or "" (component {self.id})')
+        if not name:
+            return None
+        # DECISION: What an icon name that is not bundled draws
+        # Options considered:
+        #   A) Spec error — rejected: a typo would stop the whole diagram; unknown types only warn
+        #   B) No icon — rejected: the box would lose the icon it has without the key
+        #   C) Warn and keep the type's usual icon — chosen: same as leaving the key out
+        if name.lower() in icons:
+            return icons[name.lower()]
+        # Without the assets folder every name is missing: stay quiet, as before ADO-82.
+        if icons:
+            print(
+                f"warning: '{self.name}' has unknown icon '{name}', drawn with its usual icon. "
+                f"Known icons: {', '.join(sorted(icons))}",
+                file=sys.stderr,
+            )
+        return usual
 
     def chain(self):
         """This node and every node it sits inside."""
@@ -848,9 +949,18 @@ def draw_text(ax, lines, x, y, ha, z):
         y += h
 
 
+@functools.lru_cache(maxsize=None)
+def read_png(path):
+    """Reads an icon PNG once per run (with matplotlib, so no extra dependency)."""
+    return mpimg.imread(path)
+
+
 def draw_icon(ax, icon, x, y, z):
-    """Draws a small database cylinder or user screen centred on (x, y)."""
-    if icon == "db":
+    """Draws an Azure icon, a small database cylinder or a user screen centred on (x, y)."""
+    if isinstance(icon, Path):  # AC-F3 (ADO-82)
+        s = ICON_SIZE / 2  # the y axis points down, so the image's top edge is y - s
+        ax.imshow(read_png(icon), extent=(x - s, x + s, y + s, y - s), zorder=z)
+    elif icon == "db":
         w, h = 3.0, 3.2
         ax.add_patch(
             Rectangle(

@@ -13,7 +13,7 @@
 #        Python is a target from Node.js (nodejs→python) and React a target from Angular
 #        (angular→react); Python-as-source and java/dotnet→python have no mapping refs yet.
 # Last updated: keep this file updated when conventions change
-# Plugin version: 3.27.0 (update this line after setup-init or plugin upgrade)
+# Plugin version: 3.29.0 (update this line after setup-init or plugin upgrade)
 
 ---
 

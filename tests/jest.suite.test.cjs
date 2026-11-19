@@ -16,6 +16,9 @@ const TESTS_DIR        = __dirname;
 const MIGRATION_SELF   = path.join(TESTS_DIR, 'migration-validation', 'run-selftest.cjs');
 const TIMEOUT_UNIT     = 120_000;
 const TIMEOUT_MIGRATION = 90_000;
+// Files that drive several real end-to-end runs get more time: starting a child process can
+// cost 1–2 s on a locked-down Windows machine, and setup-sync.test.cjs starts dozens (ADO-83).
+const SLOW_FILES = { 'setup-sync.test.cjs': 300_000 };
 
 // Discover raw test files — exclude this wrapper
 const unitFiles = fs
@@ -36,9 +39,12 @@ function run(file, timeoutMs) {
 }
 
 describe('Unit suite', () => {
-  test.each(unitFiles)('%s', file => {
-    run(path.join(TESTS_DIR, file), TIMEOUT_UNIT);
-  }, TIMEOUT_UNIT);
+  for (const file of unitFiles) {
+    const timeoutMs = SLOW_FILES[file] || TIMEOUT_UNIT;
+    test(file, () => {
+      run(path.join(TESTS_DIR, file), timeoutMs);
+    }, timeoutMs);
+  }
 });
 
 describe('Migration validators', () => {

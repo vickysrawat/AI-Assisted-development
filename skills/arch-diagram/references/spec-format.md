@@ -1,6 +1,6 @@
 # Spec format — what a generated /arch-diagram spec looks like
 
-_Reference for `skills/arch-diagram/SKILL.md` Steps 4–5 and 10 · ADO-8001 · AC-F6, AC-F9, AC-F14_
+_Reference for `skills/arch-diagram/SKILL.md` Steps 4–5 and 10 · ADO-8001 · AC-F6, AC-F9, AC-F14 · ADO-82 (Azure icons)_
 
 The full list of keys, zone styles, component types and flow kinds is the docstring at the top
 of `$PLUGIN_DIR/scripts/architecture-diagram.py`. This page adds the conventions a **generated**
@@ -60,6 +60,26 @@ What `/arch-diagram --refresh` does with it:
 `# manual` replaces `# source:` for that item (an item can't need both). A `# manual` zone keeps
 all its components too, and they need no `# source:` of their own. Put `# manual` only as the
 last thing on the item's first line; `#manual` inside a label does not count. To give an item back to the generator, delete the `# manual` comment.
+
+---
+
+## Azure icons (ADO-82)
+
+Boxes of an Azure service type show the official Azure Architecture Icon on their left, with
+no change to the spec. A box that holds other boxes shows its type in its heading instead.
+
+| Gets an icon by default | Types |
+|---|---|
+| Yes | `aks` `app-service` `function-app` `front-door` `app-gateway` `key-vault` `storage` `azure-sql` `app-insights` `container-apps` `users` `event-hubs` `service-bus` `log-analytics` `private-endpoint` `network-interface` `vnet` `expressroute` `entra-app` |
+| No (not one Azure service) | `vm` `firewall` `load-balancer` `registry` `pipeline` `dns` `monitoring` `sql-server` `kubernetes` `identity` `database` `file-share` and every non-Azure type |
+
+- `icon: <name>` gives a box any bundled icon, for example `icon: firewalls` on an Azure Firewall
+  or `icon: virtual-machine` on an Azure VM. Use it only when the box really is that Azure
+  service. The names are in `$PLUGIN_DIR/assets/icons/azure/manifest.json`.
+- `icon: ""` hides the icon, including the built-in database and user shapes.
+- An unknown name prints a warning and the box keeps its usual icon. The render does not fail.
+- The icons are Microsoft's, under Microsoft's terms, not the plugin's MIT licence. See
+  `$PLUGIN_DIR/assets/icons/azure/NOTICE.md`.
 
 ---
 

@@ -729,6 +729,103 @@ git push origin v{N}     # e.g. git push origin v3.26.0
 
 If any step fails: the tag is broken. Fix the issue and run `npm run bump:patch && npm run release` to cut a corrected version. Never re-use a broken tag.
 
+### Updating a project after a plugin upgrade
+
+Two steps, neither of which needs a Claude session:
+
+1. **Update the installed copy** from the plugin source: `node install.cjs --update`. It copies
+   the working tree into the installed plugin folder, plus `docs/migrations/` (the only part of
+   `docs/` an install carries), then runs `claude plugin update`. It copies files as they are on
+   disk, so install from a clean checkout when you want exactly what is committed.
+2. **Sync each project** from its root with `node "<installed plugin>/scripts/setup-sync.cjs"`.
+   The installed folder is `installPath` in `~/.claude/plugins/installed_plugins.json`.
+   Start a new Claude Code session after step 1 so Claude loads the new version too.
+
+#### Running the sync on Windows (PowerShell)
+
+Most of the team works in PowerShell. Bash syntax such as `P=$(...)` does not work there:
+PowerShell reports *"The term 'P=$(node …' is not recognized"*. Use these commands instead.
+
+**1. Find the installed plugin folder** (reads Claude Code's plugin registry):
+
+```powershell
+$P = (Get-Content "$env:USERPROFILE\.claude\plugins\installed_plugins.json" -Raw | ConvertFrom-Json).plugins.PSObject.Properties |
+  Where-Object Name -like 'ai-assisted-development@*' | ForEach-Object { $_.Value[0].installPath }
+$P                                         # e.g. C:\Users\<you>\.claude\plugins\cache\<marketplace>\ai-assisted-development\3.29.0
+Test-Path "$P\scripts\setup-sync.cjs"      # must print True; False means the install predates 3.29.0 — run install.cjs --update
+```
+
+**2. Preview, then sync one project:**
+
+```powershell
+cd C:\path\to\your\project
+node "$P\scripts\setup-sync.cjs" --dry-run   # shows the version change, migration notes and what needs Claude; writes nothing
+node "$P\scripts\setup-sync.cjs"             # does the sync
+$LASTEXITCODE                                # 0 synced · 1 a step failed · 2 not set up with /setup-init
+```
+
+**3. Several projects at once:**
+
+```powershell
+$repos = 'C:\source\repos\app-one', 'C:\source\repos\app-two'
+foreach ($repo in $repos) {
+  node "$P\scripts\setup-sync.cjs" --root=$repo
+  if ($LASTEXITCODE -ne 0) { Write-Warning "$repo needs attention (exit $LASTEXITCODE)" }
+}
+```
+
+`$P` lasts only for the current PowerShell window. Run step 1 again in a new window, or after the
+next plugin update (the folder name includes the version).
+
+#### Running the sync in Git Bash, macOS or Linux
+
+```bash
+P=$(node -p "const r=require(require('os').homedir()+'/.claude/plugins/installed_plugins.json');r.plugins[Object.keys(r.plugins).find(k=>k.startsWith('ai-assisted-development@'))][0].installPath")
+cd /path/to/your/project
+node "$P/scripts/setup-sync.cjs" --dry-run
+node "$P/scripts/setup-sync.cjs"
+for repo in ~/source/repos/app-one ~/source/repos/app-two; do
+  node "$P/scripts/setup-sync.cjs" --root="$repo" || echo "⚠ $repo needs attention"
+done
+```
+
+#### Reading the result
+
+- The last line is `✓ setup-sync complete — project at v<version>` when every step worked.
+- A `✗` line means that step failed; the steps after it still ran. Fix the cause it prints and
+  run the same command again — every step is safe to re-run.
+- **Needs Claude** lists what the script cannot decide for you (for example a missing
+  `.claude/business-context.md`, or external repos never set up). Open Claude Code in that
+  project and run `/setup-sync`: it runs the same script, then walks you through exactly those
+  items. If the list says **Nothing needs Claude**, you are done.
+- Finish with `/setup-status` in Claude Code to confirm every check is green.
+
+`scripts/setup-sync.cjs` (ADO-83) is the deterministic half of `/setup-sync`, in this order:
+
+| Step | What runs |
+|---|---|
+| Stamp | `dream_init_plugin_version` set to the script's own version first, so an interrupted run never leaves the state stale |
+| Bootstrap | `setup-init-bootstrap.cjs --mode sync` — hooks, command stubs, plugin-owned skills (`.hashes` protects edits), `plugin-path.txt`, CLAUDE.md sections, `.gitignore` / `.tfignore` |
+| Detect + rules | `repo-detect.cjs --force`, then `setup-init-bootstrap.cjs --mode post-detect --repo-type <repo_type>`. "Nothing recognisable" keeps the old `repo_type`; an empty one skips the rule deploy with a warning |
+| CLAUDE.md paths | Retries `⚠ NOT DETECTED` git / bash paths (the bootstrap only fills raw placeholders) |
+| External stacks | `external-stack-detection.cjs`, only when the developer was asked before or `additionalDirectories` is set |
+| Record | `dream_sync_last_run`; `governance_mode` / `output_mode` added only when absent |
+
+It then prints the in-range migration notes (`docs/migrations/NNN-x.y.z.md`, above the
+provisioned version and up to the installed one) and a **Needs Claude** list (ids:
+`migration-notes`, `setup-init`, `external-repos`, `business-context`, `onboarding-guide`,
+`graph-sync`, `claude-md-paths`). `/setup-sync` runs the same script and then acts on exactly
+that list, so the two never drift.
+
+Options: `--root=<folder>` (sync another project, for loops over several repos), `--dry-run`
+(writes nothing), `--verbose` (shows each script's own output). Exit codes: `0` all steps ok ·
+`1` a step failed — the later steps still ran, fix it and re-run · `2` wrong arguments or a
+folder never set up with `/setup-init`.
+
+When you add a mechanical step to project provisioning, add it to `setup-sync.cjs` (and its
+test, `tests/setup-sync.test.cjs`), not to the skill. Add a skill step only for something that
+needs a person's answer.
+
 ---
 
 ## Dependency vulnerability scanning

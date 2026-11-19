@@ -1,0 +1,180 @@
+{
+  "iconSet": "Microsoft Azure Architecture Icons",
+  "version": "V25",
+  "page": "https://learn.microsoft.com/azure/architecture/icons/",
+  "download": "https://arch-center.azureedge.net/icons/Azure_Public_Service_Icons_V25.zip",
+  "sourceRoot": "Azure_Public_Service_Icons/Icons",
+  "size": 128,
+  "icons": [
+    {
+      "name": "kubernetes-services",
+      "file": "kubernetes-services.png",
+      "source": "compute/10023-icon-service-Kubernetes-Services.svg"
+    },
+    {
+      "name": "app-services",
+      "file": "app-services.png",
+      "source": "app services/10035-icon-service-App-Services.svg"
+    },
+    {
+      "name": "function-apps",
+      "file": "function-apps.png",
+      "source": "compute/10029-icon-service-Function-Apps.svg"
+    },
+    {
+      "name": "front-door-and-cdn-profiles",
+      "file": "front-door-and-cdn-profiles.png",
+      "source": "networking/10073-icon-service-Front-Door-and-CDN-Profiles.svg"
+    },
+    {
+      "name": "application-gateways",
+      "file": "application-gateways.png",
+      "source": "networking/10076-icon-service-Application-Gateways.svg"
+    },
+    {
+      "name": "key-vaults",
+      "file": "key-vaults.png",
+      "source": "security/10245-icon-service-Key-Vaults.svg"
+    },
+    {
+      "name": "storage-accounts",
+      "file": "storage-accounts.png",
+      "source": "storage/10086-icon-service-Storage-Accounts.svg"
+    },
+    {
+      "name": "sql-database",
+      "file": "sql-database.png",
+      "source": "databases/10130-icon-service-SQL-Database.svg"
+    },
+    {
+      "name": "application-insights",
+      "file": "application-insights.png",
+      "source": "devops/00012-icon-service-Application-Insights.svg"
+    },
+    {
+      "name": "container-apps-environments",
+      "file": "container-apps-environments.png",
+      "source": "other/02989-icon-service-Container-Apps-Environments.svg"
+    },
+    {
+      "name": "users",
+      "file": "users.png",
+      "source": "identity/10230-icon-service-Users.svg"
+    },
+    {
+      "name": "event-hubs",
+      "file": "event-hubs.png",
+      "source": "analytics/00039-icon-service-Event-Hubs.svg"
+    },
+    {
+      "name": "azure-service-bus",
+      "file": "azure-service-bus.png",
+      "source": "integration/10836-icon-service-Azure-Service-Bus.svg"
+    },
+    {
+      "name": "log-analytics-workspaces",
+      "file": "log-analytics-workspaces.png",
+      "source": "analytics/00009-icon-service-Log-Analytics-Workspaces.svg"
+    },
+    {
+      "name": "private-endpoints",
+      "file": "private-endpoints.png",
+      "source": "other/02579-icon-service-Private-Endpoints.svg"
+    },
+    {
+      "name": "network-interfaces",
+      "file": "network-interfaces.png",
+      "source": "networking/10080-icon-service-Network-Interfaces.svg"
+    },
+    {
+      "name": "virtual-networks",
+      "file": "virtual-networks.png",
+      "source": "networking/10061-icon-service-Virtual-Networks.svg"
+    },
+    {
+      "name": "expressroute-circuits",
+      "file": "expressroute-circuits.png",
+      "source": "networking/10079-icon-service-ExpressRoute-Circuits.svg"
+    },
+    {
+      "name": "app-registrations",
+      "file": "app-registrations.png",
+      "source": "identity/10232-icon-service-App-Registrations.svg"
+    },
+    {
+      "name": "virtual-machine",
+      "file": "virtual-machine.png",
+      "source": "compute/10021-icon-service-Virtual-Machine.svg"
+    },
+    {
+      "name": "load-balancers",
+      "file": "load-balancers.png",
+      "source": "networking/10062-icon-service-Load-Balancers.svg"
+    },
+    {
+      "name": "firewalls",
+      "file": "firewalls.png",
+      "source": "networking/10084-icon-service-Firewalls.svg"
+    },
+    {
+      "name": "container-registries",
+      "file": "container-registries.png",
+      "source": "containers/10105-icon-service-Container-Registries.svg"
+    },
+    {
+      "name": "azure-devops",
+      "file": "azure-devops.png",
+      "source": "devops/10261-icon-service-Azure-DevOps.svg"
+    },
+    {
+      "name": "monitor",
+      "file": "monitor.png",
+      "source": "management + governance/00001-icon-service-Monitor.svg"
+    },
+    {
+      "name": "dns-zones",
+      "file": "dns-zones.png",
+      "source": "networking/10064-icon-service-DNS-Zones.svg"
+    },
+    {
+      "name": "dns-private-resolver",
+      "file": "dns-private-resolver.png",
+      "source": "networking/02882-icon-service-DNS-Private-Resolver.svg"
+    },
+    {
+      "name": "subscriptions",
+      "file": "subscriptions.png",
+      "source": "general/10002-icon-service-Subscriptions.svg"
+    },
+    {
+      "name": "resource-groups",
+      "file": "resource-groups.png",
+      "source": "general/10007-icon-service-Resource-Groups.svg"
+    },
+    {
+      "name": "subnet",
+      "file": "subnet.png",
+      "source": "networking/02742-icon-service-Subnet.svg"
+    },
+    {
+      "name": "managed-identities",
+      "file": "managed-identities.png",
+      "source": "identity/10227-icon-service-Managed-Identities.svg"
+    },
+    {
+      "name": "recovery-services-vaults",
+      "file": "recovery-services-vaults.png",
+      "source": "management + governance/00017-icon-service-Recovery-Services-Vaults.svg"
+    },
+    {
+      "name": "sql-server",
+      "file": "sql-server.png",
+      "source": "databases/10132-icon-service-SQL-Server.svg"
+    },
+    {
+      "name": "worker-container-app",
+      "file": "worker-container-app.png",
+      "source": "other/02884-icon-service-Worker-Container-App.svg"
+    }
+  ]
+}

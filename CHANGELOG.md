@@ -1,3 +1,32 @@
+## [3.29.0] — 2026-11-19
+
+### Added — one-command project sync after a plugin upgrade (ADO-83)
+
+Updating a project after a plugin upgrade needed a Claude session walking `/setup-sync` step by step, one session per repo, though nearly every step was already a plain Node script.
+
+- **`scripts/setup-sync.cjs`:** run `node "<installed plugin>/scripts/setup-sync.cjs"` from a project's root, with no Claude session. It stamps the version, runs the bootstrap in sync mode (hooks, command stubs, plugin-owned skills, `plugin-path.txt`, CLAUDE.md sections, ignore file), re-detects the stack and redeploys rules, retries `⚠ NOT DETECTED` git/bash paths, refreshes external stacks when already set up, and records the run. It then lists the migration notes in range and what still **needs Claude**. `--root=<folder>` syncs another project (loops over several repos), `--dry-run` writes nothing. Exit codes: 0 synced · 1 a step failed (the later steps still run; re-run after fixing) · 2 not set up with `/setup-init`.
+- **`/setup-sync`** runs the same script, then handles only that list: migration notes, the external-repos question, the business-context offer, the onboarding guide. 582 → 344 lines; the separate `/gitignore-sync` step is gone (the bootstrap already rewrites the managed block).
+- **Fixed — migration notes now reach projects.** All three installers skipped `docs/`, so the installed plugin had no `docs/migrations/` and `/setup-sync` never showed a note. `install.cjs`, `install.sh` and `install.ps1` now copy `docs/migrations/` (the rest of `docs/` stays out).
+- **Docs:** README "Keeping the plugin up to date" (now includes `install.cjs --update`), a DEVELOPER-GUIDE section "Updating a project after a plugin upgrade", and migration note `034-3.29.0.md`.
+- **Tests:** `tests/setup-sync.test.cjs` (23 cases, against throwaway projects and a throwaway HOME), including a check that the script leaves the same files as running the steps by hand. The Jest wrapper gives this file 300 s.
+
+---
+
+## [3.28.0] — 2026-11-19
+
+### Added — `/arch-diagram`: Azure Architecture Icons in the rendered diagram (ADO-82)
+
+Architecture reviews (DRB, DR plans, go-live packs) expect the standard Azure icons; the PNG showed coloured boxes only.
+
+- **Icons by type:** boxes of 18 Azure service types, plus `users`, now show the official Microsoft Azure Architecture Icon (V25) on the left. Specs need no change. A box that gains an icon may re-wrap its text and grow taller.
+- **`icon:` key:** gives a component any of the 34 bundled icons (`icon: firewalls`); `icon: ""` hides it. An unknown name prints a warning and the box keeps its usual icon.
+- **New types:** `event-hubs`, `service-bus`, `log-analytics`, `private-endpoint`, `network-interface`, `vnet`, `expressroute`, `entra-app`.
+- **Assets:** `assets/icons/azure/` holds 34 PNGs (128 px, 213 KB), `manifest.json` and `NOTICE.md`. The icons are under Microsoft's terms, not the repo's MIT licence. Maintainers rebuild them with `scripts/build-azure-icons.cjs`. Without the folder the renderer draws exactly as in 3.27.0.
+- **No new dependency:** the icons are read with matplotlib.
+- **Tests:** 10 new cases in `tests/architecture-diagram.test.cjs`, including a check that `manifest.json` and the PNGs on disk match both ways.
+
+---
+
 ## [3.27.0] — 2026-11-16
 
 ### Added — `/arch-diagram`: architecture & recovery diagram from the codebase (ADO-8001)

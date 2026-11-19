@@ -1,33 +1,39 @@
 ---
 name: setup-sync
 description: >
-  Re-provision an existing project after a plugin upgrade. Compares the version that
-  provisioned the project against the installed plugin version and applies only the
-  version-sensitive changes listed in docs/migrations/ for each version in range —
-  re-copies hooks, refreshes the ignore-file managed block, seeds new state/rule files —
-  then re-stamps the provisioned version. Idempotent and safe to re-run; never overwrites
-  developer content. Use when setup-status reports plugin version drift (UPGRADE PENDING).
+  Re-provision an existing project after a plugin upgrade. Runs scripts/setup-sync.cjs — the
+  one-command deterministic sync (version stamp, hooks, command stubs, plugin-owned skills,
+  ignore-file managed block, stack re-detection, rule redeploy, CLAUDE.md path retry, external
+  stacks, run record) — then handles only the steps that need judgement: the migration notes in
+  docs/migrations/ for each version in range, the external-repos question, the business-context
+  offer and the onboarding guide. Idempotent and safe to re-run; never overwrites developer
+  content. Use when setup-status reports plugin version drift (UPGRADE PENDING).
   Alias: setup-init --upgrade.
 ---
 
 # Skill: setup-sync
 
-_Skill version: 1.0 · Last changed: 2026-07-07 · Consent: C_
+_Skill version: 2.0 · Last changed: 2026-11-19 · Consent: C_
 
 > **Business context severity:** infrastructure skill — no security findings. See
 > `$PLUGIN_DIR/skills/shared/business-context-severity.md` for the B-series model it does not trigger.
 
 ## Purpose
-Re-provision an existing project after a plugin upgrade. Reads the provisioned
-version from `.claude/dream-init-state.json` and the installed version from the
-plugin's registry. Calls the bootstrap script (sync mode) to re-copy hooks,
-re-deploy stubs, update `.claude/plugin-path.txt` (the pointer skills use to
-locate plugin reference files in the cache), update plugin-owned project skills in
-`.claude/skills/` (respecting developer customisations via `.hashes`), and restore
-missing rule files from `deployed_rules[]`, then re-stamps the version.
+Re-provision an existing project after a plugin upgrade. Every mechanical step is in
+`scripts/setup-sync.cjs` (ADO-83), which a developer can also run without Claude:
+
+```
+cd <target repo> && node "<installed plugin>/scripts/setup-sync.cjs"
+```
+
+The script stamps the installed version early, runs the bootstrap in sync mode (hooks, stubs,
+`.claude/plugin-path.txt`, plugin-owned `.claude/skills/` respecting `.hashes`, CLAUDE.md
+sections, `.gitignore` / `.tfignore`), re-detects the stack and redeploys rules, retries
+`⚠ NOT DETECTED` git/bash paths in CLAUDE.md, refreshes external-stack detection when it is
+already set up, records the run, and prints the in-range migration notes and a **Needs Claude**
+list. This skill runs that script, then does only what the list asks for.
 
 Triggered by: `/setup-sync` or `/setup-init --upgrade`
-
 ---
 
 ## Persona
@@ -39,7 +45,7 @@ never assume, never attribute in output. See `$PLUGIN_DIR/skills/shared/personas
 
 ## --commands flag (scoped deployment, deterministic)
 
-When invoked as `/setup-sync --commands`, skip Steps 1–7 entirely and run only this:
+When invoked as `/setup-sync --commands`, skip Steps 1–6 entirely and run only this:
 
 **1. Read PLUGIN_DIR from `.claude/plugin-path.txt`:**
 
@@ -64,7 +70,7 @@ Stop here.
 node {PLUGIN_DIR}/scripts/deploy-commands.cjs
 ```
 
-**3. Display the script output verbatim. Stop — do not proceed to Steps 1–7.**
+**3. Display the script output verbatim. Stop — do not proceed to Steps 1–6.**
 
 The script copies every `.md` from the plugin's `.claude/commands/` to the current project's `.claude/commands/`. Files present in the target but absent from the plugin are never deleted (target-only files are reported as "Kept").
 
@@ -98,7 +104,7 @@ Stop here.
 node install.cjs --update
 ```
 
-**3. Display output verbatim. Stop — do not proceed to Steps 1–7.**
+**3. Display output verbatim. Stop — do not proceed to Steps 1–6.**
 
 This copies all source files to the installed plugin location at
 `~/.claude/plugins/{marketplace}/plugins/ai-assisted-development/`.
@@ -106,299 +112,80 @@ After this, run `/setup-sync --commands` in each target project to deploy the up
 
 ---
 
-## Step 1 — Resolve plugin path and read versions
+## Step 1 — Run the sync script
 
-> ⚠️ **HARD RULE — DO NOT IMPROVISE VERSION DETECTION.**
-> Run the node command below exactly. It reads `INSTALLED_VERSION` from the Claude plugin
-> registry (`installed_plugins.json`) — the authoritative source. It self-heals `plugin-path.txt`
-> if stale. Never infer the installed version from `CLAUDE.md` or construct it from the state field.
+> ⚠️ **HARD RULE — DO NOT IMPROVISE THE SYNC.** Run the installed plugin's script exactly as
+> below. Do not re-run the bootstrap, repo-detect or the version stamp by hand — the script
+> does all of them, in order, and is the single source of truth for this step.
+
+Resolve the installed plugin from the Claude plugin registry (authoritative — `plugin-path.txt`
+may still point at the old version's cache folder until the script refreshes it):
 
 ```javascript
 node -e "
 const fs=require('fs'),os=require('os'),path=require('path');
-// Fast path: get PLUGIN_DIR from plugin-path.txt
-const ptf = '.claude/plugin-path.txt';
-let cachedDir = '';
-try { cachedDir = fs.existsSync(ptf) ? fs.readFileSync(ptf,'utf8').trim() : ''; } catch(e) {}
-
-// Authoritative: installed version + registered path from Claude plugin registry
-const base=path.join(os.homedir(),'.claude','plugins');
-let registeredDir='', installedVersion='unknown';
+let dir='';
 try {
-  const reg=JSON.parse(fs.readFileSync(path.join(base,'installed_plugins.json'),'utf8'));
+  const reg=JSON.parse(fs.readFileSync(path.join(os.homedir(),'.claude','plugins','installed_plugins.json'),'utf8'));
   const key=Object.keys(reg.plugins||{}).find(k=>k.startsWith('ai-assisted-development@'));
-  if(key){ const a=reg.plugins[key]||[]; const e=a.find(x=>x.scope==='user')||a[0];
-    if(e){ registeredDir=(e.installPath||'').split(path.sep).join('/'); installedVersion=e.version||'unknown'; }}
+  const a=key?reg.plugins[key]||[]:[]; const e=a.find(x=>x.scope==='user')||a[0];
+  if(e&&e.installPath&&fs.existsSync(e.installPath)) dir=e.installPath;
 } catch(e) {}
-
-// Use registered path if cache is stale or absent; self-heal plugin-path.txt
-const pluginDir = (registeredDir && fs.existsSync(registeredDir)) ? registeredDir : cachedDir;
-if(!pluginDir || !fs.existsSync(pluginDir)) {
-  console.error('PLUGIN_DIR_NOT_FOUND'); process.exit(1);
-}
-if(pluginDir !== cachedDir) {
-  fs.writeFileSync(ptf, pluginDir+'\n');
-  console.log('PLUGIN_PATH_UPDATED='+pluginDir);
-}
-
-// Provisioned version from state
-let provisionedVersion = 'unknown';
-try { provisionedVersion = JSON.parse(fs.readFileSync('.claude/dream-init-state.json','utf8')).dream_init_plugin_version || 'unknown'; } catch(e) {}
-
-console.log('PLUGIN_DIR='+pluginDir);
-console.log('INSTALLED_VERSION='+installedVersion);
-console.log('PROVISIONED_VERSION='+provisionedVersion);
+if(!dir){ try{ dir=fs.readFileSync('.claude/plugin-path.txt','utf8').trim(); }catch(e){} }
+if(!dir||!fs.existsSync(path.join(dir,'scripts','setup-sync.cjs'))){ console.error('PLUGIN_DIR_NOT_FOUND'); process.exit(1); }
+console.log('PLUGIN_DIR='+dir.split(path.sep).join('/'));
 "
 ```
 
 If `PLUGIN_DIR_NOT_FOUND`:
 ```
-⚠ Cannot locate installed plugin. Run /setup-init to restore plugin-path.txt, then re-run /setup-sync.
+⚠ Cannot locate the installed plugin (or it predates scripts/setup-sync.cjs).
+  Install or update it first: node install.cjs --update  (or install.sh / install.ps1)
 ```
 Stop here.
 
-If `INSTALLED_VERSION` is `unknown`:
-```
-⚠ Cannot read installed plugin version from registry.
-  Install the plugin first: node install.cjs  (or install.sh / install.ps1)
-```
-Stop here.
+Then run (substitute the actual PLUGIN_DIR — no shell variables):
 
-Display:
 ```
-🔄 setup-sync — v$PROVISIONED_VERSION → v$INSTALLED_VERSION
+node "{PLUGIN_DIR}/scripts/setup-sync.cjs"
 ```
 
-If `INSTALLED_VERSION` is `unknown`:
-```
-⚠ Cannot read installed plugin version.
-  Install the plugin first: node install.cjs  (or install.sh / install.ps1)
-```
-Stop here.
+Show the output **verbatim**, then branch on the exit code:
 
-**Stamp the state to the installed version NOW — before the deployment steps below.**
-This is resilience: if the sync is interrupted or a later step fails, the state still reflects
-the installed version, so it is never left stale. A stale version is what triggers setup-sync in
-the first place, and can lead tooling to look for a plugin cache dir that no longer exists (the
-exact failure this guards against). The deployment steps are all idempotent, and `setup-status`
-independently verifies that rules/hooks/stubs are actually present — so the version field and the
-artifact-presence are checked separately.
+| Exit | Meaning | Action |
+|---|---|---|
+| 0 | every step ok | continue to Step 2 |
+| 1 | a step failed (marked ✗); the later steps still ran and the version is stamped | show the ✗ lines, tell the developer to fix the cause and re-run `/setup-sync`, then continue to Step 2 — the judgement steps are still useful |
+| 2 | not provisioned, or wrong arguments | show the message and stop. Not provisioned → `Run /setup-init first.` |
 
-Write `.claude/dream-init-state.json` using the Write tool — substitute the actual
-`INSTALLED_VERSION` value you read in step 3 above:
-
-```javascript
-// Read the current state first, then write back with updated version
-node -e "
-  const fs = require('fs');
-  const p = '.claude/dream-init-state.json';
-  let s = {};
-  try { s = JSON.parse(fs.readFileSync(p, 'utf8')); } catch(e) {}
-  s.dream_init_plugin_version = 'ACTUAL_VERSION_FROM_STEP_3';
-  fs.mkdirSync('.claude', { recursive: true });
-  fs.writeFileSync(p, JSON.stringify(s, null, 2));
-  console.log('  ✓ state stamped to v' + s.dream_init_plugin_version + ' (early — survives a partial run)');
-"
-```
-
-> Replace `ACTUAL_VERSION_FROM_STEP_3` with the exact version string read from
-> `{PLUGIN_DIR}/.claude-plugin/plugin.json` in Step 3. Do not use shell variable
-> interpolation — substitute the literal value directly into the script string.
-
-### Step 1c — Prerequisite check: did setup-init ever complete?
-
-setup-sync restores rules from `deployed_rules[]` and refreshes what `setup-init` created.
-If `setup-init` never ran to completion (e.g. stopped after the mechanical bootstrap), the
-state has no `detected_stacks`/`deployed_rules`, so Step 3 has nothing to restore — silently.
-Warn clearly, but do NOT block: re-copying hooks/stubs is still useful.
-
-```bash
-node -e "
-const fs=require('fs');
-let s={}; try{ s=JSON.parse(fs.readFileSync('.claude/dream-init-state.json','utf8')); }catch(e){}
-const stacks = Array.isArray(s.detected_stacks) ? s.detected_stacks : [];
-console.log(stacks.length ? 'INIT_COMPLETE' : 'INIT_INCOMPLETE');
-"
-```
-
-If `INIT_INCOMPLETE`:
-```
-⚠ setup-init may not have completed — detected_stacks is empty in dream-init-state.json.
-  Rules cannot be restored (no deployment record). Hooks/stubs will still be refreshed.
-  Run /setup-init to finish initial setup, or /setup-status to diagnose.
-```
-Continue with the remaining steps regardless.
+Keep the script's **Migration notes** and **Needs Claude** blocks — Steps 2–5 act only on what
+they list. Ids in the Needs Claude list: `migration-notes`, `setup-init`, `external-repos`,
+`business-context`, `onboarding-guide`, `graph-sync`, `claude-md-paths`.
 
 ---
 
-## Step 2 — Bootstrap (re-provision hooks, stubs, and skill files)
+## Step 2 — Show the migration notes
 
-Bootstrap in sync mode re-copies all hooks (always overwrite — plugin owns them),
-always overwrites command stubs (plugin owns stubs in sync mode),
-updates `.claude/plugin-path.txt` with the current plugin cache path (all plugin skill
-reference files are read directly from the cache via this pointer — no copies in target
-repos), updates plugin-owned project skills in `.claude/skills/` respecting developer
-customisations (files modified by the developer are protected via `.hashes`; developer-
-created files with no `.hashes` entry are never touched),
-appends any new Dream sections to CLAUDE.md, and refreshes `.claude/hooks/.hashes`.
-Does NOT write `needsLLMPopulation` — sync is not an init operation.
-
-Using the `PLUGIN_DIR` value read from `.claude/plugin-path.txt` in Step 1, run:
-
-```
-node {PLUGIN_DIR}/scripts/setup-init-bootstrap.cjs --mode sync
-```
-
-> Substitute the actual PLUGIN_DIR path — do not use shell variable syntax.
-> `plugin-path.txt` is updated by the bootstrap itself so subsequent skill reads get the refreshed path.
-
----
-
-## Step 3 — Re-run scored detection + rule deployment (ADR 0059)
-
-Rule deployment is driven by the scored `detection` object in `.claude/dream-init-state.json`.
-setup-sync **re-runs detection and the scored deploy** so a project picks up corrected
-signals (e.g. the `.slnx`/generation/pruning fixes) and any newly added rules — it no longer
-just re-copies the old `deployed_rules[]` list.
-
-```bash
-# 1. (Re)detect — refresh the scored `detection` object. Needed for pre-ADR-0059 installs that
-#    have no `detection` in state, and to pick up detector improvements. --force overwrites.
-node "$PLUGIN_DIR/scripts/repo-detect.cjs" --force --root=.
-
-# 2. Re-run the scored, hash-tracked deploy (reads state.detection; honors .claude/rules/.hashes,
-#    so developer-edited rules are protected, not clobbered; writes _deploy-manifest.json).
-node "$PLUGIN_DIR/scripts/setup-init-bootstrap.cjs" --mode post-detect --repo-type "$(node -e 'try{process.stdout.write(JSON.parse(require("fs").readFileSync(".claude/dream-init-state.json","utf8")).repo_type||"")}catch(e){}')"
-```
-
-Report the deploy summary (deployed / customised-protected counts + threshold) from the
-bootstrap output.
-
-> **v3.19.0 — version-spread backfill (Shared, automatic here).** The `--force` re-detect above now
-> also backfills `generations.dotnet.versions[]` / `packages` / `generations_meta` for pre-3.19
-> projects (safe, no rule change). **Track-A per-project rule scoping stays OFF** unless
-> `PER_PROJECT_RULES=1` / `per_project_rules:true` — when OFF the deploy is byte-identical to before.
-> If enabling, run the deploy once with `PER_PROJECT_RULES_DRYRUN=1` first to preview the scoped-path
-> plan + the one-time `.hashes` body-hash re-baseline before applying.
-
-> **Dropping wrong rules:** re-deploy is idempotent-**add** — it (re)writes the correct set and
-> the manifest, but does NOT delete rules that are no longer detected (avoids clobbering
-> possibly developer-edited files). To remove stale rules from a mis-provisioned project, run
-> `/setup-teardown --rules` then re-run `/setup-sync` (or `/setup-init`). See migration 028.
-
----
-
-## Step 4 — Apply migration files
-
-Read all migration files in `$PLUGIN_DIR/docs/migrations/` for versions
-between `PROVISIONED_VERSION` and `INSTALLED_VERSION` (exclusive of provisioned,
-inclusive of installed). Display the migration notes so the developer can
-review what changed. Do not auto-apply code changes — migrations are informational.
-
-```bash
-ls "$PLUGIN_DIR/docs/migrations/"*.md 2>/dev/null | sort
-```
-
-For each migration file in range, display its content with a header that makes the
-informational-only nature explicit (Issue 5 — developers otherwise assume it auto-applied):
+For each file the script listed under **Migration notes**, read it and display it with a header
+that makes its informational-only nature explicit (developers otherwise assume it auto-applied):
 ```
 📋 Migration {version} (informational — review and apply any manual steps yourself):
 {content}
 ```
 
-After displaying all in-range migrations, close with:
+After all of them, close with:
 ```
 If any migration above lists a manual action, complete it before running /setup-status.
 (Migrations are notes, not auto-applied changes.)
 ```
-If no migration files are in range, say so: `No migration notes between v{prov} and v{inst}.`
+If the script printed `Migration notes: none …`, repeat that line and continue.
 
 ---
 
-## Step 4b — Resolve Shell & Git paths if placeholders remain
+## Step 3 — External repos (only when `external-repos` is listed)
 
-Check whether `./CLAUDE.md` still contains unresolved placeholders **or**
-a previously failed `⚠ NOT DETECTED` value that should be retried:
-
-```javascript
-node -e "
-const fs = require('fs');
-const { execSync } = require('child_process');
-const content = fs.readFileSync('./CLAUDE.md', 'utf8');
-const hasPlaceholders = /\{GIT_PATH\}|\{BASH_PATH\}|NOT DETECTED.*where\.exe/.test(content);
-if (!hasPlaceholders) { console.log('  ✓ No unresolved placeholders'); process.exit(0); }
-const tryCmd = cmd => { try { return execSync(cmd,{encoding:'utf8',stdio:['pipe','pipe','ignore']}).split('\n')[0].trim(); } catch(e){ return ''; } };
-const gitPath  = tryCmd('where.exe git')  || tryCmd('which git')  || '';
-const bashPath = tryCmd('where.exe bash') || tryCmd('which bash') || '';
-const out = content
-  .replace(/\{GIT_PATH\}/g,  gitPath  || '⚠ NOT DETECTED — run where.exe git and update manually')
-  .replace(/\{BASH_PATH\}/g, bashPath || '⚠ NOT DETECTED — run where.exe bash and update manually')
-  .replace(/⚠ NOT DETECTED — run where\.exe git and update manually/g,  gitPath  || '⚠ NOT DETECTED — run where.exe git and update manually')
-  .replace(/⚠ NOT DETECTED — run where\.exe bash and update manually/g, bashPath || '⚠ NOT DETECTED — run where.exe bash and update manually');
-fs.writeFileSync('./CLAUDE.md', out);
-if (gitPath)  console.log('  ✅ Git path resolved: ' + gitPath);
-else          console.log('  ⚠ Git path not detected — placeholder left in CLAUDE.md');
-if (bashPath) console.log('  ✅ Bash path resolved: ' + bashPath);
-else          console.log('  ⚠ Bash path not detected — placeholder left in CLAUDE.md');
-"
-```
-
-Also check whether `## 0b. Shell & Git Configuration` section is missing
-entirely (projects provisioned before v2.2.0). If missing, add it from
-the installed plugin's `CLAUDE.md` before resolving placeholders.
-
----
-
-## Step 5 — Re-run gitignore-sync
-
-```
-Run /ai-assisted-development:gitignore-sync
-```
-
----
-
-## Step 5b — External stack detection
-
-Field-state-triggered — runs after every sync, not tied to any specific migration.
-`$PLUGIN_DIR` is already resolved in Step 1 — reuse it here.
-
-Read the current state:
-
-```bash
-node -e "
-const fs=require('fs');
-try {
-  const s=JSON.parse(fs.readFileSync('.claude/dream-init-state.json','utf8'));
-  const prompted = s.external_stacks_prompted===true ? 'true' : 'false';
-  const hasDirs  = ((JSON.parse(fs.readFileSync('.claude/settings.local.json','utf8'))||{}).additionalDirectories||[]).length > 0;
-  console.log('PROMPTED=' + prompted);
-  console.log('HAS_DIRS=' + hasDirs);
-} catch(e) { console.log('PROMPTED=false'); console.log('HAS_DIRS=false'); }
-"
-```
-
-**Case 1 — PROMPTED=true (user was already asked):**
-Run detection silently to refresh results (dirs may have changed):
-```bash
-node "$PLUGIN_DIR/scripts/external-stack-detection.cjs"
-```
-Report: `"external_detected_stacks refreshed: [result]"`
-
-**Case 2 — PROMPTED=false, HAS_DIRS=true:**
-Set flag then run detection silently:
-```bash
-node -e "
-const fs=require('fs'),p='.claude/dream-init-state.json';
-const s=JSON.parse(fs.readFileSync(p,'utf8'));
-s.external_stacks_prompted=true;
-fs.writeFileSync(p,JSON.stringify(s,null,2)+'\n');
-"
-node "$PLUGIN_DIR/scripts/external-stack-detection.cjs"
-```
-Report: `"external_detected_stacks: [result]"`
-
-**Case 3 — PROMPTED=false, HAS_DIRS=false:**
-Ask the developer:
+The script already refreshed external-stack detection when the developer was asked before or
+`additionalDirectories` is set. When `external-repos` is listed, nobody has been asked yet. Ask:
 ```
 This project may call APIs in separate repositories (e.g. a .NET API, a Java service).
 Providing paths lets Claude Code generate accurate Tech Specs spanning all layers.
@@ -427,35 +214,10 @@ If skipped:
 
 ---
 
-## Step 6 — Mark successful completion
+## Step 4 — Business context policy (only when `business-context` is listed)
 
-The version was already stamped in Step 1 (resilience). Record the successful-run date now —
-reaching this step means the deployment steps completed.
-
-```bash
-node -e "
-  const fs = require('fs');
-  const statePath = '.claude/dream-init-state.json';
-  let state = {};
-  try { state = JSON.parse(fs.readFileSync(statePath, 'utf8')); } catch(e) {}
-  state.dream_init_plugin_version = '$INSTALLED_VERSION';   // re-affirm (idempotent)
-  state.dream_sync_last_run = new Date().toISOString().slice(0, 10);
-  // Backfill fields added in later plugin versions — only set when absent so developer
-  // overrides (e.g. SET GOVERNANCE lightweight) are never clobbered.
-  if (state.governance_mode === undefined) { state.governance_mode = 'full'; console.log('  ✓ governance_mode backfilled: full'); }
-  if (state.output_mode    === undefined) { state.output_mode    = 'verbose'; console.log('  ✓ output_mode backfilled: verbose'); }
-  fs.mkdirSync('.claude', { recursive: true });
-  fs.writeFileSync(statePath, JSON.stringify(state, null, 2));
-  console.log('  ✓ dream_sync_last_run recorded (state already at v$INSTALLED_VERSION)');
-"
-```
-
----
-
-## Step 6b — Business context policy check (post-sync)
-
-After the mechanical steps complete, check whether the domain-tailored severity
-policy exists. This is not a reminder — run it actively.
+The script reported that the domain-tailored severity policy is missing. Confirm it, then
+act on it — this is not a reminder.
 
 ```bash
 node -e "
@@ -467,7 +229,7 @@ node -e "
 "
 ```
 
-**If `EXISTS`:** skip this step — business context is already configured. Continue to Step 7.
+**If `EXISTS`:** skip this step — business context is already configured. Continue to Step 5.
 
 **If `MISSING` or `STUB`:**
 
@@ -519,27 +281,27 @@ node -e "
      `business-context-generation.md` (the architect step already calls it as its
      "Business context" thin-caller step — do not call it twice if architect already ran it).
 
-4. **On No:** note the decision and continue to Step 7. The Step 7 summary will include
+4. **On No:** note the decision and continue to Step 5. The Step 5 summary will include
    a brief reminder line so the developer sees it at the end.
 
 ---
 
-## Step 7 — Confirm
+## Step 5 — Confirm
 
 ```
 ✅ setup-sync complete
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Plugin version: v$PROVISIONED_VERSION → v$INSTALLED_VERSION
-  Bootstrap:      hooks re-copied + hashes refreshed, stubs re-deployed,
-                  plugin-path.txt updated, .claude/skills/ .hashes refreshed
-  Rules:          {N} restored, {N} already present
-  Migrations:     {list of versions applied}
+  Plugin version: v{from} → v{to}           (from the script's first line)
+  Sync script:    {N} steps ok{, N warnings}{, N failed — re-run /setup-sync after fixing}
+  Migrations:     {versions shown in Step 2, or "none in range"}
 
-  ⚠ NEXT STEP — the knowledge graph is likely STALE after a version upgrade.
-    Run /graph-sync now to refresh it, or code-review/graph-viz/icea-review
-    will orient off out-of-date module data.
-  {if Step 6b ran SET DOMAIN → "  ✅ business-context.md generated — domain-tailored severity policy active."}
-  {if Step 6b declined      → "  ⚠ business-context.md still missing — type SET DOMAIN when ready."}
+  {if graph-sync was listed → "⚠ NEXT STEP — the knowledge graph is likely STALE after a version
+    upgrade. Run /graph-sync now, or code-review/graph-viz/icea-review will orient off
+    out-of-date module data."}
+  {if claude-md-paths was listed → "⚠ CLAUDE.md still has a ⚠ NOT DETECTED value — fill it in by hand."}
+  {if setup-init was listed → "⚠ setup-init never finished (no detected stacks) — run /setup-init."}
+  {if Step 4 ran SET DOMAIN → "✅ business-context.md generated — domain-tailored severity policy active."}
+  {if Step 4 was declined   → "⚠ business-context.md still missing — type SET DOMAIN when ready."}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Then run /setup-status to verify all checks are green.
 ```
@@ -558,7 +320,7 @@ Skip it for pure-modern / pure-framework / non-.NET repos (no effect there).
 
 ---
 
-## Step 7b — Onboarding guide refresh
+## Step 6 — Onboarding guide
 
 After the summary, check the onboarding guide state:
 
