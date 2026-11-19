@@ -102,6 +102,13 @@ function getPluginVersion(pluginDir) {
   } catch { return 'unknown'; }
 }
 
+// ADO-83: the migration notes are the one part of docs/ an installed plugin needs — /setup-sync
+// and scripts/setup-sync.cjs show the notes between the old and the new version.
+function copyMigrationNotes(src, dest) {
+  const notes = path.join(src, 'docs', 'migrations');
+  if (fs.existsSync(notes)) safeCopy(notes, path.join(dest, 'docs', 'migrations'));
+}
+
 function safeCopy(src, dest) {
   const exclude = new Set(['.git', 'docs', '.vs', 'node_modules']);
   fs.mkdirSync(dest, { recursive: true });
@@ -294,6 +301,7 @@ async function doInstall() {
   const localPath = validateSource();
   console.log(`Copying from ${localPath} ...`);
   safeCopy(localPath, PLUGIN_DIR);
+  copyMigrationNotes(localPath, PLUGIN_DIR);
 
   if (!fs.existsSync(path.join(PLUGIN_DIR, '.claude-plugin', 'plugin.json'))) {
     err('Install failed - plugin.json not found. Check the source and retry.');
@@ -357,6 +365,7 @@ async function doUpdate() {
   const localPath = validateSource();
   console.log(`Copying from ${localPath} ...`);
   safeCopy(localPath, PLUGIN_DIR);
+  copyMigrationNotes(localPath, PLUGIN_DIR);
 
   const newVersion = getPluginVersion(PLUGIN_DIR);
   if (cfgBackup) {
@@ -415,10 +424,15 @@ async function doUninstall() {
 
 // ── Entry point ────────────────────────────────────────────────────────────────
 
-const installedVersion = fs.existsSync(PLUGIN_DIR) ? getPluginVersion(PLUGIN_DIR) : 'not installed';
-console.log(`\n========================================`);
-console.log(`  ai-assisted-development  |  v${installedVersion}`);
-console.log(`========================================\n`);
+// Run only when executed directly, so tests can require() the copy helpers (ADO-83).
+if (require.main === module) {
+  const installedVersion = fs.existsSync(PLUGIN_DIR) ? getPluginVersion(PLUGIN_DIR) : 'not installed';
+  console.log(`\n========================================`);
+  console.log(`  ai-assisted-development  |  v${installedVersion}`);
+  console.log(`========================================\n`);
 
-const main = UNINSTALL ? doUninstall : UPDATE ? doUpdate : doInstall;
-main().catch(e => { err(e.message); process.exit(1); });
+  const main = UNINSTALL ? doUninstall : UPDATE ? doUpdate : doInstall;
+  main().catch(e => { err(e.message); process.exit(1); });
+}
+
+module.exports = { safeCopy, copyMigrationNotes };

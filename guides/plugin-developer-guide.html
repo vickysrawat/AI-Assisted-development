@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- documents-plugin-version: 3.26.0 -->
+<!-- documents-plugin-version: 3.29.0 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -370,7 +370,7 @@
   <div class="hero-grid"></div>
   <div class="hero-glow"></div>
   <div class="hero-content">
-    <div class="hero-tag" style="margin-bottom:12px;">Plugin Developer Guide · v3.26.0</div>
+    <div class="hero-tag" style="margin-bottom:12px;">Plugin Developer Guide · v3.29.0</div>
     <h1>ai-assisted-<em>development</em></h1>
     <p class="sub">
       For plugin <strong>maintainers</strong> — how the commands, skills, rules, shared specs,
@@ -378,9 +378,9 @@
       <code>.claude-plugin/plugin.json</code> and guarded by deterministic validators.
     </p>
     <div class="hero-badges">
-      <span class="badge badge-gold">v3.26.0</span>
-      <span class="badge badge-blue">46 commands</span>
-      <span class="badge badge-cyan">48 skills</span>
+      <span class="badge badge-gold">v3.29.0</span>
+      <span class="badge badge-blue">47 commands</span>
+      <span class="badge badge-cyan">50 skills</span>
       <span class="badge badge-cyan">43 rules</span>
       <span class="badge badge-cyan">47 shared specs</span>
       <span class="badge badge-green">2 subagents</span>
@@ -427,6 +427,7 @@
   <div class="sidebar-section">
     <div class="sidebar-label">Release</div>
     <a href="#release" class="recommended"><span class="nav-icon">🏷</span> Release &amp; version</a>
+    <a href="#update-projects" class="recommended"><span class="nav-icon">⟳</span> Update projects</a>
     <a href="#reference" class="optional"><span class="step-dot">→</span> ADRs &amp; architecture</a>
   </div>
 </nav>
@@ -457,8 +458,10 @@ npm  --version   <span class="cmt"># typically 9.x or 10.x</span></pre></div></d
     <div class="step-card mandatory">
       <div class="step-number">3</div>
       <div class="step-header"><div class="step-title">Python 3.9+</div><span class="tag tag-mandatory">Required</span></div>
-      <p class="step-desc">The structural validator <code>tests/validate.py</code> cross-checks the CHANGELOG version, CLAUDE.md version line, consent-category agreement, and ensures no org name is hardcoded. It must pass before any release. Install Python 3.9 or later from <strong>python.org</strong>.</p>
-      <div class="code-block"><div class="code-header"><span class="code-lang">verify</span></div><div class="code-body"><pre>python --version   <span class="cmt"># or python3 --version — must be 3.9+</span></pre></div></div>
+      <p class="step-desc">The structural validator <code>tests/validate.py</code> cross-checks the CHANGELOG version, CLAUDE.md version line, consent-category agreement, and ensures no org name is hardcoded. It must pass before any release. Install Python 3.9 or later from <strong>python.org</strong>. To work on <code>/arch-diagram</code> (its renderer and tests) you need <strong>Python 3.10+</strong> with <code>matplotlib</code> and <code>pyyaml</code>; without them those test cases skip with a notice. On Windows, run the validator with <code>PYTHONUTF8=1</code> — otherwise it fails reading the skill files with a <code>cp1252</code> decode error.</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">verify</span></div><div class="code-body"><pre>python --version   <span class="cmt"># or python3 --version — must be 3.9+ (3.10+ for /arch-diagram)</span>
+pip install matplotlib pyyaml   <span class="cmt"># only for /arch-diagram work</span>
+<span class="cmt"># Windows (PowerShell): $env:PYTHONUTF8 = 1; python tests/validate.py</span></pre></div></div>
     </div>
 
     <div class="step-card mandatory">
@@ -504,8 +507,8 @@ node tests/validate.js   <span class="cmt"># structural validator — must be gr
     <h2>How it all <em class="accent">fits</em></h2>
     <p class="section-intro">Everything is declared in <code>.claude-plugin/plugin.json</code> — the single source of truth for the version and the component manifest. At a glance the plugin ships:</p>
     <div class="feature-grid">
-      <div class="feature-card"><div class="fc-name">46 commands</div><div class="fc-desc">Slash commands — thin entry points that invoke a skill or a command-delegation flow.</div></div>
-      <div class="feature-card"><div class="fc-name">48 skills</div><div class="fc-desc">The behaviour. Each is a <code>skills/&lt;name&gt;/SKILL.md</code> (+ optional <code>references/</code>).</div></div>
+      <div class="feature-card"><div class="fc-name">47 commands</div><div class="fc-desc">Slash commands — thin entry points that invoke a skill or a command-delegation flow.</div></div>
+      <div class="feature-card"><div class="fc-name">50 skills</div><div class="fc-desc">The behaviour. Each is a <code>skills/&lt;name&gt;/SKILL.md</code> (+ optional <code>references/</code>).</div></div>
       <div class="feature-card"><div class="fc-name">43 rules</div><div class="fc-desc">Frontmatter-scoped coding rules that auto-load per file type from a layered set.</div></div>
       <div class="feature-card"><div class="fc-name">47 shared specs</div><div class="fc-desc">Cross-skill primitives under <code>skills/shared/</code> — the contracts skills reuse.</div></div>
       <div class="feature-card"><div class="fc-name">2 subagents</div><div class="fc-desc"><code>bc-searcher</code> · <code>bc-synthesizer</code> (business-context grounding).</div></div>
@@ -531,7 +534,14 @@ node tests/validate.js   <span class="cmt"># structural validator — must be gr
 │                   audit-write.cjs · rbac-check.cjs
 │                   signal-write.cjs · governance-report.cjs
 │                   validate-governance.cjs · release.cjs
+│                   setup-sync.cjs <span class="cmt">← one-command project sync (v3.29.0)</span>
+│                   architecture-diagram.py · arch-spec-scan.cjs <span class="cmt">← /arch-diagram</span>
+│                   build-azure-icons.cjs <span class="cmt">← maintainer-only icon build</span>
+│                   finding-verify.cjs <span class="cmt">← code-review / security ledger gate</span>
+├── <span class="var">assets/</span>           icons/azure/ — Azure Architecture Icons (PNG) · manifest.json · NOTICE.md
+│                   <span class="cmt">← Microsoft's terms, not MIT; shipped with the install</span>
 ├── <span class="var">docs/</span>             adrs/ · migrations/ · architecture/ · plans/
+│                   <span class="cmt">← only migrations/ ships with an install (v3.29.0)</span>
 │                   enterprise-tracker.md · DATA-HANDLING.md
 ├── <span class="var">governance/</span>       sprint governance reports (generated, committed)
 ├── <span class="var">guides/</span>           these HTML guides
@@ -543,7 +553,7 @@ node tests/validate.js   <span class="cmt"># structural validator — must be gr
   <section id="commands">
     <div class="section-eyebrow">Component model</div>
     <h2><em class="accent">Commands</em></h2>
-    <p class="section-intro">A command is a thin stub registered in <code>plugin.json → components.commands</code>. The deployable stub lives in <code>_project-deploy/commands/&lt;name&gt;.md</code> with quoted <code>description</code>, an <code>argument-hint</code>, a <code>--help</code> block, and a fully-qualified <code>&lt;skill&gt;ai-assisted-development:&lt;name&gt;&lt;/skill&gt;</code> delegation. <code>setup-init</code> deploys all 46 stubs into a project's <code>.claude/commands/</code> so they appear in the VS Code picker. For what each command <em>does</em>, see the User Guide's command reference — this guide does not duplicate it.</p>
+    <p class="section-intro">A command is a thin stub registered in <code>plugin.json → components.commands</code>. The deployable stub lives in <code>_project-deploy/commands/&lt;name&gt;.md</code> with quoted <code>description</code>, an <code>argument-hint</code>, a <code>--help</code> block, and a fully-qualified <code>&lt;skill&gt;ai-assisted-development:&lt;name&gt;&lt;/skill&gt;</code> delegation. <code>setup-init</code> deploys every stub listed in <code>STUB_FILES</code> (<code>scripts/setup-init-bootstrap.cjs</code>) into a project's <code>.claude/commands/</code> so they appear in the VS Code picker. For what each command <em>does</em>, see the User Guide's command reference — this guide does not duplicate it.</p>
   </section>
 
   <section id="skills">
@@ -559,6 +569,9 @@ node tests/validate.js   <span class="cmt"># structural validator — must be gr
       </tbody>
     </table>
     <p>The authoritative table is <code>skills/shared/source-file-consent.md</code>; <code>validate.py</code> errors if a SKILL.md's token disagrees with it. Skills route to models by task type (see Model routing) and reason through named expert personas kept consistent across the suite.</p>
+    <p>Key skill changes in v3.29.0 (ADO-83): <strong>setup-sync</strong> v2.0 — every mechanical step now lives in <code>scripts/setup-sync.cjs</code>, which a developer can run without Claude (see <a href="#update-projects">Update projects</a>). The skill runs the script, then handles only its <strong>Needs Claude</strong> list: migration notes, the external-repos question, the business-context offer, the onboarding guide (582 → 344 lines; the separate <code>/gitignore-sync</code> step is gone because the bootstrap's sync mode already rewrites the managed block). The three installers now copy <code>docs/migrations/</code> into the installed plugin — before 3.29.0 an install had no <code>docs/</code> folder, so <code>setup-sync</code> never showed a note.</p>
+    <p>Key skill changes in v3.28.0 (ADO-82): <strong>arch-diagram</strong> draws the official Microsoft Azure Architecture Icon (V25) in boxes of 18 Azure service types plus <code>users</code>, with no spec change. A per-component <code>icon:</code> key picks any of the 34 bundled icons (<code>icon: firewalls</code>) or hides it (<code>icon: ""</code>); an unknown name warns and keeps the usual icon. Eight new types: <code>event-hubs</code>, <code>service-bus</code>, <code>log-analytics</code>, <code>private-endpoint</code>, <code>network-interface</code>, <code>vnet</code>, <code>expressroute</code>, <code>entra-app</code>. Icons are PNGs in <code>assets/icons/azure/</code> with a <code>manifest.json</code> and a <code>NOTICE.md</code> — they are under Microsoft's terms, not the repo's MIT licence. Maintainers rebuild them from the Microsoft zip with <code>scripts/build-azure-icons.cjs</code> (headless Edge/Chrome); users never run it. Without the folder the renderer draws exactly as in 3.27.0.</p>
+    <p>Key skill changes in v3.27.0 (ADO-8001): new <strong>arch-diagram</strong> skill — <code>/arch-diagram</code> drafts a YAML spec of the application's zones, components and flows from the repository (every item cites <code># source: file:line</code> or is marked <code>⚠ TODO</code> and drawn amber-dashed), scans it for secrets and hostnames, and renders a PNG after approval; <code>--refresh</code> keeps items marked <code># manual</code>; <code>--spec &lt;file&gt;</code> renders an existing spec. The renderer is <code>scripts/architecture-diagram.py</code> (matplotlib, automatic layout, A* arrow routing, <code>--check</code> for overlaps and badly routed arrows); <code>scripts/arch-spec-scan.cjs</code> does the secrets / hosts / sources / manual-kept checks. Also fixed: <strong>code-review</strong> and <strong>security</strong> no longer write hallucinated findings — <code>scripts/finding-verify.cjs</code> gates every ledger write (snippet must appear verbatim once, fix must be real code that still parses, FP IDs computed, never typed), a fix is no longer mandatory (<code>manual-fix-required</code>), and findings that hinge on an unconfirmed business rule go to a non-gating <code>## Needs-Confirmation Findings</code> section. IaC and SCA findings are now standard blocks, so Critical/High ones block <code>/checkin</code>.</p>
     <p>Key skill changes in v3.26.0: new <strong>techspec-refresh</strong> skill (<code>skills/techspec-refresh/SKILL.md</code>) — four-pass audit and refresh harness for tech spec overlay templates. Pass 1 (self-consistency): checks DO NOT rules vs code snippets, API table HTTP status reachability from code, Files Changed rows vs implementation sections, layer contract vs return type annotations. Pass 2 (cross-layer contract): verifies frontend error handlers match the framework's actual response shape (e.g. FastAPI 422 <code>detail</code> is <code>list[{loc,msg,type}]</code>, not a string); confirms repository→service type flow. Pass 3 (LLM-readability + patterns): structural conventions (DO NOT block, layer contract in header, conditional guards, AC tags, tests section); universal coding patterns; stack-specific idioms (React 19+, Angular 17+, FastAPI <code>Annotated[]</code>). Pass 4 (environment fit): detects ORM vs Dapper/raw SQL; for raw SQL checks every SQL string against all databases inferred from package dependencies — multi-DB aware. Keyword handlers: <code>CHECK TECHSPEC</code> (offline), <code>REFRESH TECHSPEC {overlay}</code>, <code>REFRESH TECHSPEC ALL</code>. Also fixed: <code>techspec-python-fastapi.md</code> rewritten (8 structural issues: 422 array detail, SQL Server-compatible inserts via ORM flush, layer contract, domain exceptions, React 19+/Angular 17+ idioms); <code>scripts/release.cjs</code> minor bump bug corrected.</p>
     <p>Key skill changes in v3.25.0: <strong>icea-feature</strong> reads <code>.claude/project-knowledge.md</code> and injects applicable patterns at Step 3b, and tracks <code>clarification_count</code> through Steps 2–3 to write a <code>story-quality</code> signal at <code>SAVE PLAN</code>. <strong>icea-revise</strong> writes a <code>REVISE_ADO</code> audit event and a <code>revision</code> signal. <strong>icea-implement</strong> writes a <code>gap</code> signal when an Example cannot produce a real assertion. <strong>governance-report</strong> and <strong>onboarding-guide</strong> are new skills. Unreleased (next version): all boilerplate CONTINUE/COMPACT step-boundary gates removed from <strong>upgrade</strong> (11 removed → 3 real gates: INTAKE CONFIRMED · APPROVE REPORT · APPROVE DESIGN), <strong>rewrite</strong> (8 removed → 5 real gates), and <strong>replatform</strong> (7 removed → 4 real gates) — steps auto-advance between real artifact-review gates only (ADR 0070). <strong>upgrade</strong> intake redesigned from hand-authored manifest to a skill-generated 12-section document via three automated passes: live registry, knowledge cache, behavioral grep (ADR 0071). Research cache exit codes redesigned: 0=fresh/1=miss/2=stale with <code>--extract-bundle-to</code> flag (ADR 0073). ICEA revision signal scoped to Edit-only on doc artifacts; <code>signal-write.cjs</code> changed to append-only JSONL (ADR 0075). See ADRs 0070–0075 in <code>docs/adr/</code>.</p>
   </section>
@@ -793,6 +806,8 @@ node tests/validate.js   <span class="cmt"># structural validator — must be gr
         <tr><td><code>node scripts/validate-governance.cjs</code></td><td>Governance integrity check — validates audit event schema, ApprovalRoles.json structure, and signal file format.</td></tr>
         <tr><td><code>tests/jest.suite.test.cjs</code></td><td>Jest suite covering deterministic scripts (audit-write, rbac-check, signal-write, governance-report, and others).</td></tr>
         <tr><td>*.test.cjs</td><td>Individual unit tests for deterministic scripts (intake-verify, graph-multiroot, knowledge-freshness, …).</td></tr>
+        <tr><td>tests/architecture-diagram.test.cjs</td><td>Renders every <code>/arch-diagram</code> example with <code>--check</code>, the Azure icon rules, and that <code>assets/icons/azure/manifest.json</code> matches the PNGs both ways. The renderer cases need Python 3.10+ with <code>matplotlib</code> and <code>pyyaml</code> and skip with a notice without them; the allow-list and manifest cases always run.</td></tr>
+        <tr><td>tests/setup-sync.test.cjs</td><td>End-to-end syncs of throwaway projects under a throwaway HOME (never touches <code>~/.claude</code>), including "same files as running the steps by hand". Slow (~1–1.5 min), so the Jest wrapper gives it 300 s via <code>SLOW_FILES</code> in <code>jest.suite.test.cjs</code> — add a file there if it needs more than the default 120 s.</td></tr>
       </tbody>
     </table>
   </section>
@@ -811,10 +826,68 @@ node tests/validate.js   <span class="cmt"># structural validator — must be gr
     <div class="timeline">
       <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Bump</div><div class="tl-meta">node scripts/bump-version.js X.Y.Z</div><div class="tl-desc">Writes plugin.json, propagates the CLAUDE.md label, prepends a CHANGELOG stub, and warns about stale guide/README stamps.</div></div>
       <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Fill the CHANGELOG</div><div class="tl-meta">CHANGELOG.md</div><div class="tl-desc">Describe what changed, which files, and why. <code>validate.py</code> requires an entry for the current version.</div></div>
-      <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Write a migration note</div><div class="tl-meta">docs/migrations/NNN-X.Y.Z.md</div><div class="tl-desc">For version-sensitive changes, so <code>setup-sync</code> can apply exactly the deltas in range for existing projects.</div></div>
+      <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Write a migration note</div><div class="tl-meta">docs/migrations/NNN-X.Y.Z.md</div><div class="tl-desc">For version-sensitive changes. <code>setup-sync</code> shows every note between a project's old and new version (they are informational — list any manual step in the note). See <a href="#update-projects">Update projects</a>.</div></div>
       <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Guard</div><div class="tl-meta">node scripts/check-version-consistency.js</div><div class="tl-desc">Must be green — re-stamp the guides' <code>documents-plugin-version</code> and the README header when you touch their content.</div></div>
       <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Release script</div><div class="tl-meta">node scripts/release.cjs</div><div class="tl-desc">Packages the plugin artifact, stamps marketplace.json, and verifies all validators pass before tagging.</div></div>
     </div>
+  </section>
+
+  <section id="update-projects">
+    <div class="section-eyebrow">Release</div>
+    <h2>Update <em class="accent">projects</em> after an upgrade</h2>
+    <p class="section-intro">Two steps, neither of which needs a Claude session: update the installed plugin, then sync each project with <code>scripts/setup-sync.cjs</code> (v3.29.0+, ADO-83). <span class="cmd-pill">setup-sync</span> runs the same script and then handles only what needs a person's answer.</p>
+    <div class="timeline">
+      <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Update the installed copy</div><div class="tl-meta">node install.cjs --update   (from the plugin source)</div><div class="tl-desc">Copies the working tree into the installed plugin folder, plus <code>docs/migrations/</code> (the only part of <code>docs/</code> an install carries), then runs <code>claude plugin update</code>. It copies files as they are on disk — install from a clean checkout when you want exactly what is committed. Start a new Claude Code session afterwards.</div></div>
+      <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Sync each project</div><div class="tl-meta">node "&lt;installed plugin&gt;/scripts/setup-sync.cjs"   (from the project root)</div><div class="tl-desc">Stamps the version, refreshes hooks, command stubs, plugin-owned skills, <code>plugin-path.txt</code>, CLAUDE.md sections and the ignore file, re-detects the stack and redeploys rules, retries <code>⚠ NOT DETECTED</code> git/bash paths, refreshes external stacks, records the run. Then lists the migration notes in range and what still <strong>needs Claude</strong>.</div></div>
+      <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Finish in Claude Code (only if listed)</div><div class="tl-meta">/setup-sync  ·  /setup-status</div><div class="tl-desc">When the summary has a <strong>Needs Claude</strong> list, open Claude Code in that project and run <span class="cmd-pill">setup-sync</span> — it runs the same script, then walks through exactly those items. End with <span class="cmd-pill">setup-status</span>.</div></div>
+    </div>
+
+    <h3>Windows (PowerShell)</h3>
+    <p>Most of the team works in PowerShell. Bash syntax such as <code>P=$(...)</code> does not work there — PowerShell answers <em>"The term 'P=$(node …' is not recognized as the name of a cmdlet"</em>. Use these commands instead.</p>
+    <div class="code-block"><div class="code-header"><span class="code-lang">powershell — 1. find the installed plugin</span></div><div class="code-body"><pre>$P = (Get-Content "$env:USERPROFILE\.claude\plugins\installed_plugins.json" -Raw | ConvertFrom-Json).plugins.PSObject.Properties |
+  Where-Object Name -like 'ai-assisted-development@*' | ForEach-Object { $_.Value[0].installPath }
+<span class="cmt"># shows e.g. C:\Users\&lt;you&gt;\.claude\plugins\cache\&lt;marketplace&gt;\ai-assisted-development\3.29.0</span>
+$P
+<span class="cmt"># must print True. False = the install is older than 3.29.0: run install.cjs --update</span>
+Test-Path "$P\scripts\setup-sync.cjs"</pre></div></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">powershell — 2. preview, then sync one project</span></div><div class="code-body"><pre>cd C:\path\to\your\project
+<span class="cmt"># preview: version change, migration notes, what needs Claude. Writes nothing.</span>
+node "$P\scripts\setup-sync.cjs" --dry-run
+<span class="cmt"># the sync itself</span>
+node "$P\scripts\setup-sync.cjs"
+<span class="cmt"># 0 synced · 1 a step failed · 2 not set up with /setup-init</span>
+$LASTEXITCODE</pre></div></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">powershell — 3. several projects at once</span></div><div class="code-body"><pre>$repos = 'C:\source\repos\app-one', 'C:\source\repos\app-two'
+foreach ($repo in $repos) {
+  node "$P\scripts\setup-sync.cjs" --root=$repo
+  if ($LASTEXITCODE -ne 0) { Write-Warning "$repo needs attention (exit $LASTEXITCODE)" }
+}</pre></div></div>
+    <div class="info"><span class="wi">ℹ</span><span><code>$P</code> lasts only for the current PowerShell window. Run step 1 again in a new window, and after every plugin update — the folder name includes the version.</span></div>
+
+    <h3>Git Bash, macOS, Linux</h3>
+    <div class="code-block"><div class="code-header"><span class="code-lang">bash</span></div><div class="code-body"><pre>P=$(node -p "const r=require(require('os').homedir()+'/.claude/plugins/installed_plugins.json');
+  r.plugins[Object.keys(r.plugins).find(k=&gt;k.startsWith('ai-assisted-development@'))][0].installPath")
+cd /path/to/your/project
+node "$P/scripts/setup-sync.cjs" --dry-run
+node "$P/scripts/setup-sync.cjs"
+<span class="cmt"># several projects</span>
+for repo in ~/source/repos/app-one ~/source/repos/app-two; do
+  node "$P/scripts/setup-sync.cjs" --root="$repo" || echo "⚠ $repo needs attention"
+done</pre></div></div>
+
+    <h3>Reading the result</h3>
+    <table class="cmd-table">
+      <thead><tr><th>You see</th><th>What to do</th></tr></thead>
+      <tbody>
+        <tr><td>✓ setup-sync complete</td><td>Every step worked. If it also says <strong>Nothing needs Claude</strong>, you are done.</td></tr>
+        <tr><td>✗ &lt;step&gt; failed</td><td>That step failed; the steps after it still ran and the version is stamped. Fix the cause it prints and run the same command again — every step is safe to re-run. Exit code 1.</td></tr>
+        <tr><td>⚠ &lt;warning&gt;</td><td>The step finished with something to check (for example a target branch that could not be detected). Usually listed again under Needs Claude.</td></tr>
+        <tr><td>Needs Claude</td><td>Items the script cannot decide: migration notes to read, a missing <code>business-context.md</code>, external repos never set up, the onboarding guide, a stale graph. Run <span class="cmd-pill">setup-sync</span> in Claude Code in that project.</td></tr>
+        <tr><td>exit 2 · never provisioned</td><td>The folder was never set up with <span class="cmd-pill">setup-init</span>. Run that first.</td></tr>
+        <tr><td>⚠ Claude Code has vX installed, but this script is vY</td><td>You ran an older or newer copy of the script than the one Claude Code loads. Re-run step 1 to get <code>$P</code> for the installed version.</td></tr>
+      </tbody>
+    </table>
+    <div class="warning"><span class="wi">⚠</span><span>Adding a mechanical provisioning step? Put it in <code>scripts/setup-sync.cjs</code> and its test <code>tests/setup-sync.test.cjs</code>, not in the skill. Add a skill step only for something that needs a person's answer — that keeps the script and <span class="cmd-pill">setup-sync</span> from drifting apart.</span></div>
   </section>
 
   <section id="reference">
@@ -835,7 +908,7 @@ node tests/validate.js   <span class="cmt"># structural validator — must be gr
 </div>
 
 <footer>
-  <span>ai-assisted-development · Plugin Developer Guide · v3.26.0</span>
+  <span>ai-assisted-development · Plugin Developer Guide · v3.29.0</span>
   <span>Your Company</span>
 </footer>
 

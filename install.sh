@@ -98,6 +98,14 @@ safe_copy() {
   " "$SRC" "$DEST"
 }
 
+# ADO-83: the migration notes are the one part of docs/ an installed plugin needs — /setup-sync
+# and scripts/setup-sync.cjs show the notes between the old and the new version.
+copy_migration_notes() {
+  if [ -d "$1/docs/migrations" ]; then
+    safe_copy "$1/docs/migrations" "$2/docs/migrations"
+  fi
+}
+
 # Normalise user-entered path (Windows backslashes → forward slashes)
 normalise_path() {
   echo "$1" | sed 's|\\|/|g' | sed 's|^\([A-Za-z]\):|/\L\1|'
@@ -305,6 +313,7 @@ if [[ "$1" == "--update" ]]; then
   echo ""
   echo -e "  ${CYAN}⏳ Copying updated files — please wait…${NC}"
   safe_copy "$LOCAL_PATH" "$PLUGIN_DIR"
+  copy_migration_notes "$LOCAL_PATH" "$PLUGIN_DIR"
   NEW_VERSION=$(get_plugin_version "$PLUGIN_DIR")
 
   # Restore the preserved identity and re-sync the manifests.
@@ -367,6 +376,7 @@ echo -e "  → Installing:       ${GREEN}v$SOURCE_VERSION${NC}"
 echo ""
 echo -e "  ${CYAN}⏳ Copying plugin files — please wait…${NC}"
 safe_copy "$LOCAL_PATH" "$PLUGIN_DIR"
+copy_migration_notes "$LOCAL_PATH" "$PLUGIN_DIR"
 NEW_VERSION=$(get_plugin_version "$PLUGIN_DIR")
 
 # ── Validate ───────────────────────────────────────────────────────────────────

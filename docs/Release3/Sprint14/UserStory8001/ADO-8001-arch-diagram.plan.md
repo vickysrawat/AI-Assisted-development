@@ -103,7 +103,7 @@ As a developer or tech lead of any application using the plugin, I want `/arch-d
 
 **Won't Have:**
 - No parsing of manifests or infrastructure files in code. The skill reads them; the script only draws.
-- No SVG, draw.io or Visio output and no vendor icon packs. Output is PNG only.
+- No SVG, draw.io or Visio output and no vendor icon packs. Output is PNG only. *(Amended 2026-11-19: ADO-82 adds bundled Azure Architecture Icons; the PNG-only decision stands. See `docs/Release3/Sprint15/UserStory82/ADO-82-arch-diagram-icons.plan.md`.)*
 - No changes to the `architect`, `operations` or `go-live` skills. `/arch-diagram` only reads their output.
 - No editing of target applications' Word or PDF documents.
 - No changes to any consuming application's repository inside this ADO (see Dependencies).

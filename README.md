@@ -2,7 +2,7 @@
 
 ICEA-driven development workflow for distributed teams using **Azure DevOps**. Language-agnostic across **.NET (Framework 4.x → .NET 10) · Java/Spring Boot · Python (FastAPI/Django/Flask) · Node.js** backends and **Angular / React** frontends — the active stack is detected per repo and drives detection, generation, review, and scanning.
 
-**Version 3.27.0** — Adds the **`/arch-diagram`** skill: it draws an application's architecture / technical recovery diagram (PNG) from the codebase and architecture docs, on any hosting model (Kubernetes, Docker Compose, Node.js / PM2, Linux servers, Azure, AWS, on-prem IIS). It asks before reading evidence files, drafts a spec in which every box and arrow cites its file and line (or is marked ⚠ TODO and drawn "unverified"), checks the draft for secrets, hostnames and missing sources, and writes the spec and PNG only after approval. `--refresh` shows what changed and keeps every `# manual` item; `--spec <file>` renders a hand-written spec. New scripts: `scripts/architecture-diagram.py` (renderer with automatic layout and arrow routing, `--check`) and `scripts/arch-spec-scan.cjs` (secrets, hosts, sources, keys-only settings). Needs local Python 3.10+ with `matplotlib` and `pyyaml`. See CHANGELOG for details.
+**Version 3.29.0** — **One-command project sync after a plugin upgrade:** run `node "<installed plugin>/scripts/setup-sync.cjs"` from a project's root — no Claude session — to refresh hooks, command stubs, rules, the ignore file and the version stamp; `/setup-sync` runs the same script and then asks only what needs your answer (see [Keeping the plugin up to date](#keeping-the-plugin-up-to-date)). Migration notes now ship with the install, so `/setup-sync` shows them. **3.28.0:** `/arch-diagram` draws the official Azure Architecture Icons in Azure components (`icon:` to override or hide), with eight new Azure types. **3.27.0:** the **`/arch-diagram`** skill draws an application's architecture / technical recovery diagram (PNG) from the codebase and architecture docs on any hosting model — every box and arrow cites its file and line or is marked ⚠ TODO, and nothing is written until you approve (needs local Python 3.10+ with `matplotlib` and `pyyaml`); code-review and security no longer write unverified findings to their ledgers. See CHANGELOG for details.
 
 ---
 
@@ -14,7 +14,7 @@ ICEA-driven development workflow for distributed teams using **Azure DevOps**. L
 |---|---|
 | `/ai-assisted-development:setup-init` | One-time project setup. Runs the architect deployment questionnaire, seeds `file-cache.json` and `token-graph.json`, deploys command stubs, `.claude/rules/`, populates `.claude/architecture/` and generates the knowledge graph `.claude/graph/`, ensures `CLAUDE.md` has Dream sections. Step 2d asks whether the project depends on services in separate repositories (e.g. a .NET API in its own repo); paths provided are added to `additionalDirectories` and immediately scanned for stack detection — `external_detected_stacks` is populated so `icea-feature` can select the correct multi-layer Tech Spec overlay from the first session. Creates and populates `.gitignore` automatically. Safe to re-run. |
 | `/ai-assisted-development:setup-status` | Read-only health check. Reports green/amber/red on all **23** infrastructure checks including `architecture-deployment.md` status, .NET version-detection freshness, and knowledge graph checks. |
-| `/ai-assisted-development:setup-sync` | Re-provision an existing project after a plugin upgrade. Compares the version that provisioned the project against the installed version and applies only the version-sensitive changes (hooks, shared specs, ignore-file managed block, new state/rule files) per `docs/migrations/`, then re-stamps the version. Idempotent; never overwrites your own content. Run when `setup-status` reports **UPGRADE PENDING**. Flags: `--commands` (deploy command stubs only, deterministic), `--reinstall` (push plugin source changes to the installed copy — run from the plugin source directory). Alias: `setup-init --upgrade`. |
+| `/ai-assisted-development:setup-sync` | Re-provision an existing project after a plugin upgrade. Runs `scripts/setup-sync.cjs` — the one-command sync you can also run without Claude (hooks, command stubs, plugin-owned skills, rules, ignore-file managed block, version stamp) — then shows the migration notes in range (`docs/migrations/`) and handles what needs judgement (external repos, business context, onboarding guide). Idempotent; never overwrites your own content. Run when `setup-status` reports **UPGRADE PENDING**. Flags: `--commands` (deploy command stubs only, deterministic), `--reinstall` (push plugin source changes to the installed copy — run from the plugin source directory). Alias: `setup-init --upgrade`. |
 | `/ai-assisted-development:dream` | 6-phase memory consolidation — reads sessions, scores entries, proposes ADD/UPDATE/DELETE with full justification, waits for tiered approval before writing. Includes token-budget guard. |
 | `/ai-assisted-development:dream-health` | Generates `memory/health.html` — browser dashboard with confidence scores, decay curve, promote candidates, and clickable justification panels. |
 | `/ai-assisted-development:dream-rollback` | Reverses a specific `/dream` run using the audit trail in `memory/dream-log.md`. Auditable and itself reversible. |
@@ -85,7 +85,7 @@ ICEA-driven development workflow for distributed teams using **Azure DevOps**. L
 | `goal-loop` | "goal loop", "iterate to done", "drive this ADO to done", "/goal-loop ADO-<id>" | Thin cradle-to-grave orchestrator: sequences `icea-feature` → `icea-approve` → `icea-implement`, stopping at every gate and approving nothing on your behalf. The only loop-till-done runs inside `icea-implement` Step 4b, scoring generated code against the approved ACs until met or a hard iteration ceiling. ICEA/Tech Spec are never self-scored — they keep the critic's bounded revise. |
 | `operations` | "generate a runbook", "operational runbook", "on-call guide", "support runbook" | Generates the master Operational Runbook (Markdown + offline HTML) from architecture/config/IaC — SRE persona, generation tier, Category B consent (playbook derivation only). Evidence-derived; unknowables become greppable `⚠ TODO` — never fabricated. |
 | `go-live` | "go-live checklist", "go/no-go", "support handover gate", "acceptance checklist" | Generates the Support-Transition Acceptance Checklist by ingesting the prod-readiness report + security + code-review ledgers + deployment architecture. EA persona, infrastructure tier, Category C (reads reports/ledgers/architecture only — never application source). Auto-links the Operational Runbook. |
-| `setup-sync` | "dream sync", "re-provision after upgrade", "plugin upgrade" | Re-provisions a project after a plugin upgrade — calls the bootstrap script (sync mode) to re-copy hooks and deploy missing stubs, restores missing rules from `deployed_rules[]`, applies migration notes, re-stamps the version. Also runs a **post-sync external stack detection check**: seeds `external_detected_stacks` and `external_stacks_prompted` if absent, detects stacks from existing `additionalDirectories`, or asks the developer for external repo paths if none are configured (once, then suppressed). |
+| `setup-sync` | "dream sync", "re-provision after upgrade", "plugin upgrade" | Re-provisions a project after a plugin upgrade — runs `scripts/setup-sync.cjs` (bootstrap in sync mode, stack re-detection and rule redeploy, version stamp; also runnable on its own: `node "<plugin>/scripts/setup-sync.cjs"`), shows the in-range migration notes, then asks only what the script could not decide: external repo paths (once), the business-context policy, the onboarding guide. |
 | `upgrade` | "upgrade version", "bump to .NET 8", "UPGRADE ADO-<id>" | In-place same-stack version upgrade; orchestrates a deterministic tool; rejects false-upgrades → Rewrite. 3 real gates (INTAKE CONFIRMED · APPROVE REPORT · APPROVE DESIGN); steps auto-advance. Skill-generated intake replaces hand-authored manifest. Shared migration ledger for status/resume. |
 | `rewrite` | "port to", "rewrite in", "translate to", "Java to .NET", "REWRITE ADO-<id>" | Out-of-place generative translation to a new target folder; posture/options/DAG/BAL/ERL, two-gate. 5 real gates; steps auto-advance between them. |
 | `replatform` | "move to cloud", "lift and shift", "on-prem to Azure", "REPLATFORM ADO-<id>" | Hosting/topology migration; NFR/Well-Architected oracle; LLM authors IaC + human-executed runbooks. 4 real gates; steps auto-advance between them. |
@@ -230,7 +230,7 @@ If a developer bypassed the pre-commit hook with `--no-verify`, the CI gate catc
 plugin repo and always reminds you to pull:
 
 ```
-  plugin release    ⚠️  v3.26.0 (2026-09-20) available — run /setup-sync to apply
+  plugin release    ⚠️  v3.29.0 (2026-11-19) available — run /setup-sync to apply
                         ℹ git pull in /path/to/plugin to check for remote updates
 ```
 
@@ -241,8 +241,44 @@ plugin repo and always reminds you to pull:
    # In your local plugin repo directory:
    git pull
    ```
-2. Run `setup-sync` in the target project to apply the update.
-3. Run `setup-status` to confirm the version is current.
+2. Update the installed copy, from the plugin repo: `node install.cjs --update` (or
+   `bash install.sh --update` / `.\install.ps1 -Update`). Start a new Claude Code session afterwards.
+3. Sync each project with one command, from the project's root. No Claude session is needed.
+   First find where Claude Code installed the plugin (from its registry). The folder name includes
+   the version, so do this again after every update.
+
+   **PowerShell** (Windows):
+   ```powershell
+   $P = (Get-Content "$env:USERPROFILE\.claude\plugins\installed_plugins.json" -Raw | ConvertFrom-Json).plugins.PSObject.Properties |
+     Where-Object Name -like 'ai-assisted-development@*' | ForEach-Object { $_.Value[0].installPath }
+   node "$P\scripts\setup-sync.cjs" --dry-run   # preview, writes nothing
+   node "$P\scripts\setup-sync.cjs"
+   ```
+   **bash** (Git Bash, macOS, Linux) — don't paste this into PowerShell, which rejects `P=$(...)`:
+   ```bash
+   P=$(node -p "const r=require(require('os').homedir()+'/.claude/plugins/installed_plugins.json');r.plugins[Object.keys(r.plugins).find(k=>k.startsWith('ai-assisted-development@'))][0].installPath")
+   node "$P/scripts/setup-sync.cjs" --dry-run   # preview, writes nothing
+   node "$P/scripts/setup-sync.cjs"
+   ```
+   It refreshes hooks, command stubs, rules, the ignore file and the version stamp, then lists
+   the migration notes in range and anything that still **needs Claude** (for example a missing
+   business context). For those, open Claude Code in the project and run `/setup-sync`, which runs
+   the same script and then walks you through them. Several projects at once:
+   ```powershell
+   foreach ($repo in 'C:\source\repos\app-one', 'C:\source\repos\app-two') {
+     node "$P\scripts\setup-sync.cjs" --root=$repo
+     if ($LASTEXITCODE -ne 0) { Write-Warning "$repo needs attention (exit $LASTEXITCODE)" }
+   }
+   ```
+   ```bash
+   for repo in ~/source/repos/app-one ~/source/repos/app-two; do
+     node "$P/scripts/setup-sync.cjs" --root="$repo" || echo "⚠ $repo needs attention"
+   done
+   ```
+   Exit codes: 0 synced · 1 a step failed (re-run after fixing; every step is safe to re-run) ·
+   2 the folder was never set up with `/setup-init`. The Plugin Developer Guide
+   (`guides/plugin-developer-guide.html`, *Update projects*) has the full walkthrough.
+4. Run `setup-status` to confirm the version is current.
 
 **For plugin maintainers — releasing a new version:**
 
@@ -503,6 +539,9 @@ To update the installed copy after modifying plugin source:
 /setup-sync --commands       # from each target project (deploys command stubs)
 ```
 
+To bring a target project fully up to date without Claude, run `node "<installed plugin>/scripts/setup-sync.cjs"`
+from its root (see [Keeping the plugin up to date](#keeping-the-plugin-up-to-date)).
+
 > **Windows Git Bash note:** mintty (Git Bash's terminal) doesn't give a child process a
 > usable console, which makes interactive prompts hang after the first one. `install.sh`
 > now detects this and **transparently re-execs itself under `winpty`** (bundled with Git
@@ -730,6 +769,7 @@ ai-assisted-development/
 │   ├── graph-sync/                          ← knowledge graph incremental refresh
 │   └── (command stubs moved to _project-deploy/commands/)
 ├── _project-deploy/                         ← hooks/, rules/, commands/, skills/ — deployed to target projects
+├── assets/icons/azure/                      ← Azure Architecture Icons (PNG) for /arch-diagram — see NOTICE.md
 ├── memory/
 ├── tests/
 │   ├── runner.js                            ← Node.js test runner
@@ -741,3 +781,9 @@ ai-assisted-development/
 ├── DEVELOPER-GUIDE.md                        ← contributor guide (Markdown)
 └── README.md
 ```
+
+## Licence
+
+The plugin is MIT-licensed (`LICENSE`). The Azure icons in `assets/icons/azure/` belong to
+Microsoft and are **not** covered by that licence: they may be used only in architecture
+diagrams, training materials or documentation. See `assets/icons/azure/NOTICE.md`.

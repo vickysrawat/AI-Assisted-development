@@ -61,21 +61,9 @@ tests/migration-validation/runs/
 
 
 # === ai-assisted-development (managed) ===
-.claude/settings.local.json
-.claude/security-checkpoint.json
-.claude/code-review-checkpoint.json
-.claude/file-cache.json
-.claude/dream-init-state.json
+.claude/*
 CodeReviews/*
-!CodeReviews/code-review-ledger.md
 security/*
-!security/security-ledger.md
 dynamic-scan/*
-!dynamic-scan/dynamic-scan-ledger.md
 temp/
-.claude/plugin-path.txt
-.claude/session-context.json
 # === end ai-assisted-development ===
-
-# .claude/ is local, per-developer Claude Code state for working on this repo — not committed (2026-11-18)
-.claude/

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- documents-plugin-version: 3.26.0 -->
+<!-- documents-plugin-version: 3.29.0 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -370,7 +370,7 @@
   <div class="hero-grid"></div>
   <div class="hero-glow"></div>
   <div class="hero-content">
-    <div class="hero-tag" style="margin-bottom:12px;">Plugin User Guide · v3.26.0</div>
+    <div class="hero-tag" style="margin-bottom:12px;">Plugin User Guide · v3.29.0</div>
     <h1>ai-assisted-<em>development</em></h1>
     <p class="sub">
       ICEA-driven development for teams on Azure DevOps — language-agnostic across
@@ -379,7 +379,7 @@
       every governance action is audited and role-gated.
     </p>
     <div class="hero-badges">
-      <span class="badge badge-gold">v3.26.0</span>
+      <span class="badge badge-gold">v3.29.0</span>
       <span class="badge badge-blue">.NET (Framework 4.x → .NET 10)</span>
       <span class="badge badge-cyan">Angular</span>
       <span class="badge badge-cyan">React</span>
@@ -494,6 +494,14 @@ git config --global user.email "you@example.com"</pre></div></div>
       <div class="step-header"><div class="step-title">Docker (optional)</div><span class="tag tag-optional">Optional</span></div>
       <p class="step-desc">Only required if you plan to use the <span class="cmd-pill">dynamic-scan</span> skill, which runs OWASP ZAP in a Docker container against a running application. No other skill needs Docker. Install Docker Desktop from <strong>docker.com</strong> and ensure the daemon is running before invoking the skill.</p>
     </div>
+
+    <div class="step-card optional">
+      <div class="step-number">6</div>
+      <div class="step-header"><div class="step-title">Python 3.10+ (optional)</div><span class="tag tag-optional">Optional</span></div>
+      <p class="step-desc">Only required for <span class="cmd-pill">arch-diagram</span>, which renders the diagram PNG with a small Python script. Install Python 3.10 or later from <strong>python.org</strong>, then the two libraries below. They stay on your machine — nothing is added to your application's requirements.</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">install + verify</span></div><div class="code-body"><pre>pip install matplotlib pyyaml
+python --version   <span class="cmt"># must print 3.10 or higher</span></pre></div></div>
+    </div>
   </section>
 
   <section id="pat">
@@ -518,8 +526,9 @@ git config --global user.email "you@example.com"</pre></div></div>
     <div class="section-eyebrow">Getting started · step 2</div>
     <h2><em class="accent">Install</em> the plugin</h2>
     <p class="section-intro">The plugin runs inside Claude Code. Install it once per machine.</p>
-    <div class="code-block"><div class="code-header"><span class="code-lang">powershell</span></div><div class="code-body"><pre><span class="cmd">.install.ps1</span></pre></div></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">powershell</span></div><div class="code-body"><pre><span class="cmd">.\install.ps1</span>   <span class="cmt"># from the plugin repo folder</span></pre></div></div>
     <div class="code-block"><div class="code-header"><span class="code-lang">bash</span></div><div class="code-body"><pre><span class="cmd">bash install.sh</span></pre></div></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">node (when PowerShell scripts and bash are both blocked)</span></div><div class="code-body"><pre><span class="cmd">node install.cjs</span></pre></div></div>
     <div class="info"><span class="wi">ℹ</span><span><strong>VS Code users:</strong> after installing or updating, run <code>Developer: Reload Window</code> (<code>Ctrl+Shift+P</code>) to pick up changes.</span></div>
   </section>
 
@@ -531,7 +540,7 @@ git config --global user.email "you@example.com"</pre></div></div>
       <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Memory files</div><div class="tl-desc"><code>memory/MEMORY.md</code>, <code>memory/dream-log.md</code>, and <code>memory/topic-signals.md</code> (Dream's running tally of ICEA quality signal counts).</div></div>
       <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">ApprovalRoles.json (Step 2d)</div><div class="tl-desc">Prompts for tech leads and security officers. Stored at <code>.claude/ApprovalRoles.json</code>. These roles gate elevated actions: batch approvals require <code>tech_lead</code>; Critical/High dismissals require <code>security_officer</code>.</div></div>
       <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Config files</div><div class="tl-desc">Seeds <code>.claude/cost-governance.json</code> (per-model pricing + optional budget) and <code>.claude/project-knowledge.md</code> (team-shared ICEA pattern library, Dream-managed). Creates <code>.claude/signals/.gitkeep</code> (ICEA quality signal inbox).</div></div>
-      <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Command stubs</div><div class="tl-desc">46 stubs to <code>.claude/commands/</code> — makes every command visible in the VS Code picker.</div></div>
+      <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Command stubs</div><div class="tl-desc">Every command stub to <code>.claude/commands/</code> — makes every command visible in the VS Code picker.</div></div>
       <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Scoped rules</div><div class="tl-desc">Only the rule files matching your detected stack (from a 43-file layered set) — they activate automatically when Claude edits a matching file type.</div></div>
       <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">Dep-scan CI templates</div><div class="tl-desc">Stack-matching CI pipeline templates for dependency scanning (<code>dep-scan-dotnet.yml</code>, <code>dep-scan-node.yml</code>, <code>dep-scan-python.yml</code>, <code>dep-scan-java.yml</code>) under <code>_project-deploy/ci/</code>.</div></div>
       <div class="tl-item"><div class="tl-dot once"></div><div class="tl-title">CLAUDE.md</div><div class="tl-desc">Appends the plugin sections to an existing <code>CLAUDE.md</code>, or creates one.</div></div>
@@ -553,7 +562,7 @@ git config --global user.email "you@example.com"</pre></div></div>
         <tr><td><code>1y</code></td><td>Dep-scan CI coverage — detects the stack and checks whether a matching dep-scan template is referenced in <code>azure-pipelines.yml</code>.</td></tr>
       </tbody>
     </table>
-    <p>After a plugin upgrade, <code>setup-status</code> flags <code>UPGRADE PENDING</code>; run <span class="cmd-pill">setup-sync</span> to re-provision. <code>setup-sync</code> now also offers to generate or refresh <code>docs/ONBOARDING.md</code> (Step 7b).</p>
+    <p>After a plugin upgrade, <code>setup-status</code> flags <code>UPGRADE PENDING</code>. Bring the project up to date with one command — <code>node "&lt;installed plugin&gt;/scripts/setup-sync.cjs"</code> from the project root, no Claude session needed — or run <span class="cmd-pill">setup-sync</span> in Claude Code, which runs the same script and then asks the questions it cannot answer (business context, external repos, onboarding guide). See <a href="#update">Update &amp; uninstall</a>.</p>
   </section>
 
   <section id="icea">
@@ -668,7 +677,9 @@ git config --global user.email "you@example.com"</pre></div></div>
       <div class="feature-card"><div class="fc-name">plugin-readiness</div><div class="fc-desc">AI Architect readiness of the plugin itself across 6 domains — reads plugin state only, never your source.</div></div>
       <div class="feature-card"><div class="fc-name">operations</div><div class="fc-desc">Generates a master Operational Runbook (Markdown + offline HTML) — the doc a support engineer opens during an incident. Unknowns render as &#9888; TODO, never fabricated.</div></div>
       <div class="feature-card"><div class="fc-name">go-live</div><div class="fc-desc">Generates a Support-Transition Acceptance Checklist — the one-time go/no-go gate an incoming support team uses to accept the app.</div></div>
+      <div class="feature-card"><div class="fc-name">arch-diagram</div><div class="fc-desc">Draws the architecture / recovery diagram for a DR plan, DRB pack or runbook — any hosting model (Kubernetes, Docker, Node.js, Linux, Azure, AWS, IIS). Every item cites the file it came from or is drawn amber-dashed as &#9888; unverified. Azure components get the official Azure icons. <code>--refresh</code> keeps what you marked <code># manual</code>.</div></div>
     </div>
+    <div class="info"><span class="wi">ℹ</span><span><strong>arch-diagram</strong> asks once before reading evidence files, scans its draft for secrets and hostnames, and writes <code>docs/architecture/diagram/{app}.arch.yaml</code> and <code>docs/images/{app}-architecture.png</code> only after you approve. It needs Python 3.10+ on your machine (<code>pip install matplotlib pyyaml</code>) — nothing is added to your application's dependencies. The Azure icons are Microsoft's, used under Microsoft's terms for architecture diagrams.</span></div>
   </section>
 
   <section id="codebase">
@@ -725,14 +736,14 @@ git config --global user.email "you@example.com"</pre></div></div>
   <section id="commands">
     <div class="section-eyebrow">Reference</div>
     <h2>All <em class="accent">commands</em></h2>
-    <p class="section-intro">All 46 commands, grouped by the phase of work where you reach for them. Type <code>/&lt;name&gt;</code> in Claude Code, or use the keyword shown.</p>
+    <p class="section-intro">Every command, grouped by the phase of work where you reach for them. Type <code>/&lt;name&gt;</code> in Claude Code, or use the keyword shown.</p>
       <h3>Setup &amp; session</h3>
       <table class="cmd-table">
         <thead><tr><th>Command</th><th>What it does</th></tr></thead>
         <tbody>
-          <tr><td><code>/setup-init</code></td><td>One-time per-project setup — seeds all infrastructure incl. ApprovalRoles.json, cost-governance.json, project-knowledge.md, signal inbox, dep-scan CI templates, the deployment questionnaire, deploys the 46 command stubs + detected-stack rules, runs the architect skill, builds the knowledge graph, and auto-generates docs/ONBOARDING.md. Safe to re-run.</td></tr>
+          <tr><td><code>/setup-init</code></td><td>One-time per-project setup — seeds all infrastructure incl. ApprovalRoles.json, cost-governance.json, project-knowledge.md, signal inbox, dep-scan CI templates, the deployment questionnaire, deploys the command stubs + detected-stack rules, runs the architect skill, builds the knowledge graph, and auto-generates docs/ONBOARDING.md. Safe to re-run.</td></tr>
           <tr><td><code>/setup-status</code></td><td>Read-only infrastructure health check across 26+ items (incl. new 1w/1x/1y checks for RBAC roles, cost governance, and dep-scan CI coverage) with a prioritised action list.</td></tr>
-          <tr><td><code>/setup-sync</code></td><td>Re-provisions an existing project after a plugin upgrade — applies only version-sensitive changes and re-stamps the version. Offers to refresh docs/ONBOARDING.md (Step 7b). Run when setup-status reports UPGRADE PENDING. Idempotent.</td></tr>
+          <tr><td><code>/setup-sync</code></td><td>Re-provisions an existing project after a plugin upgrade. Runs <code>scripts/setup-sync.cjs</code> (hooks, stubs, rules, ignore file, version stamp — also runnable without Claude), shows the migration notes in range, then asks only what the script could not decide: external repos, business context, onboarding guide. Run when setup-status reports UPGRADE PENDING. Idempotent.</td></tr>
           <tr><td><code>/setup-teardown</code></td><td>Removes plugin-managed content by scope (--full/--skills/--hooks/--rules/--commands/--state). Dry-runs first and requires CONFIRM. memory/ and .claude/architecture/ are never removed.</td></tr>
           <tr><td><code>/session-start</code></td><td>Zero-cost session warm-up — stack, last decision, last fix, sessions since /dream, and any Red infrastructure items.</td></tr>
           <tr><td><code>/gitignore-sync</code></td><td>Ensures the ignore file carries the plugin's managed block (Git .gitignore / TFVC .tfignore) — never touches your own lines. Arg: --with-artifacts.</td></tr>
@@ -750,6 +761,7 @@ git config --global user.email "you@example.com"</pre></div></div>
           <tr><td><code>/icea-revise</code></td><td>Revises an existing ICEA + Tech Spec and re-gates code generation until re-approved. Writes a REVISE_ADO audit event and a revision signal (section diff + inferred category). Keyword: REVISE ADO-&lt;id&gt;.</td></tr>
           <tr><td><code>/icea-status</code></td><td>Shows the current state of all ICEA files for a work item plus the exact next action. Keyword: STATUS ADO-&lt;id&gt;.</td></tr>
           <tr><td><code>/icea-review</code></td><td>Checks a PR or diff against its ICEA and reports pass/fail compliance.</td></tr>
+          <tr><td><code>/test-plan</code></td><td>Generates the QA test plan from an approved artifact — Tech Spec, plan (lightweight governance), or an upgrade / rewrite / replatform ledger — one test case per acceptance criterion. Runs automatically after approval. Keywords: SAVE TEST · EXPAND TEST · REFRESH TEST ADO-&lt;id&gt;.</td></tr>
           <tr><td><code>/ado-tasks</code></td><td>One Azure DevOps task per Acceptance Criterion per active layer, from an approved ICEA. Arg: ADO-&lt;id&gt;.</td></tr>
           <tr><td><code>/bug</code></td><td>Lightweight ICEA-lite for confirmed bugs — one approval cycle, then the fix.</td></tr>
           <tr><td><code>/goal-loop</code></td><td>Orchestrator that sequences icea-feature &rarr; approve &rarr; implement, stopping at every gate; inside implement it self-scores generated code against the ACs until met. Never writes or approves for you.</td></tr>
@@ -799,6 +811,7 @@ git config --global user.email "you@example.com"</pre></div></div>
           <tr><td><code>/plugin-readiness</code></td><td>AI Architect review across 6 domains — reads plugin state only, never source.</td></tr>
           <tr><td><code>/operations</code></td><td>Generates a master Operational Runbook (Markdown + offline HTML) from the codebase. A documentation generator — no approval gate; unknowns render as &#9888; TODO, never fabricated.</td></tr>
           <tr><td><code>/go-live</code></td><td>Generates a Support-Transition Acceptance Checklist (go/no-go gate) from the prod-readiness report, security + code-review ledgers, and deployment architecture. No approval gate.</td></tr>
+          <tr><td><code>/arch-diagram</code></td><td>Draws the architecture / technical recovery diagram (PNG) from the repository and architecture docs. Every box and arrow cites its file and line or is marked &#9888; TODO; spec and PNG are written only after you approve. Azure components show the official Azure icon (<code>icon:</code> to override, <code>icon: ""</code> to hide). Flags: --refresh (keeps <code># manual</code> items), --spec &lt;file&gt;. Keyword: ARCH DIAGRAM. Needs Python 3.10+ with matplotlib and pyyaml.</td></tr>
         </tbody>
       </table>
 
@@ -873,6 +886,8 @@ git config --global user.email "you@example.com"</pre></div></div>
         <tr><td><code>CHECK TECHSPEC</code></td><td>Offline audit of all tech spec overlay templates — self-consistency, cross-layer contract (LLM-only), LLM-readability, and stale version mentions. Read-only, no web. See <code>skills/techspec-refresh/SKILL.md</code>.</td></tr>
         <tr><td><code>REFRESH TECHSPEC {overlay}</code></td><td>Web-grounded refresh of one overlay (e.g. <code>REFRESH TECHSPEC react-nodejs</code>). Four passes: self-consistency, cross-layer contract, environment fit (auto-detected from project context), version currency. Proposes a unified diff; writes under the Write Gate.</td></tr>
         <tr><td><code>REFRESH TECHSPEC ALL</code></td><td>Same as <code>REFRESH TECHSPEC {overlay}</code> iterated over all registered overlays — one Write Gate prompt per overlay.</td></tr>
+        <tr><td><code>SAVE TEST ADO-{ID}</code></td><td>Generate or refresh the QA test plan from the approved artifact. <code>EXPAND TEST ADO-{ID}</code> expands stub suites; <code>REFRESH TEST ADO-{ID}</code> regenerates the cross-cutting suites.</td></tr>
+        <tr><td><code>ARCH DIAGRAM</code></td><td>Draw the architecture / recovery diagram from the repository. <code>ARCH DIAGRAM --refresh</code> re-reads the evidence and shows what changed, keeping your <code># manual</code> items.</td></tr>
       </tbody>
     </table>
   </section>
@@ -895,18 +910,51 @@ git config --global user.email "you@example.com"</pre></div></div>
   <section id="update">
     <div class="section-eyebrow">Reference</div>
     <h2>Update &amp; <em class="accent">uninstall</em></h2>
-    <div class="code-block"><div class="code-header"><span class="code-lang">powershell</span></div><div class="code-body"><pre><span class="cmd">.install.ps1 -Update</span>
-<span class="cmd">.install.ps1 -Uninstall</span></pre></div></div>
-    <div class="code-block"><div class="code-header"><span class="code-lang">bash</span></div><div class="code-body"><pre><span class="cmd">bash install.sh --update</span>
-<span class="cmd">bash install.sh --uninstall</span></pre></div></div>
-    <p>After upgrading, run <span class="cmd-pill">setup-sync</span> in each project to apply version-sensitive changes (including ApprovalRoles.json seeding, new config files, and dep-scan CI templates). Uninstalling never touches your project's <code>.claude/</code>, <code>memory/</code>, or <code>CLAUDE.md</code>.</p>
+    <p class="section-intro">Updating is two steps: update the plugin on your machine, then bring each project up to date. Neither step needs a Claude session.</p>
+
+    <h3>1. Update the plugin on your machine</h3>
+    <p>From the plugin repo folder, after <code>git pull</code>:</p>
+    <div class="code-block"><div class="code-header"><span class="code-lang">powershell</span></div><div class="code-body"><pre><span class="cmd">.\install.ps1 -Update</span>
+<span class="cmd">.\install.ps1 -Uninstall</span></pre></div></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">bash · or node</span></div><div class="code-body"><pre><span class="cmd">bash install.sh --update</span>      <span class="cmt"># or: node install.cjs --update</span>
+<span class="cmd">bash install.sh --uninstall</span>   <span class="cmt"># or: node install.cjs --uninstall</span></pre></div></div>
+    <p>Then start a new Claude Code session (VS Code: <code>Developer: Reload Window</code>) so it loads the new version.</p>
+
+    <h3>2. Bring each project up to date — one command</h3>
+    <p>From v3.29.0 the project sync is a single script. Run it from the project's root folder. First find where the plugin is installed — the folder name includes the version, so do this again after every update:</p>
+    <div class="code-block"><div class="code-header"><span class="code-lang">powershell</span></div><div class="code-body"><pre>$P = (Get-Content "$env:USERPROFILE\.claude\plugins\installed_plugins.json" -Raw | ConvertFrom-Json).plugins.PSObject.Properties |
+  Where-Object Name -like 'ai-assisted-development@*' | ForEach-Object { $_.Value[0].installPath }
+cd C:\path\to\your\project
+<span class="cmt"># preview: what would change, migration notes, what needs Claude. Writes nothing.</span>
+node "$P\scripts\setup-sync.cjs" --dry-run
+<span class="cmt"># the sync itself</span>
+node "$P\scripts\setup-sync.cjs"</pre></div></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">bash (Git Bash, macOS, Linux)</span></div><div class="code-body"><pre>P=$(node -p "const r=require(require('os').homedir()+'/.claude/plugins/installed_plugins.json');
+  r.plugins[Object.keys(r.plugins).find(k=&gt;k.startsWith('ai-assisted-development@'))][0].installPath")
+cd /path/to/your/project
+node "$P/scripts/setup-sync.cjs" --dry-run
+node "$P/scripts/setup-sync.cjs"</pre></div></div>
+    <div class="warning"><span class="wi">⚠</span><span>Don't paste the bash version into PowerShell — PowerShell answers <em>"The term 'P=$(node …' is not recognized"</em>. Use the PowerShell block.</span></div>
+    <p>The script refreshes hooks, command stubs, rules, the ignore file and the version stamp, then prints:</p>
+    <table class="cmd-table">
+      <thead><tr><th>You see</th><th>What to do</th></tr></thead>
+      <tbody>
+        <tr><td>✓ setup-sync complete</td><td>Done. If it also says <strong>Nothing needs Claude</strong>, there is nothing else to do.</td></tr>
+        <tr><td>✗ &lt;step&gt; failed</td><td>Fix the cause it prints and run the same command again — every step is safe to re-run.</td></tr>
+        <tr><td>Needs Claude</td><td>Things only you can decide (for example a missing business-context policy, or which external repos the project calls). Open Claude Code in the project and run <span class="cmd-pill">setup-sync</span> — it runs the same script, then walks you through just those items.</td></tr>
+        <tr><td>Migration notes</td><td>What changed between your old and new version. Read them; any manual step is listed in the note.</td></tr>
+        <tr><td>"never provisioned"</td><td>The folder was never set up — run <span class="cmd-pill">setup-init</span> there first.</td></tr>
+      </tbody>
+    </table>
+    <p>Several projects? Add <code>--root=&lt;folder&gt;</code> and loop over them — the Plugin Developer Guide's <em>Update projects</em> section has ready-made PowerShell and bash loops. Finish with <span class="cmd-pill">setup-status</span> to confirm everything is green.</p>
+    <div class="info"><span class="wi">ℹ</span><span>Prefer to stay in Claude Code? <span class="cmd-pill">setup-sync</span> on its own does the same sync and then asks the questions. Uninstalling never touches your project's <code>.claude/</code>, <code>memory/</code>, or <code>CLAUDE.md</code>.</span></div>
   </section>
 
   </main>
 </div>
 
 <footer>
-  <span>ai-assisted-development · User Guide · v3.25.0</span>
+  <span>ai-assisted-development · User Guide · v3.29.0</span>
   <span>Your Company</span>
 </footer>
 

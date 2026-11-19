@@ -4,12 +4,16 @@
 //                      spec renders and passes --check, an ADO-90-format spec still renders, the
 //                      new hosting presets are known, todo: true adds the "Unverified" legend entry,
 //                      --check exits 1 when an arrow has no clear path, and spec mistakes give a
-//                      one-line "spec error:". The Python cases are skipped with a notice when
+//                      one-line "spec error:". ADO-82: Azure icons are drawn for Azure types, the
+//                      icon: key overrides or hides them, an unknown icon name warns, a missing
+//                      assets folder changes nothing, and manifest.json matches the PNGs on disk
+//                      (always runs). The Python cases are skipped with a notice when
 //                      Python 3.10+ / matplotlib / pyyaml are missing (ARCH_DIAGRAM_PYTHON=none
 //                      forces that). The AC-F13 allow-list case always runs: every hostname / IP
 //                      in the skill folder, the fixtures and the two scripts must be a
 //                      documentation value (RFC 2606 / RFC 5737). Exits 0 if all pass, 1 if any fail.
-// What it touches:     Reads scripts/, skills/arch-diagram/, tests/fixtures/arch-diagram/. Runs
+// What it touches:     Reads scripts/, skills/arch-diagram/, tests/fixtures/arch-diagram/,
+//                      assets/icons/azure/. Runs
 //                      python on the renderer; writes PNGs and small specs only under a temp folder
 //                      in os.tmpdir(), removed at the end.
 // What it does NOT do: No network calls, no git operations, no writes inside the repository.
@@ -29,6 +33,10 @@ const { extractHosts, isDocHost } = require('../scripts/arch-spec-scan.cjs');
 const ROOT = path.join(__dirname, '..');
 const SCRIPT = path.join(ROOT, 'scripts', 'architecture-diagram.py');
 const EXAMPLES = path.join(ROOT, 'skills', 'arch-diagram', 'references', 'examples');
+const ICONS = path.join(ROOT, 'assets', 'icons', 'azure');
+// ADO-82 AC-F4: the Azure types added with the icons.
+const NEW_AZURE_TYPES = ['event-hubs', 'service-bus', 'log-analytics', 'private-endpoint', 'network-interface',
+  'vnet', 'expressroute', 'entra-app'];
 // No __pycache__ inside the repository when the tests import the renderer.
 const PY_ENV = { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONDONTWRITEBYTECODE: '1' };
 let passed = 0;
@@ -111,6 +119,24 @@ function allowListCase() {
     }
   }
   assert(`AC-F13 P-U8 every hostname / IP in ${files.length} files is a documentation value`, bad.length === 0, bad.join('\n      '));
+}
+
+// ---- ADO-82 AC-F6: manifest.json and the PNGs match (always runs, no Python needed) ----------
+function manifestCase() {
+  process.stdout.write('ADO-82 Azure icon assets\n');
+  let icons = [];
+  try {
+    icons = JSON.parse(fs.readFileSync(path.join(ICONS, 'manifest.json'), 'utf8')).icons;
+  } catch (err) {
+    assert('ADO-82 manifest.json is readable', false, err.message);
+    return;
+  }
+  const listed = new Set(icons.map(i => i.file));
+  const missing = [...listed].filter(f => !fs.existsSync(path.join(ICONS, f)));
+  // A PNG dropped from the manifest is not deleted by the build script (Story 1 follow-up 2).
+  const unlisted = fs.readdirSync(ICONS).filter(f => f.endsWith('.png') && !listed.has(f));
+  assert(`ADO-82 AC-F6 every manifest.json entry (${icons.length}) has its PNG on disk`, missing.length === 0, missing.join(', '));
+  assert('ADO-82 AC-F6 every PNG in assets/icons/azure/ is listed in manifest.json', unlisted.length === 0, unlisted.join(', '));
 }
 
 // ---- AC-NF3: the suite passes without Python -----------------------------------------------
@@ -214,6 +240,55 @@ async function rendererCases(py) {
     'print(json.dumps([m.badge_spot([(0, 0), (2, 0)], []), m.badge_spot([(5, 5)], [(1, 1)])]))',
   ].join('\n')]);
 
+  // ADO-82: Azure icons. One box per icon rule, plus every new Azure type.
+  const iconSpec = spec('icons.yaml', [
+    'title: "Icons"',
+    'zones:',
+    '  - name: "Icon rules"',
+    '    columns: 4',
+    '    components:',
+    '      - {id: kv, name: kv, type: key-vault}',
+    '      - {id: vm, name: vm, type: vm, icon: virtual-machine}',
+    '      - {id: hide, name: hide, type: key-vault, icon: ""}',
+    '      - {id: nodb, name: nodb, type: storage, icon: ""}',
+    '      - {id: typo, name: typo, type: key-vault, icon: key-vault}',
+    '      - {id: sqlsrv, name: sqlsrv, type: sql-server}',
+    ...NEW_AZURE_TYPES.map(t => `      - {id: ${t}, name: "${t}", type: ${t}}`),
+  ].join('\n'));
+  const loadModule = [
+    'import importlib.util, json',
+    'from pathlib import Path',
+    `s = importlib.util.spec_from_file_location("ad", r"${SCRIPT}")`,
+    'm = importlib.util.module_from_spec(s); s.loader.exec_module(m)',
+    'name = lambda i: i.name if isinstance(i, Path) else i',
+  ];
+  // Which icon each box gets, and how many images matplotlib actually draws.
+  const iconProbe = run(py, ['-c', [
+    ...loadModule,
+    'calls = []',
+    'orig = m.plt.Axes.imshow',
+    'm.plt.Axes.imshow = lambda self, img, **k: calls.append(1) or orig(self, img, **k)',
+    `zones, flows, fb = m.draw(m.load_spec(Path(r"${iconSpec}")), r"${png('icons')}", 40)`,
+    'icons = m.load_icons(m.ICON_DIR)',
+    'print(json.dumps({"icons": {n.id: name(n.icon) for n in zones[0].children}, "drawn": len(calls),',
+    '  "check": m.check(zones, flows, fb), "unbundled": [v for v in m.AZURE_ICONS.values() if v not in icons]}))',
+  ].join('\n')]);
+  // Without the assets folder: ADO-8001 icons, icon: names ignored quietly, the same layout as
+  // with no Azure icons at all.
+  const noAssets = run(py, ['-c', [
+    ...loadModule,
+    `ex = Path(r"${path.join(EXAMPLES, 'azure-app-service.yaml')}")`,
+    'def rects(): return [n.rect for z in m.draw(m.load_spec(ex), r"' + png('no-assets') + '", 40)[0] for n in z.walk()]',
+    'real = m.ICON_DIR',
+    `m.ICON_DIR = Path(r"${tmp}") / "no-assets"`,
+    'zones, _ = m.build(m.load_spec(ex))',
+    'builtin = all(n.icon == m.TYPES.get(n.type, m.TYPES["service"])[4] for z in zones for n in z.walk() if not n.zone)',
+    `m.build(m.load_spec(Path(r"${iconSpec}")))`,
+    'missing = rects()',
+    'm.ICON_DIR, m.AZURE_ICONS = real, {}',
+    'print(json.dumps({"builtin": builtin, "same": missing == rects()}))',
+  ].join('\n')]);
+
   // The generated-spec example in spec-format.md (Story 2) must render cleanly too.
   const formatDoc = fs.readFileSync(path.join(ROOT, 'skills', 'arch-diagram', 'references', 'spec-format.md'), 'utf8');
   const generated = /## Example: generated[\s\S]*?```yaml\r?\n([\s\S]*?)```/.exec(formatDoc);
@@ -221,7 +296,7 @@ async function rendererCases(py) {
 
   const examples = fs.readdirSync(EXAMPLES).filter(f => f.endsWith('.yaml')).sort();
   const [exampleRuns, ado90, presetRun, todoRun, flowRun, unknownRun, legendTodo, legendPlain, fallback, broken,
-    generatedRun, wrapRun] =
+    generatedRun, wrapRun, iconRun, iconProbeRun, noAssetsRun] =
     await Promise.all([
       Promise.all(examples.map(f => render(path.join(EXAMPLES, f), path.basename(f, '.yaml'), ['--check']))),
       render(ado90Spec, 'ado90', ['--check']),
@@ -235,7 +310,39 @@ async function rendererCases(py) {
       brokenLayout,
       render(generatedSpec, 'generated-example', ['--check']),
       wrapCase,
+      render(iconSpec, 'icons-cli', ['--check']),
+      iconProbe,
+      noAssets,
     ]);
+
+  let probe = {};
+  let bare = {};
+  try {
+    probe = JSON.parse(iconProbeRun.stdout);
+    bare = JSON.parse(noAssetsRun.stdout);
+  } catch (err) {
+    process.stdout.write(`      icon probe output not JSON: ${iconProbeRun.stderr}${noAssetsRun.stderr}\n`);
+  }
+  const got = probe.icons || {};
+  assert('ADO-82 AC-F3 a known Azure type draws its bundled icon (key-vault → key-vaults.png)',
+    got.kv === 'key-vaults.png' && probe.drawn > 0, `${JSON.stringify(probe)} ${iconProbeRun.stderr}`);
+  assert('ADO-82 AC-F3 icon: picks a bundled icon for a type that has none (vm → virtual-machine.png)',
+    got.vm === 'virtual-machine.png', JSON.stringify(got));
+  assert('ADO-82 AC-F3 icon: "" hides the Azure icon and the built-in database shape',
+    got.hide === null && got.nodb === null, JSON.stringify(got));
+  assert('ADO-82 AC-F3 types without an Azure icon keep their built-in shape (sql-server → db)',
+    got.sqlsrv === 'db', JSON.stringify(got));
+  assert('ADO-82 AC-F3 an unknown icon name warns, keeps the usual icon and still renders with check: ok',
+    got.typo === 'key-vaults.png' && iconRun.status === 0 && iconRun.stdout.includes('check: ok')
+      && iconRun.stderr.includes("unknown icon 'key-vault'"), `${iconRun.status} ${iconRun.stdout}${iconRun.stderr}`);
+  assert('ADO-82 AC-F4 the 8 new Azure types are known and each draws its icon',
+    !/unknown type/.test(iconRun.stderr) && NEW_AZURE_TYPES.every(t => typeof got[t] === 'string' && got[t].endsWith('.png')),
+    JSON.stringify(got));
+  assert('ADO-82 AC-F1 every default type icon is in manifest.json', Array.isArray(probe.unbundled) && probe.unbundled.length === 0,
+    JSON.stringify(probe.unbundled));
+  assert('ADO-82 AC-F3 without the assets folder: built-in icons only, no warnings, same layout as no Azure icons',
+    bare.builtin === true && bare.same === true && !/warning/i.test(noAssetsRun.stderr),
+    `${noAssetsRun.stdout} ${noAssetsRun.stderr}`);
 
   let wrapped = [];
   let spots = [];
@@ -306,6 +413,7 @@ async function rendererCases(py) {
 
 async function main() {
   allowListCase();
+  manifestCase();
   noPythonCase();
   const py = resolvePython();
   if (py) {
